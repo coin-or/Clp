@@ -10,6 +10,9 @@
 #include "ClpFactorization.hpp"
 #include "CoinHelperFunctions.hpp"
 #include <cstdio>
+#if defined(ABOCA_LITE) || defined(CILK_OVERLAP)
+#include <cilk/cilk.h>
+#endif
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -660,6 +663,96 @@ ClpDualRowSteepest::updateWeights(CoinIndexedVector * input,
      return alpha;
 }
 
+#if ABOCA_LITE
+typedef struct {
+  double tolerance;
+  double primalRatio;
+  double changeObj;
+  const double * cost;
+  double * solution;
+  const double * lower;
+  const double * upper;
+  double * work;
+  int * which;
+  double * infeas;
+  const int * pivotVariable;
+  int numberAdded;
+  int numberToDo;
+#ifdef CLP_DUAL_COLUMN_MULTIPLIER
+  int numberColumns;
+#endif
+} update_primals;
+static void
+updatePrimalBit(update_primals & info)
+{
+  int numberAdded = 0;
+  double tolerance = info.tolerance;
+  double primalRatio = info.primalRatio;
+  double changeObj=0.0;
+  const double * COIN_RESTRICT costModel = info.cost;
+  const double * COIN_RESTRICT lowerModel = info.lower;
+  const double * COIN_RESTRICT upperModel = info.upper;
+  double * COIN_RESTRICT solution = info.solution;
+  double * COIN_RESTRICT infeas = info.infeas;
+  const int * COIN_RESTRICT pivotVariable = info.pivotVariable;
+  double * COIN_RESTRICT work = info.work;
+  int number = info.numberToDo;
+  int * COIN_RESTRICT which = info.which;
+#ifdef CLP_DUAL_COLUMN_MULTIPLIER
+  int numberColumns = info.numberColumns;
+#endif
+  for (int i = 0; i < number; i++) {
+    int iRow = which[i];
+    int iPivot = pivotVariable[iRow];
+    double value = solution[iPivot];
+    double cost = costModel[iPivot];
+    double change = primalRatio * work[i];
+    work[i] = 0.0;
+    value -= change;
+    changeObj -= change * cost;
+    double lower = lowerModel[iPivot];
+    double upper = upperModel[iPivot];
+    solution[iPivot] = value;
+    if (value < lower - tolerance) {
+      value -= lower;
+      value *= value;
+#ifdef CLP_DUAL_COLUMN_MULTIPLIER
+      if (iPivot < numberColumns)
+	value *= CLP_DUAL_COLUMN_MULTIPLIER; // bias towards columns
+#endif
+#ifdef CLP_DUAL_FIXED_COLUMN_MULTIPLIER
+      if (lower == upper)
+	value *= CLP_DUAL_FIXED_COLUMN_MULTIPLIER; // bias towards taking out fixed variables
+#endif
+      // store square in list
+      if (!infeas[iRow]) 
+	which[numberAdded++]=iRow;
+      infeas[iRow] = value;
+    } else if (value > upper + tolerance) {
+      value -= upper;
+      value *= value;
+#ifdef CLP_DUAL_COLUMN_MULTIPLIER
+      if (iPivot < numberColumns)
+	value *= CLP_DUAL_COLUMN_MULTIPLIER; // bias towards columns
+#endif
+#ifdef CLP_DUAL_FIXED_COLUMN_MULTIPLIER
+      if (lower == upper)
+	value *= CLP_DUAL_FIXED_COLUMN_MULTIPLIER; // bias towards taking out fixed variables
+#endif
+      // store square in list
+      if (!infeas[iRow]) 
+	which[numberAdded++]=iRow;
+      infeas[iRow] = value;
+    } else {
+      // feasible - was it infeasible - if so set tiny
+      if (infeas[iRow])
+	infeas[iRow] = COIN_INDEXED_REALLY_TINY_ELEMENT;
+    }
+  }
+  info.numberAdded = numberAdded;
+  info.changeObj = changeObj;
+}
+#endif
 /* Updates primal solution (and maybe list of candidates)
    Uses input vector which it deletes
    Computes change in objective function
@@ -686,6 +779,7 @@ ClpDualRowSteepest::updatePrimalSolution(
      int numberColumns = model_->numberColumns();
 #endif
      if (primalUpdate->packedMode()) {
+#if ABOCA_LITE == 0 
           for (i = 0; i < number; i++) {
                int iRow = which[i];
                int iPivot = pivotVariable[iRow];
@@ -736,6 +830,43 @@ ClpDualRowSteepest::updatePrimalSolution(
                          infeas[iRow] = COIN_INDEXED_REALLY_TINY_ELEMENT;
                }
           }
+#else
+	       update_primals info[ABOCA_LITE];
+	       int chunk = (number+ABOCA_LITE-1)/ABOCA_LITE;
+	       int n=0;
+	       for (i=0;i<ABOCA_LITE;i++) {
+		 info[i].primalRatio=primalRatio;
+		 info[i].tolerance=tolerance;
+		 info[i].cost = costModel;
+		 info[i].solution = solution;
+		 info[i].lower = lowerModel;
+		 info[i].upper = upperModel;
+		 info[i].infeas = infeas;
+		 info[i].pivotVariable = pivotVariable;
+		 info[i].which=which+n;
+		 info[i].work=work+n;
+		 info[i].numberToDo=CoinMin(chunk,number-n);
+#ifdef CLP_DUAL_COLUMN_MULTIPLIER
+		 info.numberColumns = numberColumns;
+#endif
+		 n += chunk;
+	       }
+	       for (i=0;i<ABOCA_LITE;i++) {
+		 cilk_spawn updatePrimalBit(info[i]);
+		 //updatePrimalBit(info[i]);
+	       }
+	       cilk_sync;
+	       n=infeasible_->getNumElements();
+	       int * COIN_RESTRICT index = infeasible_->getIndices();
+	       for (i=0;i<ABOCA_LITE;i++) {
+		 int numberAdded=info[i].numberAdded;
+		 int * which=info[i].which;
+		 for (int j=0;j<numberAdded;j++) 
+		   index[n++]=which[j];
+		 changeObj += info[i].changeObj;
+	       }
+	       infeasible_->setNumElements(n);
+#endif
      } else {
           for (i = 0; i < number; i++) {
                int iRow = which[i];
