@@ -7240,7 +7240,7 @@ ClpSimplex::sanityCheck()
      for (i = numberColumns_; i < numberColumns_ + numberRows_; i++) {
           double value;
           value = fabs(cost_[i]);
-          if (value > 1.0e50) {
+          if (value > 1.0e100) {
                numberBad++;
                if (firstBad < 0)
                     firstBad = i;
@@ -7292,7 +7292,7 @@ ClpSimplex::sanityCheck()
      for (i = 0; i < numberColumns_; i++) {
           double value;
           value = fabs(cost_[i]);
-          if (value > 1.0e50) {
+          if (value > 1.0e100) {
                numberBad++;
                if (firstBad < 0)
                     firstBad = i;
