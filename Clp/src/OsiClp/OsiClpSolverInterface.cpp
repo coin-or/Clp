@@ -2428,8 +2428,10 @@ void OsiClpSolverInterface::solveFromHotStart()
     int i;
     double rhsScale = smallModel_->rhsScale();
     const double * columnScale = NULL;
+    const double * rowScale = NULL;
     if (smallModel_->scalingFlag()>0) {
       columnScale = smallModel_->columnScale();
+      rowScale = smallModel_->rowScale();
     }
     // and do bounds in case dual needs them
     // may be infeasible
@@ -2611,6 +2613,7 @@ void OsiClpSolverInterface::solveFromHotStart()
     modelPtr_->setNumberPrimalInfeasibilities(smallModel_->numberPrimalInfeasibilities());
     double * solution = modelPtr_->primalColumnSolution();
     const double * solution2 = smallModel_->solutionRegion();
+    double * djs = modelPtr_->dualColumnSolution();
     if (!columnScale) {
       for (i=0;i<numberColumns2;i++) {
         int iColumn = whichColumn[i];
@@ -2626,6 +2629,22 @@ void OsiClpSolverInterface::solveFromHotStart()
         upperSmallReal[i]=saveUpperOriginal[iColumn];
       }
     }
+    // compute duals and djs
+    double * dual = modelPtr_->dualRowSolution();
+    const double * dual2 = smallModel_->dualRowSolution();
+    if (!rowScale) {
+      for (i=0;i<numberRows2;i++) {
+        int iRow = whichRow[i];
+        dual[iRow]= dual2[i];
+      }
+    } else {
+      for (i=0;i<numberRows2;i++) {
+        int iRow = whichRow[i];
+        dual[iRow]= dual2[i]*rowScale[i];
+      }
+    }
+    memcpy(djs,modelPtr_->objective(),numberColumns*sizeof(double));
+    modelPtr_->clpMatrix()->transposeTimes(-1.0,dual,djs);
     // could combine with loop above
     if (modelPtr_==smallModel_)
       modelPtr_->computeObjectiveValue();
