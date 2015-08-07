@@ -16,6 +16,7 @@
 #include "CoinMessageHandler.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "AbcCommon.hpp"
+#include "ClpEventHandler.hpp"
 // Redefine stuff for Clp
 #ifndef OSI_IDIOT
 #include "ClpMessage.hpp"
@@ -1312,6 +1313,7 @@ Idiot::crossOver(int mode)
      const int * columnLength = matrix->getVectorLengths();
      const double * element = matrix->getElements();
      const double * rowupper = model_->getRowUpper();
+     model_->eventHandler()->event(ClpEventHandler::startOfCrossover);
      int nrows = model_->getNumRows();
      int ncols = model_->getNumCols();
      double * rowsol, * colsol;
