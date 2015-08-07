@@ -67,6 +67,7 @@ public:
 	  modifyMatrixInMiniPresolve,
 	  moreMiniPresolve,
 	  modifyMatrixInMiniPostsolve,
+	  startOfCrossover, // in Idiot
 	  noTheta // At end (because no pivot)
      };
      /**@name Virtual method that the derived classes should provide.
