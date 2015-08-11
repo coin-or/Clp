@@ -6842,6 +6842,9 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
                returnCode = 0;
           }
      }
+     // slows down slightly - but more accurate
+     if (factorization_->pivots())
+       computeDuals(NULL);
 
      // clear
      for (iRow = 0; iRow < 4; iRow++) {
