@@ -212,6 +212,10 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 
      // save data
      ClpDataSave data = saveData();
+     if (problemStatus_==10&&sumPrimalInfeasibilities_==-123456789.0) {
+       // large infeasibility cost wanted
+       infeasibilityCost_ = CoinMax(infeasibilityCost_,1.0e13);
+     }
      matrix_->refresh(this); // make sure matrix okay
 
      // Save so can see if doing after dual
@@ -963,7 +967,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 	    largestPrimalError_=1.0e7;
 	    largestDualError_=1.0e7;
 	  }
-          numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
+	  bool sayValuesPass = (firstFree_>=0);
+	  //if (ifValuesPass&&numberIterations_==baseIteration_)
+	  //sayValuesPass=true;
+          numberThrownOut = gutsOfSolution(NULL, NULL, sayValuesPass);
           double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
           int reason2 = 0;
 #if CLP_CAUTION
@@ -1615,7 +1622,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                       && largestDualError_ > 1.0e6)) {
           problemStatus_ = 10; // try dual
           // See if second call
-          if ((moreSpecialOptions_ & 256) != 0||nonLinearCost_->sumInfeasibilities()>1.0e2) {
+          if ((moreSpecialOptions_ & 256) != 0&&nonLinearCost_->sumInfeasibilities()>1.0e2) {
                numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
                sumPrimalInfeasibilities_ = nonLinearCost_->sumInfeasibilities();
                // say infeasible
@@ -2622,7 +2629,7 @@ ClpSimplexPrimal::perturb(int type)
                          if (value) {
                               if (printOut)
                                    printf("col %d lower from %g to %g, upper from %g to %g\n",
-                                          iSequence, lower_[iSequence], lowerValue, upper_[iSequence], upperValue);
+                                          iSequence, lowerValue, lower_[iSequence], upperValue , upper_[iSequence]);
                               if (solutionValue) {
                                    largest = CoinMax(largest, value);
                                    if (value > (fabs(solutionValue) + 1.0)*largestPerCent)
