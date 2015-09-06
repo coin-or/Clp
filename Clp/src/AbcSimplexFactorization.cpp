@@ -416,7 +416,7 @@ AbcSimplexFactorization::factorize ( AbcSimplex * model,
   // allow dense
   int solveMode = coinAbcFactorization_->solveMode()&1;
   if (model->numberIterations()>model->baseIteration())
-    solveMode += 8;
+    solveMode |= 9;  // was +8 - this allows dense
   else
     solveMode = 1; // try dense
   if (valuesPass)
