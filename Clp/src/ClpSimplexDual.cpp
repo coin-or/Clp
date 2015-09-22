@@ -401,6 +401,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
 #endif
      double largestPrimalError = 0.0;
      double largestDualError = 0.0;
+     double smallestPrimalInfeasibility=COIN_DBL_MAX;
      int numberRayTries=0;
      // Start can skip some things in transposeTimes
      specialOptions_ |= 131072;
@@ -487,6 +488,23 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
           // may factorize, checks if problem finished
           statusOfProblemInDual(lastCleaned, factorType, saveDuals, data,
                                 ifValuesPass);
+	  smallestPrimalInfeasibility=CoinMin(smallestPrimalInfeasibility,
+					      sumPrimalInfeasibilities_);
+	  if (sumPrimalInfeasibilities_>1.0e5 &&
+	      sumPrimalInfeasibilities_>1.0e5*smallestPrimalInfeasibility &&
+	      (moreSpecialOptions_&256)==0 && 
+	      progress_.lastObjective(0)<-1.0e10 &&
+	      progress_.lastObjective(1)>-1.0e5) {
+	    // problems - try dual
+	    problemStatus_=10;
+	    // mark as large infeasibility cost wanted
+	    sumPrimalInfeasibilities_ = -123456789.0;
+	    //for (int i=0;i<numberRows_+numberColumns_;i++) {
+	    //if (fabs(cost_[i]*solution_[i])>1.0e4)
+	    //	printf("col %d cost %g sol %g bounds %g %g\n",
+	    //	       i,cost_[i],solution_[i],lower_[i],upper_[i]);
+	    //}
+	  }
 	  if ((specialOptions_&2097152)!=0&&problemStatus_==1&&!ray_&&
  	      !numberRayTries && numberIterations_) {
 	    numberRayTries=1;
@@ -3391,6 +3409,9 @@ dualColumn00(pricingInfo & info)
   info.upperTheta = upperTheta;
   info.bestPossible = bestPossible;
 }
+static 
+void ClpMemmove(void * to, void * from,int nChar)
+{ memmove(to,from,nChar);}
 // later do so less zeroing in first blocks
 // and some of it combined for loop to move and zero
 static void moveAndZero(double * to, double * from, int n)
@@ -3524,7 +3545,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
 	  bestPossible = CoinMax(bestPossible,info[0].bestPossible);
 	  upperTheta = CoinMin(upperTheta,info[0].upperTheta);
 	  for (int i=1;i<ABOCA_LITE;i++) {
-	    memmove(index+numberRemaining,info[i].index,info[i].numberRemaining*sizeof(int));
+	    ClpMemmove(index+numberRemaining,info[i].index,info[i].numberRemaining*sizeof(int));
 	    moveAndZero(spare+numberRemaining,info[i].spare,info[i].numberRemaining);
 	    numberRemaining += info[i].numberRemaining;
 	    bestPossible = CoinMax(bestPossible,info[i].bestPossible);
@@ -4056,7 +4077,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 #ifdef MORE_CAREFUL
                          // If we have done pivots and things look bad set alpha_ 0.0 to force factorization
                          if (sumBadPivots > 1.0e4) {
-                              if (handler_->logLevel() > 3)
+                              if (handler_->logLevel() > 1)
                                    *handler_ << "maybe forcing re-factorization - sum " << sumBadPivots << " " << factorization_->pivots() << " pivots" << CoinMessageEol;
                               if(factorization_->pivots() > 3) {
                                    badSumPivots = true;
@@ -4254,7 +4275,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
      // If we have done pivots and things look bad set alpha_ 0.0 to force factorization
      if ((badSumPivots ||
                fabs(theta_ * badFree) > 10.0 * dualTolerance_) && factorization_->pivots()) {
-          if (handler_->logLevel() > 3)
+          if (handler_->logLevel() > 1)
                *handler_ << "forcing re-factorization" << CoinMessageEol;
 	  //printf("badSumPivots %g theta_ %g badFree %g\n",badSumPivots,theta_,badFree);
           sequenceIn_ = -1;
@@ -6843,9 +6864,11 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
           }
      }
      // slows down slightly - but more accurate
-     if (factorization_->pivots())
+     if (factorization_->pivots()) {
+       columnArray_[0]->clear();
        computeDuals(NULL);
-
+     }
+       
      // clear
      for (iRow = 0; iRow < 4; iRow++) {
           rowArray_[iRow]->clear();
