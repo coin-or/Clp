@@ -1806,12 +1806,6 @@ Idiot::crossOver(int mode)
           ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(model_->clpMatrix());
           wantVector = clpMatrixO->wantsSpecialColumnCopy();
      }
-     if ((strategy_&262144)!=0) {
-       //justValuesPass=true; 
-       assert (addAll<3);
-       assert (presolve);
-       //allowInfeasible=true;
-     }
      if ((strategy_&32768)!=0)
        allowInfeasible=true;
      if ((strategy_&65536)!=0)
