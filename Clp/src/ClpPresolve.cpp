@@ -388,8 +388,11 @@ static int ATOI(const char *name)
 #endif
 }
 #endif
-//#define PRESOLVE_DEBUG 1
-#if PRESOLVE_DEBUG
+#ifdef PRESOLVE_DEBUG
+#define PRESOLVE_CHECK_SOL 1
+#endif
+//#define PRESOLVE_CHECK_SOL 1
+#if PRESOLVE_CHECK_SOL
 void check_sol(CoinPresolveMatrix *prob, double tol)
 {
      double *colels	= prob->colels_;
@@ -984,7 +987,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	    // need a transfer back at end of postsolve transferCosts(prob);
 
           int iLoop;
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
           check_sol(prob, 1.0e0);
 #endif
           if (dupcol) {
@@ -1148,7 +1151,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 			 printProgress('L',iLoop+1);
                     }
 
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                     check_sol(prob, 1.0e0);
 #endif
 
@@ -1286,7 +1289,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          break;
 		    printProgress('O',iLoop+1);
                }
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                check_sol(prob, 1.0e0);
 #endif
                if (dupcol) {
@@ -1299,7 +1302,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          break;
 		    printProgress('P',iLoop+1);
                }
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                check_sol(prob, 1.0e0);
 #endif
 
@@ -1312,7 +1315,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                }
 	       // Marginally slower on netlib if this call is enabled.
 	       // paction_ = testRedundant(prob,paction_) ;
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                check_sol(prob, 1.0e0);
 #endif
                bool stopLoop = false;
@@ -1348,7 +1351,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     }
 		    printProgress('R',iLoop+1);
                }
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                check_sol(prob, 1.0e0);
 #endif
                if (paction_ == paction0 || stopLoop)
@@ -1390,13 +1393,13 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
      prob->presolveOptions_ &= ~0x10000;
      if (!prob->status_) {
           paction_ = drop_zero_coefficients(prob, paction_);
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
           check_sol(prob, 1.0e0);
 #endif
 
           paction_ = drop_empty_cols_action::presolve(prob, paction_);
           paction_ = drop_empty_rows_action::presolve(prob, paction_);
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
           check_sol(prob, 1.0e0);
 #endif
      }
