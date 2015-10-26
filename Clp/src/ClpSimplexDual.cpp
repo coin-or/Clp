@@ -6864,7 +6864,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
           }
      }
      // slows down slightly - but more accurate
-     if (factorization_->pivots()) {
+     if (problemStatus_<3 && factorization_->pivots()) {
        columnArray_[0]->clear();
        computeDuals(NULL);
      }
