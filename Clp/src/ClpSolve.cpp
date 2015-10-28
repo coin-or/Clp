@@ -2594,7 +2594,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           }
           double * saveLower = NULL;
           double * saveUpper = NULL;
-          if (largest < 2.01 * smallest) {
+          if (largest < -2.01 * smallest) { // switch off for now
                // perturb - so switch off standard
                model2->setPerturbation(100);
                saveLower = new double[numberRows];
@@ -2608,15 +2608,15 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     double value = randomNumberGenerator_.randomDouble();
                     if (upperValue > lowerValue + primalTolerance_) {
                          if (lowerValue > -1.0e20 && lowerValue)
-                              lowerValue -= value * 1.0e-4 * fabs(lowerValue);
+                              lowerValue -= value * 1.0e-6 * fabs(lowerValue);
                          if (upperValue < 1.0e20 && upperValue)
-                              upperValue += value * 1.0e-4 * fabs(upperValue);
+                              upperValue += value * 1.0e-6 * fabs(upperValue);
                     } else if (upperValue > 0.0) {
-                         upperValue -= value * 1.0e-4 * fabs(lowerValue);
-                         lowerValue -= value * 1.0e-4 * fabs(lowerValue);
+                         upperValue -= value * 1.0e-6 * fabs(lowerValue);
+                         lowerValue -= value * 1.0e-6 * fabs(lowerValue);
                     } else if (upperValue < 0.0) {
-                         upperValue += value * 1.0e-4 * fabs(lowerValue);
-                         lowerValue += value * 1.0e-4 * fabs(lowerValue);
+                         upperValue += value * 1.0e-6 * fabs(lowerValue);
+                         lowerValue += value * 1.0e-6 * fabs(lowerValue);
                     } else {
                     }
                     lower[iRow] = lowerValue;
@@ -2919,15 +2919,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
           if (saveLower) {
                // unperturb and clean
                for (iRow = 0; iRow < numberRows; iRow++) {
-                    double diffLower = saveLower[iRow] - model2->rowLower_[iRow];
-                    double diffUpper = saveUpper[iRow] - model2->rowUpper_[iRow];
                     model2->rowLower_[iRow] = saveLower[iRow];
                     model2->rowUpper_[iRow] = saveUpper[iRow];
-                    if (diffLower)
-                         assert (!diffUpper || fabs(diffLower - diffUpper) < 1.0e-5);
-                    else
-                         diffLower = diffUpper;
-                    model2->rowActivity_[iRow] += diffLower;
                }
                delete [] saveLower;
                delete [] saveUpper;
