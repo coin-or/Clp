@@ -2594,7 +2594,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           }
           double * saveLower = NULL;
           double * saveUpper = NULL;
-          if (largest < 2.01 * smallest) {
+          if (largest < -2.01 * smallest) { // switch off for now
                // perturb - so switch off standard
                model2->setPerturbation(100);
                saveLower = new double[numberRows];
@@ -2919,15 +2919,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
           if (saveLower) {
                // unperturb and clean
                for (iRow = 0; iRow < numberRows; iRow++) {
-                    double diffLower = saveLower[iRow] - model2->rowLower_[iRow];
-                    double diffUpper = saveUpper[iRow] - model2->rowUpper_[iRow];
                     model2->rowLower_[iRow] = saveLower[iRow];
                     model2->rowUpper_[iRow] = saveUpper[iRow];
-                    if (diffLower)
-                         assert (!diffUpper || fabs(diffLower - diffUpper) < 1.0e-5);
-                    else
-                         diffLower = diffUpper;
-                    model2->rowActivity_[iRow] += diffLower;
                }
                delete [] saveLower;
                delete [] saveUpper;
