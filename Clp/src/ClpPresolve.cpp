@@ -1657,8 +1657,9 @@ CoinPrePostsolveMatrix::CoinPrePostsolveMatrix(const ClpSimplex * si,
 {
      bulk0_ = static_cast<CoinBigIndex> (bulkRatio_ * 
 					 CoinMax(nelems_in,nelems_));
-     hrow_  = new int   [bulk0_];
-     colels_ = new double[bulk0_];
+     // allow for temporary overflow
+     hrow_  = new int   [bulk0_+ncols_in];
+     colels_ = new double[bulk0_+ncols_in];
      si->getDblParam(ClpObjOffset, originalOffset_);
      int ncols = si->getNumCols();
      int nrows = si->getNumRows();
