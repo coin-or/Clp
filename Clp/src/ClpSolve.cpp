@@ -3636,7 +3636,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
 			    setPerturbation(51); // probably better to perturb after n its
 			}
 #ifndef ABC_INHERIT
-		        primal(1);
+			// use method thought suitable
+			//if (sumDual>sumPrimal&&sumDual>1.0e-2)
+			if (method!=ClpSolve::useDual)
+			  primal(1);
+			else
+			  dual();
 #else
 			dealWithAbc(1,2,interrupt);
 #endif
@@ -7262,7 +7267,7 @@ ClpSimplex::solveBenders(CoinStructuredModel * model,ClpSolve & options)
 		      objValue += solution[i] * saveUpper[i];
 		    } else if (solution[i] < -dualTolerance_) {
 		      // at lower
-		      if (saveLower[i] < -1.0e20);
+		      if (saveLower[i] < -1.0e20)
 			solution[i]=0.0;
 		      objValue += solution[i] * saveLower[i];
 		    } else {
