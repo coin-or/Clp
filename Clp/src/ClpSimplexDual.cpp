@@ -6921,12 +6921,12 @@ ClpSimplexDual::setupForStrongBranching(char * arrays, int numberRows,
 	  intParam_[ClpMaxNumIteration] = 100+numberRows_+numberColumns_;
           dual(0, 7);
           if (problemStatus_ == 10) {
-               ClpSimplex::dual(0, 0);
+               ClpSimplex::dual(0, 7);
 	       //if (problemStatus_)
 	       //printf("second go in hot start %d iterations - status %d\n",
 	       //	numberIterations_,problemStatus_);
                assert (problemStatus_ != 10);
-               if (problemStatus_ == 0) {
+               if (problemStatus_ == 0 && false) {
 		 dual(0, 7);
 #if 0
 		 if (problemStatus_) {
