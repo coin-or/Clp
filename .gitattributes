@@ -154,6 +154,7 @@ Clp/test/osiUnitTest.cpp -text
 /Dependencies -text
 /LICENSE -text
 /README -text
+/appveyor.yml -text
 /config.guess -text
 /config.sub -text
 /configure -text
