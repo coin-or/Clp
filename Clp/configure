@@ -4088,7 +4088,7 @@ echo "$as_me: Will use MPI C++ compiler $MPICXX" >&6;}
   CXX="$MPICXX"
 fi
 
-# correct the LD variable in a build with MS or intel compiler
+# correct the LD variable in a build with MS or Intel-windows compiler
 case "$CXX" in
   clang* ) ;;
   cl* | */cl* | CL* | */CL* | icl* | */icl* | ICL* | */ICL*)
@@ -20282,7 +20282,6 @@ echo "$as_me: Build is \"$build\"." >&6;}
   case $build in
     *-mingw*)
       CYGPATH_W=echo
-      mydos2unix=
       ;;
   esac
 
@@ -24928,7 +24927,7 @@ fi
 
 
 # Provide some information about the compiler.
-echo "$as_me:24931:" \
+echo "$as_me:24930:" \
      "checking for Fortran 77 compiler version" >&5
 ac_compiler=`set X $ac_compile; echo $2`
 { (eval echo "$as_me:$LINENO: \"$ac_compiler --version </dev/null >&5\"") >&5
@@ -25370,10 +25369,14 @@ echo "$as_me: Will use MPI Fortran compiler $MPIF77" >&6;}
 fi
 
 # correct the LD variable if we use the intel fortran compiler in windows
-case "$F77" in
-  ifort* | */ifort* | IFORT* | */IFORT*)
-    LD=link
-    ;;
+case $build in
+  *-cygwin* | *-mingw*)
+    case "$F77" in
+      ifort* | */ifort* | IFORT* | */IFORT*)
+        LD=link
+      ;;
+    esac
+  ;;
 esac
 
 ac_ext=c
@@ -25436,7 +25439,7 @@ _ACEOF
 # flags.
 ac_save_FFLAGS=$FFLAGS
 FFLAGS="$FFLAGS $ac_verb"
-(eval echo $as_me:25439: \"$ac_link\") >&5
+(eval echo $as_me:25442: \"$ac_link\") >&5
 ac_f77_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f77_v_output" >&5
 FFLAGS=$ac_save_FFLAGS
@@ -25514,7 +25517,7 @@ _ACEOF
 # flags.
 ac_save_FFLAGS=$FFLAGS
 FFLAGS="$FFLAGS $ac_cv_prog_f77_v"
-(eval echo $as_me:25517: \"$ac_link\") >&5
+(eval echo $as_me:25520: \"$ac_link\") >&5
 ac_f77_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f77_v_output" >&5
 FFLAGS=$ac_save_FFLAGS
