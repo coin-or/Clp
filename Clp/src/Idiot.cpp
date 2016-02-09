@@ -2012,7 +2012,6 @@ Idiot::crossOver(int mode)
 		     }
 		   }
 		 }
-		 delete [] which;
 		 for (int i = 0; i < nrows; i++) {
 		   if (rowIsBasic[i]>=0) {
 		     model_->setRowStatus(i, ClpSimplex::basic);
@@ -2034,6 +2033,7 @@ Idiot::crossOver(int mode)
 		     model_->setColumnStatus(i,ClpSimplex::superBasic);
 		   }
 		 }
+		 delete [] which;
 	       }
           }
           if (model_) {

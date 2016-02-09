@@ -2400,6 +2400,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
                int iStatus = (statusArray[iSequence] & 3) - 1;
                if (iStatus) {
                     double value = reducedCost[iSequence] - theta * alphaI;
+		    assert (iStatus>0);
                     reducedCost[iSequence] = value;
                     double mult = multiplier[iStatus-1];
                     value *= mult;
@@ -2483,6 +2484,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
                     int iStatus = (statusArray[iSequence] & 3) - 1;
                     if (iStatus) {
                          double value = reducedCost[iSequence] - theta * alphaI;
+			 assert (iStatus>0);
                          reducedCost[iSequence] = value; 
 			 //printf("xx %d %.18g\n",iSequence,reducedCost[iSequence]);
                          double mult = multiplier[iStatus-1];
@@ -3612,6 +3614,27 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                                    theta_ = oldValue / alpha;
                                    alpha_ = alpha;
                               }
+			      // give fake bounds if possible
+			      int jSequence=iSequence+addSequence;
+			      if (2.0*fabs(solution_[jSequence])<
+				  dualBound_) {
+				FakeBound bound = getFakeBound(jSequence);
+				assert (bound == ClpSimplexDual::noFake);
+				setFakeBound(jSequence,ClpSimplexDual::bothFake);
+				numberFake_++;
+				value = oldValue - tentativeTheta * alpha;
+				if (value > dualTolerance_) {
+				  // pretend coming in from upper bound
+				  upper_[jSequence] = solution_[jSequence];
+				  lower_[jSequence] = upper_[jSequence] - dualBound_;
+				  setColumnStatus(jSequence,ClpSimplex::atUpperBound);
+				} else {
+				  // pretend coming in from lower bound
+				  lower_[jSequence] = solution_[jSequence];
+				  upper_[jSequence] = lower_[jSequence] + dualBound_;
+				  setColumnStatus(jSequence,ClpSimplex::atLowerBound);
+				}
+			      }
                          }
                          break;
                     case atUpperBound:
