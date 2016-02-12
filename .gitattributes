@@ -1,4 +1,5 @@
 * text=auto !eol
+/.travis.yml -text
 Clp/LICENSE -text
 Clp/MSVisualStudio/v10/Clp.sln -text
 Clp/MSVisualStudio/v10/ClpExamplesMinimum/ClpExamplesMinimum.vcxproj -text
@@ -127,6 +128,7 @@ Clp/test/osiUnitTest.cpp -text
 /Dependencies -text
 /LICENSE -text
 /README -text
+/appveyor.yml -text
 /config.guess -text
 /config.sub -text
 /configure -text
