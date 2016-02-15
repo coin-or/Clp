@@ -10,10 +10,6 @@
 #ifndef ClpPEPrimalColumnDantzig_H
 #define ClpPEPrimalColumnDantzig_H
 
-#ifndef HAVE_CONFIG_H 
-#define HAVE_CONFIG_H
-#endif
-
 #include "ClpPrimalColumnDantzig.hpp"
 #include "ClpPrimalColumnPivot.hpp"
 #include "ClpSimplex.hpp"

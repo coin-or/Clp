@@ -12,10 +12,6 @@
 #ifndef ClpPEDualRowDantzig_H
 #define ClpPEDualRowDantzig_H
 
-#ifndef HAVE_CONFIG_H 
-#define HAVE_CONFIG_H
-#endif
-
 #include "ClpDualRowPivot.hpp"
 #include "ClpDualRowDantzig.hpp"
 #include "ClpSimplex.hpp"
