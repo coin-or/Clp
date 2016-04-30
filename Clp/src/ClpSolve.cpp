@@ -1761,6 +1761,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     CoinMemcpyN(saveUpper + numberColumns_, numberRows_, model2->rowUpper());
                     delete [] saveUpper;
                     saveUpper = NULL;
+		    // return if wanted
+		    if (options.infeasibleReturn() || 
+			(moreSpecialOptions_ & 1) != 0) 
+		      return -1;
                }
           }
 #ifndef COIN_HAS_VOL

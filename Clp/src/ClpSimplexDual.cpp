@@ -3213,7 +3213,8 @@ ClpSimplexDual::changeBounds(int initialize,
                     } else {
                          // set non basic free variables to fake bounds
                          // I don't think we should ever get here
-                         CoinAssert(!("should not be here"));
+ 		         // yes we can if basis goes singular twice in succession!
+                         //CoinAssert(!("should not be here"));
                          lower_[iSequence] = -0.5 * dualBound_;
                          upper_[iSequence] = 0.5 * dualBound_;
                          setFakeBound(iSequence, ClpSimplexDual::bothFake);
@@ -4551,7 +4552,8 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                          progress_.clearBadTimes();
 
                          // Go to safe
-                         factorization_->pivotTolerance(0.99);
+			 // not here - as can make more singular
+                         //factorization_->pivotTolerance(0.99);
                          forceFactorization_ = 1; // a bit drastic but ..
                          type = 2;
                          //assert (internalFactorize(1)==0);
