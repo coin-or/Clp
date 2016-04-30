@@ -1761,6 +1761,10 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     CoinMemcpyN(saveUpper + numberColumns_, numberRows_, model2->rowUpper());
                     delete [] saveUpper;
                     saveUpper = NULL;
+		    // return if wanted
+		    if (options.infeasibleReturn() || 
+			(moreSpecialOptions_ & 1) != 0) 
+		      return -1;
                }
           }
 #ifndef COIN_HAS_VOL
@@ -2273,7 +2277,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 		    }
 		    if (!doubleIdiot)
 		      info.crash(nPasses, model2->messageHandler(), model2->messagesPointer(),
-				(objective_->type() <2));
+				 (objective_->type() <2 && (model2->specialOptions()&8388608)==0));
 #else
                     info.crash(nPasses, model2->messageHandler(), model2->messagesPointer(),(objective_->type() <2));
 #endif
@@ -2375,8 +2379,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
           }
 #endif
 #ifndef LACI_TRY
-          if (options.getSpecialOption(1) != 2 ||
-                    options.getExtraInfo(1) < 1000000) {
+          if ((options.getSpecialOption(1) != 2 ||
+	       options.getExtraInfo(1) < 1000000)&&(model2->specialOptions()&8388608)==0) {
                if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
                     // See if original wanted vector
                     ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
@@ -3601,7 +3605,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  setProblemStatus(finalStatus);
 	  setSecondaryStatus(finalSecondaryStatus);
 	  int rcode=eventHandler()->event(ClpEventHandler::presolveAfterFirstSolve);
-          if (finalStatus != 3 && rcode < 0 && (finalStatus || oldStatus == -1)) {
+          if (finalStatus != 3 && rcode == -1 && (finalStatus || oldStatus == -1)) {
 	       double sumPrimal=sumPrimalInfeasibilities_;
 	       double sumDual=sumDualInfeasibilities_;
 	       // ignore some parts of solution

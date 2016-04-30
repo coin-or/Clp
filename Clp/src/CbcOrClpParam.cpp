@@ -1508,6 +1508,8 @@ CoinReadGetDoubleField(int argc, const char *argv[], int * valid)
      }
      return value;
 }
+#undef COIN_DBL_MAX
+#define COIN_DBL_MAX 1.0e100
 /*
   Subroutine to establish the cbc parameter array. See the description of
   class CbcOrClpParam for details. Pulled from C..Main() for clarity.

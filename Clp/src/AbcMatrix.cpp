@@ -3188,7 +3188,7 @@ AbcMatrix::primalColumnDouble(CoinPartitionedVector & updateForTableauRow,
    // see if worth using row copy
    int maximumRows=model_->maximumAbcNumberRows();
    int number=updateForTableauRow.getNumElements();
-#ifdef GCC_4_9
+#if 1 //def GCC_4_9
    assert (number);
 #else
    if (!number) {
