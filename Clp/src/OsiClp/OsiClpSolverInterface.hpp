@@ -478,7 +478,9 @@ public:
   bool isOptionalInteger(int colIndex) const;
   /** Set the index-th variable to be an optional integer variable */
   void setOptionalInteger(int index);
-  
+  /// Return true only if integer and not optional
+  inline bool isHeuristicInteger(int colIndex) const
+  { return ( integerInformation_&& integerInformation_[colIndex]==1 );} 
   /// Get pointer to row-wise copy of matrix
   virtual const CoinPackedMatrix * getMatrixByRow() const;
   
