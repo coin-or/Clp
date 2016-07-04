@@ -3512,7 +3512,12 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
      const int * rowLength = rowCopy.getVectorLengths();
      number = new int[numberColumns+1];
      memset(number, 0, (numberColumns + 1)*sizeof(int));
-     if (model->logLevel() > 3) {
+     int logLevel=model->logLevel();
+     bool reduceMaster=(logLevel&16)!=0;
+     bool writeMatrices=(logLevel&8)!=0;
+     bool morePrint=(logLevel&32)!=0;
+     if (logLevel > 3) {
+       // See what is needed
        // get column copy
        CoinPackedMatrix columnCopy = *matrix;
        const int * columnLength = columnCopy.getVectorLengths();
@@ -3559,11 +3564,11 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	     }
 	   }
 	   if (!objective[iColumn]) {
-	     if (model->logLevel() > 4) 
+	     if (morePrint) 
 	     printf("Singleton %d with no objective in row with %d elements - rhs %g,%g\n",iColumn,rowLength[iRow],rowLower[iRow],rowUpper[iRow]);
 	     nPossibleZeroCost++;
 	   } else if (value!=-COIN_DBL_MAX) {
-	     if (model->logLevel() > 4) 
+	     if (morePrint) 
 	       printf("Singleton %d (%s) with objective in row %d (%s) with %d equal elements - rhs %g,%g\n",iColumn,model->getColumnName(iColumn).c_str(),
 		      iRow,model->getRowName(iRow).c_str(),
 		      rowLength[iRow],rowLower[iRow],rowUpper[iRow]);
@@ -3676,8 +3681,8 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	   }
 	 }
 	 // If wanted minimize master rows
-	 if (model->logLevel()==18)
-	   thisBestBreak= (increment>0) ? thisBestBreak :
+	 if (reduceMaster)
+	   thisBestValue= (increment<0) ? thisBestBreak :
 	     numberRows-thisBestBreak;
 	 if (thisBestBreak==stop)
 	   thisBestValue=COIN_DBL_MAX;
@@ -3816,7 +3821,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	 numberWritten=fwrite(columnBlock,sizeof(int),numberColumns,fpBlocks);
 	 assert (numberWritten==numberColumns);
 	 fclose(fpBlocks);
-	 if (model->logLevel() == 17 || model->logLevel() == 18) {
+	 if (writeMatrices) {
 	   int * whichRows=new int[numberRows+numberColumns];
 	   int * whichColumns=whichRows+numberRows;
 	   char name[20];
@@ -3891,7 +3896,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
                }
           }
      }
-     if (model->logLevel() == 63
+     if (morePrint
 #ifdef SYM
                || true
 #endif
@@ -3948,7 +3953,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
                          for (int lRow = jRow; lRow < kRow; lRow++) {
                               iRow = order[lRow];
                               CoinBigIndex start = rowStart[iRow];
-                              if (model->logLevel() == 63) {
+                              if (morePrint) {
                                    printf("row %d %g <= ", iRow, rowLower[iRow]);
                                    for (CoinBigIndex i = start; i < start + iColumn; i++)
                                         printf("( %d, %g) ", column[i], element[i]);
