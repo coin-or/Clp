@@ -3675,6 +3675,10 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	       static_cast<double>(numberRowsDone);
 	   }
 	 }
+	 // If wanted minimize master rows
+	 if (model->logLevel()==18)
+	   thisBestBreak= (increment>0) ? thisBestBreak :
+	     numberRows-thisBestBreak;
 	 if (thisBestBreak==stop)
 	   thisBestValue=COIN_DBL_MAX;
 	 iPass++;
@@ -3686,12 +3690,14 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	     firstMaster=0;
 	     lastMaster=bestBreak;
 	   } else {
-	     firstMaster=thisBestBreak; // ? +1
+	     firstMaster=thisBestBreak+1;
 	     lastMaster=numberRows;
 	   }
 	 }
        }
-       if (firstMaster<lastMaster) {
+       if (firstMaster<=lastMaster) {
+	 if (firstMaster==lastMaster)
+	   printf("Total decomposition! - ");
 	 printf("%d master rows %d <= < %d\n",lastMaster-firstMaster,
 		firstMaster,lastMaster);
 	 for (int i=0;i<numberRows+2*numberColumns;i++) 
@@ -3810,7 +3816,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	 numberWritten=fwrite(columnBlock,sizeof(int),numberColumns,fpBlocks);
 	 assert (numberWritten==numberColumns);
 	 fclose(fpBlocks);
-	 if (model->logLevel() == 17) {
+	 if (model->logLevel() == 17 || model->logLevel() == 18) {
 	   int * whichRows=new int[numberRows+numberColumns];
 	   int * whichColumns=whichRows+numberRows;
 	   char name[20];
