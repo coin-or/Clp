@@ -1226,7 +1226,7 @@ ClpSimplexOther::restoreFromDual(const ClpSimplex * dualProblem,
                }
           }
      }
-     if (numberBasic != numberRows_) {
+     if (numberBasic != numberRows_ && 0) {
           printf("Bad basis - ranges - coding needed\n");
           assert (numberRanges);
           abort();
