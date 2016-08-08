@@ -52,11 +52,7 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int * which,
                                   double * valueIncrease, double * valueDecrease)
 {
      rowArray_[1]->clear();
-#ifdef LONG_REGION_2
-     rowArray_[2]->clear();
-#else
      columnArray_[1]->clear();
-#endif
      // long enough for rows+columns
      assert(rowArray_[3]->capacity() >= numberRows_ + numberColumns_);
      rowArray_[3]->clear();
@@ -116,13 +112,7 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int * which,
                factorization_->updateColumnTranspose(rowArray_[1], rowArray_[0]);
                // put row of tableau in rowArray[0] and columnArray[0]
                matrix_->transposeTimes(this, -1.0,
-                                       rowArray_[0], 
-#ifdef LONG_REGION_2 
-				       rowArray_[2],
-#else 
-				       columnArray_[1],
-#endif 
-				       columnArray_[0]);
+                                       rowArray_[0], columnArray_[1], columnArray_[0]);
 #ifdef COIN_FAC_NEW
 	       assert (!rowArray_[0]->packedMode());
 #endif
@@ -2903,7 +2893,7 @@ ClpSimplexOther::parametricsLoop(parametricsData & paramData,double reportIncrem
                rowArray_[iRow]->clear();
           }
 
-          for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
+          for (iColumn = 0; iColumn < 2; iColumn++) {
                columnArray_[iColumn]->clear();
           }
 
@@ -3344,7 +3334,7 @@ ClpSimplexOther::parametricsLoop(parametricsData & paramData,
       rowArray_[iRow]->clear();
     }
     
-    for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
+    for (iColumn = 0; iColumn < 2; iColumn++) {
       columnArray_[iColumn]->clear();
     }
     
@@ -4657,12 +4647,7 @@ ClpSimplexOther::bestPivot(bool justColumns)
   bestPossiblePivot = 
     reinterpret_cast<ClpSimplexDual *> 
     ( this)->dualColumn(rowArray_[0],
-			columnArray_[0], 
-#ifdef LONG_REGION_2 
-			rowArray_[2],
-#else 
-			columnArray_[1],
-#endif 
+			columnArray_[0], columnArray_[1],
 			rowArray_[3], acceptablePivot, NULL);
   return bestPossiblePivot;
 }
@@ -7742,7 +7727,7 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps,
   coin_init_random_vec(columnWeights,numberColumns_);
 #else
   for (int i=0;i<numberColumns_;i++)
-    columnWeights[i]=randomNumberGenerator_.randomDouble();
+    columnWeights[i]=CoinDrand48();
 #endif
 #if USE_HASH==1
   typedef struct {
