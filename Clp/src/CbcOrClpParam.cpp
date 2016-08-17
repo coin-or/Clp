@@ -1408,7 +1408,7 @@ CoinReadGetString(int argc, const char *argv[])
                          if (argv[CbcOrClpRead_mode][0] != '-') {
                               field = argv[CbcOrClpRead_mode++];
                          } else if (!strcmp(argv[CbcOrClpRead_mode], "--")) {
-                              field = argv[CbcOrClpRead_mode++];
+                              CbcOrClpRead_mode++;
                               // -- means import from stdin
                               field = "-";
                          }
@@ -1523,7 +1523,7 @@ establishParams (int &numberParameters, CbcOrClpParam *const parameters)
      parameters[numberParameters++] =
           CbcOrClpParam("-", "From stdin",
                         CLP_PARAM_ACTION_STDIN, 3, 0);
-#ifdef ABC_INHERIT
+#if defined(ABC_INHERIT)||ABOCA_LITE
       parameters[numberParameters++] =
           CbcOrClpParam("abc", "Whether to visit Aboca",
                         "off", CLP_PARAM_STR_ABCWANTED, 7, 0);
