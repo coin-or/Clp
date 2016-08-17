@@ -1408,7 +1408,7 @@ CoinReadGetString(int argc, const char *argv[])
                          if (argv[CbcOrClpRead_mode][0] != '-') {
                               field = argv[CbcOrClpRead_mode++];
                          } else if (!strcmp(argv[CbcOrClpRead_mode], "--")) {
-                              field = argv[CbcOrClpRead_mode++];
+                              CbcOrClpRead_mode++;
                               // -- means import from stdin
                               field = "-";
                          }
