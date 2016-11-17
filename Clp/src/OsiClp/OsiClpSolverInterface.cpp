@@ -7725,6 +7725,8 @@ OsiClpSolverInterface::crunch()
     small->dual(0,7);
 #endif
     modelPtr_->secondaryStatus_=0;
+    if (small->secondaryStatus_==2)
+      modelPtr_->secondaryStatus_=2;
     totalIterations += small->numberIterations();
     int problemStatus = small->problemStatus();
     if (problemStatus>=0&&problemStatus<=2) {
