@@ -972,6 +972,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 	  //sayValuesPass=true;
           numberThrownOut = gutsOfSolution(NULL, NULL, sayValuesPass);
           double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
+	  // have to use single criterion for primal infeasibilities
+	  assert (!sumPrimalInfeasibilities_);
+	  assert (!sumOfRelaxedPrimalInfeasibilities_);
+	  sumPrimalInfeasibilities_=sumInfeasibility;
+	  sumOfRelaxedPrimalInfeasibilities_=sumInfeasibility;
           int reason2 = 0;
 #if CLP_CAUTION
 #if CLP_CAUTION==2
@@ -1507,7 +1512,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          }
                     }
                } else {
-                    if (!alwaysOptimal || !sumOfRelaxedPrimalInfeasibilities_)
+                    if (alwaysOptimal || !sumOfRelaxedPrimalInfeasibilities_)
                          problemStatus_ = 0; // optimal
                     else
                          problemStatus_ = 1; // infeasible
