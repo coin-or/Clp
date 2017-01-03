@@ -1281,7 +1281,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
      // give code benefit of doubt
      if (sumOfRelaxedDualInfeasibilities_ == 0.0 &&
                sumOfRelaxedPrimalInfeasibilities_ == 0.0 &&
-	 progress->objective_[CLP_PROGRESS-1]>
+	 progress->objective_[CLP_PROGRESS-1]>=
 	 progress->objective_[CLP_PROGRESS-2]-1.0e-9*(10.0+fabs(objectiveValue_))) {
           // say optimal (with these bounds etc)
           numberDualInfeasibilities_ = 0;
@@ -1326,11 +1326,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
      }
      bool looksOptimal = (!numberDualInfeasibilities_&&!nonLinearCost_->sumInfeasibilities());
      // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
-     if ((dualFeasible() || problemStatus_ == -4) && (!ifValuesPass||looksOptimal)) {
+     if ((dualFeasible() || problemStatus_ == -4) && (!ifValuesPass||looksOptimal||firstFree_<0)) {
           // see if extra helps
           if (nonLinearCost_->numberInfeasibilities() &&
                     (nonLinearCost_->sumInfeasibilities() > 1.0e-3 || sumOfRelaxedPrimalInfeasibilities_)
-                    && !alwaysOptimal) {
+	      /*&& alwaysOptimal*/) {
                //may need infeasiblity cost changed
                // we can see if we can construct a ray
                // make up a new objective
@@ -1360,7 +1360,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     int i;
                     for (i = 0; i < numberRows_ + numberColumns_; i++)
                          cost_[i] *= 1.0e-95;
-                    gutsOfSolution(NULL, NULL, ifValuesPass != 0);
+                    gutsOfSolution(NULL, NULL, ifValuesPass != 0 && firstFree_>=0);
                     nonLinearCost_ = nonLinear;
                     infeasibilityCost_ = saveWeight;
                     if ((infeasibilityCost_ >= 1.0e18 ||
@@ -1507,7 +1507,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          }
                     }
                } else {
-                    if (!alwaysOptimal || !sumOfRelaxedPrimalInfeasibilities_)
+                    if (alwaysOptimal || !sumOfRelaxedPrimalInfeasibilities_)
                          problemStatus_ = 0; // optimal
                     else
                          problemStatus_ = 1; // infeasible
