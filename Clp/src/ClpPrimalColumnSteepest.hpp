@@ -60,7 +60,8 @@ public:
                       CoinIndexedVector * spareRow2,
                       CoinIndexedVector * spareColumn1,
                       CoinIndexedVector * spareColumn2);
-     /// Update djs, weights for Steepest using djs
+     /** Update djs, weights for Steepest using djs
+	 sets best sequence (possibly) */
      void djsAndSteepest(CoinIndexedVector * updates,
                          CoinIndexedVector * spareRow2,
                          CoinIndexedVector * spareColumn1,
@@ -86,7 +87,7 @@ public:
                        CoinIndexedVector * spareColumn1,
                        CoinIndexedVector * spareColumn2);
      /// Updates two arrays for steepest
-     void transposeTimes2(const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+     int transposeTimes2(const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
                           const CoinIndexedVector * pi2, CoinIndexedVector * dj2,
                           CoinIndexedVector * spare, double scaleFactor);
 
@@ -110,6 +111,8 @@ public:
          5) at end of values pass (so need initialization)
      */
      virtual void saveWeights(ClpSimplex * model, int mode);
+     /// redo infeasibilities
+     void redoInfeasibilities();
      /// Gets rid of last update
      virtual void unrollWeights();
      /// Gets rid of all arrays
@@ -125,6 +128,22 @@ public:
      /// Mode
      inline int mode() const {
           return mode_;
+     }
+     /// Set mode
+     inline void setMode(int mode) {
+          mode_ = mode;
+     }
+     /// square of infeasibility array (just for infeasible columns)
+     inline CoinIndexedVector * infeasible() const {
+       return infeasible_;
+     }
+     /// Weights
+     inline const double * weights() const {
+       return weights_;
+     }
+     /// alternate weight array
+     inline CoinIndexedVector * alternateWeights() const {
+       return alternateWeights_;
      }
      /** Returns number of extra columns for sprint algorithm - 0 means off.
          Also number of iterations before recompute
@@ -227,6 +246,12 @@ protected:
 
      */
      int mode_;
+     /* Infeasibility state i.e. array of infeasibilities and sequenceIn-
+	0 - correct
+	1 - needs correcting
+	2 - not known but column sequence has been chosen
+     */
+     int infeasibilitiesState_;
      /// Life of weights
      Persistence persistence_;
      /// Number of times switched from partial dantzig to 0/2

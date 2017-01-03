@@ -41,6 +41,12 @@ extern glp_prob* cbc_glp_prob;
 #define GLP_OPT 5
 #endif
 
+#if ABOCA_LITE
+// 1 is not owner of abcState_
+#define ABCSTATE_LITE 1
+#include <cilk/cilk.h>
+#include <cilk/cilk_api.h>
+#endif
 #include "AbcCommon.hpp"
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
@@ -191,6 +197,11 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
 	  startCpu=CoinCpuTime();
 	  memset(debugInt,0,sizeof(debugInt));
 	  memset(debugDouble,0,sizeof(debugDouble));
+#endif
+#if ABOCA_LITE
+	  //__cilkrts_end_cilk();
+	  __cilkrts_set_param("nworkers","1");
+	  //abcState_=1;
 #endif
 #if 0
 #ifndef ABC_INHERIT
@@ -764,7 +775,17 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                    allowImportErrors = action;
                                    break;
                               case CLP_PARAM_STR_ABCWANTED:
+#ifdef ABC_INHERIT
                                    models[iModel].setAbcState(action);
+#elif ABOCA_LITE
+                                   setAbcState(action);
+				   {
+				     char temp[3];
+				     sprintf(temp,"%d",action);
+				     __cilkrts_set_param("nworkers",temp);
+				     printf("setting cilk workers to %d\n",action);
+				   }
+#endif
                                    break;
                               case CLP_PARAM_STR_INTPRINT:
                                    printMode = action;
@@ -3410,7 +3431,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
      if (model->logLevel() < 2)
           return ;
 #endif
-     int kMax = model->logLevel() > 3 ? 1000000 : 10;
+     int kMax = model->logLevel() > 3 ? 10000000 : 10;
      k = 0;
      for (iRow = 1; iRow <= numberRows; iRow++) {
           if (number[iRow]) {
@@ -3420,29 +3441,25 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
                     break;
           }
      }
-     if (k < numberRows) {
-          int kk = k;
-          k = 0;
-          for (iRow = numberRows; iRow >= 1; iRow--) {
-               if (number[iRow]) {
-                    k++;
-                    if (k == kMax)
-                         break;
-               }
-          }
-          if (k > kk) {
-               printf("\n    .........\n\n");
-               iRow = k;
-               k = 0;
-               for (; iRow < numberRows; iRow++) {
-                    if (number[iRow]) {
-                         k++;
-                         printf("%d columns have %d entries\n", number[iRow], iRow);
-                         if (k == kMax)
-                              break;
-                    }
-               }
-          }
+     {
+       int n = 0;
+       int nLast=-1;
+       int iLast=-1;
+       int jRow=iRow;
+       iRow++;
+       for (; iRow <numberRows; iRow++) {
+	 if (number[iRow]) {
+	   n += number[iRow];
+	   nLast = number[iRow];
+	   iLast=iRow;
+	 }
+       }
+       if (n) {
+	 printf("\n    ... set logLevel >3 to see all ......\n\n");
+	 printf("%d columns > %d entries < %d\n", n-nLast, jRow,iLast);
+	 printf("%d column%s %d entries\n", nLast,
+		nLast>1 ? "s have" : " has",iLast);
+       }
      }
      delete [] number;
      printf("\n\n");
@@ -3872,29 +3889,25 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
                     break;
           }
      }
-     if (k < numberColumns) {
-          int kk = k;
-          k = 0;
-          for (iColumn = numberColumns; iColumn >= 1; iColumn--) {
-               if (number[iColumn]) {
-                    k++;
-                    if (k == kMax)
-                         break;
-               }
-          }
-          if (k > kk) {
-               printf("\n    .........\n\n");
-               iColumn = k;
-               k = 0;
-               for (; iColumn < numberColumns; iColumn++) {
-                    if (number[iColumn]) {
-                         k++;
-                         printf("%d rows have %d entries\n", number[iColumn], iColumn);
-                         if (k == kMax)
-                              break;
-                    }
-               }
-          }
+     {
+       int n = 0;
+       int nLast=-1;
+       int iLast=-1;
+       int jColumn=iColumn;
+       iColumn++;
+       for (; iColumn <numberColumns; iColumn++) {
+	 if (number[iColumn]) {
+	   n += number[iColumn];
+	   nLast = number[iColumn];
+	   iLast=iColumn;
+	 }
+       }
+       if (n) {
+	 printf("\n    ... set logLevel >3 to see all ......\n\n");
+	 printf("%d rows > %d entries < %d\n", n-nLast, jColumn,iLast);
+	 printf("%d row%s %d entries\n", nLast,
+		nLast>1 ? "s have" : " has",iLast);
+       }
      }
      if (morePrint
 #ifdef SYM

@@ -20,6 +20,7 @@
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
+class CoinFactorization;
 class CoinIndexedVector;
 class ClpNonLinearCost;
 class ClpNodeStuff;
@@ -48,6 +49,36 @@ class ClpConstraint;
 class AbcTolerancesEtc;
 class AbcSimplex;
 #include "CoinAbcCommon.hpp"
+#endif
+#ifndef ABC_INHERIT
+#if ABOCA_LITE
+#ifndef FAKE_CILK
+#include <cilk/cilk.h>
+#else
+#undef cilk_for
+#undef cilk_spawn
+#undef cilk_sync
+#define cilk_for for
+#define cilk_spawn
+#define cilk_sync
+#endif
+#ifndef LONG_REGION_2
+#define LONG_REGION_2 1
+#endif
+#define SHORT_REGION 1
+#else
+#define cilk_spawn
+#define cilk_sync
+#endif
+#ifdef LONG_REGION_2
+#define SHORT_REGION 1
+#else
+#define SHORT_REGION 2
+#endif
+#else
+//ABC_INHERIT
+#define LONG_REGION_2 1
+#define SHORT_REGION 1
 #endif
 /** This solves LPs using the simplex method
 
@@ -136,11 +167,11 @@ public:
      /** This copies back stuff from miniModel and then deletes miniModel.
          Only to be used with mini constructor */
      void originalModel(ClpSimplex * miniModel);
+#ifdef ABC_INHERIT
   inline int abcState() const
   { return abcState_;}
   inline void setAbcState(int state)
   { abcState_=state;}
-#ifdef ABC_INHERIT
   inline AbcSimplex * abcSimplex() const
   { return abcSimplex_;}
   inline void setAbcSimplex(AbcSimplex * simplex)
@@ -1230,6 +1261,8 @@ public:
      inline ClpNonLinearCost * nonLinearCost() const {
           return nonLinearCost_;
      }
+     /// Set pointer to details of costs
+     void setNonLinearCost(ClpNonLinearCost & nonLinearCost);
      /** Return more special options
          1 bit - if presolve says infeasible in ClpSolve return
          2 bit - if presolved problem infeasible return
@@ -1278,6 +1311,7 @@ public:
 	 2097152 bit - no primal in fastDual2 if feasible
 	 4194304 bit - tolerances have been changed by code
 	 8388608 bit - tolerances are dynamic (at first)
+	 16777216 bit - try vector matrix
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;
@@ -1735,13 +1769,13 @@ protected:
      ClpSimplexProgress progress_;
 #ifdef ABC_INHERIT
   AbcSimplex * abcSimplex_;
+  int abcState_;
 #define CLP_ABC_WANTED 1
 #define CLP_ABC_WANTED_PARALLEL 2
 #define CLP_ABC_FULL_DONE 8
   // bits 256,512,1024 for crash
 #endif
 #define CLP_ABC_BEEN_FEASIBLE 65536
-  int abcState_;
   /// Number of degenerate pivots since last perturbed
   int numberDegeneratePivots_;
 public:
@@ -1832,5 +1866,72 @@ public:
   int numberThreads_;
 };
 void * clp_parallelManager(void * stuff);
+#endif
+typedef struct {
+  double upperTheta;
+  double bestPossible;
+  double acceptablePivot;
+  double tolerance; 
+  double dualTolerance; 
+  double theta; 
+  double primalRatio;
+  double changeObj;
+  const double * COIN_RESTRICT cost;
+  double  * COIN_RESTRICT solution;
+  double * COIN_RESTRICT reducedCost; 
+  const double * COIN_RESTRICT lower; 
+  const double * COIN_RESTRICT upper;
+  double * COIN_RESTRICT work; 
+  int * COIN_RESTRICT index;
+  double * COIN_RESTRICT spare;
+  const unsigned char * COIN_RESTRICT status; 
+  int * COIN_RESTRICT which; 
+  double * COIN_RESTRICT infeas;
+  const int * COIN_RESTRICT pivotVariable;
+  const double * COIN_RESTRICT element; 
+  const CoinBigIndex * COIN_RESTRICT start;
+  const int * COIN_RESTRICT row;
+  int numberAdded;
+  int numberInfeasibilities; 
+  int numberRemaining;
+  int startColumn;
+  int numberToDo;
+  int numberColumns;
+} clpTempInfo;
+#ifndef ABC_INHERIT
+#if ABOCA_LITE
+void moveAndZero(clpTempInfo * info,int type,void * extra);
+// 2 is owner of abcState_
+#ifdef ABCSTATE_LITE
+#if ABCSTATE_LITE==2
+int abcState_=0;
+#else
+extern int abcState_;
+#endif
+  inline int abcState() 
+  { return abcState_;}
+  inline void setAbcState(int state)
+  { abcState_=state;}
+#endif
+#else
+#define abcState 0
+#endif
+#endif
+#ifdef CLP_USER_DRIVEN
+// expand as needed
+typedef struct {
+  double alpha;
+  double totalThru;
+  double rhs;
+  double value;
+  double lower;
+  double upper;
+  double cost;
+  int type;
+  int row;
+  int sequence;
+  int printing;
+  int change;
+} clpUserStruct;
 #endif
 #endif

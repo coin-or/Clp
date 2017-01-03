@@ -96,7 +96,7 @@ int ClpSimplexNonlinear::primal ()
                     rowArray_[iRow]->clear();
                }
 
-               for (iColumn = 0; iColumn < 2; iColumn++) {
+               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                     columnArray_[iColumn]->clear();
                }
 

@@ -458,6 +458,8 @@ int mainTest (int argc, const char *argv[], int algorithm,
                objValueTol.push_back(1.e-5);
                objValue.push_back(/*-5.5740430007e+02*/ -557.48972927292);
                bestStrategy.push_back(3);
+#endif
+#if 1
                mpsName.push_back("pilot4");
                min.push_back(true);
                nRows.push_back(411);
@@ -465,7 +467,6 @@ int mainTest (int argc, const char *argv[], int algorithm,
                objValueTol.push_back(5.e-5);
                objValue.push_back(-2.5811392641e+03);
                bestStrategy.push_back(3);
-#endif
                mpsName.push_back("pilot87");
                min.push_back(true);
                nRows.push_back(2031);
@@ -473,7 +474,6 @@ int mainTest (int argc, const char *argv[], int algorithm,
                objValueTol.push_back(1.e-4);
                objValue.push_back(3.0171072827e+02);
                bestStrategy.push_back(0);
-#if 1
                mpsName.push_back("adlittle");
                min.push_back(true);
                nRows.push_back(57);
@@ -879,14 +879,14 @@ int mainTest (int argc, const char *argv[], int algorithm,
                min.push_back(true);
                nRows.push_back(148);
                nCols.push_back(1350);
-               objValueTol.push_back(1.e-10);
+               objValueTol.push_back(1.e-8);
                objValue.push_back(5.0500000078e+01);
                bestStrategy.push_back(3 + 100);
                mpsName.push_back("scsd8");
                min.push_back(true);
                nRows.push_back(398);
                nCols.push_back(2750);
-               objValueTol.push_back(1.e-10);
+               objValueTol.push_back(1.e-7);
                objValue.push_back(9.0499999993e+02);
                bestStrategy.push_back(1 + 100);
                mpsName.push_back("sctap1");
@@ -1046,6 +1046,8 @@ int mainTest (int argc, const char *argv[], int algorithm,
                objValueTol.push_back(5.e-5);
                objValue.push_back(1.4429024116e+00);
                bestStrategy.push_back(3);
+#endif
+#if 1
                mpsName.push_back("woodw");
                min.push_back(true);
                nRows.push_back(1099);

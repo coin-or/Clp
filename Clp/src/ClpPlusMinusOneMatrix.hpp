@@ -177,11 +177,14 @@ public:
          and if it would be faster */
      virtual bool canCombine(const ClpSimplex * model,
                              const CoinIndexedVector * pi) const;
-     /// Updates two arrays for steepest
-     virtual void transposeTimes2(const ClpSimplex * model,
-                                  const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                                  const CoinIndexedVector * pi2,
-                                  CoinIndexedVector * spare,
+     /** Updates two arrays for steepest and does devex weights 
+	 Returns nonzero if updates reduced cost and infeas -
+	 new infeas in dj1 */
+     virtual int transposeTimes2(const ClpSimplex * model,
+				 const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+				 const CoinIndexedVector * pi2,
+				 CoinIndexedVector * spare,
+				 double * infeas, double * reducedCost,
                                   double referenceIn, double devex,
                                   // Array for exact devex to say what is in reference framework
                                   unsigned int * reference,

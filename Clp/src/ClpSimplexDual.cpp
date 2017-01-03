@@ -98,6 +98,10 @@
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpHelperFunctions.hpp"
+#if ABOCA_LITE
+// 2 is owner of abcState_
+#define ABCSTATE_LITE 2
+#endif
 #include "ClpSimplexDual.hpp"
 #include "ClpEventHandler.hpp"
 #include "ClpFactorization.hpp"
@@ -236,7 +240,7 @@ ClpSimplexDual::startupSolve(int ifValuesPass, double * saveDuals, int startFini
      // If user asked for perturbation - do it
      numberFake_ = 0; // Number of variables at fake bounds
      numberChanged_ = 0; // Number of variables with changed costs
-     if (!startup(0, startFinishOptions)) {
+     if (!startup(0/* ? fix valuesPass */, startFinishOptions)) {
           int usePrimal = 0;
           // looks okay
           // Superbasic variables not allowed
@@ -434,7 +438,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
                rowArray_[iRow]->clear();
           }
 
-          for (iColumn = 0; iColumn < 2; iColumn++) {
+          for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                columnArray_[iColumn]->clear();
           }
 
@@ -806,7 +810,7 @@ int ClpSimplexDual::dual (int ifValuesPass , int startFinishOptions)
                     rowArray_[iRow]->clear();
                }
 
-               for (iColumn = 0; iColumn < 2; iColumn++) {
+               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                     columnArray_[iColumn]->clear();
                }
 
@@ -920,7 +924,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
           for (i = 0; i < 4; i++) {
                rowArray_[i]->clear();
           }
-          for (i = 0; i < 2; i++) {
+          for (i = 0; i < SHORT_REGION; i++) {
                columnArray_[i]->clear();
           }
      }
@@ -1192,6 +1196,12 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                candidate = -1;
           dualRow(candidate);
           if (pivotRow_ >= 0) {
+#if ABOCA_LITE_FACTORIZATION
+	    int numberThreads=abcState();
+	    if (numberThreads)
+	      cilk_spawn factorization_->replaceColumn1(columnArray_[1],
+						      pivotRow_);
+#endif
                // we found a pivot row
                if (handler_->detail(CLP_SIMPLEX_PIVOTROW, messages_) < 100) {
                     handler_->message(CLP_SIMPLEX_PIVOTROW, messages_)
@@ -1255,7 +1265,12 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
 #endif
                     // do ratio test for normal iteration
                     bestPossiblePivot = dualColumn(rowArray_[0], columnArray_[0], rowArray_[3],
-                                                   columnArray_[1], acceptablePivot, dubiousWeights);
+#ifdef LONG_REGION_2 
+                                                   rowArray_[2],
+#else 
+                                                   columnArray_[1],
+#endif 
+						   acceptablePivot, dubiousWeights);
 		    if (sequenceIn_<0&&acceptablePivot>acceptablePivot_)
 		      acceptablePivot_ = - fabs(acceptablePivot_); // stop early exit
 #if CAN_HAVE_ZERO_OBJ>1
@@ -1517,7 +1532,16 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                          }
                     }
                     // if stable replace in basis
-                    int updateStatus = factorization_->replaceColumn(this,
+		    int updateStatus=123456789; 
+#if ABOCA_LITE_FACTORIZATION
+		    if (numberThreads)
+		      cilk_sync;
+		    if (columnArray_[1]->getNumElements())
+		      updateStatus = factorization_->replaceColumn2(columnArray_[1],
+								    pivotRow_,alpha_);
+		    if (updateStatus==123456789)
+#endif
+		     updateStatus = factorization_->replaceColumn(this,
                                        rowArray_[2],
                                        rowArray_[1],
                                        pivotRow_,
@@ -2295,23 +2319,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
 #endif
      return returnCode;
 }
-//#define ABOCA_LITE 4
 #if ABOCA_LITE
-#include <cilk/cilk.h>
-typedef struct {
-  double tolerance;
-  double theta;
-  double * reducedCost;
-  const double * lower;
-  const double * upper;
-  double * work;
-  const unsigned char * statusArray;
-  int * which;
-  int numberInfeasibilities;
-  int numberToDo;
-} update_duals;
 static void
-updateDualBit(update_duals & info)
+updateDualBit(clpTempInfo & info)
 {
   int numberInfeasibilities = 0;
   double tolerance = info.tolerance;
@@ -2322,7 +2332,7 @@ updateDualBit(update_duals & info)
   double * COIN_RESTRICT work = info.work;
   int number = info.numberToDo;
   int * COIN_RESTRICT which = info.which;
-  const unsigned char * COIN_RESTRICT statusArray = info.statusArray;
+  const unsigned char * COIN_RESTRICT statusArray = info.status;
   double multiplier[] = { -1.0, 1.0};
   for (int i = 0; i < number; i++) {
     int iSequence = which[i];
@@ -2438,27 +2448,29 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
           if ((moreSpecialOptions_ & 8) != 0) {
                const unsigned char * COIN_RESTRICT statusArray = status_;
 #if ABOCA_LITE
-	       update_duals info[ABOCA_LITE];
-	       int chunk = (number+ABOCA_LITE-1)/ABOCA_LITE;
+	       int numberThreads=abcState();
+	       if (numberThreads) {
+	       clpTempInfo info[ABOCA_LITE];
+	       int chunk = (number+numberThreads-1)/numberThreads;
 	       int n=0;
 	       int * whichX = which;
-	       for (i=0;i<ABOCA_LITE;i++) {
+	       for (i=0;i<numberThreads;i++) {
 		 info[i].theta=theta;
 		 info[i].tolerance=tolerance;
 		 info[i].reducedCost = reducedCost;
 		 info[i].lower = lower;
 		 info[i].upper = upper;
-		 info[i].statusArray=statusArray;
+		 info[i].status=statusArray;
 		 info[i].which=which+n;
 		 info[i].work=work+n;
 		 info[i].numberToDo=CoinMin(chunk,number-n);
 		 n += chunk;
 	       }
-	       for (i=0;i<ABOCA_LITE;i++) {
+	       for (i=0;i<numberThreads;i++) {
 		 cilk_spawn updateDualBit(info[i]);
 	       }
 	       cilk_sync;
-	       for (i=0;i<ABOCA_LITE;i++) {
+	       for (i=0;i<numberThreads;i++) {
 		 int n = info[i].numberInfeasibilities;
 		 double * workV = info[i].work;
 		 int * whichV = info[i].which;
@@ -2475,7 +2487,8 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
 		    matrix_->add(this, outputArray, iSequence, movement);
 		 }
                }
-#else
+	       } else {
+#endif
                for (i = 0; i < number; i++) {
                     int iSequence = which[i];
                     double alphaI = work[i];
@@ -2508,6 +2521,8 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
                          }
                     }
                }
+#if ABOCA_LITE
+	       }
 #endif
           } else {
                for (i = 0; i < number; i++) {
@@ -3351,25 +3366,10 @@ ClpSimplexDual::changeBounds(int initialize,
      }
 }
 #if ABOCA_LITE
-typedef struct {
-  const int * COIN_RESTRICT which;
-  const double * COIN_RESTRICT work;
-  int * COIN_RESTRICT index;
-  double * COIN_RESTRICT spare;
-  const unsigned char * COIN_RESTRICT status;
-  const double * COIN_RESTRICT reducedCost;
-  double upperTheta;
-  double bestPossible;
-  double acceptablePivot;
-  double dualTolerance;
-  int numberRemaining;
-  int numberToDo;
-} pricingInfo;
-
 /* Meat of transposeTimes by column when not scaled and skipping
    and doing part of dualColumn */
 static void
-dualColumn00(pricingInfo & info)
+dualColumn00(clpTempInfo & info)
 {
   const int * COIN_RESTRICT which = info.which;
   const double * COIN_RESTRICT work = info.work;
@@ -3379,7 +3379,7 @@ dualColumn00(pricingInfo & info)
   const double * COIN_RESTRICT reducedCost = info.reducedCost;
   double upperTheta = info.upperTheta;
   double acceptablePivot = info.acceptablePivot;
-  double dualTolerance = info.dualTolerance;
+  double dualTolerance = info.tolerance;
   double bestPossible = info.bestPossible;
   int numberToDo=info.numberToDo;
   double tentativeTheta = 1.0e15;
@@ -3412,24 +3412,73 @@ dualColumn00(pricingInfo & info)
   info.upperTheta = upperTheta;
   info.bestPossible = bestPossible;
 }
-static 
-void ClpMemmove(void * to, void * from,int nChar)
-{ memmove(to,from,nChar);}
-// later do so less zeroing in first blocks
-// and some of it combined for loop to move and zero
-static void moveAndZero(double * to, double * from, int n)
+void moveAndZero(clpTempInfo * info,int type,void * extra)
 {
-  long int distance = from-to;
-  assert (distance>=0);
-  if (distance==0)
-    return;
-  memmove(to,from,n*sizeof(double));
-  if (n<distance) {
-    // no overlap
-    memset(from,0,n*sizeof(double));
-  } else {
-    //memmove(to,from,n*sizeof(double));
-    memset(to+n,0,distance*sizeof(double));
+  int numberThreads=abcState();
+  switch (type) {
+  case 1:
+    {
+      int numberRemaining = info[0].numberRemaining;
+      int * COIN_RESTRICT index = info[0].index+numberRemaining;
+      double * COIN_RESTRICT spare = info[0].spare+numberRemaining;
+      for (int i=1;i<numberThreads;i++) {
+	int number = info[i].numberRemaining;
+	memmove(index,info[i].index,number*sizeof(int));
+	index += number;
+	double * COIN_RESTRICT from = info[i].spare;
+	assert (from>=spare);
+	memmove(spare,from,number*sizeof(double));
+	spare += number;
+      }
+      // now zero out
+      int i;
+      for (i=1;i<numberThreads;i++) {
+	double * spareBit = info[i].spare + info[i].numberRemaining;
+	if (spareBit>spare) {
+	  memset(spare,0,(spareBit-spare)*sizeof(double));
+	  break;
+	}
+      }
+      i++; // just zero
+      for (;i<numberThreads;i++) {
+	int number = info[i].numberRemaining;
+	memset(info[i].spare,0,number*sizeof(double));
+      }
+    }
+    break;
+  case 2:
+    {
+      int numberAdded = info[0].numberAdded;
+      int * COIN_RESTRICT index = info[0].which+numberAdded;
+      double * COIN_RESTRICT spare = info[0].infeas+numberAdded;
+      for (int i=1;i<numberThreads;i++) {
+	int number = info[i].numberAdded;
+	memmove(index,info[i].which,number*sizeof(int));
+	index += number;
+	double * COIN_RESTRICT from = info[i].infeas;
+	assert (from>=spare);
+	memmove(spare,from,number*sizeof(double));
+	spare += number;
+      }
+      // now zero out
+      int i;
+      for (i=1;i<numberThreads;i++) {
+	double * spareBit = info[i].infeas + info[i].numberAdded;
+	if (spareBit>spare) {
+	  memset(spare,0,(spareBit-spare)*sizeof(double));
+	  break;
+	}
+      }
+      i++; // just zero
+      for (;i<numberThreads;i++) {
+	int number = info[i].numberAdded;
+	memset(info[i].infeas,0,number*sizeof(double));
+      }
+    }
+    break;
+  default:
+    abort();
+    break;
   }
 }
 #endif
@@ -3462,7 +3511,8 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
 #if ABOCA_LITE==0
 	  int nSections=2;
 #else
-	  int nSections=1;
+	  int numberThreads=abcState();
+	  int nSections=numberThreads ? 1 : 2;
 #endif
           for (int iSection = 0; iSection < nSections; iSection++) {
 
@@ -3515,44 +3565,42 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                }
           }
 #if ABOCA_LITE
+	  if (numberThreads) {
 	  work = columnArray->denseVector();
 	  number = columnArray->getNumElements();
 	  which = columnArray->getIndices();
 	  reducedCost = reducedCostWork_;
 	  unsigned char * statusArray = status_;
 	  
-	  pricingInfo info[ABOCA_LITE];
-	  int chunk = (number+ABOCA_LITE-1)/ABOCA_LITE;
+	  clpTempInfo info[ABOCA_LITE];
+	  int chunk = (number+numberThreads-1)/numberThreads;
 	  int n=0;
 	  int nR=numberRemaining;
-	  for (int i=0;i<ABOCA_LITE;i++) {
-	    info[i].which=which+n;
-	    info[i].work=work+n;
+	  for (int i=0;i<numberThreads;i++) {
+	    info[i].which=const_cast<int *>(which+n);
+	    info[i].work=const_cast<double *>(work+n);
 	    info[i].numberToDo=CoinMin(chunk,number-n);
 	    n += chunk;
 	    info[i].index = index+nR;
 	    info[i].spare = spare+nR;
 	    nR += chunk;
-	    info[i].reducedCost = reducedCost;
+	    info[i].reducedCost = const_cast<double *>(reducedCost);
 	    info[i].upperTheta = upperTheta;
 	    info[i].bestPossible = bestPossible;
 	    info[i].acceptablePivot = acceptablePivot;
 	    info[i].status = statusArray;
-	    info[i].dualTolerance=dualTolerance_;
+	    info[i].tolerance=dualTolerance_;
 	  }
-	  for (int i=0;i<ABOCA_LITE;i++) {
+	  for (int i=0;i<numberThreads;i++) {
 	    cilk_spawn dualColumn00(info[i]);
 	  }
 	  cilk_sync;
-	  numberRemaining += info[0].numberRemaining;
-	  bestPossible = CoinMax(bestPossible,info[0].bestPossible);
-	  upperTheta = CoinMin(upperTheta,info[0].upperTheta);
-	  for (int i=1;i<ABOCA_LITE;i++) {
-	    ClpMemmove(index+numberRemaining,info[i].index,info[i].numberRemaining*sizeof(int));
-	    moveAndZero(spare+numberRemaining,info[i].spare,info[i].numberRemaining);
+	  moveAndZero(info,1,NULL);
+	  for (int i=0;i<numberThreads;i++) {
 	    numberRemaining += info[i].numberRemaining;
-	    bestPossible = CoinMax(bestPossible,info[i].bestPossible);
-	    upperTheta = CoinMin(upperTheta,info[i].upperTheta);
+	    bestPossible = CoinMax(bestPossible,static_cast<double>(info[i].bestPossible));
+	    upperTheta = CoinMin(upperTheta,static_cast<double>(info[i].upperTheta));
+	  }
 	  }
 #endif
      } else {
@@ -6821,7 +6869,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
                rowArray_[iRow]->clear();
           }
 
-          for (iColumn = 0; iColumn < 2; iColumn++) {
+          for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                columnArray_[iColumn]->clear();
           }
 
@@ -6899,7 +6947,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
           rowArray_[iRow]->clear();
      }
 
-     for (iColumn = 0; iColumn < 2; iColumn++) {
+     for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
           columnArray_[iColumn]->clear();
      }
      // Say not in fast dual
@@ -7172,7 +7220,12 @@ ClpSimplexDual::pivotResultPart1()
   // do ratio test for normal iteration
   dualOut_ *= 1.0e-8;
   bestPossiblePivot = dualColumn(rowArray_[0], columnArray_[0], rowArray_[3],
-				 columnArray_[1], acceptablePivot, 
+#ifdef LONG_REGION_2 
+				 rowArray_[2],
+#else 
+				 columnArray_[1],
+#endif 
+				 acceptablePivot, 
 				 NULL/*dubiousWeights*/);
   dualOut_ *= 1.0e8;
   if (fabs(bestPossiblePivot)<1.0e-6)

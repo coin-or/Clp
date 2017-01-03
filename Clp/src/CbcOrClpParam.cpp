@@ -1704,6 +1704,11 @@ have more rounds of cuts - see passC!uts and passT!ree."
 #else
      parameters[numberParameters-1].append("Mumps_dummy");
 #endif
+#ifdef PARDISO_BARRIER
+     parameters[numberParameters-1].append("Pardiso");
+#else
+     parameters[numberParameters-1].append("Pardiso_dummy");
+#endif
      parameters[numberParameters-1].setLonghelp
      (
           "For a barrier code to be effective it needs a good Cholesky ordering and factorization.  \
@@ -2240,7 +2245,7 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("exper!iment", "Whether to use testing features",
-                        -1, 200, CBC_PARAM_INT_EXPERIMENT, 0);
+                        -1, 200000, CBC_PARAM_INT_EXPERIMENT, 0);
      parameters[numberParameters-1].setLonghelp
      (
           "Defines how adventurous you want to be in using new ideas. \

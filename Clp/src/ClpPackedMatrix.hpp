@@ -9,6 +9,7 @@
 #include "CoinPragma.hpp"
 
 #include "ClpMatrixBase.hpp"
+#include "ClpPrimalColumnSteepest.hpp"
 
 /** This implements CoinPackedMatrix as derived from ClpMatrixBase.
 
@@ -18,6 +19,7 @@
 
 class ClpPackedMatrix2;
 class ClpPackedMatrix3;
+class CoinDoubleArrayWithLength;
 class ClpPackedMatrix : public ClpMatrixBase {
 
 public:
@@ -122,7 +124,7 @@ public:
                             CoinFactorizationDouble * element);
      /** Creates scales for column copy (rowCopy in model may be modified)
          returns non-zero if no scaling done */
-     virtual int scale(ClpModel * model, const ClpSimplex * baseModel = NULL) const ;
+     virtual int scale(ClpModel * model, ClpSimplex * simplex = NULL) const ;
      /** Scales rowCopy if column copy scaled
          Only called if scales already exist */
      virtual void scaleRowCopy(ClpModel * model) const ;
@@ -262,11 +264,14 @@ public:
          and if it would be faster */
      virtual bool canCombine(const ClpSimplex * model,
                              const CoinIndexedVector * pi) const;
-     /// Updates two arrays for steepest
-     virtual void transposeTimes2(const ClpSimplex * model,
-                                  const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                                  const CoinIndexedVector * pi2,
-                                  CoinIndexedVector * spare,
+     /** Updates two arrays for steepest and does devex weights 
+	 Returns nonzero if updates reduced cost and infeas -
+	 new infeas in dj1 */
+     virtual int transposeTimes2(const ClpSimplex * model,
+				 const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+				 const CoinIndexedVector * pi2,
+				 CoinIndexedVector * spare,
+				 double * infeas, double * reducedCost,
                                   double referenceIn, double devex,
                                   // Array for exact devex to say what is in reference framework
                                   unsigned int * reference,
@@ -560,11 +565,21 @@ protected:
      //@}
 };
 typedef struct {
-     CoinBigIndex startElements_; // point to data
-     int startIndices_; // point to column_
-     int numberInBlock_;
-     int numberPrice_; // at beginning
-     int numberElements_; // number elements per column
+  CoinBigIndex startElements_; // point to data
+  CoinBigIndex startRows_; // point to data later
+  int startIndices_; // point to column_
+  int numberInBlock_;
+  int numberScan_; // i.e. miss out basic and fixed
+  /* order is -
+     free or superbasic
+     at upper
+     at lower
+     fixed or basic */
+  int firstAtUpper_;
+  int firstAtLower_;
+  int firstBasic_; // or fixed
+  int numberElements_; // number elements per column
+  int numberOnes_; // later
 } blockStruct;
 class ClpPackedMatrix3 {
 
@@ -581,6 +596,8 @@ public:
      void transposeTimes2(const ClpSimplex * model,
                           const double * pi, CoinIndexedVector * dj1,
                           const double * piWeight,
+			  double * COIN_RESTRICT infeas, 
+			  double * COIN_RESTRICT reducedCost,
                           double referenceIn, double devex,
                           // Array for exact devex to say what is in reference framework
                           unsigned int * reference,
@@ -611,6 +628,16 @@ public:
      /// Swap one variable
      void swapOne(const ClpSimplex * model, const ClpPackedMatrix * matrix,
                   int iColumn);
+     /// Part of above
+     void swapOne(int iBlock, int kA, int kB);
+     /**
+	type - 1 redo infeasible, 2 choose sequenceIn, 3 both
+	returns sequenceIn (or -1) for type 2
+     */
+     int redoInfeasibilities(const ClpSimplex * model,
+			     ClpPrimalColumnSteepest * pivotChoose,
+			     int type);
+  /// Get temporary array (aligned)
      //@}
 
 
@@ -622,17 +649,99 @@ protected:
      int numberBlocks_;
      /// Number of columns
      int numberColumns_;
+     /// Number of columns including gaps
+     int numberColumnsWithGaps_;
+#if ABOCA_LITE
+     /// Number of chunks
+     int numberChunks_;
+#endif
+     /// Number of elements (including gaps)
+     CoinBigIndex numberElements_;
+     /// Maximum size of any block
+     int maxBlockSize_;
      /// Column indices and reverse lookup (within block)
      int * column_;
-     /// Starts for odd/long vectors
+     /// Starts for odd/long vectors??
      CoinBigIndex * start_;
      /// Rows
      int * row_;
      /// Elements
      double * element_;
+     /// Temporary work area (aligned)
+     CoinDoubleArrayWithLength * temporary_;
+#if ABOCA_LITE
+     /// Chunk ends (could have more than cpus)
+     int endChunk_[2*ABOCA_LITE+1];
+#endif
      /// Blocks (ordinary start at 0 and go to first block)
      blockStruct * block_;
      //@}
 };
-
+#elif INCLUDE_MATRIX3_PRICING
+      int iColumn=*column;
+      column++;
+      if (fabs(value) > zeroTolerance) {
+	double thisWeight = weights[iColumn];
+	double pivot = value * scaleFactor;
+	double pivotSquared = pivot * pivot;
+	thisWeight += pivotSquared * devex + pivot * modification;
+	if (thisWeight < DEVEX_TRY_NORM) {
+	  if (referenceIn < 0.0) {
+	    // steepest
+	    thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+	  } else {
+	    // exact
+	    thisWeight = referenceIn * pivotSquared;
+	    if (reference(iColumn))
+	      thisWeight += 1.0;
+	    thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+	  }
+	}
+	// out basic or fixed
+	weights[iColumn] = thisWeight;
+	value = reducedCost[iColumn]-value;
+	reducedCost[iColumn] = value;
+	unsigned char thisStatus=status[iColumn]&7;
+	assert (thisStatus!=0&&thisStatus!=4);
+	if (thisStatus==3) {
+	  //} else if ((thisStatus&1)!=0) {
+	  // basic or fixed
+	  //value=0.0;
+	} else {
+	  assert (thisStatus==2);
+	  value=-value;
+	}
+	if (value < dualTolerance) {
+	  value *= value;
+	  if (value>bestRatio*weights[iColumn]) {
+	    bestSequence = iColumn;
+	    bestRatio = value/weights[iColumn];
+#if NO_CHANGE_MULTIPLIER != 1
+	    bestRatio2 = bestRatio * NO_CHANGE_MULTIPLIER;
+#endif
+	  }
+	}
+      } else {
+	// interesting - was faster without this?!
+	value = reducedCost[iColumn];
+	unsigned char thisStatus=status[iColumn]&7;
+	assert (thisStatus!=0&&thisStatus!=4);
+	if (thisStatus==3) {
+	} else if ((thisStatus&1)!=0) {
+	  // basic or fixed
+	  value=0.0;
+	} else {
+	  value=-value;
+	}
+	if (value < dualTolerance) {
+	  value *= value;
+	  if (value>bestRatio2*weights[iColumn]) {
+	    bestSequence = iColumn;
+	    bestRatio2 = value/weights[iColumn];
+#if NO_CHANGE_MULTIPLIER != 1
+	    bestRatio = bestRatio2 * INVERSE_MULTIPLIER;
+#endif
+	  }
+	}
+      }
 #endif

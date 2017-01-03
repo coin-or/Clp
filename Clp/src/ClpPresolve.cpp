@@ -1025,7 +1025,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	       printProgress('E',0);
           }
 	  if (ifree) {
-	    int fill_level=10;
+	    int fill_level=CoinMax(10,prob->maxSubstLevel_);
 	    const CoinPresolveAction * lastAction = NULL;
 	    int iPass=4;
 	    while(lastAction!=paction_&&iPass) {
@@ -1346,7 +1346,14 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     } else {
                          // do costed if Clp (at end as ruins rest of presolve)
 		      possibleBreak;
+#ifndef CLP_MOVE_COSTS
                          paction_ = slack_singleton_action::presolve(prob, paction_, rowObjective_);
+#else
+			 double * fakeRowObjective=new double[prob->nrows_];
+			 memset(fakeRowObjective,0,prob->nrows_*sizeof(double));
+                         paction_ = slack_singleton_action::presolve(prob, paction_, fakeRowObjective);
+			 delete [] fakeRowObjective;
+#endif
                          stopLoop = true;
                     }
 		    printProgress('R',iLoop+1);

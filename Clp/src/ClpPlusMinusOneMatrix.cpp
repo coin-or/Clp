@@ -1925,12 +1925,15 @@ ClpPlusMinusOneMatrix::canCombine(const ClpSimplex * model,
 }
 // These have to match ClpPrimalColumnSteepest version
 #define reference(i)  (((reference[i>>5]>>(i&31))&1)!=0)
-// Updates two arrays for steepest
-void
+/* Updates two arrays for steepest and does devex weights 
+   Returns nonzero if updates reduced cost and infeas -
+   new infeas in dj1  - This does not at present*/
+int
 ClpPlusMinusOneMatrix::transposeTimes2(const ClpSimplex * model,
                                        const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
                                        const CoinIndexedVector * pi2,
                                        CoinIndexedVector * spare,
+				       double * , double * ,
                                        double referenceIn, double devex,
                                        // Array for exact devex to say what is in reference framework
                                        unsigned int * COIN_RESTRICT reference,
@@ -2070,6 +2073,7 @@ ClpPlusMinusOneMatrix::transposeTimes2(const ClpSimplex * model,
      spare->setNumElements(0);
      if (packed)
           dj1->setPackedMode(true);
+     return 0;
 }
 // Updates second array for steepest and does devex weights
 void

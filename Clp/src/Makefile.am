@@ -66,6 +66,7 @@ libClp_la_SOURCES = \
 	ClpSolve.cpp ClpSolve.hpp \
 	Idiot.cpp Idiot.hpp \
 	IdiSolve.cpp \
+	ClpCholeskyPardiso.cpp ClpCholeskyPardiso.hpp \
 	ClpPESimplex.cpp ClpPESimplex.hpp \
         ClpPEPrimalColumnDantzig.cpp ClpPEPrimalColumnDantzig.hpp \
  	ClpPEPrimalColumnSteepest.cpp ClpPEPrimalColumnSteepest.hpp \
@@ -242,6 +243,7 @@ includecoin_HEADERS = \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
 	Idiot.hpp \
+	ClpCholeskyPardiso.hpp \
 	ClpPESimplex.hpp \
         ClpPEPrimalColumnDantzig.hpp \
         ClpPEPrimalColumnSteepest.hpp \

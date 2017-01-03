@@ -69,6 +69,9 @@ int debugInt[24];
 #ifdef TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
+#ifdef PARDISO_BARRIER
+#include "ClpCholeskyPardiso.hpp"
+#endif
 #include "ClpCholeskyMumps.hpp"
 #ifdef COIN_HAS_VOL
 #include "VolVolume.hpp"
@@ -2948,7 +2951,17 @@ ClpSimplex::initialSolve(ClpSolve & options)
           timeX = time2;
           model2->setNumberIterations(model2->numberIterations() + totalIterations);
      } else if (method == ClpSolve::useBarrier || method == ClpSolve::useBarrierNoCross) {
-#ifndef SLIM_CLP
+         if (presolve == ClpSolve::presolveOn) {
+               int numberInfeasibilities = model2->tightenPrimalBounds(0.0, 0);
+               if (numberInfeasibilities) {
+                    handler_->message(CLP_INFEASIBLE, messages_)
+                              << CoinMessageEol;
+                    delete model2;
+                    model2 = this;
+                    presolve = ClpSolve::presolveOff;
+               }
+	 }
+ #ifndef SLIM_CLP
           //printf("***** experimental pretty crude barrier\n");
           //#define SAVEIT 2
 #ifndef SAVEIT
@@ -3070,13 +3083,25 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #ifdef COIN_HAS_MUMPS
           case 6: {
                if (!doKKT) {
-                    ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
+		    int logLevel = 0;
+		    if (barrier.logLevel()>3) {
+		      logLevel = (barrier.logLevel()>4) ? 2 : 1;
+		    }
+                    ClpCholeskyMumps * cholesky = new ClpCholeskyMumps(-1,logLevel);
                     barrier.setCholesky(cholesky);
                } else {
                     ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
                     cholesky->setKKT(true);
                     barrier.setCholesky(cholesky);
                }
+          }
+          break;
+#endif
+#ifdef PARDISO_BARRIER
+          case 7: {
+               ClpCholeskyPardiso * cholesky = new ClpCholeskyPardiso();
+               barrier.setCholesky(cholesky);
+               assert (!doKKT);
           }
           break;
 #endif
@@ -4863,6 +4888,73 @@ ClpSimplex::scaleObjective(double value)
      }
      return largest;
 }
+#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
+void * clp_parallelManager(void * stuff)
+{
+  CoinPthreadStuff * driver = reinterpret_cast<CoinPthreadStuff *>(stuff);
+  int whichThread=driver->whichThread();
+  CoinThreadInfo * threadInfo = driver->threadInfoPointer(whichThread);
+  threadInfo->status=-1;
+  int * which = threadInfo->stuff;
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
+  pthread_barrier_wait(driver->barrierPointer());
+#endif
+#if 0
+  int status=-1;
+  while (status!=100)
+    status=timedWait(driver,1000,2);
+  pthread_cond_signal(driver->conditionPointer(1));
+  pthread_mutex_unlock(driver->mutexPointer(1,whichThread));
+#endif
+  // so now mutex_ is locked
+  int whichLocked=0;
+  while (true) {
+    pthread_mutex_t * mutexPointer = driver->mutexPointer(whichLocked,whichThread);
+    // wait
+    //printf("Child waiting for %d - status %d %d %d\n",
+    //	   whichLocked,lockedX[0],lockedX[1],lockedX[2]);
+#ifdef DETAIL_THREAD
+    printf("thread %d about to lock mutex %d\n",whichThread,whichLocked);
+#endif
+    pthread_mutex_lock (mutexPointer);
+    whichLocked++;
+    if (whichLocked==3)
+      whichLocked=0;
+    int unLock=whichLocked+1;
+    if (unLock==3)
+      unLock=0;
+    //printf("child pointer %x status %d\n",threadInfo,threadInfo->status);
+    assert(threadInfo->status>=0);
+    if (threadInfo->status==1000)
+      pthread_exit(NULL);
+    int type=threadInfo->status;
+    int & returnCode=which[0];
+    int iPass=which[1];
+    ClpSimplex * clpSimplex = reinterpret_cast<ClpSimplex *>(threadInfo->extraInfo);
+    //CoinIndexedVector * array;
+    //double dummy;
+    switch(type) {
+      // dummy
+    case 0:
+      break;
+    case 1:
+      if (!clpSimplex->problemStatus()||!iPass)
+	returnCode=clpSimplex->dual();
+      else
+	returnCode=clpSimplex->primal();
+      break;
+    case 100:
+      // initialization
+      break;
+    }
+    threadInfo->status=-1;
+#ifdef DETAIL_THREAD
+    printf("thread %d about to unlock mutex %d\n",whichThread,unLock);
+#endif
+    pthread_mutex_unlock (driver->mutexPointer(unLock,whichThread));
+  }
+}
+#endif
 // Solve using Dantzig-Wolfe decomposition and maybe in parallel
 int
 ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
@@ -5136,6 +5228,19 @@ ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
      handler_->message(CLP_GENERAL, messages_)
        << generalPrint
        << CoinMessageEol;
+#ifdef ABC_INHERIT
+     //AbcSimplex abcMaster;
+     //if (!this->abcState())
+     //setAbcState(1);
+     int numberCpu=CoinMin((this->abcState()&15),4);
+     CoinPthreadStuff threadInfo(numberCpu,clp_parallelManager);
+     master.setAbcState(this->abcState());
+     //AbcSimplex * tempMaster=master.dealWithAbc(2,10,true);
+     //abcMaster=*tempMaster;
+     //delete tempMaster;
+     //abcMaster.startThreads(numberCpu);
+     //#define master abcMaster
+#endif
      for (iPass = 0; iPass < maxPass; iPass++) {
           sprintf(generalPrint,"Start of pass %d", iPass);
 	  handler_->message(CLP_GENERAL, messages_)
@@ -5207,7 +5312,12 @@ ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
                }
                printf("** suminf %g\n", sum);
           }
-          master.primal(1);
+#ifdef ABC_INHERIT
+	  master.dealWithAbc(1,0,true);
+#else
+          master.primal();
+#endif
+          //master.primal(1);
           // Correct artificials
           sumArtificials = 0.0;
           {
@@ -5220,7 +5330,12 @@ ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
           master.scaleObjective(scaleFactor);
           int problemStatus = master.status(); // do here as can change (delcols)
           if (problemStatus == 2 && master.numberColumns()) {
+#ifdef ABC_INHERIT
+	    master.dealWithAbc(1,1,true);
+#else
 	    master.primal(1);
+#endif
+	  //master.primal(1);
 	    if (problemStatus==2) {
 	      int numberColumns = master.numberColumns();
 	      double * lower = master.columnLower();
@@ -5229,7 +5344,12 @@ ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
 		lower[i]=CoinMax(lower[i],-1.0e10);
 		upper[i]=CoinMin(upper[i],1.0e10);
 	      }
+#ifdef ABC_INHERIT
+	      master.dealWithAbc(1,1,true);
+#else
 	      master.primal(1);
+#endif
+	      //master.primal(1);
 	      assert (problemStatus!=2);
 	    }
           }
@@ -5294,9 +5414,14 @@ ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
           // Create objective for sub problems and solve
           columnAdd[0] = 0;
           int numberProposals = 0;
+	  double ** saveObj2=new double * [numberBlocks];
+          for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
+	    int numberColumns2 = sub[iBlock].numberColumns();
+	    saveObj2[iBlock] = new double [numberColumns2];
+	  }
           for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
                int numberColumns2 = sub[iBlock].numberColumns();
-               double * saveObj = new double [numberColumns2];
+               double * saveObj = saveObj2[iBlock];
                double * objective2 = sub[iBlock].objective();
                memcpy(saveObj, objective2, numberColumns2 * sizeof(double));
                // new objective
@@ -5310,23 +5435,52 @@ ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
                          objective2[i] = -objective2[i];
                }
                // scale objective to be reasonable
-               double scaleFactor =
-                    sub[iBlock].scaleObjective((sumArtificials > 1.0e-5) ? -1.0e-4 : -1.0e9);
+               //double scaleFactor =
+	       //   sub[iBlock].scaleObjective((sumArtificials > 1.0e-5) ? -1.0e-4 : -1.0e9);
 		    
 	       if (reducePrint) 
 		   sub[iBlock].setLogLevel(0);
+	  }
+#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
+	  if (numberCpu<2) {
+#endif
+	    for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
                if (iPass) {
                     sub[iBlock].primal();
                } else {
                     sub[iBlock].dual();
                }
+	    }
+#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
+	  } else {
+	    int iBlock=0;
+	    while (iBlock<numberBlocks) {
+	      if (sub[iBlock].secondaryStatus()!=99||true) {
+		int iThread;
+		threadInfo.waitParallelTask(1,iThread,true);
+#ifdef DETAIL_THREAD
+		printf("Starting block %d on thread %d\n",
+		       iBlock,iThread);
+#endif
+		threadInfo.startParallelTask(1,iThread,sub+iBlock);
+	      }
+	      iBlock++;
+	    }
+	    threadInfo.waitAllTasks();
+	  }
+#endif
+          for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
+               int numberColumns2 = sub[iBlock].numberColumns();
+               double * saveObj = saveObj2[iBlock];
+               double * objective2 = sub[iBlock].objective();
+	       int i;
                sub[iBlock].scaleObjective(scaleFactor);
                if (!sub[iBlock].isProvenOptimal() &&
                          !sub[iBlock].isProvenDualInfeasible()) {
                     memset(objective2, 0, numberColumns2 * sizeof(double));
                     sub[iBlock].primal();
                     if (problemStatus == 0) {
-                         for (i = 0; i < numberColumns2; i++)
+                         for (int i = 0; i < numberColumns2; i++)
                               objective2[i] = saveObj[i] - objective2[i];
                     } else {
                          for (i = 0; i < numberColumns2; i++)
@@ -5421,9 +5575,11 @@ ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
                          abort();
                     }
                }
-               delete [] saveObj;
-          }
-          if (deleteDual)
+	  }
+	  for (iBlock = 0; iBlock < numberBlocks; iBlock++) 
+	    delete [] saveObj2[iBlock];
+	  delete [] saveObj2;
+         if (deleteDual)
                delete [] dual;
           if (numberProposals)
                master.addColumns(numberProposals, NULL, NULL, objective,
@@ -5635,71 +5791,6 @@ static ClpSimplex * deBound(ClpSimplex * oldModel)
   return model;
 }
 #if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
-void * clp_parallelManager(void * stuff)
-{
-  CoinPthreadStuff * driver = reinterpret_cast<CoinPthreadStuff *>(stuff);
-  int whichThread=driver->whichThread();
-  CoinThreadInfo * threadInfo = driver->threadInfoPointer(whichThread);
-  threadInfo->status=-1;
-  int * which = threadInfo->stuff;
-#ifdef PTHREAD_BARRIER_SERIAL_THREAD
-  pthread_barrier_wait(driver->barrierPointer());
-#endif
-#if 0
-  int status=-1;
-  while (status!=100)
-    status=timedWait(driver,1000,2);
-  pthread_cond_signal(driver->conditionPointer(1));
-  pthread_mutex_unlock(driver->mutexPointer(1,whichThread));
-#endif
-  // so now mutex_ is locked
-  int whichLocked=0;
-  while (true) {
-    pthread_mutex_t * mutexPointer = driver->mutexPointer(whichLocked,whichThread);
-    // wait
-    //printf("Child waiting for %d - status %d %d %d\n",
-    //	   whichLocked,lockedX[0],lockedX[1],lockedX[2]);
-#ifdef DETAIL_THREAD
-    printf("thread %d about to lock mutex %d\n",whichThread,whichLocked);
-#endif
-    pthread_mutex_lock (mutexPointer);
-    whichLocked++;
-    if (whichLocked==3)
-      whichLocked=0;
-    int unLock=whichLocked+1;
-    if (unLock==3)
-      unLock=0;
-    //printf("child pointer %x status %d\n",threadInfo,threadInfo->status);
-    assert(threadInfo->status>=0);
-    if (threadInfo->status==1000)
-      pthread_exit(NULL);
-    int type=threadInfo->status;
-    int & returnCode=which[0];
-    int iPass=which[1];
-    ClpSimplex * clpSimplex = reinterpret_cast<ClpSimplex *>(threadInfo->extraInfo);
-    //CoinIndexedVector * array;
-    //double dummy;
-    switch(type) {
-      // dummy
-    case 0:
-      break;
-    case 1:
-      if (!clpSimplex->problemStatus()||!iPass)
-	returnCode=clpSimplex->dual();
-      else
-	returnCode=clpSimplex->primal();
-      break;
-    case 100:
-      // initialization
-      break;
-    }
-    threadInfo->status=-1;
-#ifdef DETAIL_THREAD
-    printf("thread %d about to unlock mutex %d\n",whichThread,unLock);
-#endif
-    pthread_mutex_unlock (driver->mutexPointer(unLock,whichThread));
-  }
-}
 CoinPthreadStuff::CoinPthreadStuff(int numberThreads,
 				   void * parallelManager(void * stuff))
 {

@@ -11,7 +11,11 @@
 #include "CoinIndexedVector.hpp"
 #include "CoinHelperFunctions.hpp"
 //#define THREAD
-
+//#define FAKE_CILK
+#if ABOCA_LITE
+// 1 is not owner of abcState_
+#define ABCSTATE_LITE 1
+#endif
 #include "ClpSimplex.hpp"
 #include "ClpSimplexDual.hpp"
 #include "ClpFactorization.hpp"
@@ -47,7 +51,16 @@
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
-
+static void debug3(int iColumn,double &thisWeight,double pivotSquared,double devex,
+		   double pivot,double modification,double oldWeight)
+{
+  //double newWeight=oldWeight+pivotSquared * devex + pivot * modification;
+  //if (/*iColumn==34845 && */newWeight!=thisWeight)
+  //printf("YY %d %.30g %.30g %.30g %.30g %.30g %.30g\n",
+  //	   iColumn,thisWeight,pivotSquared,devex,pivot,modification,oldWeight);
+  thisWeight=oldWeight;
+  thisWeight += pivotSquared * devex + pivot * modification;
+}
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
@@ -315,6 +328,31 @@ ClpPackedMatrix::times(double scalar,
           }
      }
 }
+#if ABOCA_LITE
+static void
+transposeTimesBit(clpTempInfo & info)
+{
+  const CoinBigIndex * COIN_RESTRICT columnStart=info.start;
+  const int * COIN_RESTRICT row = info.row;
+  const double * COIN_RESTRICT elementByColumn = info.element;
+  double * COIN_RESTRICT y = info.spare;
+  const double * COIN_RESTRICT x = info.work;
+  int first = info.startColumn;
+  int last = first+info.numberToDo;
+  CoinBigIndex start = columnStart[first];
+  for (int iColumn = first; iColumn < last; iColumn++) {
+    CoinBigIndex j;
+    CoinBigIndex next = columnStart[iColumn+1];
+    double value = y[iColumn];
+    for (j = start; j < next; j++) {
+      int jRow = row[j];
+      value -= x[jRow] * elementByColumn[j];
+    }
+    start = next;
+    y[iColumn] = value;
+  }
+}
+#endif
 void
 ClpPackedMatrix::transposeTimes(double scalar,
                                 const double * COIN_RESTRICT x, double * COIN_RESTRICT y) const
@@ -326,6 +364,28 @@ ClpPackedMatrix::transposeTimes(double scalar,
      const double * COIN_RESTRICT elementByColumn = matrix_->getElements();
      if (!(flags_ & 2)) {
           if (scalar == -1.0) {
+#if ABOCA_LITE
+	    int numberThreads=abcState();
+	    if (numberThreads) {
+	    clpTempInfo info[ABOCA_LITE];
+	    int chunk = (numberActiveColumns_+numberThreads-1)/numberThreads;
+	    int n=0;
+	    for (int i=0;i<numberThreads;i++) {
+	      info[i].spare=y;
+	      info[i].work=const_cast<double *>(x);
+	      info[i].startColumn=n;
+	      info[i].element=elementByColumn;
+	      info[i].start=columnStart;
+	      info[i].row=row;
+	      info[i].numberToDo=CoinMin(chunk,numberActiveColumns_-n);
+	      n += chunk;
+	    }
+	    for (int i=0;i<numberThreads;i++) {
+	      cilk_spawn transposeTimesBit(info[i]);
+	    }
+	    cilk_sync;
+	    } else {
+#endif
                CoinBigIndex start = columnStart[0];
                for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
                     CoinBigIndex j;
@@ -338,6 +398,9 @@ ClpPackedMatrix::transposeTimes(double scalar,
                     start = next;
                     y[iColumn] = value;
                }
+#if ABOCA_LITE
+	    }
+#endif
           } else {
                CoinBigIndex start = columnStart[0];
                for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
@@ -518,6 +581,33 @@ ClpPackedMatrix::transposeTimes( double scalar,
           transposeTimes(scalar, x, y);
      }
 }
+#if ABOCA_LITE
+static void
+transposeTimesSubsetBit(clpTempInfo & info)
+{
+  const CoinBigIndex * COIN_RESTRICT columnStart=info.start;
+  const int * COIN_RESTRICT row = info.row;
+  const double * COIN_RESTRICT elementByColumn = info.element;
+  double * COIN_RESTRICT y = info.spare;
+  const double * COIN_RESTRICT x = info.work;
+  const int * COIN_RESTRICT which = info.which;
+  int first = info.startColumn;
+  int last = first+info.numberToDo;
+  for (int i = first; i < last; i++) {
+    int iColumn = which[i];
+    CoinBigIndex j;
+    CoinBigIndex start = columnStart[iColumn];
+    CoinBigIndex next = columnStart[iColumn+1];
+    double value = 0.0;
+    for (j = start; j < next; j++) {
+      int jRow = row[j];
+      value += x[jRow] * elementByColumn[j];
+    }
+    start = next;
+    y[iColumn] -= value;
+  }
+}
+#endif
 void
 ClpPackedMatrix::transposeTimesSubset( int number,
                                        const int * which,
@@ -545,6 +635,29 @@ ClpPackedMatrix::transposeTimesSubset( int number,
                     y[iColumn] -= value * columnScale[iColumn];
                }
           } else {
+#if ABOCA_LITE
+	       int numberThreads=abcState();
+	       if (numberThreads) {
+  	       clpTempInfo info[ABOCA_LITE];
+	       int chunk = (number+numberThreads-1)/numberThreads;
+	       int n=0;
+	       for (int i=0;i<numberThreads;i++) {
+		 info[i].spare=y;
+		 info[i].work=const_cast<double *>(x);
+		 info[i].which=const_cast<int *>(which);
+		 info[i].startColumn=n;
+		 info[i].element=elementByColumn;
+		 info[i].start=columnStart;
+		 info[i].row=row;
+		 info[i].numberToDo=CoinMin(chunk,number-n);
+		 n += chunk;
+	       }
+	       for (int i=0;i<numberThreads;i++) {
+		 cilk_spawn transposeTimesSubsetBit(info[i]);
+	       }
+	       cilk_sync;
+	       } else {
+#endif
                for (int jColumn = 0; jColumn < number; jColumn++) {
                     int iColumn = which[jColumn];
                     CoinBigIndex j;
@@ -557,6 +670,9 @@ ClpPackedMatrix::transposeTimesSubset( int number,
                     }
                     y[iColumn] -= value;
                }
+#if ABOCA_LITE
+	    }
+#endif
           }
      } else {
           // can use spare region
@@ -962,6 +1078,16 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
                               model->spareDoubleArray_[0] = upperTheta;
                               model->spareDoubleArray_[1] = bestPossible;
                               spareArray->setNumElements(numberRemaining);
+#if 0
+                              columnArray->setNumElements(numberNonZero);
+			      spareArray->setPackedMode(true);
+			      columnArray->setPackedMode(true);
+			      spareArray->checkClean();
+			      columnArray->checkClean();
+			      printf("col %d spare %d upper %g best %g\n",
+				     columnArray->getNumElements(),
+				     spareArray->getNumElements(),upperTheta,bestPossible);
+#endif
                               // signal partially done
                               model->spareIntArray_[0] = -2;
                          } else {
@@ -1455,6 +1581,60 @@ ClpPackedMatrix::gutsOfTransposeTimesScaled(const double * COIN_RESTRICT pi,
      }
      return numberNonZero;
 }
+#if ABOCA_LITE
+static void
+transposeTimesUnscaledBit(clpTempInfo & info)
+{
+  const CoinBigIndex * COIN_RESTRICT columnStart=info.start;
+  const int * COIN_RESTRICT row = info.row;
+  const double * COIN_RESTRICT elementByColumn = info.element;
+  double * COIN_RESTRICT array = info.infeas;
+  int * COIN_RESTRICT index = info.which;
+  const unsigned char * COIN_RESTRICT status = info.status;
+  double zeroTolerance=info.tolerance;
+  const double * COIN_RESTRICT pi = info.work;
+  int first = info.startColumn;
+  int last = first+info.numberToDo;
+  double value = 0.0;
+  int jColumn = -1;
+  int numberNonZero=0;
+  for (int iColumn = first; iColumn < last; iColumn++) {
+    bool wanted = ((status[iColumn] & 3) != 1);
+    if (fabs(value) > zeroTolerance) {
+      array[numberNonZero] = value;
+      index[numberNonZero++] = jColumn;
+    }
+    value = 0.0;
+    if (wanted) {
+      CoinBigIndex start = columnStart[iColumn];
+      CoinBigIndex end = columnStart[iColumn+1];
+      jColumn = iColumn;
+      int n = end - start;
+      bool odd = (n & 1) != 0;
+      n = n >> 1;
+      const int * COIN_RESTRICT rowThis = row + start;
+      const double * COIN_RESTRICT elementThis = elementByColumn + start;
+      for (; n; n--) {
+	int iRow0 = *rowThis;
+	int iRow1 = *(rowThis + 1);
+	rowThis += 2;
+	value += pi[iRow0] * (*elementThis);
+	value += pi[iRow1] * (*(elementThis + 1));
+	elementThis += 2;
+      }
+      if (odd) {
+	int iRow = *rowThis;
+	value += pi[iRow] * (*elementThis);
+      }
+    }
+  }
+  if (fabs(value) > zeroTolerance) {
+    array[numberNonZero] = value;
+    index[numberNonZero++] = jColumn;
+  }
+  info.numberAdded=numberNonZero;
+}
+#endif
 // Meat of transposeTimes by column when not scaled
 int
 ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
@@ -1468,6 +1648,34 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
      const int * COIN_RESTRICT row = matrix_->getIndices();
      const CoinBigIndex * COIN_RESTRICT columnStart = matrix_->getVectorStarts();
      const double * COIN_RESTRICT elementByColumn = matrix_->getElements();
+#if ABOCA_LITE
+     int numberThreads=abcState();
+     if (numberThreads) {
+     clpTempInfo info[ABOCA_LITE];
+     int chunk = (numberActiveColumns_+numberThreads-1)/numberThreads;
+     int n=0;
+     for (int i=0;i<numberThreads;i++) {
+       info[i].which = index+n;
+       info[i].infeas = array+n;
+       info[i].work=const_cast<double *>(pi);
+       info[i].status=const_cast<unsigned char *>(status);
+       info[i].startColumn=n;
+       info[i].element=elementByColumn;
+       info[i].start=columnStart;
+       info[i].row=row;
+       info[i].numberToDo=CoinMin(chunk,numberActiveColumns_-n);
+       info[i].tolerance=zeroTolerance;
+       n += chunk;
+     }
+     for (int i=0;i<numberThreads;i++) {
+       cilk_spawn transposeTimesUnscaledBit(info[i]);
+     }
+     cilk_sync;
+     for (int i=0;i<numberThreads;i++) 
+       numberNonZero += info[i].numberAdded;
+     moveAndZero(info,2,NULL);
+       } else {
+#endif
      double value = 0.0;
      int jColumn = -1;
      for (int iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
@@ -1504,8 +1712,89 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
           array[numberNonZero] = value;
           index[numberNonZero++] = jColumn;
      }
+#if ABOCA_LITE
+	    }
+#endif
      return numberNonZero;
 }
+#if ABOCA_LITE
+static void
+transposeTimesUnscaledBit2(clpTempInfo & info)
+{
+  const CoinBigIndex * COIN_RESTRICT columnStart=info.start;
+  const int * COIN_RESTRICT row = info.row;
+  const double * COIN_RESTRICT elementByColumn = info.element;
+  double * COIN_RESTRICT array = info.infeas;
+  const double * COIN_RESTRICT reducedCost = info.reducedCost;
+  int * COIN_RESTRICT index = info.which;
+  double * COIN_RESTRICT spareArray = info.spare;
+  int * COIN_RESTRICT spareIndex = info.index;
+  const unsigned char * COIN_RESTRICT status = info.status;
+  double zeroTolerance=info.tolerance;
+  double dualTolerance=info.dualTolerance;
+  double acceptablePivot = info.acceptablePivot;
+  const double * COIN_RESTRICT pi = info.work;
+  double tentativeTheta = 1.0e15;
+  int numberRemaining = 0;
+  double upperTheta = info.upperTheta;
+  double bestPossible = info.bestPossible;
+  int first = info.startColumn;
+  int last = first+info.numberToDo;
+  int numberNonZero=0;
+  double multiplier[] = { -1.0, 1.0};
+  double dualT = - dualTolerance;
+  for (int iColumn = first; iColumn < last; iColumn++) {
+    int wanted = (status[iColumn] & 3) - 1;
+    if (wanted) {
+      double value = 0.0;
+      CoinBigIndex start = columnStart[iColumn];
+      CoinBigIndex end = columnStart[iColumn+1];
+      int n = end - start;
+      bool odd = (n & 1) != 0;
+      n = n >> 1;
+      const int * COIN_RESTRICT rowThis = row + start;
+      const double * COIN_RESTRICT elementThis = elementByColumn + start;
+      for (; n; n--) {
+	int iRow0 = *rowThis;
+	int iRow1 = *(rowThis + 1);
+	rowThis += 2;
+	value += pi[iRow0] * (*elementThis);
+	value += pi[iRow1] * (*(elementThis + 1));
+	elementThis += 2;
+      }
+      if (odd) {
+	int iRow = *rowThis;
+	value += pi[iRow] * (*elementThis);
+      }
+      if (fabs(value) > zeroTolerance) {
+	double mult = multiplier[wanted-1];
+	double alpha = value * mult;
+	array[numberNonZero] = value;
+	index[numberNonZero++] = iColumn;
+	if (alpha > 0.0) {
+	  double oldValue = reducedCost[iColumn] * mult;
+	  double value = oldValue - tentativeTheta * alpha;
+	  if (value < dualT) {
+	    bestPossible = CoinMax(bestPossible, alpha);
+	    value = oldValue - upperTheta * alpha;
+	    if (value < dualT && alpha >= acceptablePivot) {
+	      upperTheta = (oldValue - dualT) / alpha;
+	      //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+	    }
+	    // add to list
+	    spareArray[numberRemaining] = alpha * mult;
+	    spareIndex[numberRemaining++] = iColumn;
+	  }
+	}
+      }
+    }
+  }
+  info.numberAdded=numberNonZero;
+  info.numberRemaining=numberRemaining;
+  info.bestPossible=bestPossible;
+  info.upperTheta=upperTheta;
+}
+#endif
 /* Meat of transposeTimes by column when not scaled and skipping
    and doing part of dualColumn */
 int
@@ -1523,7 +1812,6 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
           int & numberRemainingP,
           const double zeroTolerance) const
 {
-     double tentativeTheta = 1.0e15;
      int numberRemaining = numberRemainingP;
      double upperTheta = upperThetaP;
      double bestPossible = bestPossibleP;
@@ -1532,6 +1820,47 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
      const int * COIN_RESTRICT row = matrix_->getIndices();
      const CoinBigIndex * COIN_RESTRICT columnStart = matrix_->getVectorStarts();
      const double * COIN_RESTRICT elementByColumn = matrix_->getElements();
+#if ABOCA_LITE
+     int numberThreads=abcState();
+     if (numberThreads) {
+     clpTempInfo info[ABOCA_LITE];
+     int chunk = (numberActiveColumns_+numberThreads-1)/numberThreads;
+     int n=0;
+     for (int i=0;i<numberThreads;i++) {
+       info[i].upperTheta = upperThetaP;
+       info[i].bestPossible = bestPossibleP;
+       info[i].acceptablePivot = acceptablePivot;
+       info[i].reducedCost = const_cast<double *>(reducedCost);
+       info[i].index = spareIndex+n+numberRemaining;
+       info[i].spare = spareArray+n+numberRemaining;
+       info[i].which = index+n;
+       info[i].infeas = array+n;
+       info[i].work=const_cast<double *>(pi);
+       info[i].status=const_cast<unsigned char *>(status);
+       info[i].startColumn=n;
+       info[i].element=elementByColumn;
+       info[i].start=columnStart;
+       info[i].row=row;
+       info[i].numberToDo=CoinMin(chunk,numberActiveColumns_-n);
+       info[i].tolerance=zeroTolerance;
+       info[i].dualTolerance=dualTolerance;
+       n += chunk;
+     }
+     for (int i=0;i<numberThreads;i++) {
+       cilk_spawn transposeTimesUnscaledBit2(info[i]);
+     }
+     cilk_sync;
+     for (int i=0;i<numberThreads;i++) { 
+       numberNonZero += info[i].numberAdded;
+       numberRemaining += info[i].numberRemaining;
+       bestPossible = CoinMax(bestPossible,static_cast<double>(info[i].bestPossible));
+       upperTheta = CoinMin(upperTheta,static_cast<double>(info[i].upperTheta));
+     }
+     moveAndZero(info,1,NULL);
+     moveAndZero(info,2,NULL);
+     } else {
+#endif
+     double tentativeTheta = 1.0e15;
      double multiplier[] = { -1.0, 1.0};
      double dualT = - dualTolerance;
      for (int iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
@@ -1658,6 +1987,9 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
                }
           }
      }
+#if ABOCA_LITE
+	    }
+#endif
      numberRemainingP = numberRemaining;
      upperThetaP = upperTheta;
      bestPossibleP = bestPossible;
@@ -1703,6 +2035,29 @@ ClpPackedMatrix::gutsOfTransposeTimesScaled(const double * COIN_RESTRICT pi,
      }
      return numberNonZero;
 }
+#if ABOCA_LITE
+static void
+packDownBit(clpTempInfo & info)
+{
+  double * COIN_RESTRICT output = info.infeas;
+  int * COIN_RESTRICT index = info.which;
+  double zeroTolerance=info.tolerance;
+  int first = info.startColumn;
+  int last = info.numberToDo;
+  int numberNonZero=0;
+  for (int i = 0; i < last; i++) {
+    double value = output[i];
+    if (value) {
+      output[i] = 0.0;
+      if (fabs(value) > zeroTolerance) {
+	output[numberNonZero] = value;
+	index[numberNonZero++] = i+first;
+      }
+    }
+  }
+  info.numberAdded=numberNonZero;
+}
+#endif
 // Meat of transposeTimes by row n > K if packed - returns number nonzero
 int
 ClpPackedMatrix::gutsOfTransposeTimesByRowGEK(const CoinIndexedVector * COIN_RESTRICT piVector,
@@ -1740,6 +2095,30 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGEK(const CoinIndexedVector * COIN_RES
      }
      // get rid of tiny values and count
      int numberNonZero = 0;
+#if ABOCA_LITE
+     int numberThreads=abcState();
+     if (numberThreads) {
+     clpTempInfo info[ABOCA_LITE];
+     int chunk = (numberColumns+numberThreads-1)/numberThreads;
+     int n=0;
+     for (int i=0;i<numberThreads;i++) {
+       info[i].which = index+n;
+       info[i].infeas = output+n;
+       info[i].startColumn=n;
+       info[i].numberToDo=CoinMin(chunk,numberColumns-n);
+       info[i].tolerance=tolerance;
+       n += chunk;
+     }
+     for (int i=0;i<numberThreads;i++) {
+       cilk_spawn packDownBit(info[i]);
+     }
+     cilk_sync;
+     for (int i=0;i<numberThreads;i++) { 
+       numberNonZero += info[i].numberAdded;
+     }
+     moveAndZero(info,2,NULL);
+     } else {
+#endif
      for (int i = 0; i < numberColumns; i++) {
           double value = output[i];
           if (value) {
@@ -1750,6 +2129,9 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGEK(const CoinIndexedVector * COIN_RES
                }
           }
      }
+#if ABOCA_LITE
+	    }
+#endif
 #ifndef NDEBUG
      for (int i = numberNonZero; i < numberColumns; i++)
           assert(!output[i]);
@@ -2048,23 +2430,248 @@ ClpPackedMatrix::canCombine(const ClpSimplex * model,
      // if not packed then bias a bit more towards by column
      if (!packed)
           factor *= 0.9;
+     // bias if columnCopy
+     if (columnCopy_)
+       factor *= 0.5;
      return ((numberInRowArray > factor * numberRows || !model->rowCopy()) && !(flags_ & 2));
 }
 #ifndef CLP_ALL_ONE_FILE
 // These have to match ClpPrimalColumnSteepest version
 #define reference(i)  (((reference[i>>5]>>(i&31))&1)!=0)
 #endif
+#if ABOCA_LITE
+static void
+transposeTimes2UnscaledBit(clpTempInfo & info)
+{
+  const CoinBigIndex * COIN_RESTRICT columnStart=info.start;
+  const int * COIN_RESTRICT row = info.row;
+  const double * COIN_RESTRICT elementByColumn = info.element;
+  double * COIN_RESTRICT array = info.infeas;
+  double * COIN_RESTRICT weights = const_cast<double *>(info.lower);
+  double * COIN_RESTRICT reducedCost = info.reducedCost;
+  double * COIN_RESTRICT infeas = const_cast<double *>(info.upper);
+  int * COIN_RESTRICT index = info.which;
+  unsigned int * COIN_RESTRICT reference = reinterpret_cast<unsigned int *>(info.index);
+  const unsigned char * COIN_RESTRICT status = info.status;
+  double zeroTolerance=info.tolerance;
+  double dualTolerance=info.dualTolerance;
+  const double * COIN_RESTRICT pi = info.work;
+  const double * COIN_RESTRICT piWeight = info.cost;
+  double scaleFactor = info.primalRatio;
+  double devex = info.changeObj;
+  double referenceIn = info.theta;
+  int first = info.startColumn;
+  int last = first+info.numberToDo;
+  int killDjs=info.numberInfeasibilities;
+  int numberNonZero=0;
+  double mmult[2]={1.0,-1.0};
+  for (int iColumn = first; iColumn < last; iColumn++) {
+    int iStat = status[iColumn]&7;
+    if (iStat!=1&&iStat!=5) {
+      double value = 0.0;
+      CoinBigIndex start = columnStart[iColumn];
+      CoinBigIndex end = columnStart[iColumn+1];
+      int n = end - start;
+      const int * COIN_RESTRICT rowThis = row + start;
+      const double * COIN_RESTRICT elementThis = elementByColumn + start;
+      for (int i=0; i < n; i ++) {
+	int iRow = rowThis[i];
+	value -= pi[iRow] * elementThis[i];
+      }
+      if (fabs(value) > zeroTolerance) {
+	// and do other array
+	double modification = 0.0;
+	for (int i=0; i < n; i ++) {
+	  int iRow = rowThis[i];
+	  modification += piWeight[iRow] * elementThis[i];
+	}
+	double thisWeight = weights[iColumn];
+	double oldWeight=thisWeight;
+	double pivot = value * scaleFactor;
+	double pivotSquared = pivot * pivot;
+	thisWeight += pivotSquared * devex + pivot * modification;
+	debug3(iColumn,thisWeight,pivotSquared,devex,pivot,modification,oldWeight);
+	if (thisWeight < DEVEX_TRY_NORM) {
+	  if (referenceIn < 0.0) {
+	    // steepest
+	    thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+	  } else {
+	    // exact
+	    thisWeight = referenceIn * pivotSquared;
+	    if (reference(iColumn))
+	      thisWeight += 1.0;
+	    thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+	  }
+	}
+	weights[iColumn] = thisWeight;
+	if (!killDjs) {
+	  value = reducedCost[iColumn]-value;
+	  reducedCost[iColumn] = value;
+	  if (iStat>1&&iStat<4) {
+	    value *= mmult[iStat-2];
+	    if (value<=dualTolerance)
+	      value=0.0;
+	  } else {
+	    // free or super basic
+	    if (fabs(value) > FREE_ACCEPT * dualTolerance) {
+	      // we are going to bias towards free (but only if reasonable)
+	      value *= FREE_BIAS;
+	    } else {
+	      value=0.0;
+	    }
+	  }
+	  if (value) {
+	    value *= value;
+	    // store square in list
+	    if (infeas[iColumn]) {
+	      infeas[iColumn] = value; // already there
+	    } else {
+	      array[numberNonZero]=value;
+	      index[numberNonZero++]=iColumn;
+	    }
+	  } else {
+	    array[numberNonZero]=0.0;
+	    index[numberNonZero++]=iColumn;
+	  }
+	} 
+      }
+    }
+  }
+  info.numberAdded=numberNonZero;
+}
+static void
+transposeTimes2ScaledBit(clpTempInfo & info)
+{
+  const CoinBigIndex * COIN_RESTRICT columnStart=info.start;
+  const int * COIN_RESTRICT row = info.row;
+  const double * COIN_RESTRICT elementByColumn = info.element;
+  double * COIN_RESTRICT array = info.infeas;
+  double * COIN_RESTRICT weights = const_cast<double *>(info.lower);
+  int * COIN_RESTRICT index = info.which;
+  unsigned int * COIN_RESTRICT reference = reinterpret_cast<unsigned int *>(info.index);
+  const unsigned char * COIN_RESTRICT status = info.status;
+  double zeroTolerance=info.tolerance;
+  double dualTolerance=info.dualTolerance;
+  double * COIN_RESTRICT reducedCost = info.reducedCost;
+  double * COIN_RESTRICT infeas = const_cast<double *>(info.upper);
+  const double * COIN_RESTRICT pi = info.work;
+  const double * COIN_RESTRICT piWeight = info.cost;
+  const double * COIN_RESTRICT columnScale = info.solution;
+  double scaleFactor = info.primalRatio;
+  double devex = info.changeObj;
+  double referenceIn = info.theta;
+  int first = info.startColumn;
+  int last = first+info.numberToDo;
+  int killDjs=info.numberInfeasibilities;
+  int numberNonZero=0;
+  double mmult[2]={1.0,-1.0};
+  for (int iColumn = first; iColumn < last; iColumn++) {
+    int iStat = status[iColumn]&7;
+    if (iStat!=1&&iStat!=5) {
+      double value = 0.0;
+      double scale = columnScale[iColumn];
+      CoinBigIndex start = columnStart[iColumn];
+      CoinBigIndex end = columnStart[iColumn+1];
+      int n = end - start;
+      bool odd = (n & 1) != 0;
+      n &= ~1;
+      const int * COIN_RESTRICT rowThis = row + start;
+      const double * COIN_RESTRICT elementThis = elementByColumn + start;
+      for (int i=0; i < n; i += 2) {
+	int iRow0 = rowThis[i];
+	int iRow1 = rowThis[i+1];
+	value -= pi[iRow0] * elementThis[i];
+	value -= pi[iRow1] * elementThis[i+1];
+      }
+      if (odd) {
+	int iRow = rowThis[n];
+	value -= pi[iRow] * elementThis[n];
+      }
+      value *= scale;
+      if (fabs(value) > zeroTolerance) {
+	// and do other array
+	double modification = 0.0;
+	for (int i=0; i < n; i += 2) {
+	  int iRow0 = rowThis[i];
+	  int iRow1 = rowThis[i+1];
+	  modification += piWeight[iRow0] * elementThis[i];
+	  modification += piWeight[iRow1] * elementThis[i+1];
+	}
+	if (odd) {
+	  int iRow = rowThis[n];
+	  modification += piWeight[iRow] * elementThis[n];
+	}
+	modification *= scale;
+	double thisWeight = weights[iColumn];
+	double pivot = value * scaleFactor;
+	double pivotSquared = pivot * pivot;
+	thisWeight += pivotSquared * devex + pivot * modification;
+	if (thisWeight < DEVEX_TRY_NORM) {
+	  if (referenceIn < 0.0) {
+	    // steepest
+	    thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+	  } else {
+	    // exact
+	    thisWeight = referenceIn * pivotSquared;
+	    if (reference(iColumn))
+	      thisWeight += 1.0;
+	    thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+	  }
+	}
+	weights[iColumn] = thisWeight;
+	if (!killDjs) {
+	  value = reducedCost[iColumn]-value;
+	  reducedCost[iColumn] = value;
+	  if (iStat>1&&iStat<4) {
+	    value *= mmult[iStat-2];
+	    if (value<=dualTolerance)
+	      value=0.0;
+	  } else {
+	    // free or super basic
+	    if (fabs(value) > FREE_ACCEPT * dualTolerance) {
+	      // we are going to bias towards free (but only if reasonable)
+	      value *= FREE_BIAS;
+	    } else {
+	      value=0.0;
+	    }
+	  }
+	  if (value) {
+	    value *= value;
+	    // store square in list
+	    if (infeas[iColumn]) {
+	      infeas[iColumn] = value; // already there
+	    } else {
+	      array[numberNonZero]=value;
+	      index[numberNonZero++]=iColumn;
+	    }
+	  } else {
+	    array[numberNonZero]=0.0;
+	    index[numberNonZero++]=iColumn;
+	  }
+	} 
+      }
+    }
+  }
+  info.numberAdded=numberNonZero;
+}
+#endif
+/* Updates two arrays for steepest and does devex weights 
+   Returns nonzero if updates reduced cost and infeas -
+   new infeas in dj1 */
 // Updates two arrays for steepest
-void
+int
 ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
                                  const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
                                  const CoinIndexedVector * pi2,
                                  CoinIndexedVector * spare,
+				 double * COIN_RESTRICT infeas, 
+				 double * COIN_RESTRICT reducedCost,
                                  double referenceIn, double devex,
                                  // Array for exact devex to say what is in reference framework
                                  unsigned int * COIN_RESTRICT reference,
                                  double * COIN_RESTRICT weights, double scaleFactor)
 {
+     int returnCode=0;
      // put row of tableau in dj1
      double * COIN_RESTRICT pi = pi1->denseVector();
      int numberNonZero = 0;
@@ -2072,6 +2679,12 @@ ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
      double * COIN_RESTRICT array = dj1->denseVector();
      int numberInRowArray = pi1->getNumElements();
      double zeroTolerance = model->zeroTolerance();
+     double dualTolerance = model->currentDualTolerance();
+     // we can't really trust infeasibilities if there is dual error
+     // this coding has to mimic coding in checkDualSolution
+     double error = CoinMin(1.0e-2, model->largestDualError());
+     // allow tolerance at least slightly bigger than standard
+     dualTolerance = dualTolerance +  error;
      bool packed = pi1->packedMode();
      // do by column
      int iColumn;
@@ -2108,55 +2721,162 @@ ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
                     int iRow = whichRow[i];
                     pi[iRow] = piOld[i];
                }
-               if (!columnCopy_) {
+               if (!columnCopy_ || killDjs) {
+		 if (infeas)
+		   returnCode=1;
+#if ABOCA_LITE
+	       int numberThreads=abcState();
+	       if (numberThreads) {
+		 clpTempInfo info[ABOCA_LITE];
+		 int chunk = (numberActiveColumns_+numberThreads-1)/numberThreads;
+		 int n=0;
+		 for (int i=0;i<numberThreads;i++) {
+		   info[i].theta = referenceIn;
+		   info[i].changeObj = devex;
+		   info[i].primalRatio = scaleFactor;
+		   info[i].lower = weights;
+		   info[i].reducedCost = reducedCost;
+		   info[i].upper = infeas;
+		   info[i].which = index+n;
+		   info[i].infeas = array+n;
+		   info[i].index = reinterpret_cast<int *>(reference);
+		   info[i].work=const_cast<double *>(pi);
+		   info[i].cost=const_cast<double *>(piWeight);
+		   info[i].status=const_cast<unsigned char *>(model->statusArray());
+		   info[i].startColumn=n;
+		   info[i].element=elementByColumn;
+		   info[i].start=columnStart;
+		   info[i].row=row;
+		   info[i].numberToDo=CoinMin(chunk,numberActiveColumns_-n);
+		   info[i].tolerance=zeroTolerance;
+		   info[i].dualTolerance=dualTolerance;
+		   info[i].numberInfeasibilities=killDjs ? 1 : 0;
+		   n += chunk;
+		 }
+		 for (int i=0;i<numberThreads;i++) {
+		   cilk_spawn transposeTimes2UnscaledBit(info[i]);
+		 }
+		 cilk_sync;
+		 for (int i=0;i<numberThreads;i++) { 
+		   numberNonZero += info[i].numberAdded;
+		 }
+		 moveAndZero(info,2,NULL);
+	       } else {
+#endif
                     CoinBigIndex j;
                     CoinBigIndex end = columnStart[0];
                     for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
-                         CoinBigIndex start = end;
-                         end = columnStart[iColumn+1];
-                         ClpSimplex::Status status = model->getStatus(iColumn);
-                         if (status == ClpSimplex::basic || status == ClpSimplex::isFixed) continue;
-                         double value = 0.0;
-                         for (j = start; j < end; j++) {
-                              int iRow = row[j];
-                              value -= pi[iRow] * elementByColumn[j];
-                         }
-                         if (fabs(value) > zeroTolerance) {
-                              // and do other array
-                              double modification = 0.0;
-                              for (j = start; j < end; j++) {
-                                   int iRow = row[j];
-                                   modification += piWeight[iRow] * elementByColumn[j];
-                              }
-                              double thisWeight = weights[iColumn];
-                              double pivot = value * scaleFactor;
-                              double pivotSquared = pivot * pivot;
-                              thisWeight += pivotSquared * devex + pivot * modification;
-                              if (thisWeight < DEVEX_TRY_NORM) {
-                                   if (referenceIn < 0.0) {
-                                        // steepest
-                                        thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
-                                   } else {
-                                        // exact
-                                        thisWeight = referenceIn * pivotSquared;
-                                        if (reference(iColumn))
-                                             thisWeight += 1.0;
-                                        thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
-                                   }
-                              }
-                              weights[iColumn] = thisWeight;
-                              if (!killDjs) {
-                                   array[numberNonZero] = value;
-                                   index[numberNonZero++] = iColumn;
-                              }
-                         }
+		      CoinBigIndex start = end;
+		      end = columnStart[iColumn+1];
+		      ClpSimplex::Status status = model->getStatus(iColumn);
+		      if (status == ClpSimplex::basic || status == ClpSimplex::isFixed) continue;
+		      double value = 0.0;
+		      for (j = start; j < end; j++) {
+			int iRow = row[j];
+			value -= pi[iRow] * elementByColumn[j];
+		      }
+		      if (fabs(value) > zeroTolerance) {
+			// and do other array
+			double modification = 0.0;
+			for (j = start; j < end; j++) {
+			  int iRow = row[j];
+			  modification += piWeight[iRow] * elementByColumn[j];
+			}
+			double thisWeight = weights[iColumn];
+			double oldWeight=thisWeight;
+			double pivot = value * scaleFactor;
+			double pivotSquared = pivot * pivot;
+			thisWeight += pivotSquared * devex + pivot * modification;
+			debug3(iColumn,thisWeight,pivotSquared,devex,pivot,modification,oldWeight);
+			if (thisWeight < DEVEX_TRY_NORM) {
+			  if (referenceIn < 0.0) {
+			    // steepest
+			    thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+			  } else {
+			    // exact
+			    thisWeight = referenceIn * pivotSquared;
+			    if (reference(iColumn))
+			      thisWeight += 1.0;
+			    thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+			  }
+			}
+			weights[iColumn] = thisWeight;
+			if (!killDjs) {
+			  value = reducedCost[iColumn]-value;
+			  reducedCost[iColumn] = value;
+			  // simplify status
+			  ClpSimplex::Status status = model->getStatus(iColumn);
+			  
+			  switch(status) {
+			    
+			  case ClpSimplex::basic:
+			  case ClpSimplex::isFixed:
+			    break;
+			  case ClpSimplex::isFree:
+			  case ClpSimplex::superBasic:
+			    if (fabs(value) > FREE_ACCEPT * dualTolerance) {
+			      // we are going to bias towards free (but only if reasonable)
+			      value *= FREE_BIAS;
+			      value *= value;
+			      // store square in list
+			      if (infeas[iColumn]) {
+				infeas[iColumn] = value; // already there
+			      } else {
+				array[numberNonZero]=value;
+				index[numberNonZero++]=iColumn;
+			      }
+			    } else {
+			      array[numberNonZero]=0.0;
+			      index[numberNonZero++]=iColumn;
+			    }
+			    break;
+			  case ClpSimplex::atUpperBound:
+			    if (value > dualTolerance) {
+			      value *= value;
+			      // store square in list
+			      if (infeas[iColumn]) {
+				infeas[iColumn] = value; // already there
+			      } else {
+				array[numberNonZero]=value;
+				index[numberNonZero++]=iColumn;
+			      }
+			    } else {
+			      array[numberNonZero]=0.0;
+			      index[numberNonZero++]=iColumn;
+			    }
+			    break;
+			  case ClpSimplex::atLowerBound:
+			    if (value < -dualTolerance) {
+			      value *= value;
+			      // store square in list
+			      if (infeas[iColumn]) {
+				infeas[iColumn] = value; // already there
+			      } else {
+				array[numberNonZero]=value;
+				index[numberNonZero++]=iColumn;
+			      }
+			    } else {
+			      array[numberNonZero]=0.0;
+			      index[numberNonZero++]=iColumn;
+			    }
+			  }
+			}
+		      }
                     }
+#if ABOCA_LITE
+	    }
+#endif
                } else {
                     // use special column copy
                     // reset back
-                    if (killDjs)
-                         scaleFactor = 0.0;
-                    columnCopy_->transposeTimes2(model, pi, dj1, piWeight, referenceIn, devex,
+		    assert (!killDjs);
+                    //if (killDjs)
+		    //   scaleFactor = 0.0;
+		 if (infeas)
+		   returnCode=1;
+                    columnCopy_->transposeTimes2(model, pi, dj1, piWeight,
+						 infeas, reducedCost,
+						 referenceIn, devex,
                                                  reference, weights, scaleFactor);
                     numberNonZero = dj1->getNumElements();
                }
@@ -2174,8 +2894,54 @@ ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
                     int iRow = indexWeight[i];
                     piWeight[iRow] *= rowScale[iRow];
                }
-               if (!columnCopy_) {
-                    const double * COIN_RESTRICT columnScale = model->columnScale();
+               if (!columnCopy_ || killDjs) {
+		 if (infeas)
+		   returnCode=1;
+		 const double * COIN_RESTRICT columnScale = model->columnScale();
+#if ABOCA_LITE
+		 int numberThreads=abcState();
+		 if (numberThreads) {
+		   clpTempInfo info[ABOCA_LITE];
+		   int chunk = (numberActiveColumns_+numberThreads-1)/numberThreads;
+		   int n=0;
+		   for (int i=0;i<numberThreads;i++) {
+		     info[i].theta = referenceIn;
+		     info[i].changeObj = devex;
+		     info[i].primalRatio = scaleFactor;
+		     info[i].lower = weights;
+		     info[i].reducedCost = reducedCost;
+		     info[i].upper = infeas;
+		     info[i].solution = const_cast<double *>(columnScale);
+		     info[i].which = index+n;
+		     info[i].infeas = array+n;
+		     info[i].index = reinterpret_cast<int *>(reference);
+		     info[i].work=const_cast<double *>(pi);
+		     info[i].cost=const_cast<double *>(piWeight);
+		     info[i].status=const_cast<unsigned char *>(model->statusArray());
+		     info[i].startColumn=n;
+		     info[i].element=elementByColumn;
+		     info[i].start=columnStart;
+		     info[i].row=row;
+		     info[i].numberToDo=CoinMin(chunk,numberActiveColumns_-n);
+		     info[i].tolerance=zeroTolerance;
+		     info[i].dualTolerance=dualTolerance;
+		     info[i].numberInfeasibilities=killDjs ? 1 : 0;
+		     n += chunk;
+		   }
+		   for (int i=0;i<numberThreads;i++) {
+		     cilk_spawn transposeTimes2ScaledBit(info[i]);
+		   }
+		   cilk_sync;
+		   for (int i=0;i<numberThreads;i++) { 
+		     numberNonZero += info[i].numberAdded;
+		   }
+		   moveAndZero(info,2,NULL);
+		   if (infeas) {
+		     returnCode=1;
+		     dj1->setNumElements(numberNonZero);
+		   }
+		 } else {
+#endif
                     CoinBigIndex j;
                     CoinBigIndex end = columnStart[0];
                     for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
@@ -2215,17 +2981,156 @@ ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
                               }
                               weights[iColumn] = thisWeight;
                               if (!killDjs) {
-                                   array[numberNonZero] = value;
-                                   index[numberNonZero++] = iColumn;
-                              }
+				value = reducedCost[iColumn]-value;
+				reducedCost[iColumn] = value;
+				// simplify status
+				ClpSimplex::Status status = model->getStatus(iColumn);
+				
+				switch(status) {
+				  
+				case ClpSimplex::basic:
+				case ClpSimplex::isFixed:
+				  break;
+				case ClpSimplex::isFree:
+				case ClpSimplex::superBasic:
+				  if (fabs(value) > FREE_ACCEPT * dualTolerance) {
+				    // we are going to bias towards free (but only if reasonable)
+				    value *= FREE_BIAS;
+				    value *= value;
+				    // store square in list
+				    if (infeas[iColumn]) {
+				      infeas[iColumn] = value; // already there
+				    } else {
+				      array[numberNonZero]=value;
+				      index[numberNonZero++]=iColumn;
+				    }
+				  } else {
+				    array[numberNonZero]=0.0;
+				    index[numberNonZero++]=iColumn;
+				  }
+				  break;
+				case ClpSimplex::atUpperBound:
+				  if (value > dualTolerance) {
+				    value *= value;
+				    // store square in list
+				    if (infeas[iColumn]) {
+				      infeas[iColumn] = value; // already there
+				    } else {
+				      array[numberNonZero]=value;
+				      index[numberNonZero++]=iColumn;
+				    }
+				  } else {
+				    array[numberNonZero]=0.0;
+				    index[numberNonZero++]=iColumn;
+				  }
+				  break;
+				case ClpSimplex::atLowerBound:
+				  if (value < -dualTolerance) {
+				    value *= value;
+				    // store square in list
+				    if (infeas[iColumn]) {
+				      infeas[iColumn] = value; // already there
+				    } else {
+				      array[numberNonZero]=value;
+				      index[numberNonZero++]=iColumn;
+				    }
+				  } else {
+				    array[numberNonZero]=0.0;
+				    index[numberNonZero++]=iColumn;
+				  }
+				}
+			      }
                          }
                     }
+#if ABOCA_LITE
+		 }
+#endif
+		 if (infeas&&false) {
+		   double tolerance = model->currentDualTolerance();
+		   // we can't really trust infeasibilities if there is dual error
+		   // this coding has to mimic coding in checkDualSolution
+		   double error = CoinMin(1.0e-2, model->largestDualError());
+		   // allow tolerance at least slightly bigger than standard
+		   tolerance = tolerance +  error;
+		   returnCode=1;
+		   int number=0;
+		   for (int j = 0; j < numberNonZero; j++) {
+		     int iSequence = index[j];
+		     double value = reducedCost[iSequence];
+		     double value2 = array[j];
+		     array[j] = 0.0;
+		     value -= value2;
+		     reducedCost[iSequence] = value;
+		     // simplify status
+		     ClpSimplex::Status status = model->getStatus(iSequence);
+	 
+		     switch(status) {
+		       
+		     case ClpSimplex::basic:
+		     case ClpSimplex::isFixed:
+		       break;
+		     case ClpSimplex::isFree:
+		     case ClpSimplex::superBasic:
+		       if (fabs(value) > FREE_ACCEPT * tolerance) {
+			 // we are going to bias towards free (but only if reasonable)
+			 value *= FREE_BIAS;
+			 value *= value;
+			 // store square in list
+			 if (infeas[iSequence]) {
+			   infeas[iSequence] = value; // already there
+			 } else {
+			   array[number]=value;
+			   index[number++]=iSequence;
+			 }
+		       } else {
+			 array[number]=0.0;
+			 index[number++]=iSequence;
+		       }
+		       break;
+		     case ClpSimplex::atUpperBound:
+		       if (value > tolerance) {
+			 value *= value;
+			 // store square in list
+			 if (infeas[iSequence]) {
+			   infeas[iSequence] = value; // already there
+			 } else {
+			   array[number]=value;
+			   index[number++]=iSequence;
+			 }
+		       } else {
+			 array[number]=0.0;
+			 index[number++]=iSequence;
+		       }
+		       break;
+		     case ClpSimplex::atLowerBound:
+		       if (value < -tolerance) {
+			 value *= value;
+			 // store square in list
+			 if (infeas[iSequence]) {
+			   infeas[iSequence] = value; // already there
+			 } else {
+			   array[number]=value;
+			   index[number++]=iSequence;
+			 }
+		       } else {
+			 array[number]=0.0;
+			 index[number++]=iSequence;
+		       }
+		     }
+		   }
+		   dj1->setNumElements(number);
+		 }
                } else {
                     // use special column copy
                     // reset back
-                    if (killDjs)
-                         scaleFactor = 0.0;
-                    columnCopy_->transposeTimes2(model, pi, dj1, piWeight, referenceIn, devex,
+		    assert (!killDjs);
+                    //if (killDjs)
+		    //   scaleFactor = 0.0;
+		    if (infeas)
+		      returnCode=1;
+                    columnCopy_->transposeTimes2(model, pi, dj1, piWeight,
+						 infeas, reducedCost,
+						 referenceIn, devex,
                                                  reference, weights, scaleFactor);
                     numberNonZero = dj1->getNumElements();
                }
@@ -2348,6 +3253,7 @@ ClpPackedMatrix::transposeTimes2(const ClpSimplex * model,
      spare->setNumElements(0);
      if (packed)
           dj1->setPackedMode(true);
+     return returnCode;
 }
 // Updates second array for steepest and does devex weights
 void
@@ -3252,7 +4158,7 @@ static void doSqrts(double * array, int n)
 //static int scale_stats[5]={0,0,0,0,0};
 // Creates scales for column copy (rowCopy in model may be modified)
 int
-ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
+ClpPackedMatrix::scale(ClpModel * model, ClpSimplex * simplex) const
 {
      //const ClpSimplex * baseModel=NULL;
      //return scale2(model);
@@ -3391,6 +4297,11 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
      model->messageHandler()->message(CLP_PACKEDSCALE_INITIAL, *model->messagesPointer())
                << smallest << largest
                << CoinMessageEol;
+     if (smallest *1.0e12 < largest && simplex) {
+       // increase tolerances
+       simplex->setCurrentDualTolerance(CoinMax(simplex->currentDualTolerance(),5.0e-7));
+       simplex->setCurrentPrimalTolerance(CoinMax(simplex->currentPrimalTolerance(),5.0e-7));
+     }
      if (smallest >= 0.5 && largest <= 2.0 && !deletedElements) {
           // don't bother scaling
           model->messageHandler()->message(CLP_PACKEDSCALE_FORGET, *model->messagesPointer())
@@ -4956,6 +5867,14 @@ void
 ClpPackedMatrix::specialColumnCopy(ClpSimplex * model)
 {
      delete columnCopy_;
+     if ((model->moreSpecialOptions()&16777216)!=0) {
+       flags_ |= 16;
+       // go to exact devex (unless full steepest)
+       ClpPrimalColumnSteepest * pricing =
+	 dynamic_cast<ClpPrimalColumnSteepest *>(model->primalColumnPivot());
+       if (pricing && pricing->mode()>1)
+	 pricing->setMode(0);
+     }
      if ((flags_ & 16) != 0) {
           columnCopy_ = new ClpPackedMatrix3(model, matrix_);
           flags_ |= 8;
@@ -4977,12 +5896,9 @@ ClpPackedMatrix::correctSequence(const ClpSimplex * model, int & sequenceIn, int
 {
      if (columnCopy_) {
           if (sequenceIn != -999) {
-               if (sequenceIn != sequenceOut) {
-                    if (sequenceIn < numberActiveColumns_)
-                         columnCopy_->swapOne(model, this, sequenceIn);
-                    if (sequenceOut < numberActiveColumns_)
-                         columnCopy_->swapOne(model, this, sequenceOut);
-               }
+	    columnCopy_->swapOne(model, this, sequenceIn);
+	    if (sequenceIn != sequenceOut)
+	      columnCopy_->swapOne(model, this, sequenceOut);
           } else {
                // do all
                columnCopy_->sortBlocks(model);
@@ -5868,394 +6784,750 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
           model->spareIntArray_[0] = -1;
      }
 }
+#define ALIGNMENT 32
+static void * clp_align (void * memory)
+{
+  if (sizeof(int)==sizeof(void *)&&ALIGNMENT) {
+    CoinInt64 k = reinterpret_cast<CoinInt64> (memory);
+    if ((k&(ALIGNMENT-1))!=0) {
+      k &= ~(ALIGNMENT-1);
+      k += ALIGNMENT;
+      memory = reinterpret_cast<void *> (k);
+    }
+    return memory;
+  } else {
+    CoinInt64 k = reinterpret_cast<CoinInt64> (memory);
+    if ((k&(ALIGNMENT-1))!=0) {
+      k &= ~(ALIGNMENT-1);
+      k += ALIGNMENT;
+      memory = reinterpret_cast<void *> (k);
+    }
+    return memory;
+  }
+}
 /* Default constructor. */
 ClpPackedMatrix3::ClpPackedMatrix3()
-     : numberBlocks_(0),
-       numberColumns_(0),
-       column_(NULL),
-       start_(NULL),
-       row_(NULL),
-       element_(NULL),
-       block_(NULL)
+  : numberBlocks_(0),
+  numberColumns_(0),
+  numberColumnsWithGaps_(0),
+#if ABOCA_LITE
+  numberChunks_(0),
+#endif
+  numberElements_(0),
+  maxBlockSize_(0),
+  column_(NULL),
+  start_(NULL),
+  row_(NULL),
+  element_(NULL),
+  temporary_(NULL),
+  block_(NULL)
 {
 }
 /* Constructor from copy. */
 ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex * model, const CoinPackedMatrix * columnCopy)
-     : numberBlocks_(0),
-       numberColumns_(0),
-       column_(NULL),
-       start_(NULL),
-       row_(NULL),
-       element_(NULL),
-       block_(NULL)
+  : numberBlocks_(0),
+  numberColumns_(0),
+  numberColumnsWithGaps_(0),
+#if ABOCA_LITE
+  numberChunks_(0),
+#endif
+  numberElements_(0),
+  maxBlockSize_(0),
+  column_(NULL),
+  start_(NULL),
+  row_(NULL),
+  element_(NULL),
+  temporary_(NULL),
+  block_(NULL)
 {
+#ifndef COIN_AVX2
+#define COIN_AVX2 4
+#else
+#define HASWELL
+#endif
+#if COIN_AVX2 == 1
+#define COIN_AVX2_SHIFT 0
+#elif COIN_AVX2 == 2
+#define COIN_AVX2_SHIFT 1
+#elif COIN_AVX2 == 4
+#define COIN_AVX2_SHIFT 2
+#elif COIN_AVX2 == 8
+  error at present;
+#else
+  error;
+#endif
+#define COIN_ALIGN 8*COIN_AVX2 // later
+#define COIN_ALIGN_DOUBLE COIN_AVX2
+#define COIN_AVX2_CHUNK 128 // do this many at a time
 #define MINBLOCK 6
 #define MAXBLOCK 100
 #define MAXUNROLL 10
-     numberColumns_ = model->getNumCols();
-     int numberColumns = columnCopy->getNumCols();
-     assert (numberColumns_ >= numberColumns);
-     int numberRows = columnCopy->getNumRows();
-     int * counts = new int[numberRows+1];
-     CoinZeroN(counts, numberRows + 1);
-     CoinBigIndex nels = 0;
-     CoinBigIndex nZeroEl = 0;
-     int iColumn;
-     // get matrix data pointers
-     const int * row = columnCopy->getIndices();
-     const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
-     const int * columnLength = columnCopy->getVectorLengths();
-     const double * elementByColumn = columnCopy->getElements();
-     for (iColumn = 0; iColumn < numberColumns; iColumn++) {
-          CoinBigIndex start = columnStart[iColumn];
-          int n = columnLength[iColumn];
-          CoinBigIndex end = start + n;
-          int kZero = 0;
-          for (CoinBigIndex j = start; j < end; j++) {
-               if(!elementByColumn[j])
-                    kZero++;
-          }
-          n -= kZero;
-          nZeroEl += kZero;
-          nels += n;
-          counts[n]++;
-     }
-     counts[0] += numberColumns_ - numberColumns;
-     int nZeroColumns = counts[0];
-     counts[0] = -1;
-     numberColumns_ -= nZeroColumns;
-     column_ = new int [2*numberColumns_+nZeroColumns];
-     int * lookup = column_ + numberColumns_;
-     row_ = new int[nels];
-     element_ = new double[nels];
-     int nOdd = 0;
-     CoinBigIndex nInOdd = 0;
-     int i;
-     for (i = 1; i <= numberRows; i++) {
-          int n = counts[i];
-          if (n) {
-               if (n < MINBLOCK || i > MAXBLOCK) {
-                    nOdd += n;
-                    counts[i] = -1;
-                    nInOdd += n * i;
-               } else {
-                    numberBlocks_++;
-               }
-          } else {
-               counts[i] = -1;
-          }
-     }
-     start_ = new CoinBigIndex [nOdd+1];
-     // even if no blocks do a dummy one
-     numberBlocks_ = CoinMax(numberBlocks_, 1);
-     block_ = new blockStruct [numberBlocks_];
-     memset(block_, 0, numberBlocks_ * sizeof(blockStruct));
-     // Fill in what we can
-     int nTotal = nOdd;
-     // in case no blocks
-     block_->startIndices_ = nTotal;
-     nels = nInOdd;
-     int nBlock = 0;
-     for (i = 0; i <= CoinMin(MAXBLOCK, numberRows); i++) {
-          if (counts[i] > 0) {
-               blockStruct * block = block_ + nBlock;
-               int n = counts[i];
-               counts[i] = nBlock; // backward pointer
-               nBlock++;
-               block->startIndices_ = nTotal;
-               block->startElements_ = nels;
-               block->numberElements_ = i;
-               // up counts
-               nTotal += n;
-               nels += n * i;
-          }
-     }
-     for (iColumn = numberColumns; iColumn < numberColumns_; iColumn++)
-          lookup[iColumn] = -1;
-     // fill
-     start_[0] = 0;
-     nOdd = 0;
-     nInOdd = 0;
-     const double * columnScale = model->columnScale();
-     for (iColumn = 0; iColumn < numberColumns; iColumn++) {
-          CoinBigIndex start = columnStart[iColumn];
-          int n = columnLength[iColumn];
-          CoinBigIndex end = start + n;
-          int kZero = 0;
-          for (CoinBigIndex j = start; j < end; j++) {
-               if(!elementByColumn[j])
-                    kZero++;
-          }
-          n -= kZero;
-          if (n) {
-               int iBlock = counts[n];
-               if (iBlock >= 0) {
-                    blockStruct * block = block_ + iBlock;
-                    int k = block->numberInBlock_;
-                    block->numberInBlock_ ++;
-                    column_[block->startIndices_+k] = iColumn;
-                    lookup[iColumn] = k;
-                    CoinBigIndex put = block->startElements_ + k * n;
-                    for (CoinBigIndex j = start; j < end; j++) {
-                         double value = elementByColumn[j];
-                         if(value) {
-                              if (columnScale)
-                                   value *= columnScale[iColumn];
-                              element_[put] = value;
-                              row_[put++] = row[j];
-                         }
-                    }
-               } else {
-                    // odd ones
-                    for (CoinBigIndex j = start; j < end; j++) {
-                         double value = elementByColumn[j];
-                         if(value) {
-                              if (columnScale)
-                                   value *= columnScale[iColumn];
-                              element_[nInOdd] = value;
-                              row_[nInOdd++] = row[j];
-                         }
-                    }
-                    column_[nOdd] = iColumn;
-                    lookup[iColumn] = -1;
-                    nOdd++;
-                    start_[nOdd] = nInOdd;
-               }
-          } else {
-               // zero column
-               lookup[iColumn] = -1;
-          }
-     }
-     delete [] counts;
+#define roundUp(xx) ((xx+COIN_ALIGN_DOUBLE-1)&(~(COIN_ALIGN_DOUBLE-1)))
+#define roundDown(xx) (xx&(~(COIN_ALIGN_DOUBLE-1)))
+  numberColumns_ = model->getNumCols();
+  int numberColumns = columnCopy->getNumCols();
+  assert (numberColumns_ >= numberColumns);
+  int numberRows = columnCopy->getNumRows();
+  int * counts = new int[numberRows+1];
+  CoinZeroN(counts, numberRows + 1);
+  CoinBigIndex nels = 0;
+  int iColumn;
+  // get matrix data pointers
+  const int * row = columnCopy->getIndices();
+  const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
+  const int * columnLength = columnCopy->getVectorLengths();
+  const double * elementByColumn = columnCopy->getElements();
+  unsigned char * status = model->statusArray();
+  const double * lower = model->columnLower();
+  const double * upper = model->columnUpper();
+  int nFree=0; // or superbasic
+  int nFreeEls=0;
+  for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+    CoinBigIndex start = columnStart[iColumn];
+    int n = columnLength[iColumn];
+    CoinBigIndex end = start + n;
+    int kZero = 0;
+    for (CoinBigIndex j = start; j < end; j++) {
+      if(!elementByColumn[j])
+	kZero++;
+    }
+    n -= kZero;
+    nels += n;
+    if ((lower[iColumn]==-COIN_DBL_MAX&&upper[iColumn]==COIN_DBL_MAX)||
+	(status[iColumn]&3) == 0) {
+      nFree++;
+      nFreeEls += n;
+      n=0;
+      if ((status[iColumn]&3) != 0) {
+	status[iColumn] &= ~7;
+	status[iColumn] |= 4;
+      }
+    }
+    counts[n]++;
+  }
+  counts[0] += numberColumns_ - numberColumns;
+  int nZeroColumns = counts[0]; // also free
+  counts[0] = -1;
+  int nOdd = nZeroColumns;
+  CoinBigIndex nInOdd = nFreeEls;
+  maxBlockSize_ = 0;
+  int i;
+  for (i = 1; i <= numberRows; i++) {
+    int n = counts[i];
+    if (n) {
+      if (n < MINBLOCK || i > MAXBLOCK) {
+	nOdd += n;
+	counts[i] = -1;
+	nInOdd += n * i;
+      } else {
+	numberBlocks_++;
+	maxBlockSize_ = CoinMax(maxBlockSize_,n);;
+      }
+    } else {
+      counts[i] = -1;
+    }
+  }
+  // align on boundaries
+  nels = roundUp(nInOdd);
+  numberColumnsWithGaps_ = nOdd;
+  for (int i = 0; i <= CoinMin(MAXBLOCK, numberRows); i++) {
+    if (counts[i] > 0) {
+      int n = roundUp(counts[i]);
+      nels += n*i;
+      numberColumnsWithGaps_ += n;
+    }
+  }
+  row_ = new int[nels+15];
+  element_ = new double[nels+31];
+  start_ = new CoinBigIndex [nOdd+1];
+  // also allow for rows!
+  int numberColumnsWithGaps = roundUp(numberColumnsWithGaps_);
+  numberColumnsWithGaps_ = roundUp(numberColumnsWithGaps+numberRows);
+  column_ = new int [2*numberColumnsWithGaps_];
+  memset(row_,0,nels*sizeof(int));
+  memset(element_,0,nels*sizeof(double));
+  int * lookup = column_ + numberColumnsWithGaps_;
+  for (int i = 0; i < numberColumnsWithGaps; i++) {
+    column_[i] = -1;
+    lookup[i] = -1;
+  }
+  for (int i = 0; i < numberRows; i++) {
+    column_[i+numberColumnsWithGaps] = i+numberColumns;
+    lookup[i+numberColumns] = i;
+  }
+  for (int i = numberRows+numberColumnsWithGaps;
+       i < numberColumnsWithGaps_; i++) {
+    column_[i] = -1;
+    lookup[i] = -1;
+  }
+  // even if no blocks do a dummy one
+  numberBlocks_ = CoinMax(numberBlocks_, 1);
+  block_ = new blockStruct [numberBlocks_+1]; // +1 for slacks
+  memset(block_, 0, (numberBlocks_+1) * sizeof(blockStruct));
+  // Fill in what we can
+  int nTotal = nOdd;
+  // in case no blocks
+  block_->startIndices_ = nTotal;
+  // adjust nels so start on 8 double boundary
+  double * elements2 = reinterpret_cast<double *>(clp_align(element_+nInOdd));
+  nels = elements2-element_;
+  int nBlock = 0;
+  for (i = 0; i <= CoinMin(MAXBLOCK, numberRows); i++) {
+    if (counts[i] > 0) {
+      blockStruct * block = block_ + nBlock;
+      int n = roundUp(counts[i]);
+      counts[i] = nBlock; // backward pointer
+      nBlock++;
+      block->startIndices_ = nTotal;
+      block->startElements_ = nels;
+      block->numberElements_ = i;
+      // up counts
+      nTotal += n;
+      nels += n * i;
+    }
+  }
+  numberElements_ = nels;
+  nBlock = CoinMax(nBlock, 1);
+  // slacks
+  block_[nBlock].numberElements_ = 0;
+  block_[nBlock].numberInBlock_ = numberRows;
+  block_[nBlock].startIndices_ = numberColumnsWithGaps;
+  // fill
+  start_[0] = 0;
+  nOdd = 0;
+  nInOdd = 0;
+  const double * columnScale = model->columnScale();
+  for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+    CoinBigIndex start = columnStart[iColumn];
+    int n = columnLength[iColumn];
+    CoinBigIndex end = start + n;
+    int kZero = 0;
+    for (CoinBigIndex j = start; j < end; j++) {
+      if(!elementByColumn[j])
+	kZero++;
+    }
+    n -= kZero;
+    if ((status[iColumn]&3) == 0)
+      n=0;
+    {
+      int iBlock = counts[n];
+      if (iBlock >= 0) {
+	blockStruct * block = block_ + iBlock;
+	int k = block->numberInBlock_;
+	block->numberInBlock_ ++;
+	column_[block->startIndices_+k] = iColumn;
+	lookup[iColumn] = k;
+	CoinBigIndex put = block->startElements_
+	  + roundDown(k) * n + (k&(COIN_AVX2-1));
+	for (CoinBigIndex j = start; j < end; j++) {
+	  double value = elementByColumn[j];
+	  if(value) {
+	    if (columnScale)
+	      value *= columnScale[iColumn];
+	    element_[put] = value;
+	    row_[put] = row[j];
+	    put += COIN_AVX2;
+	  }
+	}
+      } else {
+	// odd ones
+	for (CoinBigIndex j = start; j < end; j++) {
+	  double value = elementByColumn[j];
+	  if(value) {
+	    if (columnScale)
+	      value *= columnScale[iColumn];
+	    element_[nInOdd] = value;
+	    row_[nInOdd++] = row[j];
+	  }
+	}
+	column_[nOdd] = iColumn;
+	lookup[iColumn] = -1;
+	nOdd++;
+	start_[nOdd] = nInOdd;
+      }
+    }
+  }
+  // This much temporary space
+#if ABOCA_LITE
+  temporary_ = new CoinDoubleArrayWithLength(2*COIN_AVX2_CHUNK*2*ABOCA_LITE,
+					     -2-COIN_ALIGN_DOUBLE);
+#else
+  temporary_ = new CoinDoubleArrayWithLength(2*COIN_AVX2_CHUNK,
+					     -2-COIN_ALIGN_DOUBLE);
+#endif
+#if ABOCA_LITE
+  // balance work - maybe with 2*cpu chunks
+#define COLUMN_WEIGHT 5
+#define BLOCK_MULT 2
+  // If do +1's then need two element weights
+  double totalWork=0.0;
+  for (int iBlock=0;iBlock<numberBlocks_;iBlock++) {
+    totalWork += (COLUMN_WEIGHT+block_[iBlock].numberElements_)*
+      block_[iBlock].numberInBlock_;
+    if (model->logLevel()>2)
+    printf("block %d ncol %d nel %d total %g this %d\n",
+	   iBlock,block_[iBlock].numberInBlock_,
+	   block_[iBlock].numberElements_,totalWork,
+	   (COLUMN_WEIGHT+block_[iBlock].numberElements_)*
+	   block_[iBlock].numberInBlock_);
+  }
+  double eachWork = totalWork/(BLOCK_MULT*ABOCA_LITE);
+  double thisWork = 0.0;
+  numberChunks_=0;
+  endChunk_[0]=0;
+  for (int iBlock=0;iBlock<numberBlocks_;iBlock++) {
+    thisWork += (COLUMN_WEIGHT+block_[iBlock].numberElements_)*
+      block_[iBlock].numberInBlock_;
+    if (thisWork>=eachWork) {
+      totalWork -= thisWork;
+      thisWork=0.0;
+      eachWork = totalWork/(BLOCK_MULT*ABOCA_LITE-numberChunks_-1);
+      numberChunks_++;
+      endChunk_[numberChunks_]=iBlock+1;
+      if (numberChunks_==BLOCK_MULT*ABOCA_LITE)
+	break;
+    }
+  }
+  if (numberChunks_==BLOCK_MULT*ABOCA_LITE)
+    endChunk_[numberChunks_]=numberBlocks_;
+  else if (endChunk_[numberChunks_]<numberBlocks_)
+    endChunk_[++numberChunks_]=numberBlocks_;
+  //printf("%d chunks for %d blocks\n",numberChunks_,numberBlocks_);
+  assert(numberChunks_<=2*ABOCA_LITE);
+#endif
+  delete [] counts;
 }
 /* Destructor */
 ClpPackedMatrix3::~ClpPackedMatrix3()
 {
-     delete [] column_;
-     delete [] start_;
-     delete [] row_;
-     delete [] element_;
-     delete [] block_;
+  delete [] column_;
+  delete [] start_;
+  delete [] row_;
+  delete [] element_;
+  delete temporary_;
+  delete [] block_;
 }
 /* The copy constructor. */
 ClpPackedMatrix3::ClpPackedMatrix3(const ClpPackedMatrix3 & rhs)
-     : numberBlocks_(rhs.numberBlocks_),
-       numberColumns_(rhs.numberColumns_),
-       column_(NULL),
-       start_(NULL),
-       row_(NULL),
-       element_(NULL),
-       block_(NULL)
+  : numberBlocks_(rhs.numberBlocks_),
+  numberColumns_(rhs.numberColumns_),
+  numberColumnsWithGaps_(rhs.numberColumnsWithGaps_),
+#if ABOCA_LITE
+  numberChunks_(rhs.numberChunks_),
+#endif
+  numberElements_(rhs.numberElements_),
+  maxBlockSize_(rhs.maxBlockSize_),
+  column_(NULL),
+  start_(NULL),
+  row_(NULL),
+  element_(NULL),
+  temporary_(NULL),
+  block_(NULL)
 {
-     if (rhs.numberBlocks_) {
-          block_ = CoinCopyOfArray(rhs.block_, numberBlocks_);
-          column_ = CoinCopyOfArray(rhs.column_, 2 * numberColumns_);
-          int numberOdd = block_->startIndices_;
-          start_ = CoinCopyOfArray(rhs.start_, numberOdd + 1);
-          blockStruct * lastBlock = block_ + (numberBlocks_ - 1);
-          CoinBigIndex numberElements = lastBlock->startElements_ +
-                                        lastBlock->numberInBlock_ * lastBlock->numberElements_;
-          row_ = CoinCopyOfArray(rhs.row_, numberElements);
-          element_ = CoinCopyOfArray(rhs.element_, numberElements);
-     }
+  if (rhs.numberBlocks_) {
+    block_ = CoinCopyOfArray(rhs.block_, numberBlocks_);
+    column_ = CoinCopyOfArray(rhs.column_, 2 * numberColumnsWithGaps_);
+    int numberOdd = block_->startIndices_;
+    start_ = CoinCopyOfArray(rhs.start_, numberOdd + 1);
+    row_ = CoinCopyOfArray(rhs.row_, numberElements_);
+    element_ = CoinCopyOfArray(rhs.element_, numberElements_+8);
+    // This much temporary space
+#if ABOCA_LITE
+    temporary_ = new CoinDoubleArrayWithLength(2*COIN_AVX2_CHUNK*2*ABOCA_LITE,
+					       -2-COIN_ALIGN_DOUBLE);
+#else
+    temporary_ = new CoinDoubleArrayWithLength(2*COIN_AVX2_CHUNK,
+					       -2-COIN_ALIGN_DOUBLE);
+#endif
+#if ABOCA_LITE
+    memcpy(endChunk_,rhs.endChunk_,sizeof(endChunk_));
+#endif
+  }
 }
 ClpPackedMatrix3&
-ClpPackedMatrix3::operator=(const ClpPackedMatrix3 & rhs)
+   ClpPackedMatrix3::operator=(const ClpPackedMatrix3 & rhs)
 {
-     if (this != &rhs) {
-          delete [] column_;
-          delete [] start_;
-          delete [] row_;
-          delete [] element_;
-          delete [] block_;
-          numberBlocks_ = rhs.numberBlocks_;
-          numberColumns_ = rhs.numberColumns_;
-          if (rhs.numberBlocks_) {
-               block_ = CoinCopyOfArray(rhs.block_, numberBlocks_);
-               column_ = CoinCopyOfArray(rhs.column_, 2 * numberColumns_);
-               int numberOdd = block_->startIndices_;
-               start_ = CoinCopyOfArray(rhs.start_, numberOdd + 1);
-               blockStruct * lastBlock = block_ + (numberBlocks_ - 1);
-               CoinBigIndex numberElements = lastBlock->startElements_ +
-                                             lastBlock->numberInBlock_ * lastBlock->numberElements_;
-               row_ = CoinCopyOfArray(rhs.row_, numberElements);
-               element_ = CoinCopyOfArray(rhs.element_, numberElements);
-          } else {
-               column_ = NULL;
-               start_ = NULL;
-               row_ = NULL;
-               element_ = NULL;
-               block_ = NULL;
-          }
-     }
-     return *this;
+  if (this != &rhs) {
+    delete [] column_;
+    delete [] start_;
+    delete [] row_;
+    delete [] element_;
+    delete temporary_;
+    temporary_=NULL;
+    delete [] block_;
+    numberBlocks_ = rhs.numberBlocks_;
+    numberColumns_ = rhs.numberColumns_;
+    numberColumnsWithGaps_ = rhs.numberColumnsWithGaps_;
+#if ABOCA_LITE
+    numberChunks_ = rhs.numberChunks_;
+    memcpy(endChunk_,rhs.endChunk_,sizeof(endChunk_));
+#endif
+    numberElements_ = rhs.numberElements_;
+    maxBlockSize_ = rhs.maxBlockSize_;
+    if (rhs.numberBlocks_) {
+      block_ = CoinCopyOfArray(rhs.block_, numberBlocks_);
+      column_ = CoinCopyOfArray(rhs.column_, 2 * numberColumnsWithGaps_);
+      int numberOdd = block_->startIndices_;
+      start_ = CoinCopyOfArray(rhs.start_, numberOdd + 1);
+      row_ = CoinCopyOfArray(rhs.row_, numberElements_);
+      element_ = CoinCopyOfArray(rhs.element_, numberElements_+8);
+      // This much temporary space
+#if ABOCA_LITE
+      temporary_ = new CoinDoubleArrayWithLength(2*COIN_AVX2_CHUNK*2*ABOCA_LITE,
+						 -2-COIN_ALIGN_DOUBLE);
+#else
+      temporary_ = new CoinDoubleArrayWithLength(2*COIN_AVX2_CHUNK,
+						 -2-COIN_ALIGN_DOUBLE);
+#endif
+    } else {
+      column_ = NULL;
+      start_ = NULL;
+      row_ = NULL;
+      element_ = NULL;
+      block_ = NULL;
+    }
+  }
+  return *this;
 }
 /* Sort blocks */
 void
 ClpPackedMatrix3::sortBlocks(const ClpSimplex * model)
 {
-     int * lookup = column_ + numberColumns_;
-     for (int iBlock = 0; iBlock < numberBlocks_; iBlock++) {
-          blockStruct * block = block_ + iBlock;
-          int numberInBlock = block->numberInBlock_;
-          int nel = block->numberElements_;
-          int * row = row_ + block->startElements_;
-          double * element = element_ + block->startElements_;
-          int * column = column_ + block->startIndices_;
-          int lastPrice = 0;
-          int firstNotPrice = numberInBlock - 1;
-          while (lastPrice <= firstNotPrice) {
-               // find first basic or fixed
-               int iColumn = numberInBlock;
-               for (; lastPrice <= firstNotPrice; lastPrice++) {
-                    iColumn = column[lastPrice];
-                    if (model->getColumnStatus(iColumn) == ClpSimplex::basic ||
-                              model->getColumnStatus(iColumn) == ClpSimplex::isFixed)
-                         break;
-               }
-               // find last non basic or fixed
-               int jColumn = -1;
-               for (; firstNotPrice > lastPrice; firstNotPrice--) {
-                    jColumn = column[firstNotPrice];
-                    if (model->getColumnStatus(jColumn) != ClpSimplex::basic &&
-                              model->getColumnStatus(jColumn) != ClpSimplex::isFixed)
-                         break;
-               }
-               if (firstNotPrice > lastPrice) {
-                    assert (column[lastPrice] == iColumn);
-                    assert (column[firstNotPrice] == jColumn);
-                    // need to swap
-                    column[firstNotPrice] = iColumn;
-                    lookup[iColumn] = firstNotPrice;
-                    column[lastPrice] = jColumn;
-                    lookup[jColumn] = lastPrice;
-                    double * elementA = element + lastPrice * nel;
-                    int * rowA = row + lastPrice * nel;
-                    double * elementB = element + firstNotPrice * nel;
-                    int * rowB = row + firstNotPrice * nel;
-                    for (int i = 0; i < nel; i++) {
-                         int temp = rowA[i];
-                         double tempE = elementA[i];
-                         rowA[i] = rowB[i];
-                         elementA[i] = elementB[i];
-                         rowB[i] = temp;
-                         elementB[i] = tempE;
-                    }
-                    firstNotPrice--;
-                    lastPrice++;
-               } else if (lastPrice == firstNotPrice) {
-                    // make sure correct side
-                    iColumn = column[lastPrice];
-                    if (model->getColumnStatus(iColumn) != ClpSimplex::basic &&
-                              model->getColumnStatus(iColumn) != ClpSimplex::isFixed)
-                         lastPrice++;
-                    break;
-               }
-          }
-          block->numberPrice_ = lastPrice;
+  int * lookup = column_ + numberColumnsWithGaps_;
+  for (int iBlock = 0; iBlock < numberBlocks_+1; iBlock++) {
+    blockStruct * block = block_ + iBlock;
+    int numberInBlock = block->numberInBlock_;
+    int nel = block->numberElements_;
+    int * row = row_ + block->startElements_;
+    double * element = element_ + block->startElements_;
+    int * column = column_ + block->startIndices_;
+    int lastPrice = 0;
+    int firstNotPrice = numberInBlock - 1;
+    while (lastPrice <= firstNotPrice) {
+      // find first basic or fixed
+      int iColumn = numberInBlock;
+      for (; lastPrice <= firstNotPrice; lastPrice++) {
+	iColumn = column[lastPrice];
+	if (model->getColumnStatus(iColumn) == ClpSimplex::basic ||
+	    model->getColumnStatus(iColumn) == ClpSimplex::isFixed)
+	  break;
+      }
+      // find last non basic or fixed
+      int jColumn = -1;
+      for (; firstNotPrice > lastPrice; firstNotPrice--) {
+	jColumn = column[firstNotPrice];
+	if (model->getColumnStatus(jColumn) != ClpSimplex::basic &&
+	    model->getColumnStatus(jColumn) != ClpSimplex::isFixed)
+	  break;
+      }
+      if (firstNotPrice > lastPrice) {
+	assert (column[lastPrice] == iColumn);
+	assert (column[firstNotPrice] == jColumn);
+	// need to swap
+	column[firstNotPrice] = iColumn;
+	lookup[iColumn] = firstNotPrice;
+	column[lastPrice] = jColumn;
+	lookup[jColumn] = lastPrice;
+	int startBit = roundDown(lastPrice);
+	CoinBigIndex offset =startBit*nel + (lastPrice-startBit);
+	double * elementA = element + offset;
+	int * rowA = row + offset;
+	startBit = roundDown(firstNotPrice);
+	offset =startBit*nel + (firstNotPrice-startBit);
+	double * elementB = element + offset;
+	int * rowB = row + offset;
+	for (int i = 0; i < nel*COIN_AVX2; i+=COIN_AVX2) {
+	  int temp = rowA[i];
+	  double tempE = elementA[i];
+	  rowA[i] = rowB[i];
+	  elementA[i] = elementB[i];
+	  rowB[i] = temp;
+	  elementB[i] = tempE;
+	}
+	firstNotPrice--;
+	lastPrice++;
+      } else if (lastPrice == firstNotPrice) {
+	// make sure correct side
+	iColumn = column[lastPrice];
+	if (model->getColumnStatus(iColumn) != ClpSimplex::basic &&
+	    model->getColumnStatus(iColumn) != ClpSimplex::isFixed)
+	  lastPrice++;
+	break;
+      }
+    }
+    block->firstBasic_ = lastPrice;
+    // reuse ints even though names wrong
+    // lower
+    firstNotPrice = lastPrice - 1;
+    lastPrice = 0;
+    while (lastPrice <= firstNotPrice) {
+      // find first lower
+      int iColumn = numberInBlock;
+      for (; lastPrice <= firstNotPrice; lastPrice++) {
+	iColumn = column[lastPrice];
+	if (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound)
+	  break;
+      }
+      // find last lower
+      int jColumn = -1;
+      for (; firstNotPrice > lastPrice; firstNotPrice--) {
+	jColumn = column[firstNotPrice];
+	if (model->getColumnStatus(jColumn) != ClpSimplex::atLowerBound)
+	  break;
+      }
+      if (firstNotPrice > lastPrice) {
+	assert (column[lastPrice] == iColumn);
+	assert (column[firstNotPrice] == jColumn);
+	// need to swap
+	column[firstNotPrice] = iColumn;
+	lookup[iColumn] = firstNotPrice;
+	column[lastPrice] = jColumn;
+	lookup[jColumn] = lastPrice;
+	int startBit = roundDown(lastPrice);
+	CoinBigIndex offset =startBit*nel + (lastPrice-startBit);
+	double * elementA = element + offset;
+	int * rowA = row + offset;
+	startBit = roundDown(firstNotPrice);
+	offset =startBit*nel + (firstNotPrice-startBit);
+	double * elementB = element + offset;
+	int * rowB = row + offset;
+	for (int i = 0; i < nel*COIN_AVX2; i+=COIN_AVX2) {
+	  int temp = rowA[i];
+	  double tempE = elementA[i];
+	  rowA[i] = rowB[i];
+	  elementA[i] = elementB[i];
+	  rowB[i] = temp;
+	  elementB[i] = tempE;
+	}
+	firstNotPrice--;
+	lastPrice++;
+      } else if (lastPrice == firstNotPrice) {
+	// make sure correct side
+	iColumn = column[lastPrice];
+	if (model->getColumnStatus(iColumn) != ClpSimplex::atLowerBound)
+	  lastPrice++;
+	break;
+      }
+    }
+    block->firstAtLower_ = lastPrice;
+    // now upper
+    firstNotPrice = lastPrice - 1;
+    lastPrice = 0;
+    while (lastPrice <= firstNotPrice) {
+      // find first basic or fixed
+      int iColumn = numberInBlock;
+      for (; lastPrice <= firstNotPrice; lastPrice++) {
+	iColumn = column[lastPrice];
+	if (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound)
+	  break;
+      }
+      // find last non basic or fixed
+      int jColumn = -1;
+      for (; firstNotPrice > lastPrice; firstNotPrice--) {
+	jColumn = column[firstNotPrice];
+	if (model->getColumnStatus(jColumn) != ClpSimplex::atUpperBound)
+	  break;
+      }
+      if (firstNotPrice > lastPrice) {
+	assert (column[lastPrice] == iColumn);
+	assert (column[firstNotPrice] == jColumn);
+	// need to swap
+	column[firstNotPrice] = iColumn;
+	lookup[iColumn] = firstNotPrice;
+	column[lastPrice] = jColumn;
+	lookup[jColumn] = lastPrice;
+	int startBit = roundDown(lastPrice);
+	CoinBigIndex offset =startBit*nel + (lastPrice-startBit);
+	double * elementA = element + offset;
+	int * rowA = row + offset;
+	startBit = roundDown(firstNotPrice);
+	offset =startBit*nel + (firstNotPrice-startBit);
+	double * elementB = element + offset;
+	int * rowB = row + offset;
+	for (int i = 0; i < nel*COIN_AVX2; i+=COIN_AVX2) {
+	  int temp = rowA[i];
+	  double tempE = elementA[i];
+	  rowA[i] = rowB[i];
+	  elementA[i] = elementB[i];
+	  rowB[i] = temp;
+	  elementB[i] = tempE;
+	}
+	firstNotPrice--;
+	lastPrice++;
+      } else if (lastPrice == firstNotPrice) {
+	// make sure correct side
+	iColumn = column[lastPrice];
+	if (model->getColumnStatus(iColumn) != ClpSimplex::atUpperBound)
+	  lastPrice++;
+	break;
+      }
+    }
+    block->firstAtUpper_ = lastPrice;
 #ifndef NDEBUG
-          // check
-          int i;
-          for (i = 0; i < lastPrice; i++) {
-               int iColumn = column[i];
-               assert (model->getColumnStatus(iColumn) != ClpSimplex::basic &&
-                       model->getColumnStatus(iColumn) != ClpSimplex::isFixed);
-               assert (lookup[iColumn] == i);
-          }
-          for (; i < numberInBlock; i++) {
-               int iColumn = column[i];
-               assert (model->getColumnStatus(iColumn) == ClpSimplex::basic ||
-                       model->getColumnStatus(iColumn) == ClpSimplex::isFixed);
-               assert (lookup[iColumn] == i);
-          }
+    // check
+    int i;
+    for (i = 0; i < block->firstBasic_; i++) {
+      int iColumn = column[i];
+      assert (model->getColumnStatus(iColumn) != ClpSimplex::basic &&
+	      model->getColumnStatus(iColumn) != ClpSimplex::isFixed);
+      assert (lookup[iColumn] == i);
+      if (i<block->firstAtUpper_) {
+	assert (model->getColumnStatus(iColumn) == ClpSimplex::isFree ||
+		model->getColumnStatus(iColumn) == ClpSimplex::superBasic);
+      } else if (i<block->firstAtLower_) {
+	assert (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound);
+      } else {
+	assert (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound);
+      }
+    }
+    for (; i < numberInBlock; i++) {
+      int iColumn = column[i];
+      assert (model->getColumnStatus(iColumn) == ClpSimplex::basic ||
+	      model->getColumnStatus(iColumn) == ClpSimplex::isFixed);
+      assert (lookup[iColumn] == i);
+    }
 #endif
-     }
+  }
+}
+// Swap one variable - when found
+void
+  ClpPackedMatrix3::swapOne(int iBlock, int kA, int kB)
+{
+  int * lookup = column_ + numberColumnsWithGaps_;
+  blockStruct * block = block_ + iBlock;
+  int nel = block->numberElements_;
+  int * row = row_ + block->startElements_;
+  double * element = element_ + block->startElements_;
+  int * column = column_ + block->startIndices_;
+  int iColumn = column[kA];
+  int jColumn = column[kB];
+  column[kA] = jColumn;
+  lookup[jColumn] = kA;
+  column[kB] = iColumn;
+  lookup[iColumn] = kB;
+  int startBit = roundDown(kA);
+  CoinBigIndex offset =startBit*nel + (kA-startBit);
+  double * elementA = element + offset;
+  int * rowA = row + offset;
+  startBit = roundDown(kB);
+  offset =startBit*nel + (kB-startBit);
+  double * elementB = element + offset;
+  int * rowB = row + offset;
+  int i;
+  for (i = 0; i < nel*COIN_AVX2; i+=COIN_AVX2) {
+    int temp = rowA[i];
+    double tempE = elementA[i];
+    rowA[i] = rowB[i];
+    elementA[i] = elementB[i];
+    rowB[i] = temp;
+    elementB[i] = tempE;
+  }
 }
 // Swap one variable
 void
-ClpPackedMatrix3::swapOne(const ClpSimplex * model, const ClpPackedMatrix * matrix,
-                          int iColumn)
+  ClpPackedMatrix3::swapOne(const ClpSimplex * model, const ClpPackedMatrix * matrix,
+			    int iColumn)
 {
-     int * lookup = column_ + numberColumns_;
-     // position in block
-     int kA = lookup[iColumn];
-     if (kA < 0)
-          return; // odd one
-     // get matrix data pointers
-     const CoinPackedMatrix * columnCopy = matrix->getPackedMatrix();
-     //const int * row = columnCopy->getIndices();
-     const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
-     const int * columnLength = columnCopy->getVectorLengths();
-     const double * elementByColumn = columnCopy->getElements();
-     CoinBigIndex start = columnStart[iColumn];
-     int n = columnLength[iColumn];
-     if (matrix->zeros()) {
-          CoinBigIndex end = start + n;
-          for (CoinBigIndex j = start; j < end; j++) {
-               if(!elementByColumn[j])
-                    n--;
-          }
-     }
-     // find block - could do binary search
-     int iBlock = CoinMin(n, numberBlocks_) - 1;
-     while (block_[iBlock].numberElements_ != n)
-          iBlock--;
-     blockStruct * block = block_ + iBlock;
-     int nel = block->numberElements_;
-     int * row = row_ + block->startElements_;
-     double * element = element_ + block->startElements_;
-     int * column = column_ + block->startIndices_;
-     assert (column[kA] == iColumn);
-     bool moveUp = (model->getColumnStatus(iColumn) == ClpSimplex::basic ||
-                    model->getColumnStatus(iColumn) == ClpSimplex::isFixed);
-     int lastPrice = block->numberPrice_;
-     int kB;
-     if (moveUp) {
-          // May already be in correct place (e.g. fixed basic leaving basis)
-          if (kA >= lastPrice)
-               return;
-          kB = lastPrice - 1;
-          block->numberPrice_--;
-     } else {
-          assert (kA >= lastPrice);
-          kB = lastPrice;
-          block->numberPrice_++;
-     }
-     int jColumn = column[kB];
-     column[kA] = jColumn;
-     lookup[jColumn] = kA;
-     column[kB] = iColumn;
-     lookup[iColumn] = kB;
-     double * elementA = element + kB * nel;
-     int * rowA = row + kB * nel;
-     double * elementB = element + kA * nel;
-     int * rowB = row + kA * nel;
-     int i;
-     for (i = 0; i < nel; i++) {
-          int temp = rowA[i];
-          double tempE = elementA[i];
-          rowA[i] = rowB[i];
-          elementA[i] = elementB[i];
-          rowB[i] = temp;
-          elementB[i] = tempE;
-     }
+  int * lookup = column_ + numberColumnsWithGaps_;
+  // position in block
+  int kA = lookup[iColumn];
+  if (kA < 0)
+    return; // odd one
+  int iBlock = numberBlocks_;
+  if (iColumn<model->numberColumns()) {
+    // get matrix data pointers
+    const CoinPackedMatrix * columnCopy = matrix->getPackedMatrix();
+    //const int * row = columnCopy->getIndices();
+    const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
+    const int * columnLength = columnCopy->getVectorLengths();
+    const double * elementByColumn = columnCopy->getElements();
+    CoinBigIndex start = columnStart[iColumn];
+    int n = columnLength[iColumn];
+    if (matrix->zeros()) {
+      CoinBigIndex end = start + n;
+      for (CoinBigIndex j = start; j < end; j++) {
+	if(!elementByColumn[j])
+	  n--;
+      }
+    }
+    // find block - could do binary search
+    iBlock = CoinMin(n, numberBlocks_) - 1;
+    while (block_[iBlock].numberElements_ != n)
+      iBlock--;
+  }
+  blockStruct * block = block_ + iBlock;
 #ifndef NDEBUG
-     // check
-     for (i = 0; i < block->numberPrice_; i++) {
-          int iColumn = column[i];
-          if (iColumn != model->sequenceIn() && iColumn != model->sequenceOut())
-               assert (model->getColumnStatus(iColumn) != ClpSimplex::basic &&
-                       model->getColumnStatus(iColumn) != ClpSimplex::isFixed);
-          assert (lookup[iColumn] == i);
-     }
-     int numberInBlock = block->numberInBlock_;
-     for (; i < numberInBlock; i++) {
-          int iColumn = column[i];
-          if (iColumn != model->sequenceIn() && iColumn != model->sequenceOut())
-               assert (model->getColumnStatus(iColumn) == ClpSimplex::basic ||
-                       model->getColumnStatus(iColumn) == ClpSimplex::isFixed);
-          assert (lookup[iColumn] == i);
-     }
+  int * column = column_ + block->startIndices_;
+  assert (column[kA] == iColumn);
+#endif
+  int from,to;
+  if (kA<block->firstBasic_) {
+    if (kA>=block->firstAtLower_) {
+      from=2;
+    } else if (kA>=block->firstAtUpper_) {
+      from=1;
+    } else {
+      from=0;
+    }
+  } else {
+    from=3;
+  }
+  if (model->getColumnStatus(iColumn) == ClpSimplex::basic ||
+      model->getColumnStatus(iColumn) == ClpSimplex::isFixed) {
+    to=3;
+  } else if (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound) {
+    to=2;
+  } else if (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound) {
+    to=1;
+  } else {
+    to=0;
+  }
+  int * statusCounts = (&block->firstAtUpper_)-1;
+  if (from<to) {
+    while (from<to) {
+      int kB=statusCounts[from+1]-1;
+      statusCounts[from+1]=kB;
+      swapOne(iBlock,kA,kB);
+      kA=kB;
+      from++;
+    }
+  } else if (from>to) {
+    while (from>to) {
+      int kB=statusCounts[from];
+      statusCounts[from]=kB+1;
+      swapOne(iBlock,kA,kB);
+      kA=kB;
+      from--;
+    }
+  }
+#ifndef NDEBUG
+  // check
+  int i;
+  for (i = 0; i < block->firstBasic_; i++) {
+    int iColumn = column[i];
+    if (iColumn != model->sequenceIn() && iColumn != model->sequenceOut())
+      assert (model->getColumnStatus(iColumn) != ClpSimplex::basic &&
+	      model->getColumnStatus(iColumn) != ClpSimplex::isFixed);
+    assert (lookup[iColumn] == i);
+    if (model->algorithm()>0) {
+      if (i<block->firstAtUpper_) {
+	assert (model->getColumnStatus(iColumn) == ClpSimplex::isFree ||
+		model->getColumnStatus(iColumn) == ClpSimplex::superBasic);
+      } else if (i<block->firstAtLower_) {
+	assert (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound);
+      } else {
+	assert (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound);
+      }
+    }
+  }
+  int numberInBlock = block->numberInBlock_;
+  for (; i < numberInBlock; i++) {
+    int iColumn = column[i];
+    if (iColumn != model->sequenceIn() && iColumn != model->sequenceOut())
+      assert (model->getColumnStatus(iColumn) == ClpSimplex::basic ||
+	      model->getColumnStatus(iColumn) == ClpSimplex::isFixed);
+    assert (lookup[iColumn] == i);
+  }
 #endif
 }
 /* Return <code>x * -1 * A in <code>z</code>.
@@ -6263,384 +7535,856 @@ ClpPackedMatrix3::swapOne(const ClpSimplex * model, const ClpPackedMatrix * matr
    Squashes small elements and knows about ClpSimplex */
 void
 ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
-                                 const double * pi,
-                                 CoinIndexedVector * output) const
+				 const double * pi,
+				 CoinIndexedVector * output) const
 {
-     int numberNonZero = 0;
-     int * index = output->getIndices();
-     double * array = output->denseVector();
-     double zeroTolerance = model->zeroTolerance();
-     double value = 0.0;
-     CoinBigIndex j;
-     int numberOdd = block_->startIndices_;
-     if (numberOdd) {
-          // A) as probably long may be worth unrolling
-          CoinBigIndex end = start_[1];
-          for (j = start_[0]; j < end; j++) {
-               int iRow = row_[j];
-               value += pi[iRow] * element_[j];
-          }
-          int iColumn;
-          // int jColumn=column_[0];
-
-          for (iColumn = 0; iColumn < numberOdd - 1; iColumn++) {
-               CoinBigIndex start = end;
-               end = start_[iColumn+2];
-               if (fabs(value) > zeroTolerance) {
-                    array[numberNonZero] = value;
-                    index[numberNonZero++] = column_[iColumn];
-                    //index[numberNonZero++]=jColumn;
-               }
-               // jColumn = column_[iColumn+1];
-               value = 0.0;
-               //if (model->getColumnStatus(jColumn)!=ClpSimplex::basic) {
-               for (j = start; j < end; j++) {
-                    int iRow = row_[j];
-                    value += pi[iRow] * element_[j];
-               }
-               //}
-          }
-          if (fabs(value) > zeroTolerance) {
-               array[numberNonZero] = value;
-               index[numberNonZero++] = column_[iColumn];
-               //index[numberNonZero++]=jColumn;
-          }
-     }
-     for (int iBlock = 0; iBlock < numberBlocks_; iBlock++) {
-          // B) Can sort so just do nonbasic (and nonfixed)
-          // C) Can do two at a time (if so put odd one into start_)
-          // D) can use switch
-          blockStruct * block = block_ + iBlock;
-          //int numberPrice = block->numberInBlock_;
-          int numberPrice = block->numberPrice_;
-          int nel = block->numberElements_;
-          int * row = row_ + block->startElements_;
-          double * element = element_ + block->startElements_;
-          int * column = column_ + block->startIndices_;
-#if 0
-          // two at a time
-          if ((numberPrice & 1) != 0) {
-               double value = 0.0;
-               int nel2 = nel;
-               for (; nel2; nel2--) {
-                    int iRow = *row++;
-                    value += pi[iRow] * (*element++);
-               }
-               if (fabs(value) > zeroTolerance) {
-                    array[numberNonZero] = value;
-                    index[numberNonZero++] = *column;
-               }
-               column++;
-          }
-          numberPrice = numberPrice >> 1;
-          switch ((nel % 2)) {
-               // 2 k +0
-          case 0:
-               for (; numberPrice; numberPrice--) {
-                    double value0 = 0.0;
-                    double value1 = 0.0;
-                    int nel2 = nel;
-                    for (; nel2; nel2--) {
-                         int iRow0 = *row;
-                         int iRow1 = *(row + nel);
-                         row++;
-                         double element0 = *element;
-                         double element1 = *(element + nel);
-                         element++;
-                         value0 += pi[iRow0] * element0;
-                         value1 += pi[iRow1] * element1;
-                    }
-                    row += nel;
-                    element += nel;
-                    if (fabs(value0) > zeroTolerance) {
-                         array[numberNonZero] = value0;
-                         index[numberNonZero++] = *column;
-                    }
-                    column++;
-                    if (fabs(value1) > zeroTolerance) {
-                         array[numberNonZero] = value1;
-                         index[numberNonZero++] = *column;
-                    }
-                    column++;
-               }
-               break;
-               // 2 k +1
-          case 1:
-               for (; numberPrice; numberPrice--) {
-                    double value0;
-                    double value1;
-                    int nel2 = nel - 1;
-                    {
-                         int iRow0 = row[0];
-                         int iRow1 = row[nel];
-                         double pi0 = pi[iRow0];
-                         double pi1 = pi[iRow1];
-                         value0 = pi0 * element[0];
-                         value1 = pi1 * element[nel];
-                         row++;
-                         element++;
-                    }
-                    for (; nel2; nel2--) {
-                         int iRow0 = *row;
-                         int iRow1 = *(row + nel);
-                         row++;
-                         double element0 = *element;
-                         double element1 = *(element + nel);
-                         element++;
-                         value0 += pi[iRow0] * element0;
-                         value1 += pi[iRow1] * element1;
-                    }
-                    row += nel;
-                    element += nel;
-                    if (fabs(value0) > zeroTolerance) {
-                         array[numberNonZero] = value0;
-                         index[numberNonZero++] = *column;
-                    }
-                    column++;
-                    if (fabs(value1) > zeroTolerance) {
-                         array[numberNonZero] = value1;
-                         index[numberNonZero++] = *column;
-                    }
-                    column++;
-               }
-               break;
-          }
+  int numberNonZero = 0;
+  int * index = output->getIndices();
+  double * array = output->denseVector();
+  double zeroTolerance = model->zeroTolerance();
+  double value = 0.0;
+  CoinBigIndex j;
+  int numberOdd = block_->startIndices_;
+  if (numberOdd) {
+    // A) as probably long may be worth unrolling
+    CoinBigIndex end = start_[1];
+    for (j = start_[0]; j < end; j++) {
+      int iRow = row_[j];
+      value += pi[iRow] * element_[j];
+    }
+    int iColumn;
+    // int jColumn=column_[0];
+    
+    for (iColumn = 0; iColumn < numberOdd - 1; iColumn++) {
+      CoinBigIndex start = end;
+      end = start_[iColumn+2];
+      if (fabs(value) > zeroTolerance) {
+	array[numberNonZero] = value;
+	index[numberNonZero++] = column_[iColumn];
+	//index[numberNonZero++]=jColumn;
+      }
+      // jColumn = column_[iColumn+1];
+      value = 0.0;
+      //if (model->getColumnStatus(jColumn)!=ClpSimplex::basic) {
+      for (j = start; j < end; j++) {
+	int iRow = row_[j];
+	value += pi[iRow] * element_[j];
+      }
+      //}
+    }
+    if (fabs(value) > zeroTolerance) {
+      array[numberNonZero] = value;
+      index[numberNonZero++] = column_[iColumn];
+      //index[numberNonZero++]=jColumn;
+    }
+  }
+  for (int iBlock = 0; iBlock < numberBlocks_; iBlock++) {
+    // C) Can do two at a time (if so put odd one into start_)
+    // D) can use switch
+    blockStruct * block = block_ + iBlock;
+    //int numberPrice = block->numberInBlock_;
+    int numberPrice = block->firstBasic_;
+    int nel = block->numberElements_;
+    int * row = row_ + block->startElements_;
+    double * element = element_ + block->startElements_;
+    int * column = column_ + block->startIndices_;
+    int nBlock=numberPrice>>COIN_AVX2_SHIFT;
+    numberPrice -= roundDown(numberPrice);
+    for (int jBlock=0;jBlock<nBlock;jBlock++) {
+      for (int j=0; j < COIN_AVX2; j++) {
+	double value = 0.0;
+	for (int i=0; i < nel; i++) {
+	  int iRow = row[i*COIN_AVX2];
+	  value += pi[iRow] * element[i*COIN_AVX2];
+	}
+#if COIN_AVX2>1
+	row++;
+	element++;
 #else
-          for (; numberPrice; numberPrice--) {
-               double value = 0.0;
-               int nel2 = nel;
-               for (; nel2; nel2--) {
-                    int iRow = *row++;
-                    value += pi[iRow] * (*element++);
-               }
-               if (fabs(value) > zeroTolerance) {
-                    array[numberNonZero] = value;
-                    index[numberNonZero++] = *column;
-               }
-               column++;
-          }
+	row+=nel;
+	element+=nel;
 #endif
-     }
-     output->setNumElements(numberNonZero);
+	if (fabs(value) > zeroTolerance) {
+	  array[numberNonZero] = value;
+	  index[numberNonZero++] = *column;
+	}
+	column++;
+      }
+#if COIN_AVX2>1
+      row += (nel-1)*COIN_AVX2;
+      element += (nel-1)*COIN_AVX2;
+      assert (row == row_ + block->startElements_ + nel*COIN_AVX2*(jBlock+1));
+#endif
+    }
+    // last lot
+    for (int j=0; j < numberPrice; j++) {
+      double value = 0.0;
+      for (int i=0; i < nel; i++) {
+	int iRow = row[i*COIN_AVX2];
+	value += pi[iRow] * element[i*COIN_AVX2];
+      }
+#if COIN_AVX2>1
+      row++;
+      element++;
+#else
+      row+=nel;
+      element+=nel;
+#endif
+      if (fabs(value) > zeroTolerance) {
+	array[numberNonZero] = value;
+	index[numberNonZero++] = *column;
+      }
+      column++;
+    }
+  }
+  output->setNumElements(numberNonZero);
+}
+static void
+transposeTimes3Bit2Odd(clpTempInfo & info)
+{
+  double zeroTolerance = info.tolerance;
+  double dualTolerance = -info.dualTolerance; // sign swapped
+  double * COIN_RESTRICT reducedCost = info.reducedCost;
+  double * COIN_RESTRICT weights = info.solution;
+  const unsigned int * reference =
+    reinterpret_cast<const unsigned int *>(info.upper);
+  const unsigned char * status = info.status;
+  const CoinBigIndex * starts = info.start;
+  const int * row = info.row;
+  const int * column = info.which;
+  const double * element = info.element;
+  double scaleFactor = info.theta;
+  const double * pi = info.cost;
+  const double * piWeight = info.lower;
+  double referenceIn = info.upperTheta;
+  double devex = info.changeObj;
+  assert (scaleFactor);
+  int bestSequence = info.numberAdded;
+  double bestRatio = info.bestPossible;
+#define NO_CHANGE_MULTIPLIER 1
+#define INVERSE_MULTIPLIER 1.0/NO_CHANGE_MULTIPLIER
+#if NO_CHANGE_MULTIPLIER != 1
+  double bestRatio2 = NO_CHANGE_MULTIPLIER*bestRatio;
+#else
+#define bestRatio2 bestRatio
+#endif
+  CoinBigIndex end = starts[0];
+  int numberOdd = info.numberToDo;
+  for (int jColumn = 0; jColumn < numberOdd; jColumn++) {
+    CoinBigIndex start = end;
+    CoinBigIndex j;
+    int iColumn = column[jColumn];
+    end = starts[jColumn+1];
+    double value = 0.0;
+    if ((status[iColumn]&7) != 1) {
+      for (j = start; j < end; j++) {
+	int iRow = row[j];
+	value -= pi[iRow] * element[j];
+      }
+      if (fabs(value) > zeroTolerance) {
+	// and do other array
+	double modification = 0.0;
+	for (j = start; j < end; j++) {
+	  int iRow = row[j];
+	  modification += piWeight[iRow] * element[j];
+	}
+	double thisWeight = weights[iColumn];
+	double pivot = value * scaleFactor;
+	double pivotSquared = pivot * pivot;
+	thisWeight += pivotSquared * devex + pivot * modification;
+	if (thisWeight < DEVEX_TRY_NORM) {
+	  if (referenceIn < 0.0) {
+	    // steepest
+	    thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+	  } else {
+	    // exact
+	    thisWeight = referenceIn * pivotSquared;
+	    if (reference(iColumn))
+	      thisWeight += 1.0;
+	    thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+	  }
+	}
+	weights[iColumn] = thisWeight;
+	value = reducedCost[iColumn]-value;
+	reducedCost[iColumn] = value;
+	unsigned char thisStatus=status[iColumn]&7;
+	if (thisStatus==3) {
+	} else if ((thisStatus&1)!=0) {
+	  // basic or fixed
+	  value=0.0;
+	} else if (thisStatus==2) {
+	  value=-value;
+	} else {
+	  // free or superbasic
+	  if (fabs(value) > -FREE_ACCEPT * dualTolerance) {
+	    // we are going to bias towards free (but only if reasonable)
+	    value = -fabs(value)*FREE_BIAS;
+	  } else {
+	    value=0.0;
+	  }
+	}
+	if (value < dualTolerance) {
+	  value *= value;
+	  if (value>bestRatio*weights[iColumn]) {
+	    bestSequence = iColumn;
+	    bestRatio = value/weights[iColumn];
+#if NO_CHANGE_MULTIPLIER != 1
+	    bestRatio2 = bestRatio * NO_CHANGE_MULTIPLIER;
+#endif
+	  }
+	}
+      } else {
+	value = reducedCost[iColumn];
+	unsigned char thisStatus=status[iColumn]&7;
+	if (thisStatus==3) {
+	} else if ((thisStatus&1)!=0) {
+	  // basic or fixed
+	  value=0.0;
+	} else if (thisStatus==2) {
+	  value=-value;
+	} else {
+	  // free or superbasic
+	  if (fabs(value) > -FREE_ACCEPT * dualTolerance) {
+	    // we are going to bias towards free (but only if reasonable)
+	    value = -fabs(value)*FREE_BIAS;
+	  } else {
+	    value=0.0;
+	  }
+	}
+	if (value < dualTolerance) {
+	  value *= value;
+	  if (value>bestRatio2*weights[iColumn]) {
+	    bestSequence = iColumn;
+	    bestRatio2 = value/weights[iColumn];
+#if NO_CHANGE_MULTIPLIER != 1
+	    bestRatio = bestRatio2 * INVERSE_MULTIPLIER;
+#endif
+	  }
+	}
+      }
+    }
+  }
+  info.numberAdded = bestSequence;
+  info.bestPossible = bestRatio;
+}
+#include <immintrin.h>
+static void
+transposeTimes3Bit2(clpTempInfo & info)
+{
+  double zeroTolerance = info.tolerance;
+  double dualTolerance = -info.dualTolerance; // sign swapped
+  double * COIN_RESTRICT reducedCost = info.reducedCost;
+  double * COIN_RESTRICT weights = info.solution;
+  double * COIN_RESTRICT work = info.work;
+  double * COIN_RESTRICT work2 = work+COIN_AVX2_CHUNK;
+  const unsigned int * reference =
+    reinterpret_cast<const unsigned int *>(info.upper);
+  const blockStruct * blocks =
+    reinterpret_cast<const blockStruct *>(info.pivotVariable);
+  const unsigned char * status = info.status;
+  const int * rowBlock = info.row;
+  const int * columnBlock = info.which;
+  const double * elementBlock = info.element;
+  double scaleFactor = info.theta;
+  const double * pi = info.cost;
+  const double * piWeight = info.lower;
+  double referenceIn = info.upperTheta;
+  double devex = info.changeObj;
+  assert (scaleFactor);
+  int bestSequence = info.numberAdded;
+  double bestRatio = info.bestPossible;
+#if NO_CHANGE_MULTIPLIER != 1
+  double bestRatio2 = NO_CHANGE_MULTIPLIER*bestRatio;
+#endif
+#define INCLUDE_MATRIX3_PRICING 1
+  int firstBlock=info.startColumn;
+  int lastBlock=info.numberToDo;
+  //double * COIN_RESTRICT tempArray =
+  //const_cast<double *>(elementBlock+info.numberColumns);
+  //double * COIN_RESTRICT tempArray2 = tempArray + roundUp(maxBlockSize);
+  for (int iBlock = firstBlock; iBlock < lastBlock; iBlock++) {
+    const blockStruct * block = blocks + iBlock;
+    int numberPrice = block->firstBasic_;
+    int nel = block->numberElements_;
+    const int * row = rowBlock + block->startElements_;
+    const double * element = elementBlock + block->startElements_;
+    const int * column = columnBlock + block->startIndices_;
+#if COIN_AVX2 > 1
+    int numberDo = roundDown(numberPrice);
+#ifdef HASWELL
+    assert(COIN_AVX2==4);
+    __m256d zero = _mm256_setzero_pd();
+    for (int kColumn=0;kColumn<numberDo;kColumn+=COIN_AVX2_CHUNK) {
+      int endBlock=CoinMin(COIN_AVX2_CHUNK,numberDo-kColumn);
+      for(int i=0;i<endBlock;i+=COIN_AVX2) {
+	__m256d arrayX = _mm256_setzero_pd();
+	__m256d tempX = _mm256_setzero_pd();
+	for (int j=0;j<nel;j++) {
+	  __m128i rows = _mm_loadu_si128((const __m128i *)row);
+	  __m256d elements = _mm256_load_pd(element);
+	  __m256d pis = _mm256_i32gather_pd(pi,rows,8);
+	  __m256d piWeights = _mm256_i32gather_pd(piWeight,rows,8);
+	  // should be better way using sub
+	  arrayX = _mm256_fmadd_pd(pis,elements,arrayX);
+	  tempX = _mm256_fmadd_pd(piWeights,elements,tempX);
+	  row+=4;
+	  element+=4;
+	}
+	arrayX = _mm256_sub_pd(zero,arrayX);
+	_mm256_store_pd(work+i,tempX);
+	_mm256_store_pd(work2+i,arrayX);
+      }
+      for (int i=0;i<endBlock;i++) {
+	double value=work2[i];
+	double modification = work[i];
+	// common coding
+#include "ClpPackedMatrix.hpp"
+      }
+    }
+#else
+    for (int kColumn=0;kColumn<numberDo;kColumn+=COIN_AVX2_CHUNK) {
+      int n=0;
+      int nBlock=CoinMin(COIN_AVX2_CHUNK,numberPrice-kColumn)>>COIN_AVX2_SHIFT;
+      //int nBlock = numberPrice>>COIN_AVX2_SHIFT;
+      for (int jBlock=0;jBlock<nBlock;jBlock++) {
+	for (int j=0; j < COIN_AVX2; j++) {
+	  double value = 0.0;
+	  double modification = 0.0;
+	  for (int i=0; i < nel; i++) {
+	    //assert (element+i*COIN_AVX2<tempArray);
+	    int iRow = row[i*COIN_AVX2];
+	    value -= pi[iRow] * element[i*COIN_AVX2];
+	    modification += piWeight[iRow] * element[i*COIN_AVX2];
+	  }
+	  work[n]=modification;
+	  work2[n++] = value;
+	  row++;
+	  element++;
+	}
+	row += (nel-1)*COIN_AVX2;
+	element += (nel-1)*COIN_AVX2;
+	//assert (row == rowBlock + block->startElements_ + nel*COIN_AVX2*(jBlock+1));
+      }
+      for (int j=0;j<n;j++) {
+	double value=work2[j];
+	double modification = work[j];
+	// common coding
+#include "ClpPackedMatrix.hpp"
+      }
+    }
+#endif
+    // last lot
+    for (int j=numberDo; j < numberPrice; j++) {
+      double value = 0.0;
+      double modification = 0.0;
+      for (int i=0; i < nel; i++) {
+	int iRow = row[i*COIN_AVX2];
+	value -= pi[iRow] * element[i*COIN_AVX2];
+	modification += piWeight[iRow] * element[i*COIN_AVX2];
+      }
+      // common coding
+      #include "ClpPackedMatrix.hpp"
+      row++;
+      element++;
+    }
+#else // COIN_AVX2 == 1
+    for (int j=0; j < numberPrice; j++) {
+      double value = 0.0;
+      double modification = 0.0;
+      for (int i=0; i < nel; i++) {
+	//assert (element+i*COIN_AVX2<tempArray);
+	int iRow = row[i*COIN_AVX2];
+	value -= pi[iRow] * element[i*COIN_AVX2];
+	modification += piWeight[iRow] * element[i*COIN_AVX2];
+      }
+      // common coding
+      #include "ClpPackedMatrix.hpp"
+      row+=nel;
+      element+=nel;
+    }
+    int n = numberPrice;
+#endif
+  }
+  info.numberAdded = bestSequence;
+  info.bestPossible = bestRatio;
+}
+static void
+transposeTimes3BitSlacks(clpTempInfo & info)
+{
+  double dualTolerance = info.dualTolerance;
+  double * COIN_RESTRICT reducedCost = info.reducedCost;
+  double * COIN_RESTRICT weights = info.solution;
+  const int * columnBlock = info.which;
+  const blockStruct * blocks =
+    reinterpret_cast<const blockStruct *>(info.pivotVariable);
+  //const unsigned char * status = info.status;
+  int bestSequence = info.numberAdded;
+  double bestRatio = info.bestPossible;
+  int iBlock=info.startColumn;
+  assert (info.numberToDo==iBlock+1);
+  const blockStruct * block = blocks + iBlock;
+  int first = 0;
+  int last = block->firstAtUpper_;
+  const int * column = columnBlock + block->startIndices_;
+  for (int j=first;j<last;j++) {
+    int iColumn=*column;
+    column++;
+    double value = reducedCost[iColumn];
+    // free or superbasic
+    if (fabs(value) > FREE_ACCEPT * dualTolerance) {
+      // we are going to bias towards free (but only if reasonable)
+      value = -fabs(value)*FREE_BIAS;
+      value *= value;
+      if (value>bestRatio*weights[iColumn]) {
+	bestSequence = iColumn;
+	bestRatio = value/weights[iColumn];
+      }
+    }
+  }
+  first = last;
+  last = block->firstAtLower_;
+  for (int j=first;j<last;j++) {
+    int iColumn=*column;
+    column++;
+    double value = reducedCost[iColumn];
+    // at upper
+    if (value > dualTolerance) {
+      value *= value;
+      if (value>bestRatio*weights[iColumn]) {
+	bestSequence = iColumn;
+	bestRatio = value/weights[iColumn];
+      }
+    }
+  }
+  first = last;
+  last = block->firstBasic_;
+  dualTolerance = - dualTolerance; //flip sign
+  for (int j=first;j<last;j++) {
+    int iColumn=*column;
+    column++;
+    double value = reducedCost[iColumn];
+    // at lower
+    if (value < dualTolerance) {
+      value *= value;
+      if (value>bestRatio*weights[iColumn]) {
+	bestSequence = iColumn;
+	bestRatio = value/weights[iColumn];
+      }
+    }
+  }
+  info.numberAdded = bestSequence;
+  info.bestPossible = bestRatio;
 }
 // Updates two arrays for steepest
 void
 ClpPackedMatrix3::transposeTimes2(const ClpSimplex * model,
-                                  const double * pi, CoinIndexedVector * output,
-                                  const double * piWeight,
-                                  double referenceIn, double devex,
-                                  // Array for exact devex to say what is in reference framework
-                                  unsigned int * reference,
-                                  double * weights, double scaleFactor)
+				  const double * COIN_RESTRICT pi,
+				  CoinIndexedVector * output,
+				  const double * COIN_RESTRICT piWeight,
+				  double * COIN_RESTRICT infeas, 
+				  double * COIN_RESTRICT reducedCost,
+				  double referenceIn, double devex,
+				  // Array for exact devex to say what is in reference framework
+				  unsigned int * COIN_RESTRICT reference,
+				  double * COIN_RESTRICT weights, double scaleFactor)
 {
-     int numberNonZero = 0;
-     int * index = output->getIndices();
-     double * array = output->denseVector();
-     double zeroTolerance = model->zeroTolerance();
-     double value = 0.0;
-     bool killDjs = (scaleFactor == 0.0);
-     if (!scaleFactor)
-          scaleFactor = 1.0;
-     int numberOdd = block_->startIndices_;
-     int iColumn;
-     CoinBigIndex end = start_[0];
-     for (iColumn = 0; iColumn < numberOdd; iColumn++) {
-          CoinBigIndex start = end;
-          CoinBigIndex j;
-          int jColumn = column_[iColumn];
-          end = start_[iColumn+1];
-          value = 0.0;
-          if (model->getColumnStatus(jColumn) != ClpSimplex::basic) {
-               for (j = start; j < end; j++) {
-                    int iRow = row_[j];
-                    value -= pi[iRow] * element_[j];
-               }
-               if (fabs(value) > zeroTolerance) {
-                    // and do other array
-                    double modification = 0.0;
-                    for (j = start; j < end; j++) {
-                         int iRow = row_[j];
-                         modification += piWeight[iRow] * element_[j];
-                    }
-                    double thisWeight = weights[jColumn];
-                    double pivot = value * scaleFactor;
-                    double pivotSquared = pivot * pivot;
-                    thisWeight += pivotSquared * devex + pivot * modification;
-                    if (thisWeight < DEVEX_TRY_NORM) {
-                         if (referenceIn < 0.0) {
-                              // steepest
-                              thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
-                         } else {
-                              // exact
-                              thisWeight = referenceIn * pivotSquared;
-                              if (reference(jColumn))
-                                   thisWeight += 1.0;
-                              thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
-                         }
-                    }
-                    weights[jColumn] = thisWeight;
-                    if (!killDjs) {
-                         array[numberNonZero] = value;
-                         index[numberNonZero++] = jColumn;
-                    }
-               }
-          }
-     }
-     for (int iBlock = 0; iBlock < numberBlocks_; iBlock++) {
-          // B) Can sort so just do nonbasic (and nonfixed)
-          // C) Can do two at a time (if so put odd one into start_)
-          // D) can use switch
-          blockStruct * block = block_ + iBlock;
-          //int numberPrice = block->numberInBlock_;
-          int numberPrice = block->numberPrice_;
-          int nel = block->numberElements_;
-          int * row = row_ + block->startElements_;
-          double * element = element_ + block->startElements_;
-          int * column = column_ + block->startIndices_;
-          for (; numberPrice; numberPrice--) {
-               double value = 0.0;
-               int nel2 = nel;
-               for (; nel2; nel2--) {
-                    int iRow = *row++;
-                    value -= pi[iRow] * (*element++);
-               }
-               if (fabs(value) > zeroTolerance) {
-                    int jColumn = *column;
-                    // back to beginning
-                    row -= nel;
-                    element -= nel;
-                    // and do other array
-                    double modification = 0.0;
-                    nel2 = nel;
-                    for (; nel2; nel2--) {
-                         int iRow = *row++;
-                         modification += piWeight[iRow] * (*element++);
-                    }
-                    double thisWeight = weights[jColumn];
-                    double pivot = value * scaleFactor;
-                    double pivotSquared = pivot * pivot;
-                    thisWeight += pivotSquared * devex + pivot * modification;
-                    if (thisWeight < DEVEX_TRY_NORM) {
-                         if (referenceIn < 0.0) {
-                              // steepest
-                              thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
-                         } else {
-                              // exact
-                              thisWeight = referenceIn * pivotSquared;
-                              if (reference(jColumn))
-                                   thisWeight += 1.0;
-                              thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
-                         }
-                    }
-                    weights[jColumn] = thisWeight;
-                    if (!killDjs) {
-                         array[numberNonZero] = value;
-                         index[numberNonZero++] = jColumn;
-                    }
-               }
-               column++;
-          }
-     }
-     output->setNumElements(numberNonZero);
-     output->setPackedMode(true);
+  /*
+    This is designed for meaty problems so probably should also go to exact devex
+    also could do sequenceIn_ choice here
+    could do ones at lb separately - ?? masking - ? masking for weights
+   */
+  double zeroTolerance = model->zeroTolerance();
+  double dualTolerance = model->currentDualTolerance();
+  // we can't really trust infeasibilities if there is dual error
+  // this coding has to mimic coding in checkDualSolution
+  double error = CoinMin(1.0e-2, model->largestDualError());
+  // allow tolerance at least slightly bigger than standard
+  dualTolerance = dualTolerance +  error;
+  int numberOdd = block_->startIndices_;
+  assert (scaleFactor);
+#if ABOCA_LITE
+  //int nChunks=numberChunks_;
+#define ODD_INFO 2*ABOCA_LITE
+#else
+#define ODD_INFO 1
+  //int nChunks=1;
+#endif
+  clpTempInfo info[ODD_INFO+2]={};
+  unsigned char * status = model->statusArray();
+  // fill in info
+  for (int i=0;i<ODD_INFO+2;i++) {
+    //memset(info+i,0,sizeof(clpTempInfo));
+    info[i].tolerance=zeroTolerance;
+    info[i].dualTolerance=dualTolerance; 
+    info[i].reducedCost=reducedCost;
+    info[i].infeas=infeas;
+    info[i].solution=weights;
+    info[i].upper=reinterpret_cast<const double *>(reference);
+    info[i].pivotVariable=reinterpret_cast<const int *>(block_);
+    info[i].status=status;
+    info[i].start=start_;
+    info[i].row=row_;
+    info[i].which=column_;
+    info[i].element=element_;
+    info[i].theta=scaleFactor;
+    info[i].cost=pi;
+    info[i].lower=piWeight;
+    info[i].upperTheta=referenceIn;
+    info[i].changeObj=devex;
+    info[i].numberAdded=-1;
+  }
+  //assert (ODD_INFO==1);
+  info[ODD_INFO].startColumn=0;
+  info[ODD_INFO].numberToDo=numberOdd;
+  //
+  double * temporary = temporary_->array(); 
+#if ABOCA_LITE
+  for (int iBlock=0;iBlock<numberChunks_;iBlock++) {
+    info[iBlock].startColumn=endChunk_[iBlock];
+    info[iBlock].numberToDo=endChunk_[iBlock+1];
+    info[iBlock].work=temporary+2*COIN_AVX2_CHUNK*iBlock;
+  }
+#else
+  info[0].startColumn=0;
+  info[0].numberToDo=numberBlocks_;
+  info[0].work=temporary;
+#endif
+  info[ODD_INFO+1].startColumn=numberBlocks_;
+  info[ODD_INFO+1].numberToDo=numberBlocks_+1;
+#if ABOCA_LITE
+  if (abcState()>1) {
+    cilk_spawn transposeTimes3Bit2Odd(info[ODD_INFO]);
+    for (int iBlock=0;iBlock<numberChunks_;iBlock++) {
+      cilk_spawn transposeTimes3Bit2(info[iBlock]);
+    }
+    transposeTimes3BitSlacks(info[ODD_INFO+1]);
+    cilk_sync; 
+  } else {
+#endif
+    transposeTimes3Bit2Odd(info[ODD_INFO]);
+#if ABOCA_LITE
+    for (int iBlock=0;iBlock<numberChunks_;iBlock++) {
+      transposeTimes3Bit2(info[iBlock]);
+    }
+#else
+    transposeTimes3Bit2(info[0]);
+#endif
+    transposeTimes3BitSlacks(info[ODD_INFO+1]);
+#if ABOCA_LITE
+  }
+#endif  
+  int sequenceIn=-1;
+  double best=0.0;
+  for (int iBlock=0;iBlock<ODD_INFO+2;iBlock++) {
+    if (info[iBlock].bestPossible>best) {
+      best=info[iBlock].bestPossible;
+      sequenceIn=info[iBlock].numberAdded;
+    }
+  }
+  // Make sure sequenceOut not eligible
+  int sequenceOut = model->sequenceOut();
+  double saveOutDj;
+  if (sequenceOut>=0) {
+    saveOutDj=reducedCost[sequenceOut];
+    unsigned char thisStatus=status[sequenceOut]&7;
+    assert (thisStatus!=0&&thisStatus!=4);
+    if (thisStatus!=2) 
+      reducedCost[sequenceOut]=COIN_DBL_MAX;
+    else
+      reducedCost[sequenceOut]=-COIN_DBL_MAX;
+  }
+  if (sequenceIn>=0) {
+    // check not flagged
+    if (model->flagged(sequenceIn)||sequenceIn==sequenceOut) {
+      int number = model->numberRows() + model->numberColumns();
+      const unsigned char * COIN_RESTRICT status =
+	model->statusArray();
+      sequenceIn = -2;
+      double bestRatio=0.0;
+      for (int iSequence=0;iSequence<number;iSequence++) {
+	unsigned char thisStatus=status[iSequence]&7;
+	double value = reducedCost[iSequence];
+	if (thisStatus==3) {
+	} else if ((thisStatus&1)!=0) {
+	  // basic or fixed
+	  value=0.0;
+	} else if (thisStatus==2) {
+	  value=-value;
+	} else {
+	  // free or superbasic
+	  if (fabs(value) > FREE_ACCEPT * -dualTolerance) {
+	    // we are going to bias towards free (but only if reasonable)
+	    value = -fabs(value)*FREE_BIAS;
+	  } else {
+	    value=0.0;
+	  }
+	}
+	if (value < dualTolerance) {
+	  value *= value;
+	  if (value>bestRatio*weights[iSequence]) {
+	    if (!model->flagged(iSequence)) {
+	      sequenceIn = iSequence;
+	      bestRatio = value/weights[iSequence];
+	    }
+	  }
+	}
+      }
+    }
+  }
+  if (sequenceOut>=0) 
+    reducedCost[sequenceOut]=saveOutDj;
+  model->spareIntArray_[3]=sequenceIn;
+}
+ /*
+  type - 1 redo infeasible, 2 choose sequenceIn, 3 both
+  returns sequenceIn (or -1) for type 2
+ */
+int
+ClpPackedMatrix3::redoInfeasibilities(const ClpSimplex * model,
+				      ClpPrimalColumnSteepest * pivotChoose,
+				      int type)
+{
+  CoinIndexedVector * infeasible = pivotChoose->infeasible();
+  // change to use blocks
+  double tolerance = model->currentDualTolerance();
+  // we can't really trust infeasibilities if there is dual error
+  // this coding has to mimic coding in checkDualSolution
+  double error = CoinMin(1.0e-2, model->largestDualError());
+  // allow tolerance at least slightly bigger than standard
+  tolerance = tolerance +  error;
+  // reverse sign so test is cleaner
+  tolerance = - tolerance;
+  int number = model->numberRows() + model->numberColumns();
+
+  const double * COIN_RESTRICT reducedCost = model->djRegion();
+  const unsigned char * COIN_RESTRICT status =
+    model->statusArray();
+  const double * COIN_RESTRICT weights = pivotChoose->weights();
+  int sequenceIn=-1;
+  double bestRatio=0.0;
+  switch (type) {
+  case 1:
+    infeasible->clear();
+    for (int iSequence=0;iSequence<number;iSequence++) {
+      unsigned char thisStatus=status[iSequence]&7;
+      double value = reducedCost[iSequence];
+      if (thisStatus==3) {
+      } else if ((thisStatus&1)!=0) {
+	// basic or fixed
+	value=0.0;
+      } else if (thisStatus==2) {
+	value=-value;
+      } else {
+	// free or superbasic
+	if (fabs(value) > FREE_ACCEPT * -tolerance) {
+	  // we are going to bias towards free (but only if reasonable)
+	  value = -fabs(value)*FREE_BIAS;
+	} else {
+	  value=0.0;
+	}
+      }
+      if (value < tolerance) {
+	// store square in list
+	infeasible->quickAdd(iSequence, value * value);
+      }
+    }
+    break;
+  case 2:
+    infeasible->clear(); // temp for debug
+    for (int iSequence=0;iSequence<number;iSequence++) {
+      unsigned char thisStatus=status[iSequence]&7;
+      double value = reducedCost[iSequence];
+      if (thisStatus==3) {
+      } else if ((thisStatus&1)!=0) {
+	// basic or fixed
+	value=0.0;
+      } else if (thisStatus==2) {
+	value=-value;
+      } else {
+	// free or superbasic
+	if (fabs(value) > FREE_ACCEPT * -tolerance) {
+	  // we are going to bias towards free (but only if reasonable)
+	  value = -fabs(value)*FREE_BIAS;
+	} else {
+	  value=0.0;
+	}
+      }
+      if (value < tolerance) {
+	value *= value;
+	if (value>bestRatio*weights[iSequence]) {
+	  sequenceIn = iSequence;
+	  bestRatio = value/weights[iSequence];
+	}
+      }
+    }
+    break;
+  case 3:
+    infeasible->clear();
+    for (int iSequence=0;iSequence<number;iSequence++) {
+      unsigned char thisStatus=status[iSequence]&7;
+      double value = reducedCost[iSequence];
+      if (thisStatus==3) {
+      } else if ((thisStatus&1)!=0) {
+	// basic or fixed
+	value=0.0;
+      } else if (thisStatus==2) {
+	value=-value;
+      } else {
+	// free or superbasic
+	if (fabs(value) > FREE_ACCEPT * -tolerance) {
+	  // we are going to bias towards free (but only if reasonable)
+	  value = -fabs(value)*FREE_BIAS;
+	} else {
+	  value=0.0;
+	}
+      }
+      if (value < tolerance) {
+	value *= value;
+	// store square in list
+	infeasible->quickAdd(iSequence, value);
+	if (value>bestRatio*weights[iSequence]) {
+	  sequenceIn = iSequence;
+	  bestRatio = value/weights[iSequence];
+	}
+      }
+    }
+    break;
+  }
+  if (sequenceIn>=0) {
+    // check not flagged
+    if (model->flagged(sequenceIn)) {
+      sequenceIn = -1;
+      for (int iSequence=0;iSequence<number;iSequence++) {
+	unsigned char thisStatus=status[iSequence]&7;
+	double value = reducedCost[iSequence];
+	if (thisStatus==3) {
+	} else if ((thisStatus&1)!=0) {
+	  // basic or fixed
+	  value=0.0;
+	} else if (thisStatus==2) {
+	  value=-value;
+	} else {
+	  // free or superbasic
+	  if (fabs(value) > FREE_ACCEPT * -tolerance) {
+	    // we are going to bias towards free (but only if reasonable)
+	    value = -fabs(value)*FREE_BIAS;
+	  } else {
+	    value=0.0;
+	  }
+	}
+	if (value < tolerance) {
+	  value *= value;
+	  if (value>bestRatio*weights[iSequence]) {
+	    if (!model->flagged(iSequence)) {
+	      sequenceIn = iSequence;
+	      bestRatio = value/weights[iSequence];
+	    }
+	  }
+	}
+      }
+    }
+  }
+  return sequenceIn;
 }
 #if COIN_LONG_WORK
 // For long double versions
 void
-ClpPackedMatrix::times(CoinWorkDouble scalar,
-                       const CoinWorkDouble * x, CoinWorkDouble * y) const
+  ClpPackedMatrix::times(CoinWorkDouble scalar,
+			 const CoinWorkDouble * x, CoinWorkDouble * y) const
 {
-     int iRow, iColumn;
-     // get matrix data pointers
-     const int * row = matrix_->getIndices();
-     const CoinBigIndex * columnStart = matrix_->getVectorStarts();
-     const double * elementByColumn = matrix_->getElements();
-     //memset(y,0,matrix_->getNumRows()*sizeof(double));
-     assert (((flags_ & 2) != 0) == matrix_->hasGaps());
-     if (!(flags_ & 2)) {
-          for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
-               CoinBigIndex j;
-               CoinWorkDouble value = x[iColumn];
-               if (value) {
-                    CoinBigIndex start = columnStart[iColumn];
-                    CoinBigIndex end = columnStart[iColumn+1];
-                    value *= scalar;
-                    for (j = start; j < end; j++) {
-                         iRow = row[j];
-                         y[iRow] += value * elementByColumn[j];
-                    }
-               }
-          }
-     } else {
-          const int * columnLength = matrix_->getVectorLengths();
-          for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
-               CoinBigIndex j;
-               CoinWorkDouble value = x[iColumn];
-               if (value) {
-                    CoinBigIndex start = columnStart[iColumn];
-                    CoinBigIndex end = start + columnLength[iColumn];
-                    value *= scalar;
-                    for (j = start; j < end; j++) {
-                         iRow = row[j];
-                         y[iRow] += value * elementByColumn[j];
-                    }
-               }
-          }
-     }
+  int iRow, iColumn;
+  // get matrix data pointers
+  const int * row = matrix_->getIndices();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const double * elementByColumn = matrix_->getElements();
+  //memset(y,0,matrix_->getNumRows()*sizeof(double));
+  assert (((flags_ & 2) != 0) == matrix_->hasGaps());
+  if (!(flags_ & 2)) {
+    for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
+      CoinBigIndex j;
+      CoinWorkDouble value = x[iColumn];
+      if (value) {
+	CoinBigIndex start = columnStart[iColumn];
+	CoinBigIndex end = columnStart[iColumn+1];
+	value *= scalar;
+	for (j = start; j < end; j++) {
+	  iRow = row[j];
+	  y[iRow] += value * elementByColumn[j];
+	}
+      }
+    }
+  } else {
+    const int * columnLength = matrix_->getVectorLengths();
+    for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
+      CoinBigIndex j;
+      CoinWorkDouble value = x[iColumn];
+      if (value) {
+	CoinBigIndex start = columnStart[iColumn];
+	CoinBigIndex end = start + columnLength[iColumn];
+	value *= scalar;
+	for (j = start; j < end; j++) {
+	  iRow = row[j];
+	  y[iRow] += value * elementByColumn[j];
+	}
+      }
+    }
+  }
 }
 void
 ClpPackedMatrix::transposeTimes(CoinWorkDouble scalar,
-                                const CoinWorkDouble * x, CoinWorkDouble * y) const
+				const CoinWorkDouble * x, CoinWorkDouble * y) const
 {
-     int iColumn;
-     // get matrix data pointers
-     const int * row = matrix_->getIndices();
-     const CoinBigIndex * columnStart = matrix_->getVectorStarts();
-     const double * elementByColumn = matrix_->getElements();
-     if (!(flags_ & 2)) {
-          if (scalar == -1.0) {
-               CoinBigIndex start = columnStart[0];
-               for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
-                    CoinBigIndex j;
-                    CoinBigIndex next = columnStart[iColumn+1];
-                    CoinWorkDouble value = y[iColumn];
-                    for (j = start; j < next; j++) {
-                         int jRow = row[j];
-                         value -= x[jRow] * elementByColumn[j];
-                    }
-                    start = next;
-                    y[iColumn] = value;
-               }
-          } else {
-               CoinBigIndex start = columnStart[0];
-               for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
-                    CoinBigIndex j;
-                    CoinBigIndex next = columnStart[iColumn+1];
-                    CoinWorkDouble value = 0.0;
-                    for (j = start; j < next; j++) {
-                         int jRow = row[j];
-                         value += x[jRow] * elementByColumn[j];
-                    }
-                    start = next;
-                    y[iColumn] += value * scalar;
-               }
-          }
-     } else {
-          const int * columnLength = matrix_->getVectorLengths();
-          for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
-               CoinBigIndex j;
-               CoinWorkDouble value = 0.0;
-               CoinBigIndex start = columnStart[iColumn];
-               CoinBigIndex end = start + columnLength[iColumn];
-               for (j = start; j < end; j++) {
-                    int jRow = row[j];
-                    value += x[jRow] * elementByColumn[j];
-               }
-               y[iColumn] += value * scalar;
-          }
-     }
+  int iColumn;
+  // get matrix data pointers
+  const int * row = matrix_->getIndices();
+  const CoinBigIndex * columnStart = matrix_->getVectorStarts();
+  const double * elementByColumn = matrix_->getElements();
+  if (!(flags_ & 2)) {
+    if (scalar == -1.0) {
+      CoinBigIndex start = columnStart[0];
+      for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
+	CoinBigIndex j;
+	CoinBigIndex next = columnStart[iColumn+1];
+	CoinWorkDouble value = y[iColumn];
+	for (j = start; j < next; j++) {
+	  int jRow = row[j];
+	  value -= x[jRow] * elementByColumn[j];
+	}
+	start = next;
+	y[iColumn] = value;
+      }
+    } else {
+      CoinBigIndex start = columnStart[0];
+      for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
+	CoinBigIndex j;
+	CoinBigIndex next = columnStart[iColumn+1];
+	CoinWorkDouble value = 0.0;
+	for (j = start; j < next; j++) {
+	  int jRow = row[j];
+	  value += x[jRow] * elementByColumn[j];
+	}
+	start = next;
+	y[iColumn] += value * scalar;
+      }
+    }
+  } else {
+    const int * columnLength = matrix_->getVectorLengths();
+    for (iColumn = 0; iColumn < numberActiveColumns_; iColumn++) {
+      CoinBigIndex j;
+      CoinWorkDouble value = 0.0;
+      CoinBigIndex start = columnStart[iColumn];
+      CoinBigIndex end = start + columnLength[iColumn];
+      for (j = start; j < end; j++) {
+	int jRow = row[j];
+	value += x[jRow] * elementByColumn[j];
+      }
+      y[iColumn] += value * scalar;
+    }
+  }
 }
 #endif
 #ifdef CLP_ALL_ONE_FILE
 #undef reference
 #endif
+ 
+ 

@@ -81,6 +81,7 @@
 #include "CoinPragma.hpp"
 
 #include <math.h>
+//#define FAKE_CILK
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplexPrimal.hpp"
@@ -96,6 +97,13 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
+#if ABOCA_LITE
+#undef ALT_UPDATE_WEIGHTS
+#define ALT_UPDATE_WEIGHTS 2
+#endif
+#if ALT_UPDATE_WEIGHTS==1
+CoinIndexedVector * altVector[3]={NULL,NULL,NULL};
+#endif
 #ifdef CLP_USER_DRIVEN1
 /* Returns true if variable sequenceOut can leave basis when
    model->sequenceIn() enters.
@@ -325,7 +333,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                     rowArray_[iRow]->clear();
                }
 
-               for (iColumn = 0; iColumn < 2; iColumn++) {
+               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                     columnArray_[iColumn]->clear();
                }
 
@@ -670,8 +678,13 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
                // pass in list of cost changes so can do row updates (rowArray_[1])
                // NOTE rowArray_[0] is used by computeDuals which is a
                // slow way of getting duals but might be used
+#ifdef LONG_REGION_2 
+               primalColumn(rowArray_[1], rowArray_[0], rowArray_[3],
+                            columnArray_[0], rowArray_[2]);
+#else 
                primalColumn(rowArray_[1], rowArray_[2], rowArray_[3],
                             columnArray_[0], columnArray_[1]);
+#endif 
           } else {
                // in values pass
                int sequenceIn = nextSuperBasic(superBasicType, columnArray_[0]);
@@ -1803,6 +1816,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
      while (true) {
           pivotOne = -1;
           totalThru = 0.0;
+	  //double totalThruFake=0.0;
+	  //int nThru=0;
           // We also re-compute reduced cost
           numberRemaining = 0;
           dualIn_ = cost_[sequenceIn_];
@@ -1814,8 +1829,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                int iRow = which[iIndex];
                double alpha = work[iIndex];
                int iPivot = pivotVariable_[iRow];
-               if (cost_[iPivot])
-                    dualIn_ -= alpha * cost_[iPivot];
+               // faster without if (cost_[iPivot])
+	       dualIn_ -= alpha * cost_[iPivot];
                alpha *= way;
                double oldValue = solution_[iPivot];
                // get where in bound sequence
@@ -1856,13 +1871,47 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                     rhs[numberRemaining] = oldValue;
                     indexPoint[numberRemaining] = iIndex;
                     index[numberRemaining++] = iRow;
-                    totalThru += alpha;
+                    totalThru += alpha; // need more if dubious pricing
+#if 0 // wasdef CLP_USER_DRIVEN
+		    clpUserStruct info;
+		    info.type=1;
+		    info.row=iRow;
+		    info.sequence=pivotVariable_[iRow];
+		    info.alpha=way*work[iIndex];
+		    double tempThru=totalThruFake+alpha;
+		    info.totalThru=totalThruFake+alpha;
+		    info.rhs=oldValue;
+		    info.printing=printing;
+		    eventHandler_->eventWithInfo(ClpEventHandler::pivotRow,
+						 &info);
+		    totalThruFake=info.totalThru;
+		    if (fabs(totalThruFake-tempThru)>1.0e-4)
+		      printf("%d thru - fake %g real %g\n",nThru,totalThruFake,totalThru);
+		    nThru++;
+#endif		    
                     setActive(iRow);
                     //} else if (value<primalTolerance_*1.002) {
                     // May change if is a flip
                     //indexRhs[numberFlip++]=iRow;
                }
           }
+#if 0 // was def CLP_USER_DRIVEN
+	  clpUserStruct info;
+	  info.type=4;
+	  info.alpha=(upperTheta+1.0e-5)*way;
+	  eventHandler_->eventWithInfo(ClpEventHandler::pivotRow,
+				       &info);
+          if (upperTheta < maximumMovement && totalThru*infeasibilityCost_ >= 1.0001 * dualCheck) {
+	    if (totalThruFake*infeasibilityCost_ < 1.0001 * dualCheck) {
+	      printf("fake allows through - it %d - fake %g real %g - dj %g\n",
+		     numberIterations_,totalThruFake,totalThru,dualCheck);
+	    } else if (totalThruFake!=totalThru) {
+	      printf("it %d - fake %g real %g - dj %g - ratio %g\n",
+		     numberIterations_,totalThruFake,totalThru,dualCheck,
+		     dualCheck/totalThruFake);
+	    }
+	  }
+#endif		    
           if (upperTheta < maximumMovement && totalThru*infeasibilityCost_ >= 1.0001 * dualCheck) {
                // Can pivot here
                break;
@@ -1922,7 +1971,6 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                          iBest = iIndex; // just in case weird numbers
                     }
                }
-
                // now look at best in this lot
                // But also see how infeasible small pivots will make
                double sumInfeasibilities = 0.0;
@@ -1938,7 +1986,24 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                     if (value <= 0 || iBest == iIndex) {
                          // how much would it cost to go thru and modify bound
                          double trueAlpha = way * work[indexPoint[iIndex]];
-                         totalThru += nonLinearCost_->changeInCost(pivotVariable_[iRow], trueAlpha, rhs[iIndex]);
+			 int jSequence=pivotVariable_[iRow];
+			 //if (printing)
+			 //jSequence += 1000000;
+                         totalThru += nonLinearCost_->changeInCost(jSequence, trueAlpha, rhs[iIndex]);
+#if 0 //was def CLP_USER_DRIVEN
+			 clpUserStruct info;
+			 info.type=2;
+			 info.row=iRow;
+			 info.sequence=pivotVariable_[iRow];
+			 info.alpha=trueAlpha;
+			 info.totalThru=totalThru;
+			 info.rhs=rhs[iIndex];
+			 info.printing=printing;
+			 eventHandler_->eventWithInfo(ClpEventHandler::pivotRow,
+						      &info);
+			 totalThru=info.totalThru;
+			 rhs[iIndex]=info.rhs;
+#endif		    
                          setActive(iRow);
                          if (alpha > bestPivot) {
                               bestPivot = alpha;
@@ -1955,6 +2020,13 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                          }
                     }
                }
+#if 0 // was def CLP_USER_DRIVEN
+	       clpUserStruct info;
+	       info.type=5;
+	       info.alpha=(theta_+1.0e-5)*way;
+	       eventHandler_->eventWithInfo(ClpEventHandler::pivotRow,
+				       &info);
+#endif		    
                if (bestPivot < 0.1 * bestEverPivot &&
                          bestEverPivot > 1.0e-6 && bestPivot < 1.0e-3) {
                     // back to previous one
@@ -2890,6 +2962,52 @@ ClpSimplexPrimal::exactOutgoing() const
 {
      return (specialOptions_ & 4) != 0;
 }
+#if ALT_UPDATE_WEIGHTS
+static void doAlternate(ClpSimplex * model)
+{
+  // copy rowArray_[1]
+  ClpPrimalColumnSteepest * steep =
+    dynamic_cast<ClpPrimalColumnSteepest *>(model->primalColumnPivot());
+  if (steep) {
+#if ALT_UPDATE_WEIGHTS==1
+    if (!altVector[0]) {
+      altVector[1]=new CoinIndexedVector(2000);
+    }
+    CoinIndexedVector * alternateWeights2 = altVector[1];
+#else
+    CoinIndexedVector * alternateWeights2 = steep->alternateWeights();
+#endif
+    double * other2 = alternateWeights2->denseVector();
+    int * index2 = alternateWeights2->getIndices();
+    //rowArray packed
+    double * array = model->rowArray(1)->denseVector();
+    int * index = model->rowArray(1)->getIndices();
+    int n=model->rowArray(1)->getNumElements();
+    const int * pivotVariable = model->pivotVariable();
+    int n2=0;
+    alternateWeights2->clear();
+    if (steep->mode()!=1) {
+      for (int i=0;i<n;i++) {
+	int iRow = index[i];
+	int iPivot = pivotVariable[iRow];
+	if (steep->reference(iPivot)) {
+	  other2[iRow] = -2.0*array[i];
+	  index2[n2++] = iRow;
+	}
+      }
+    } else {
+      for (int i=0;i<n;i++) {
+	int iRow = index[i];
+	other2[iRow] = -2.0*array[i];
+	index2[n2++] = iRow;
+      }
+    }
+    alternateWeights2->setNumElements(n2);
+    model->factorization()->updateColumnTranspose(model->rowArray(0),
+					   alternateWeights2);
+  }
+}
+#endif
 /*
   Reasons to come out (normal mode/user mode):
   -1 normal
@@ -2960,6 +3078,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
           factorization_->updateColumnFT(rowArray_[2], rowArray_[1]);
           // Get extra rows
           matrix_->extendUpdated(this, rowArray_[1], 0);
+#ifdef ALT_UPDATE_WEIGHTS
+	  cilk_spawn doAlternate(this);
+#endif
           // do ratio test and re-compute dj
 #ifdef CLP_USER_DRIVEN
           if (solveType_ != 2 || (moreSpecialOptions_ & 512) == 0) {
@@ -3011,6 +3132,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                     }
                }
           }
+#ifdef ALT_UPDATE_WEIGHTS
+	  cilk_sync;
+#endif
           // need to clear toIndex_ in gub
           // ? when can I clear stuff
           // Clean up any gub stuff
@@ -3125,7 +3249,13 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                     factorization_->updateColumnTranspose(rowArray_[2], rowArray_[0]);
                     // put row of tableau in rowArray[0] and columnArray[0]
                     matrix_->transposeTimes(this, -1.0,
-                                            rowArray_[0], columnArray_[1], columnArray_[0]);
+                                            rowArray_[0], 
+#ifdef LONG_REGION_2 
+					    rowArray_[2],
+#else 
+					    columnArray_[1],
+#endif 
+					    columnArray_[0]);
                     // update column djs
                     int i;
                     int * index = columnArray_[0]->getIndices();
@@ -3383,6 +3513,11 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                     secondaryStatus_ = ClpEventHandler::endOfIteration;
                     returnCode = 3;
                }
+#if CLP_USER_DRIVEN
+	       int in = sequenceIn_;
+	       int out = sequenceOut_;
+	       matrix_->correctSequence(this, in, out);
+#endif
           }
      }
      if ((solveType_ == 2 && (moreSpecialOptions_ & 512) == 0) &&
@@ -3668,7 +3803,7 @@ ClpSimplexPrimal::lexSolve()
                     rowArray_[iRow]->clear();
                }
 
-               for (iColumn = 0; iColumn < 2; iColumn++) {
+               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                     columnArray_[iColumn]->clear();
                }
 

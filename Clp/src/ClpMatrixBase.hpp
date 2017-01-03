@@ -110,7 +110,7 @@ public:
      /** Creates scales for column copy (rowCopy in model may be modified)
          default does not allow scaling
          returns non-zero if no scaling done */
-     virtual int scale(ClpModel * , const ClpSimplex * = NULL) const {
+     virtual int scale(ClpModel * , ClpSimplex * = NULL) const {
           return 1;
      }
      /** Scales rowCopy if column copy scaled
@@ -321,11 +321,15 @@ public:
                              const CoinIndexedVector * ) const {
           return false;
      }
-     /// Updates two arrays for steepest and does devex weights (need not be coded)
-     virtual void transposeTimes2(const ClpSimplex * model,
-                                  const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                                  const CoinIndexedVector * pi2,
-                                  CoinIndexedVector * spare,
+     /** Updates two arrays for steepest and does devex weights 
+	 (need not be coded)
+	 Returns nonzero if updates reduced cost and infeas -
+	 new infeas in dj1 */
+     virtual int transposeTimes2(const ClpSimplex * model,
+				 const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+				 const CoinIndexedVector * pi2,
+				 CoinIndexedVector * spare,
+				 double * infeas, double * reducedCost,
                                   double referenceIn, double devex,
                                   // Array for exact devex to say what is in reference framework
                                   unsigned int * reference,

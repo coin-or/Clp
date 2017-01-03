@@ -12,6 +12,7 @@
 #include "ClpSimplex.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "ClpNonLinearCost.hpp"
+#include "ClpEventHandler.hpp"
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -278,6 +279,43 @@ ClpNonLinearCost::refresh()
      
 }
 #endif
+// Refresh one- assuming regions OK
+void 
+ClpNonLinearCost::refresh(int iSequence)
+{
+     double infeasibilityCost = model_->infeasibilityCost();
+     double primalTolerance = model_->currentPrimalTolerance();
+     double * cost = model_->costRegion();
+     double * upper = model_->upperRegion();
+     double * lower = model_->lowerRegion();
+     double * solution = model_->solutionRegion();
+     cost2_[iSequence] = cost[iSequence];
+     double value = solution[iSequence];
+     double lowerValue = lower[iSequence];
+     double upperValue = upper[iSequence];
+     if (value - upperValue <= primalTolerance) {
+       if (value - lowerValue >= -primalTolerance) {
+	 // feasible
+	 status_[iSequence] = static_cast<unsigned char>(CLP_FEASIBLE | (CLP_SAME << 4));
+	 bound_[iSequence] = 0.0;
+       } else {
+	 // below
+	 cost[iSequence] -= infeasibilityCost;
+	 status_[iSequence] = static_cast<unsigned char>(CLP_BELOW_LOWER | (CLP_SAME << 4));
+	 bound_[iSequence] = upperValue;
+	 upper[iSequence] = lowerValue;
+	 lower[iSequence] = -COIN_DBL_MAX;
+       }
+     } else {
+       // above
+       cost[iSequence] += infeasibilityCost;
+       status_[iSequence] = static_cast<unsigned char>(CLP_ABOVE_UPPER | (CLP_SAME << 4));
+       bound_[iSequence] = lowerValue;
+       lower[iSequence] = upperValue;
+       upper[iSequence] = COIN_DBL_MAX;
+     }
+     
+}
 // Refreshes costs always makes row costs zero
 void
 ClpNonLinearCost::refreshCosts(const double * columnCosts)
@@ -1603,6 +1641,17 @@ ClpNonLinearCost::setOne(int iSequence, double value)
           double upperValue = upper[iSequence];
           double costValue = cost2_[iSequence];
           int iWhere = originalStatus(iStatus);
+#undef CLP_USER_DRIVEN
+#ifdef CLP_USER_DRIVEN
+	  clpUserStruct info;
+	  info.type=3;
+	  info.sequence=iSequence;
+	  info.value=value;
+	  info.change=0;
+	  info.lower=lowerValue;
+	  info.upper=upperValue;
+	  info.cost=costValue;
+#endif		    
           if (iWhere == CLP_BELOW_LOWER) {
                lowerValue = upperValue;
                upperValue = bound_[iSequence];
@@ -1675,6 +1724,12 @@ ClpNonLinearCost::setOne(int iSequence, double value)
                }
                break;
           }
+#ifdef CLP_USER_DRIVEN
+	  model_->eventHandler()->eventWithInfo(ClpEventHandler::pivotRow,
+							   &info);
+	  if (info.change) {
+	  }
+#endif		    
      }
      changeCost_ += value * difference;
      return difference;
@@ -1725,6 +1780,11 @@ ClpNonLinearCost::setOneOutgoing(int iSequence, double & value)
      // difference in cost
      double difference = 0.0;
      int direction = 0;
+#ifdef CLP_USER_DRIVEN
+     double saveLower = model_->lowerRegion()[iSequence];
+     double saveUpper = model_->upperRegion()[iSequence];
+     double saveCost = model_->costRegion()[iSequence];
+#endif
      if (CLP_METHOD1) {
           // get where in bound sequence
           int iRange;
@@ -1881,6 +1941,17 @@ ClpNonLinearCost::setOneOutgoing(int iSequence, double & value)
           }
      }
      changeCost_ += value * difference;
+#ifdef CLP_USER_DRIVEN
+     //if (iSequence>=model_->numberColumns)
+     if (difference||saveCost!=model_->costRegion()[iSequence]) {
+       printf("Out %d (%d) %g <= %g <= %g cost %g x=>x %g < %g cost %g\n",
+	      iSequence,iSequence-model_->numberColumns(),
+	      saveLower,value,saveUpper,saveCost,
+	      model_->lowerRegion()[iSequence],
+	      model_->upperRegion()[iSequence],
+	      model_->costRegion()[iSequence]);
+     }
+#endif
      return direction;
 }
 // Returns nearest bound

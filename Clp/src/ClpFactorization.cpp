@@ -4,6 +4,10 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 #include "CoinPragma.hpp"
+#if ABOCA_LITE
+// 1 is not owner of abcState_
+#define ABCSTATE_LITE 1
+#endif
 #include "ClpFactorization.hpp"
 #ifndef SLIM_CLP
 #include "ClpQuadraticObjective.hpp"
@@ -1007,6 +1011,38 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
 #else
           return networkBasis_->updateColumnTranspose(regionSparse, regionSparse2);
 #endif
+     }
+#endif
+}
+/* Updates two columns (BTRAN) from regionSparse2 and 3
+   regionSparse starts as zero and is zero at end 
+   Note - if regionSparse2 packed on input - will be packed on output - same for 3
+*/
+void 
+ClpFactorization::updateTwoColumnsTranspose ( CoinIndexedVector * regionSparse,
+				  CoinIndexedVector * regionSparse2,
+				  CoinIndexedVector * regionSparse3) const
+{
+     if (!numberRows_)
+          return 0;
+#ifndef SLIM_CLP
+     if (!networkBasis_) {
+#endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+          factorization_instrument(-1);
+#endif
+          collectStatistics_ = true;
+          CoinFactorization::updateTwoColumnsTranspose(regionSparse,
+						       regionSparse2,regionSparse3);
+          collectStatistics_ = false;
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+          factorization_instrument(6);
+#endif
+          return returnCode;
+#ifndef SLIM_CLP
+     } else {
+       factorization__->updateColumnTranspose(regionSparse, regionSparse2);
+       factorization__->updateColumnTranspose(regionSparse, regionSparse3);
      }
 #endif
 }
@@ -2967,9 +3003,13 @@ ClpFactorization::updateColumnForDebug ( CoinIndexedVector * regionSparse,
      if (!coinFactorizationA_->numberRows())
           return 0;
      coinFactorizationA_->setCollectStatistics(false);
+     // above doesn't work any more - do by hand
+     double save[15];
+     memcpy(save,&coinFactorizationA_->ftranCountInput_,sizeof(save));
      int returnCode = coinFactorizationA_->updateColumn(regionSparse,
                       regionSparse2,
                       noPermute);
+     memcpy(&coinFactorizationA_->ftranCountInput_,save,sizeof(save));
      return returnCode;
 }
 /* Updates one column (BTRAN) from region2
@@ -3044,6 +3084,49 @@ ClpFactorization::updateColumnTranspose ( CoinIndexedVector * regionSparse,
 #else
 return networkBasis_->updateColumnTranspose(regionSparse, regionSparse2);
 #endif
+     }
+#endif
+}
+/* Updates two columns (BTRAN) from regionSparse2 and 3
+   regionSparse starts as zero and is zero at end 
+   Note - if regionSparse2 packed on input - will be packed on output - same for 3
+*/
+void 
+ClpFactorization::updateTwoColumnsTranspose ( CoinIndexedVector * regionSparse,
+				  CoinIndexedVector * regionSparse2,
+				  CoinIndexedVector * regionSparse3) const
+{
+  if (!numberRows())
+          return;
+#ifndef SLIM_CLP
+     if (!networkBasis_) {
+#endif
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+          factorization_instrument(-1);
+#endif
+          if (coinFactorizationA_) {
+               coinFactorizationA_->setCollectStatistics(doStatistics_);
+#if ABOCA_LITE_FACTORIZATION
+               coinFactorizationA_->updateTwoColumnsTranspose(regionSparse,
+							      regionSparse2,regionSparse3,abcState());
+#else
+               coinFactorizationA_->updateTwoColumnsTranspose(regionSparse,
+	      regionSparse2,regionSparse3,0);
+#endif
+               coinFactorizationA_->setCollectStatistics(false);
+          } else {
+               coinFactorizationB_->updateColumnTranspose(regionSparse,
+                            regionSparse2);
+               coinFactorizationB_->updateColumnTranspose(regionSparse,
+                            regionSparse3);
+          }
+#ifdef CLP_FACTORIZATION_INSTRUMENT
+          factorization_instrument(6);
+#endif
+#ifndef SLIM_CLP
+     } else {
+       updateColumnTranspose(regionSparse, regionSparse2);
+       updateColumnTranspose(regionSparse, regionSparse3);
      }
 #endif
 }
@@ -3159,6 +3242,27 @@ ClpFactorization::getWeights(int * weights) const
      factorization_instrument(8);
 #endif
 }
+#if ABOCA_LITE_FACTORIZATION
+// Does btranU part of replaceColumn (skipping entries)
+void
+ClpFactorization::replaceColumn1 ( CoinIndexedVector * regionSparse,
+				    int pivotRow)
+{
+  if (coinFactorizationA_)
+    coinFactorizationA_->replaceColumn1(regionSparse,pivotRow);
+}
+// Does replaceColumn - having already done btranU
+int
+ClpFactorization::replaceColumn2 ( CoinIndexedVector * regionSparse,
+                                 int pivotRow,
+				    double pivotCheck)
+{
+  if (coinFactorizationA_)
+    return coinFactorizationA_->replaceColumn2(regionSparse,pivotRow,pivotCheck);
+  else
+    return 12345678;
+}
+#endif
 // Set tolerances to safer of existing and given
 void
 ClpFactorization::saferTolerances (  double zeroValue,

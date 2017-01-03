@@ -40,11 +40,6 @@ typedef unsigned int CoinSimplexUnsignedInt;
 //#define EARLY_FACTORIZE
 #ifndef FAKE_CILK
 #include <cilk/cilk.h>
-//gcc4.9 main branch has not got cilk_for!!!!!!!!!!!
-#ifdef GCC_4_9
-#undef cilk_for
-#define cilk_for for
-#endif
 #else
 #define cilk_for for
 #define cilk_spawn

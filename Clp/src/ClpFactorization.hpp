@@ -95,6 +95,14 @@ public:
                          double pivotCheck ,
                          bool checkBeforeModifying = false,
                          double acceptablePivot = 1.0e-8);
+#if ABOCA_LITE_FACTORIZATION
+  /// Does btranU part of replaceColumn (skipping entries)
+  void replaceColumn1(CoinIndexedVector * regionSparse, int pivotRow);
+  /// Does replaceColumn - having already done btranU
+  int replaceColumn2 ( CoinIndexedVector * regionSparse,
+		      int pivotRow,
+		       double pivotCheck);
+#endif
      //@}
 
      /**@name various uses of factorization (return code number elements)
@@ -128,6 +136,13 @@ public:
          region1 starts as zero and is zero at end */
      int updateColumnTranspose ( CoinIndexedVector * regionSparse,
                                  CoinIndexedVector * regionSparse2) const;
+     /** Updates two columns (BTRAN) from regionSparse2 and 3
+	 regionSparse starts as zero and is zero at end 
+	 Note - if regionSparse2 packed on input - will be packed on output - same for 3
+     */
+     void updateTwoColumnsTranspose ( CoinIndexedVector * regionSparse,
+				      CoinIndexedVector * regionSparse2,
+				      CoinIndexedVector * regionSparse3) const;
      //@}
 #ifdef CLP_MULTIPLE_FACTORIZATIONS
      /**@name Lifted from CoinFactorization */
@@ -347,6 +362,10 @@ public:
      /// Return 1 if dense code
      inline int isDenseOrSmall() const {
           return coinFactorizationB_ ? 1 : 0;
+     }
+     /// Return coinFactorizationA_
+     inline CoinFactorization * coinFactorization() const {
+          return coinFactorizationA_;
      }
 #else
      inline bool timeToRefactorize() const {

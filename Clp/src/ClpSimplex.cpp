@@ -583,6 +583,9 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
      }
      double objectiveModification = 0.0;
      if (algorithm_ > 0 && nonLinearCost_ != NULL) {
+#ifdef CLP_USER_DRIVEN
+          eventHandler_->eventWithInfo(ClpEventHandler::goodFactorization,NULL);
+#endif
           // primal algorithm
           // get correct bounds on all variables
           // If  4 bit set - Force outgoing variables to exact bound (primal)
@@ -746,10 +749,10 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
 	 double value;
 	 switch (getStatus(iSequence)) {
 	 case atLowerBound:
-	   value=1.0e-9*(1.0+CoinDrand48());
+	   value=1.0e-9*(1.0+randomNumberGenerator_.randomDouble());
 	   break;
 	 case atUpperBound:
-	   value=-1.0e-9*(1.0+CoinDrand48());
+	   value=-1.0e-9*(1.0+randomNumberGenerator_.randomDouble());
 	   break;
 	 default:
 	   value=0.0;
@@ -1842,6 +1845,7 @@ int ClpSimplex::internalFactorize ( int solveType)
                          double lower = columnLowerWork_[iColumn];
                          double upper = columnUpperWork_[iColumn];
                          double big_bound = largeValue_;
+			 double value = columnActivityWork_[iColumn];
                          if (lower > -big_bound || upper < big_bound) {
                               if ((getColumnStatus(iColumn) == atLowerBound &&
                                         columnActivityWork_[iColumn] == lower) ||
@@ -1850,7 +1854,7 @@ int ClpSimplex::internalFactorize ( int solveType)
                                    // status looks plausible
                               } else {
                                    // set to sensible
-                                   if (fabs(lower) <= fabs(upper)) {
+                                   if (fabs(lower-value) <= fabs(upper-value)) {
                                         setColumnStatus(iColumn, atLowerBound);
                                         columnActivityWork_[iColumn] = lower;
                                    } else {
@@ -3337,7 +3341,7 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                     for (int iRow = 0; iRow < 4; iRow++) {
                          rowArray_[iRow]->clear();
                     }
-                    for (int iColumn = 0; iColumn < 2; iColumn++) {
+                    for (int iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                          columnArray_[iColumn]->clear();
                     }
                }
@@ -3510,7 +3514,7 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                                      numberColumns_, inverseColumnScale_);
                     }
                }
-               if (matrix_->scale(this))
+               if (matrix_->scale(this,this))
                     scalingFlag_ = -scalingFlag_; // not scaled after all
                if (rowScale_ && automaticScale_) {
 		    if (!savedRowScale_) {
@@ -4161,12 +4165,12 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                int iRow, iColumn;
                // these are "indexed" arrays so we always know where nonzeros are
                /**********************************************************
-               rowArray_[3] is long enough for rows+columns
+               rowArray_[3] is long enough for rows+columns (2 also maybe)
                rowArray_[1] is long enough for max(rows,columns)
                *********************************************************/
                for (iRow = 0; iRow < 4; iRow++) {
                     int length = numberRows2 + factorization_->maximumPivots();
-                    if (iRow == 3 || objective_->type() > 1)
+                    if (iRow > SHORT_REGION || objective_->type() > 1)
                          length += numberColumns_;
                     else if (iRow == 1)
                          length = CoinMax(length, numberColumns_);
@@ -4177,7 +4181,7 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                     rowArray_[iRow]->reserve(length);
                }
 
-               for (iColumn = 0; iColumn < 2; iColumn++) {
+               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                     if ((specialOptions_ & 65536) == 0 || !columnArray_[iColumn]) {
                          delete columnArray_[iColumn];
                          columnArray_[iColumn] = new CoinIndexedVector();
@@ -4188,7 +4192,7 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                int iRow, iColumn;
                for (iRow = 0; iRow < 4; iRow++) {
                     int length = numberRows2 + factorization_->maximumPivots();
-                    if (iRow == 3 || objective_->type() > 1)
+                    if (iRow > SHORT_REGION || objective_->type() > 1)
                          length += numberColumns_;
                     if(rowArray_[iRow]->capacity() >= length) {
                          rowArray_[iRow]->clear();
@@ -4201,7 +4205,7 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
 #endif
                }
 
-               for (iColumn = 0; iColumn < 2; iColumn++) {
+               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                     int length = numberColumns_;
                     if (iColumn)
                          length = CoinMax(numberRows2, numberColumns_);
@@ -4527,6 +4531,9 @@ ClpSimplex::createRim5(bool initial)
 void
 ClpSimplex::deleteRim(int getRidOfFactorizationData)
 {
+#ifdef CLP_USER_DRIVEN
+     eventHandler_->event(ClpEventHandler::beforeDeleteRim);
+#endif
      // Just possible empty problem
      int numberRows = numberRows_;
      int numberColumns = numberColumns_;
@@ -4864,7 +4871,7 @@ ClpSimplex::copyFactorization( ClpFactorization & factorization)
 void
 ClpSimplex::setPerturbation(int value)
 {
-     if(value <= 100 && value >= -1000) {
+     if(value <= 102 && value >= -1000) {
           perturbation_ = value;
      }
 }
@@ -6202,13 +6209,16 @@ int ClpSimplex::reducedGradient(int phase)
 }
 #include "ClpPredictorCorrector.hpp"
 #include "ClpCholeskyBase.hpp"
-// Preference is WSSMP, UFL (just ordering), MUMPS, TAUCS then base
+// Preference is PARDISO, WSSMP, UFL (just ordering), MUMPS, TAUCS then base
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #include "ClpCholeskyUfl.hpp"
 #include "ClpCholeskyMumps.hpp"
 #if TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
+#endif
+#if PARDISO_BARRIER
+#include "ClpCholeskyPardiso.hpp"
 #endif
 #include "ClpPresolve.hpp"
 /* Solves using barrier (assumes you have good cholesky factor code).
@@ -6226,8 +6236,12 @@ ClpSimplex::barrier(bool crossover)
           quadraticObj = (static_cast< ClpQuadraticObjective*>(objective_));
      // If Quadratic we need KKT
      bool doKKT = (quadraticObj != NULL);
-     // Preference is WSSMP, UFL, MUMPS, TAUCS then base
-#ifdef WSSMP_BARRIER
+     // Preference is PARDISO, WSSMP, UFL, MUMPS, TAUCS then base
+#ifdef PARDISO_BARRIER
+     assert (!doKKT);
+     ClpCholeskyPardiso * cholesky = new ClpCholeskyPardiso();
+     barrier.setCholesky(cholesky);
+#elif WSSMP_BARRIER
      if (!doKKT) {
           ClpCholeskyWssmp * cholesky = new ClpCholeskyWssmp(CoinMax(100, model2->numberRows() / 10));
           barrier.setCholesky(cholesky);
@@ -8631,7 +8645,13 @@ int ClpSimplex::pivot()
                factorization_->updateColumnTranspose(rowArray_[2], rowArray_[0]);
                // put row of tableau in rowArray[0] and columnArray[0]
                matrix_->transposeTimes(this, -1.0,
-                                       rowArray_[0], columnArray_[1], columnArray_[0]);
+                                       rowArray_[0], 
+#ifdef LONG_REGION_2 
+				       rowArray_[2],
+#else 
+				       columnArray_[1],
+#endif 
+				       columnArray_[0]);
                // update column djs
                int i;
                int * index = columnArray_[0]->getIndices();
@@ -8909,8 +8929,14 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
           }
           // for primal we will change bounds using infeasibilityCost_
           if (nonLinearCost_ == NULL && algorithm_ > 0) {
-               // get a valid nonlinear cost function
-               nonLinearCost_ = new ClpNonLinearCost(this);
+#ifdef CLP_USER_DRIVEN
+	    eventHandler_->event(ClpEventHandler::beforeCreateNonLinear);
+#endif
+	    // get a valid nonlinear cost function
+	    nonLinearCost_ = new ClpNonLinearCost(this);
+#ifdef CLP_USER_DRIVEN
+	    eventHandler_->event(ClpEventHandler::afterCreateNonLinear);
+#endif
           }
 
           // loop round to clean up solution if values pass
