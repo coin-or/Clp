@@ -84,6 +84,8 @@ Clp/src/AbcWarmStart.cpp -text
 Clp/src/AbcWarmStart.hpp -text
 Clp/src/ClpCholeskyMumps.cpp -text
 Clp/src/ClpCholeskyMumps.hpp -text
+Clp/src/ClpCholeskyPardiso.cpp -text
+Clp/src/ClpCholeskyPardiso.hpp -text
 Clp/src/ClpConstraint.cpp -text
 Clp/src/ClpConstraint.hpp -text
 Clp/src/ClpConstraintLinear.cpp -text
