@@ -3956,17 +3956,17 @@ ClpSimplexProgress::ClpSimplexProgress ()
 {
      int i;
      for (i = 0; i < CLP_PROGRESS; i++) {
-          objective_[i] = COIN_DBL_MAX;
+          objective_[i] = COIN_DBL_MAX*1.0e-50;
           infeasibility_[i] = -1.0; // set to an impossible value
-          realInfeasibility_[i] = COIN_DBL_MAX;
+          realInfeasibility_[i] = COIN_DBL_MAX*1.0e-50;
           numberInfeasibilities_[i] = -1;
           iterationNumber_[i] = -1;
      }
 #ifdef CLP_PROGRESS_WEIGHT
      for (i = 0; i < CLP_PROGRESS_WEIGHT; i++) {
-          objectiveWeight_[i] = COIN_DBL_MAX;
+          objectiveWeight_[i] = COIN_DBL_MAX*1.0e-50;
           infeasibilityWeight_[i] = -1.0; // set to an impossible value
-          realInfeasibilityWeight_[i] = COIN_DBL_MAX;
+          realInfeasibilityWeight_[i] = COIN_DBL_MAX*1.0e-50;
           numberInfeasibilitiesWeight_[i] = -1;
           iterationNumberWeight_[i] = -1;
      }
@@ -3975,7 +3975,7 @@ ClpSimplexProgress::ClpSimplexProgress ()
 #endif
      initialWeight_ = 0.0;
      for (i = 0; i < CLP_CYCLE; i++) {
-          //obj_[i]=COIN_DBL_MAX;
+          //obj_[i]=COIN_DBL_MAX*1.0e-50;
           in_[i] = -1;
           out_[i] = -1;
           way_[i] = 0;
@@ -4266,19 +4266,19 @@ ClpSimplexProgress::reset()
      int i;
      for (i = 0; i < CLP_PROGRESS; i++) {
           if (model_->algorithm() >= 0)
-               objective_[i] = COIN_DBL_MAX;
+               objective_[i] = COIN_DBL_MAX*1.0e-50;
           else
-               objective_[i] = -COIN_DBL_MAX;
+               objective_[i] = -COIN_DBL_MAX*1.0e-50;
           infeasibility_[i] = -1.0; // set to an impossible value
-          realInfeasibility_[i] = COIN_DBL_MAX;
+          realInfeasibility_[i] = COIN_DBL_MAX*1.0e-50;
           numberInfeasibilities_[i] = -1;
           iterationNumber_[i] = -1;
      }
 #ifdef CLP_PROGRESS_WEIGHT
      for (i = 0; i < CLP_PROGRESS_WEIGHT; i++) {
-          objectiveWeight_[i] = COIN_DBL_MAX;
+          objectiveWeight_[i] = COIN_DBL_MAX*1.0e-50;
           infeasibilityWeight_[i] = -1.0; // set to an impossible value
-          realInfeasibilityWeight_[i] = COIN_DBL_MAX;
+          realInfeasibilityWeight_[i] = COIN_DBL_MAX*1.0e-50;
           numberInfeasibilitiesWeight_[i] = -1;
           iterationNumberWeight_[i] = -1;
      }
@@ -4286,7 +4286,7 @@ ClpSimplexProgress::reset()
      best_ = 0.0;
 #endif
      for (i = 0; i < CLP_CYCLE; i++) {
-          //obj_[i]=COIN_DBL_MAX;
+          //obj_[i]=COIN_DBL_MAX*1.0e-50;
           in_[i] = -1;
           out_[i] = -1;
           way_[i] = 0;
@@ -4348,7 +4348,7 @@ ClpSimplexProgress::startCheck()
 {
      int i;
      for (i = 0; i < CLP_CYCLE; i++) {
-          //obj_[i]=COIN_DBL_MAX;
+          //obj_[i]=COIN_DBL_MAX*1.0e-50;
           in_[i] = -1;
           out_[i] = -1;
           way_[i] = 0;
