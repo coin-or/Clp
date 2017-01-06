@@ -1,7 +1,7 @@
 \language: cpp
 env:
   global: 
-    - secure: "WEPiGQTAVh02Fc5Qxvj2VBZoWBgNjjB6w5MdNwg6NtzFKhbhxB1OqfaVE7EJV1Cw9mf1k5Qcg2fSy9bQEJllWNclRpbRGfEcC+Crx3CyjFOebSr6e6T7lAjIspIVSRf9+y6oPEY2zR8yXoX/HAEYyw3IQzJtKCHIbSJrrZsPomc="
+    - secure: "DlFscEcRlvw4CQsk0zyJxsvW0QQ1MBobX+/ucMPkHy6JLCg2n608pdKF5L04BrwOQoTg/4xcyrIAfPPVld7LeVc/2MTmdb/Hn6jnyfEP0LdeEDQi1yuN7tUk/Rkid/CWFng4j+5I+GNQqAvoCqWwNCt8VtMO8DJWI20/ZNVDuaU="
     
 matrix:
   include:
@@ -27,7 +27,7 @@ matrix:
 
 before_script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then  export PLATFORM=osx$OSX-x86_64-clang`clang -dumpversion`; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install gcc; echo gfortran --version; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install gcc; brew link --overwrite gcc; gfortran --version; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export PLATFORM=linux-x86_64-gcc`gcc -dumpversion`; fi
   - git clone https://github.com/coin-or-tools/BuildTools
   - bash BuildTools/get.dependencies.sh fetch > /dev/null
