@@ -29,7 +29,7 @@ extern "C" {
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
-ClpCholeskyMumps::ClpCholeskyMumps (int denseThreshold)
+ClpCholeskyMumps::ClpCholeskyMumps (int denseThreshold,int logLevel)
      : ClpCholeskyBase(denseThreshold)
 {
      mumps_ = (DMUMPS_STRUC_C*)malloc(sizeof(DMUMPS_STRUC_C));
@@ -59,11 +59,13 @@ ClpCholeskyMumps::ClpCholeskyMumps (int denseThreshold)
      mumps_->ICNTL(4) = 2; // log messages
      mumps_->ICNTL(24) = 1; // Deal with zeros on diagonal
      mumps_->CNTL(3) = 1.0e-20; // drop if diagonal less than this
-     // output off
-     mumps_->ICNTL(1) = -1;
-     mumps_->ICNTL(2) = -1;
-     mumps_->ICNTL(3) = -1;
-     mumps_->ICNTL(4) = 0;
+     if (!logLevel) {
+       // output off
+       mumps_->ICNTL(1) = -1;
+       mumps_->ICNTL(2) = -1;
+       mumps_->ICNTL(3) = -1;
+       mumps_->ICNTL(4) = 0;
+     }
 }
 
 //-------------------------------------------------------------------
