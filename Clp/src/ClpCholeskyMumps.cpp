@@ -14,7 +14,7 @@
 #define USE_COMM_WORLD -987654
 extern "C" {
 #include "dmumps_c.h"
-#include "mumps_mpi.h"
+#include "mpi.h"
 }
 
 #include "ClpCholeskyMumps.hpp"
