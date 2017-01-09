@@ -1336,7 +1336,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                // make up a new objective
                double saveWeight = infeasibilityCost_;
                // save nonlinear cost as we are going to switch off costs
-               ClpNonLinearCost * nonLinear = nonLinearCost_;
+               //ClpNonLinearCost * nonLinear = nonLinearCost_;
                // do twice to make sure Primal solution has settled
                // put non-basics to bounds in case tolerance moved
                // put back original costs
@@ -1344,7 +1344,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                nonLinearCost_->checkInfeasibilities(0.0);
                gutsOfSolution(NULL, NULL, ifValuesPass != 0);
 
-               infeasibilityCost_ = 1.0e100;
+               //infeasibilityCost_ = 1.0e100;
                // put back original costs
                createRim(4);
                nonLinearCost_->checkInfeasibilities(primalTolerance_);
@@ -1355,13 +1355,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     infeasibilityCost_ = saveWeight;
                     nonLinearCost_->checkInfeasibilities(primalTolerance_);
                } else {
-                    nonLinearCost_ = NULL;
-                    // scale
-                    int i;
-                    for (i = 0; i < numberRows_ + numberColumns_; i++)
-                         cost_[i] *= 1.0e-95;
+		    infeasibilityCost_ = 1.0e30;
                     gutsOfSolution(NULL, NULL, ifValuesPass != 0 && firstFree_>=0);
-                    nonLinearCost_ = nonLinear;
                     infeasibilityCost_ = saveWeight;
                     if ((infeasibilityCost_ >= 1.0e18 ||
                               numberDualInfeasibilities_ == 0) && perturbation_ == 101) {
