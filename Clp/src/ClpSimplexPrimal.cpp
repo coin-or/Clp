@@ -985,11 +985,6 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 	  //sayValuesPass=true;
           numberThrownOut = gutsOfSolution(NULL, NULL, sayValuesPass);
           double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
-	  // have to use single criterion for primal infeasibilities
-	  assert (!sumPrimalInfeasibilities_);
-	  assert (!sumOfRelaxedPrimalInfeasibilities_);
-	  sumPrimalInfeasibilities_=sumInfeasibility;
-	  sumOfRelaxedPrimalInfeasibilities_=sumInfeasibility;
           int reason2 = 0;
 #if CLP_CAUTION
 #if CLP_CAUTION==2
@@ -1259,6 +1254,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           lastObj += infeasibilityCost_ * 2.0 * lastInf;
           double lastObj3 = progress->lastObjective(3);
           lastObj3 += infeasibilityCost_ * 2.0 * lastInf3;
+	  assert (thisObj<=COIN_DBL_MAX);
+	  assert (lastObj<=COIN_DBL_MAX);
+	  assert (lastObj3<=COIN_DBL_MAX);
           if (lastObj < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj)) - 1.0e-7
                     && firstFree_ < 0 && thisInf >= lastInf) {
                if (handler_->logLevel() == 63)
@@ -1299,7 +1297,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
      // give code benefit of doubt
      if (sumOfRelaxedDualInfeasibilities_ == 0.0 &&
                sumOfRelaxedPrimalInfeasibilities_ == 0.0 &&
-	 progress->objective_[CLP_PROGRESS-1]>
+	 progress->objective_[CLP_PROGRESS-1]>=
 	 progress->objective_[CLP_PROGRESS-2]-1.0e-9*(10.0+fabs(objectiveValue_))) {
           // say optimal (with these bounds etc)
           numberDualInfeasibilities_ = 0;
@@ -1344,17 +1342,17 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
      }
      bool looksOptimal = (!numberDualInfeasibilities_&&!nonLinearCost_->sumInfeasibilities());
      // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
-     if ((dualFeasible() || problemStatus_ == -4) && (!ifValuesPass||looksOptimal)) {
+     if ((dualFeasible() || problemStatus_ == -4) && (!ifValuesPass||looksOptimal||firstFree_<0)) {
           // see if extra helps
           if (nonLinearCost_->numberInfeasibilities() &&
                     (nonLinearCost_->sumInfeasibilities() > 1.0e-3 || sumOfRelaxedPrimalInfeasibilities_)
-                    && !alwaysOptimal) {
+	      /*&& alwaysOptimal*/) {
                //may need infeasiblity cost changed
                // we can see if we can construct a ray
                // make up a new objective
                double saveWeight = infeasibilityCost_;
                // save nonlinear cost as we are going to switch off costs
-               ClpNonLinearCost * nonLinear = nonLinearCost_;
+               //ClpNonLinearCost * nonLinear = nonLinearCost_;
                // do twice to make sure Primal solution has settled
                // put non-basics to bounds in case tolerance moved
                // put back original costs
@@ -1362,7 +1360,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                nonLinearCost_->checkInfeasibilities(0.0);
                gutsOfSolution(NULL, NULL, ifValuesPass != 0);
 
-               infeasibilityCost_ = 1.0e100;
+               //infeasibilityCost_ = 1.0e100;
                // put back original costs
                createRim(4);
                nonLinearCost_->checkInfeasibilities(primalTolerance_);
@@ -1373,13 +1371,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     infeasibilityCost_ = saveWeight;
                     nonLinearCost_->checkInfeasibilities(primalTolerance_);
                } else {
-                    nonLinearCost_ = NULL;
-                    // scale
-                    int i;
-                    for (i = 0; i < numberRows_ + numberColumns_; i++)
-                         cost_[i] *= 1.0e-95;
-                    gutsOfSolution(NULL, NULL, ifValuesPass != 0);
-                    nonLinearCost_ = nonLinear;
+		    infeasibilityCost_ = 1.0e30;
+                    gutsOfSolution(NULL, NULL, ifValuesPass != 0 && firstFree_>=0);
                     infeasibilityCost_ = saveWeight;
                     if ((infeasibilityCost_ >= 1.0e18 ||
                               numberDualInfeasibilities_ == 0) && perturbation_ == 101) {
