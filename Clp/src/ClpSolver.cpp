@@ -1159,9 +1159,9 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
 						  //printf("basic %d direction %d farkas %g\n",
 						  //	   i,simplex->directionOut(),value);
 						  if (value<0.0) 
-						    boundValue=columnLower[i];
+						    boundValue=CoinMax(columnLower[i],-1.0e20);
 						  else
-						    boundValue=columnUpper[i];
+						    boundValue=CoinMin(columnUpper[i],1.0e20);
 						}
 					      } else if (fabs(value)>1.0e-10) {
 						if (value<0.0) 
@@ -1201,21 +1201,21 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
 						  rhsValue=rowUpper[i];
 					      }
 					      effectiveRhs[i]=rhsValue;
-					      if (fabs(effectiveRhs[i])>1.0e10)
-						printf("Large rhs row %d %g\n",
-						       i,effectiveRhs[i]);
+					      //if (fabs(effectiveRhs[i])>1.0e10)
+					      //printf("Large rhs row %d %g\n",
+					      //       i,effectiveRhs[i]);
 					    }
 					    simplex->times(-1.0,bound,effectiveRhs);
 					    double bSum=0.0;
 					    for (int i=0;i<numberRows;i++) {
 					      bSum += effectiveRhs[i]*ray[i];
-					      if (fabs(effectiveRhs[i])>1.0e10)
-						printf("Large rhs row %d %g after\n",
-						       i,effectiveRhs[i]);
+					      //if (fabs(effectiveRhs[i])>1.0e10)
+					      //printf("Large rhs row %d %g after\n",
+					      //       i,effectiveRhs[i]);
 					    }
 					    if (numberBad||bSum>1.0e-6) {
-					      printf("Bad infeasibility ray %g  - %d bad\n",
-						     bSum,numberBad);
+					      //printf("Bad infeasibility ray %g  - %d bad\n",
+					      //     bSum,numberBad);
 					    } else {
 					      //printf("Good ray - infeasibility %g\n",
 					      //     -bSum);
