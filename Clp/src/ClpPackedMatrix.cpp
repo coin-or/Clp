@@ -7767,7 +7767,12 @@ transposeTimes3Bit2Odd(clpTempInfo & info)
   info.numberAdded = bestSequence;
   info.bestPossible = bestRatio;
 }
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
 #include <immintrin.h>
+#endif
+
 static void
 transposeTimes3Bit2(clpTempInfo & info)
 {
