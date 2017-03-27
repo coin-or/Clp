@@ -159,6 +159,14 @@ public:
           if (doDependency) presolveActions_  |= 32768;
           else presolveActions_ &= ~32768;
      }
+     /// Whether we want to do transfer part of presolve
+     inline bool doTransfer() const {
+          return (presolveActions_ & 65536) != 0;
+     }
+     inline void setDoTransfer(bool doTransfer) {
+          if (doTransfer) presolveActions_  |= 65536;
+          else presolveActions_ &= ~65536;
+     }
      /// Whether we want to do singleton column part of presolve
      inline bool doSingletonColumn() const {
           return (presolveActions_ & 512) == 0;
@@ -202,10 +210,10 @@ public:
      }
      /// Set whole group
      inline int presolveActions() const {
-          return presolveActions_ & 0xffff;
+          return presolveActions_ & 0xffffff;
      }
      inline void setPresolveActions(int action) {
-          presolveActions_  = (presolveActions_ & 0xffff0000) | (action & 0xffff);
+          presolveActions_  = (presolveActions_ & 0xff000000) | (action & 0xffffff);
      }
      /// Substitution level
      inline void setSubstitution(int value) {

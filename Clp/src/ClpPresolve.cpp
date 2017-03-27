@@ -2258,6 +2258,8 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
           // See if we want statistics
           if ((presolveActions_ & 0x80000000) != 0)
                prob.statistics();
+	  if (doTransfer())
+	      transferCosts(&prob);
           // make sure row solution correct
           {
                double *colels	= prob.colels_;

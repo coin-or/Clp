@@ -912,7 +912,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
      int presolveOptions = options.presolveActions();
      bool presolveToFile = (presolveOptions & 0x40000000) != 0;
      presolveOptions &= ~0x40000000;
-     if ((presolveOptions & 0xffff) != 0)
+     if ((presolveOptions & 0xffffff) != 0)
           pinfo->setPresolveActions(presolveOptions);
      // switch off singletons to slacks
      //pinfo->setDoSingletonColumn(false); // done by bits
@@ -2449,10 +2449,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
           double * columnSolution = model2->primalColumnSolution();
 
           // See if we have costed slacks
-          int * negSlack = new int[numberRows];
-          int * posSlack = new int[numberRows];
+          int * negSlack = new int[numberRows+numberColumns];
+          int * posSlack = new int[numberRows+numberColumns];
+	  int * nextNegSlack = negSlack+numberRows;
+	  int * nextPosSlack = posSlack+numberRows;
           int iRow;
-          for (iRow = 0; iRow < numberRows; iRow++) {
+          for (iRow = 0; iRow < numberRows+numberColumns; iRow++) {
                negSlack[iRow] = -1;
                posSlack[iRow] = -1;
           }
@@ -2473,11 +2475,26 @@ ClpSimplex::initialSolve(ClpSolve & options)
                if (columnLength[iColumn] == 1) {
                     int jRow = row[columnStart[iColumn]];
                     if (!columnLower[iColumn]) {
-                         if (element[columnStart[iColumn]] > 0.0 && posSlack[jRow] < 0)
-                              posSlack[jRow] = iColumn;
-                         else if (element[columnStart[iColumn]] < 0.0 && negSlack[jRow] < 0)
-                              negSlack[jRow] = iColumn;
-                    } else if (!columnUpper[iColumn]) {
+		      if (element[columnStart[iColumn]] > 0.0) {
+			if(posSlack[jRow] < 0) {
+			  posSlack[jRow] = iColumn;
+			} else {
+			  int jColumn=posSlack[jRow];
+			  while (nextPosSlack[jColumn]>=0)
+			    jColumn=nextPosSlack[jColumn];
+			  nextPosSlack[jColumn]=iColumn;
+			}
+		      } else if (element[columnStart[iColumn]] < 0.0) {
+			if(negSlack[jRow] < 0) {
+			  negSlack[jRow] = iColumn;
+			} else {
+			  int jColumn=negSlack[jRow];
+			  while (nextNegSlack[jColumn]>=0)
+			    jColumn=nextNegSlack[jColumn];
+			  nextNegSlack[jColumn]=iColumn;
+			}
+		      }
+                    } else if (!columnUpper[iColumn]&& false) {// out for testing
                          if (element[columnStart[iColumn]] < 0.0 && posSlack[jRow] < 0)
                               posSlack[jRow] = iColumn;
                          else if (element[columnStart[iColumn]] > 0.0 && negSlack[jRow] < 0)
@@ -2486,6 +2503,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
           }
           // now see what that does to row solution
+	  const double * objective = model2->objective();
           double * rowSolution = model2->primalRowSolution();
           CoinZeroN (rowSolution, numberRows);
           model2->clpMatrix()->times(1.0, columnSolution, rowSolution);
@@ -2497,7 +2515,30 @@ ClpSimplex::initialSolve(ClpSolve & options)
                if (lower[iRow] > rowSolution[iRow] + 1.0e-8) {
                     int jColumn = posSlack[iRow];
                     if (jColumn >= 0) {
-                         if (columnSolution[jColumn])
+		      // sort if more than one
+		      int nPos=1;
+		      sort[0]=jColumn;
+		      weight[0]=objective[jColumn];
+		      while (nextPosSlack[jColumn]>=0) {
+			jColumn=nextPosSlack[jColumn];
+			sort[nPos]=jColumn;
+			weight[nPos++]=objective[jColumn];
+		      }
+		      if (nPos>1) { 
+			CoinSort_2(weight,weight+nPos,sort);
+			for (int i=0;i<nPos;i++) {
+			  double difference = lower[iRow] - rowSolution[iRow];
+			  jColumn=sort[i];
+			  double elementValue = element[columnStart[jColumn]];
+			  assert (elementValue > 0.0);
+			  double value=columnSolution[jColumn];
+			  double movement = CoinMin(difference / elementValue, columnUpper[jColumn]-value);
+			  columnSolution[jColumn] += movement;
+			  rowSolution[iRow] += movement * elementValue;
+			}
+			continue;
+		      }
+		        if (jColumn<0||columnSolution[jColumn])
                               continue;
                          double difference = lower[iRow] - rowSolution[iRow];
                          double elementValue = element[columnStart[jColumn]];
@@ -2514,7 +2555,30 @@ ClpSimplex::initialSolve(ClpSolve & options)
                } else if (upper[iRow] < rowSolution[iRow] - 1.0e-8) {
                     int jColumn = negSlack[iRow];
                     if (jColumn >= 0) {
-                         if (columnSolution[jColumn])
+		      // sort if more than one
+		      int nNeg=1;
+		      sort[0]=jColumn;
+		      weight[0]=objective[jColumn];
+		      while (nextNegSlack[jColumn]>=0) {
+			jColumn=nextNegSlack[jColumn];
+			sort[nNeg]=jColumn;
+			weight[nNeg++]=objective[jColumn];
+		      }
+		      if (nNeg>1) { 
+			CoinSort_2(weight,weight+nNeg,sort);
+			for (int i=0;i<nNeg;i++) {
+			  double difference = rowSolution[iRow]-upper[iRow];
+			  jColumn=sort[i];
+			  double elementValue = element[columnStart[jColumn]];
+			  assert (elementValue < 0.0);
+			  double value=columnSolution[jColumn];
+			  double movement = CoinMin(difference / -elementValue, columnUpper[jColumn]-value);
+			  columnSolution[jColumn] += movement;
+			  rowSolution[iRow] += movement * elementValue;
+			}
+			continue;
+		      }
+		        if (jColumn<0||columnSolution[jColumn])
                               continue;
                          double difference = upper[iRow] - rowSolution[iRow];
                          double elementValue = element[columnStart[jColumn]];
@@ -2777,8 +2841,11 @@ ClpSimplex::initialSolve(ClpSolve & options)
 		      else
 		         small.dual(0);
 #endif
-		      if (small.problemStatus())
+		      if (small.problemStatus()) {
+			int numberIterations=small.numberIterations();
 			small.dual(0);
+			small.setNumberIterations(small.numberIterations()+numberIterations);
+		      }
 #else
                          int numberColumns = small.numberColumns();
                          int numberRows = small.numberRows();
@@ -2873,7 +2940,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
                if (iPass > 20)
                     sumArtificials = 0.0;
-               if ((small.objectiveValue()*optimizationDirection_ > lastObjective[1] - 1.0e-7 && iPass > 5 && sumArtificials < 1.0e-8) ||
+               if ((small.objectiveValue()*optimizationDirection_ > lastObjective[1] - 1.0e-7 && iPass > 5 && sumArtificials < 1.0e-8 && maxSprintPass<200) ||
                          (!small.numberIterations() && iPass) ||
                          iPass == maxSprintPass - 1 || small.status() == 3) {
 
@@ -4240,8 +4307,8 @@ ClpSimplexProgress::looping()
                          iSequence = in_[CLP_CYCLE-1];
                     } else {
                          // primal
-                         if (model_->infeasibilityCost() > 1.0e14)
-                              model_->setInfeasibilityCost(1.0e14);
+                         //if (model_->infeasibilityCost() > 1.0e14)
+		         //   model_->setInfeasibilityCost(1.0e14);
                          iSequence = out_[CLP_CYCLE-1];
                     }
                     if (iSequence >= 0) {

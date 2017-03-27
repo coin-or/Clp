@@ -200,7 +200,7 @@ public:
                      const CoinIndexedVector * columnArray,
                      CoinIndexedVector * spareArray,
                      double acceptablePivot,
-                     double & upperReturn, double &bestReturn, double & badFree);
+                     double & upperReturn, double & badFree);
      /**
          Row array has row part of pivot row
          Column array has column part.

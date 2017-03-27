@@ -750,6 +750,8 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
           rowCopy_->transposeTimes(model, rowCopy->matrix_, rowArray, y, columnArray);
           return;
      }
+     if (columnCopy_)
+       factor *= 0.7;
      if (numberInRowArray > factor * numberRows || !rowCopy) {
           // do by column
           // If no gaps - can do a bit faster
@@ -1031,7 +1033,6 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
                               // We can also see if infeasible or pivoting on free
                               double tentativeTheta = 1.0e15;
                               double upperTheta = 1.0e31;
-                              double bestPossible = 0.0;
                               int addSequence = model->numberColumns();
                               const unsigned char * COIN_RESTRICT statusArray = model->statusArray() + addSequence;
                               int numberRemaining = 0;
@@ -1048,7 +1049,6 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
                                              oldValue = reducedCost[iSequence] * mult;
                                              value = oldValue - tentativeTheta * alpha;
                                              if (value < dualT) {
-                                                  bestPossible = CoinMax(bestPossible, alpha);
                                                   value = oldValue - upperTheta * alpha;
                                                   if (value < dualT && alpha >= acceptablePivot) {
                                                        upperTheta = (oldValue - dualT) / alpha;
@@ -1070,13 +1070,11 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
                                              spare,
                                              model->djRegion(1),
                                              upperTheta,
-                                             bestPossible,
                                              acceptablePivot,
                                              model->currentDualTolerance(),
                                              numberRemaining,
                                              zeroTolerance);
                               model->spareDoubleArray_[0] = upperTheta;
-                              model->spareDoubleArray_[1] = bestPossible;
                               spareArray->setNumElements(numberRemaining);
 #if 0
                               columnArray->setNumElements(numberNonZero);
@@ -1084,9 +1082,9 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
 			      columnArray->setPackedMode(true);
 			      spareArray->checkClean();
 			      columnArray->checkClean();
-			      printf("col %d spare %d upper %g best %g\n",
+			      printf("col %d spare %d upper %g\n",
 				     columnArray->getNumElements(),
-				     spareArray->getNumElements(),upperTheta,bestPossible);
+				     spareArray->getNumElements(),upperTheta);
 #endif
                               // signal partially done
                               model->spareIntArray_[0] = -2;
@@ -1108,7 +1106,14 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
                     columnArray->setNumElements(numberNonZero);
                     //xA++;
                } else {
+		 if ((model->moreSpecialOptions()&8)!=0 &&
+		     model->algorithm()<0) {
+		   columnCopy_->transposeTimes(model, pi, columnArray,
+		     model->rowArray(3),rowArray);
+		   model->spareIntArray_[0]=-2;
+		 } else {
                     columnCopy_->transposeTimes(model, pi, columnArray);
+		 }
                     numberNonZero = columnArray->getNumElements();
                     //xB++;
                }
@@ -1149,7 +1154,14 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
                     columnArray->setNumElements(numberNonZero);
                     //xC++;
                } else {
+		 if ((model->moreSpecialOptions()&8)!=0 &&
+		     model->algorithm()<0) {
+		   columnCopy_->transposeTimes(model, pi, columnArray,
+		     model->rowArray(3),rowArray);
+		   model->spareIntArray_[0]=-2;
+		 } else {
                     columnCopy_->transposeTimes(model, pi, columnArray);
+		 }
                     numberNonZero = columnArray->getNumElements();
                     //xD++;
                }
@@ -1737,7 +1749,6 @@ transposeTimesUnscaledBit2(clpTempInfo & info)
   double tentativeTheta = 1.0e15;
   int numberRemaining = 0;
   double upperTheta = info.upperTheta;
-  double bestPossible = info.bestPossible;
   int first = info.startColumn;
   int last = first+info.numberToDo;
   int numberNonZero=0;
@@ -1775,7 +1786,6 @@ transposeTimesUnscaledBit2(clpTempInfo & info)
 	  double oldValue = reducedCost[iColumn] * mult;
 	  double value = oldValue - tentativeTheta * alpha;
 	  if (value < dualT) {
-	    bestPossible = CoinMax(bestPossible, alpha);
 	    value = oldValue - upperTheta * alpha;
 	    if (value < dualT && alpha >= acceptablePivot) {
 	      upperTheta = (oldValue - dualT) / alpha;
@@ -1791,7 +1801,6 @@ transposeTimesUnscaledBit2(clpTempInfo & info)
   }
   info.numberAdded=numberNonZero;
   info.numberRemaining=numberRemaining;
-  info.bestPossible=bestPossible;
   info.upperTheta=upperTheta;
 }
 #endif
@@ -1806,7 +1815,6 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
           double * COIN_RESTRICT spareArray,
           const double * COIN_RESTRICT reducedCost,
           double & upperThetaP,
-          double & bestPossibleP,
           double acceptablePivot,
           double dualTolerance,
           int & numberRemainingP,
@@ -1814,7 +1822,6 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
 {
      int numberRemaining = numberRemainingP;
      double upperTheta = upperThetaP;
-     double bestPossible = bestPossibleP;
      int numberNonZero = 0;
      // get matrix data pointers
      const int * COIN_RESTRICT row = matrix_->getIndices();
@@ -1828,7 +1835,6 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
      int n=0;
      for (int i=0;i<numberThreads;i++) {
        info[i].upperTheta = upperThetaP;
-       info[i].bestPossible = bestPossibleP;
        info[i].acceptablePivot = acceptablePivot;
        info[i].reducedCost = const_cast<double *>(reducedCost);
        info[i].index = spareIndex+n+numberRemaining;
@@ -1853,7 +1859,6 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
      for (int i=0;i<numberThreads;i++) { 
        numberNonZero += info[i].numberAdded;
        numberRemaining += info[i].numberRemaining;
-       bestPossible = CoinMax(bestPossible,static_cast<double>(info[i].bestPossible));
        upperTheta = CoinMin(upperTheta,static_cast<double>(info[i].upperTheta));
      }
      moveAndZero(info,1,NULL);
@@ -1973,7 +1978,6 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
                          double oldValue = reducedCost[iColumn] * mult;
                          double value = oldValue - tentativeTheta * alpha;
                          if (value < dualT) {
-                              bestPossible = CoinMax(bestPossible, alpha);
                               value = oldValue - upperTheta * alpha;
                               if (value < dualT && alpha >= acceptablePivot) {
                                    upperTheta = (oldValue - dualT) / alpha;
@@ -1992,7 +1996,6 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
 #endif
      numberRemainingP = numberRemaining;
      upperThetaP = upperTheta;
-     bestPossibleP = bestPossible;
      return numberNonZero;
 }
 // Meat of transposeTimes by column when scaled
@@ -5867,7 +5870,7 @@ void
 ClpPackedMatrix::specialColumnCopy(ClpSimplex * model)
 {
      delete columnCopy_;
-     if ((model->moreSpecialOptions()&16777216)!=0) {
+     if (model->vectorMode()) {
        flags_ |= 16;
        // go to exact devex (unless full steepest)
        ClpPrimalColumnSteepest * pricing =
@@ -5875,7 +5878,8 @@ ClpPackedMatrix::specialColumnCopy(ClpSimplex * model)
        if (pricing && pricing->mode()>1)
 	 pricing->setMode(0);
      }
-     if ((flags_ & 16) != 0) {
+     if ((flags_ & 16) != 0 && model->numberRows()>200 &&
+	 model->numberColumns()>500) {
           columnCopy_ = new ClpPackedMatrix3(model, matrix_);
           flags_ |= 8;
      } else {
@@ -5903,6 +5907,9 @@ ClpPackedMatrix::correctSequence(const ClpSimplex * model, int & sequenceIn, int
                // do all
                columnCopy_->sortBlocks(model);
           }
+#ifndef NDEBUG
+	  columnCopy_->checkBlocks(model);
+#endif
      }
 }
 // Check validity
@@ -6204,13 +6211,12 @@ ClpPackedMatrix2::operator=(const ClpPackedMatrix2& rhs)
 static int dualColumn0(const ClpSimplex * model, double * spare,
                        int * spareIndex, const double * arrayTemp,
                        const int * indexTemp, int numberIn,
-                       int offset, double acceptablePivot, double * bestPossiblePtr,
+                       int offset, double acceptablePivot, 
                        double * upperThetaPtr, int * posFreePtr, double * freePivotPtr)
 {
      // do dualColumn0
      int i;
      int numberRemaining = 0;
-     double bestPossible = 0.0;
      double upperTheta = 1.0e31;
      double freePivot = acceptablePivot;
      int posFree = -1;
@@ -6232,7 +6238,6 @@ static int dualColumn0(const ClpSimplex * model, double * spare,
                break;
           case ClpSimplex::isFree:
           case ClpSimplex::superBasic:
-               bestPossible = CoinMax(bestPossible, fabs(alpha));
                oldValue = reducedCost[iSequence];
                // If free has to be very large - should come in via dualRow
                if (model->getStatus(iSequence) == ClpSimplex::isFree && fabs(alpha) < 1.0e-3)
@@ -6260,7 +6265,6 @@ static int dualColumn0(const ClpSimplex * model, double * spare,
                value = oldValue - tentativeTheta * alpha;
                //assert (oldValue<=dualTolerance*1.0001);
                if (value > dualTolerance) {
-                    bestPossible = CoinMax(bestPossible, -alpha);
                     value = oldValue - upperTheta * alpha;
                     if (value > dualTolerance && -alpha >= acceptablePivot)
                          upperTheta = (oldValue - dualTolerance) / alpha;
@@ -6274,7 +6278,6 @@ static int dualColumn0(const ClpSimplex * model, double * spare,
                value = oldValue - tentativeTheta * alpha;
                //assert (oldValue>=-dualTolerance*1.0001);
                if (value < -dualTolerance) {
-                    bestPossible = CoinMax(bestPossible, alpha);
                     value = oldValue - upperTheta * alpha;
                     if (value < -dualTolerance && alpha >= acceptablePivot)
                          upperTheta = (oldValue + dualTolerance) / alpha;
@@ -6285,7 +6288,6 @@ static int dualColumn0(const ClpSimplex * model, double * spare,
                break;
           }
      }
-     *bestPossiblePtr = bestPossible;
      *upperThetaPtr = upperTheta;
      *freePivotPtr = freePivot;
      *posFreePtr = posFree;
@@ -6461,7 +6463,7 @@ static void * doOneBlockAnd0Thread(void * voidInfo)
      *(info->numberOutPtr) =  dualColumn0(info->model, info->spare,
                                           info->spareIndex, (const double *)info->arrayTemp,
                                           (const int *) info->indexTemp, *(info->numberInPtr),
-                                          info->offset, info->acceptablePivot, info->bestPossiblePtr,
+                                          info->offset, info->acceptablePivot, 
                                           info->upperThetaPtr, info->posFreePtr, info->freePivotPtr);
      return NULL;
 }
@@ -6479,7 +6481,6 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
      // See if dualColumn0 coding wanted
      bool dualColumn = model->spareIntArray_[0] == 1;
      double acceptablePivot = model->spareDoubleArray_[0];
-     double bestPossible = 0.0;
      double upperTheta = 1.0e31;
      double freePivot = acceptablePivot;
      int posFree = -1;
@@ -6535,7 +6536,6 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
                     break;
                case ClpSimplex::isFree:
                case ClpSimplex::superBasic:
-                    bestPossible = CoinMax(bestPossible, fabs(alpha));
                     oldValue = reducedCost[iRow];
                     // If free has to be very large - should come in via dualRow
                     if (model->getStatus(iRow + addSequence) == ClpSimplex::isFree && fabs(alpha) < 1.0e-3)
@@ -6563,7 +6563,6 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
                     value = oldValue - tentativeTheta * alpha;
                     //assert (oldValue<=dualTolerance*1.0001);
                     if (value > dualTolerance) {
-                         bestPossible = CoinMax(bestPossible, -alpha);
                          value = oldValue - upperTheta * alpha;
                          if (value > dualTolerance && -alpha >= acceptablePivot)
                               upperTheta = (oldValue - dualTolerance) / alpha;
@@ -6577,7 +6576,6 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
                     value = oldValue - tentativeTheta * alpha;
                     //assert (oldValue>=-dualTolerance*1.0001);
                     if (value < -dualTolerance) {
-                         bestPossible = CoinMax(bestPossible, alpha);
                          value = oldValue - upperTheta * alpha;
                          if (value < -dualTolerance && alpha >= acceptablePivot)
                               upperTheta = (oldValue + dualTolerance) / alpha;
@@ -6654,7 +6652,7 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
                                       spareIndex + offset2,
                                       arrayTemp, indexTemp,
                                       iwork[0], offset3, acceptablePivot,
-                                      &dwork[0], &dwork[1], &iwork[2],
+                                      &dwork[1], &iwork[2],
                                       &dwork[2]);
                int number = iwork[0];
                int numberLook = iwork[1];
@@ -6675,7 +6673,6 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
                     posFree = iwork[2] + numberNonZero;
                }
                upperTheta =  CoinMin(dwork[1], upperTheta);
-               bestPossible = CoinMax(dwork[0], bestPossible);
                for (i = 0; i < number; i++) {
                     // double value = arrayTemp[i];
                     //arrayTemp[i]=0.0;
@@ -6697,7 +6694,6 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
                infoPtr->numberInPtr = &iwork[0];
                infoPtr->offset = offset;
                infoPtr->acceptablePivot = acceptablePivot;
-               infoPtr->bestPossiblePtr = &dwork[0];
                infoPtr->upperThetaPtr = &dwork[1];
                infoPtr->posFreePtr = &iwork[2];
                infoPtr->freePivotPtr = &dwork[2];
@@ -6744,7 +6740,6 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
                     posFree = iwork[2] + numberNonZero;
                }
                upperTheta =  CoinMin(dwork[1], upperTheta);
-               bestPossible = CoinMax(dwork[0], bestPossible);
           }
           double * arrayTemp = array + offset;
           const int * indexTemp = index + offset;
@@ -6760,7 +6755,6 @@ ClpPackedMatrix2::transposeTimes(const ClpSimplex * model,
      columnArray->setPackedMode(true);
      if (dualColumn) {
           model->spareDoubleArray_[0] = upperTheta;
-          model->spareDoubleArray_[1] = bestPossible;
           // and theta and alpha and sequence
           if (posFree < 0) {
                model->spareIntArray_[1] = -1;
@@ -6820,9 +6814,16 @@ ClpPackedMatrix3::ClpPackedMatrix3()
   row_(NULL),
   element_(NULL),
   temporary_(NULL),
-  block_(NULL)
+  block_(NULL),
+  ifActive_(0)
 {
 }
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <immintrin.h>
+//#include <fmaintrin.h>
+#endif
 /* Constructor from copy. */
 ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex * model, const CoinPackedMatrix * columnCopy)
   : numberBlocks_(0),
@@ -6838,12 +6839,26 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex * model, const CoinPackedMatrix * 
   row_(NULL),
   element_(NULL),
   temporary_(NULL),
-  block_(NULL)
+  block_(NULL),
+  ifActive_(0)
 {
+  //#undef COIN_AVX2
+  //#define COIN_AVX2 8
+  //#define NO_AVX_HARDWARE
 #ifndef COIN_AVX2
 #define COIN_AVX2 4
 #else
+#if COIN_AVX2==4
+#ifndef NO_AVX_HARDWARE
 #define HASWELL
+#endif
+#elif COIN_AVX2==8
+#ifndef NO_AVX_HARDWARE
+#define SKYLAKE
+#endif
+#else
+  error
+#endif
 #endif
 #if COIN_AVX2 == 1
 #define COIN_AVX2_SHIFT 0
@@ -6852,7 +6867,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex * model, const CoinPackedMatrix * 
 #elif COIN_AVX2 == 4
 #define COIN_AVX2_SHIFT 2
 #elif COIN_AVX2 == 8
-  error at present;
+#define COIN_AVX2_SHIFT 3
 #else
   error;
 #endif
@@ -7122,7 +7137,8 @@ ClpPackedMatrix3::ClpPackedMatrix3(const ClpPackedMatrix3 & rhs)
   row_(NULL),
   element_(NULL),
   temporary_(NULL),
-  block_(NULL)
+  block_(NULL),
+  ifActive_(rhs.ifActive_)
 {
   if (rhs.numberBlocks_) {
     block_ = CoinCopyOfArray(rhs.block_, numberBlocks_);
@@ -7164,6 +7180,7 @@ ClpPackedMatrix3&
 #endif
     numberElements_ = rhs.numberElements_;
     maxBlockSize_ = rhs.maxBlockSize_;
+    ifActive_ = rhs.ifActive_;
     if (rhs.numberBlocks_) {
       block_ = CoinCopyOfArray(rhs.block_, numberBlocks_);
       column_ = CoinCopyOfArray(rhs.column_, 2 * numberColumnsWithGaps_);
@@ -7193,6 +7210,7 @@ ClpPackedMatrix3&
 void
 ClpPackedMatrix3::sortBlocks(const ClpSimplex * model)
 {
+  ifActive_=1;
   int * lookup = column_ + numberColumnsWithGaps_;
   for (int iBlock = 0; iBlock < numberBlocks_+1; iBlock++) {
     blockStruct * block = block_ + iBlock;
@@ -7261,67 +7279,14 @@ ClpPackedMatrix3::sortBlocks(const ClpSimplex * model)
     firstNotPrice = lastPrice - 1;
     lastPrice = 0;
     while (lastPrice <= firstNotPrice) {
-      // find first lower
-      int iColumn = numberInBlock;
-      for (; lastPrice <= firstNotPrice; lastPrice++) {
-	iColumn = column[lastPrice];
-	if (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound)
-	  break;
-      }
-      // find last lower
-      int jColumn = -1;
-      for (; firstNotPrice > lastPrice; firstNotPrice--) {
-	jColumn = column[firstNotPrice];
-	if (model->getColumnStatus(jColumn) != ClpSimplex::atLowerBound)
-	  break;
-      }
-      if (firstNotPrice > lastPrice) {
-	assert (column[lastPrice] == iColumn);
-	assert (column[firstNotPrice] == jColumn);
-	// need to swap
-	column[firstNotPrice] = iColumn;
-	lookup[iColumn] = firstNotPrice;
-	column[lastPrice] = jColumn;
-	lookup[jColumn] = lastPrice;
-	int startBit = roundDown(lastPrice);
-	CoinBigIndex offset =startBit*nel + (lastPrice-startBit);
-	double * elementA = element + offset;
-	int * rowA = row + offset;
-	startBit = roundDown(firstNotPrice);
-	offset =startBit*nel + (firstNotPrice-startBit);
-	double * elementB = element + offset;
-	int * rowB = row + offset;
-	for (int i = 0; i < nel*COIN_AVX2; i+=COIN_AVX2) {
-	  int temp = rowA[i];
-	  double tempE = elementA[i];
-	  rowA[i] = rowB[i];
-	  elementA[i] = elementB[i];
-	  rowB[i] = temp;
-	  elementB[i] = tempE;
-	}
-	firstNotPrice--;
-	lastPrice++;
-      } else if (lastPrice == firstNotPrice) {
-	// make sure correct side
-	iColumn = column[lastPrice];
-	if (model->getColumnStatus(iColumn) != ClpSimplex::atLowerBound)
-	  lastPrice++;
-	break;
-      }
-    }
-    block->firstAtLower_ = lastPrice;
-    // now upper
-    firstNotPrice = lastPrice - 1;
-    lastPrice = 0;
-    while (lastPrice <= firstNotPrice) {
-      // find first basic or fixed
+      // find first upper
       int iColumn = numberInBlock;
       for (; lastPrice <= firstNotPrice; lastPrice++) {
 	iColumn = column[lastPrice];
 	if (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound)
 	  break;
       }
-      // find last non basic or fixed
+      // find last upper
       int jColumn = -1;
       for (; firstNotPrice > lastPrice; firstNotPrice--) {
 	jColumn = column[firstNotPrice];
@@ -7363,6 +7328,59 @@ ClpPackedMatrix3::sortBlocks(const ClpSimplex * model)
       }
     }
     block->firstAtUpper_ = lastPrice;
+    // now lower
+    firstNotPrice = lastPrice - 1;
+    lastPrice = 0;
+    while (lastPrice <= firstNotPrice) {
+      // find first basic or fixed
+      int iColumn = numberInBlock;
+      for (; lastPrice <= firstNotPrice; lastPrice++) {
+	iColumn = column[lastPrice];
+	if (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound)
+	  break;
+      }
+      // find last non basic or fixed
+      int jColumn = -1;
+      for (; firstNotPrice > lastPrice; firstNotPrice--) {
+	jColumn = column[firstNotPrice];
+	if (model->getColumnStatus(jColumn) != ClpSimplex::atLowerBound)
+	  break;
+      }
+      if (firstNotPrice > lastPrice) {
+	assert (column[lastPrice] == iColumn);
+	assert (column[firstNotPrice] == jColumn);
+	// need to swap
+	column[firstNotPrice] = iColumn;
+	lookup[iColumn] = firstNotPrice;
+	column[lastPrice] = jColumn;
+	lookup[jColumn] = lastPrice;
+	int startBit = roundDown(lastPrice);
+	CoinBigIndex offset =startBit*nel + (lastPrice-startBit);
+	double * elementA = element + offset;
+	int * rowA = row + offset;
+	startBit = roundDown(firstNotPrice);
+	offset =startBit*nel + (firstNotPrice-startBit);
+	double * elementB = element + offset;
+	int * rowB = row + offset;
+	for (int i = 0; i < nel*COIN_AVX2; i+=COIN_AVX2) {
+	  int temp = rowA[i];
+	  double tempE = elementA[i];
+	  rowA[i] = rowB[i];
+	  elementA[i] = elementB[i];
+	  rowB[i] = temp;
+	  elementB[i] = tempE;
+	}
+	firstNotPrice--;
+	lastPrice++;
+      } else if (lastPrice == firstNotPrice) {
+	// make sure correct side
+	iColumn = column[lastPrice];
+	if (model->getColumnStatus(iColumn) != ClpSimplex::atLowerBound)
+	  lastPrice++;
+	break;
+      }
+    }
+    block->firstAtLower_ = lastPrice;
 #ifndef NDEBUG
     // check
     int i;
@@ -7371,13 +7389,13 @@ ClpPackedMatrix3::sortBlocks(const ClpSimplex * model)
       assert (model->getColumnStatus(iColumn) != ClpSimplex::basic &&
 	      model->getColumnStatus(iColumn) != ClpSimplex::isFixed);
       assert (lookup[iColumn] == i);
-      if (i<block->firstAtUpper_) {
+      if (i<block->firstAtLower_) {
 	assert (model->getColumnStatus(iColumn) == ClpSimplex::isFree ||
 		model->getColumnStatus(iColumn) == ClpSimplex::superBasic);
-      } else if (i<block->firstAtLower_) {
-	assert (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound);
-      } else {
+      } else if (i<block->firstAtUpper_) {
 	assert (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound);
+      } else {
+	assert (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound);
       }
     }
     for (; i < numberInBlock; i++) {
@@ -7428,6 +7446,8 @@ void
   ClpPackedMatrix3::swapOne(const ClpSimplex * model, const ClpPackedMatrix * matrix,
 			    int iColumn)
 {
+  if (!ifActive_)
+    return;
   int * lookup = column_ + numberColumnsWithGaps_;
   // position in block
   int kA = lookup[iColumn];
@@ -7462,9 +7482,9 @@ void
 #endif
   int from,to;
   if (kA<block->firstBasic_) {
-    if (kA>=block->firstAtLower_) {
+    if (kA>=block->firstAtUpper_) {
       from=2;
-    } else if (kA>=block->firstAtUpper_) {
+    } else if (kA>=block->firstAtLower_) {
       from=1;
     } else {
       from=0;
@@ -7475,14 +7495,14 @@ void
   if (model->getColumnStatus(iColumn) == ClpSimplex::basic ||
       model->getColumnStatus(iColumn) == ClpSimplex::isFixed) {
     to=3;
-  } else if (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound) {
-    to=2;
   } else if (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound) {
+    to=2;
+  } else if (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound) {
     to=1;
   } else {
     to=0;
   }
-  int * statusCounts = (&block->firstAtUpper_)-1;
+  int * statusCounts = (&block->firstAtLower_)-1;
   if (from<to) {
     while (from<to) {
       int kB=statusCounts[from+1]-1;
@@ -7510,13 +7530,13 @@ void
 	      model->getColumnStatus(iColumn) != ClpSimplex::isFixed);
     assert (lookup[iColumn] == i);
     if (model->algorithm()>0) {
-      if (i<block->firstAtUpper_) {
+      if (i<block->firstAtLower_) {
 	assert (model->getColumnStatus(iColumn) == ClpSimplex::isFree ||
 		model->getColumnStatus(iColumn) == ClpSimplex::superBasic);
-      } else if (i<block->firstAtLower_) {
-	assert (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound);
-      } else {
+      } else if (i<block->firstAtUpper_) {
 	assert (model->getColumnStatus(iColumn) == ClpSimplex::atLowerBound);
+      } else {
+	assert (model->getColumnStatus(iColumn) == ClpSimplex::atUpperBound);
       }
     }
   }
@@ -7530,6 +7550,37 @@ void
   }
 #endif
 }
+#ifndef NDEBUG
+/* Debug - check blocks */
+void
+ClpPackedMatrix3::checkBlocks(const ClpSimplex * model)
+{
+  if (!ifActive_)
+    return;
+  for (int iBlock=0;iBlock<numberBlocks_+1;iBlock++) {
+    blockStruct * block = block_ + iBlock;
+    int * column = column_ + block->startIndices_;
+    for (int i=0;i<block->firstAtLower_;i++) {
+      int iSequence=column[i];
+      assert (model->getColumnStatus(iSequence) == ClpSimplex::isFree ||
+	      model->getColumnStatus(iSequence) != ClpSimplex::superBasic);
+    }
+    for (int i=block->firstAtLower_;i<block->firstAtUpper_;i++) {
+      int iSequence=column[i];
+      assert (model->getColumnStatus(iSequence) == ClpSimplex::atLowerBound);
+    }
+    for (int i=block->firstAtUpper_;i<block->firstBasic_;i++) {
+      int iSequence=column[i];
+      assert (model->getColumnStatus(iSequence) == ClpSimplex::atUpperBound);
+    }
+    for (int i=block->firstBasic_;i<block->numberInBlock_;i++) {
+      int iSequence=column[i];
+      assert (model->getColumnStatus(iSequence) == ClpSimplex::basic ||
+	      model->getColumnStatus(iSequence) == ClpSimplex::isFixed);
+    }
+  }
+}
+#endif
 /* Return <code>x * -1 * A in <code>z</code>.
    Note - x packed and z will be packed mode
    Squashes small elements and knows about ClpSimplex */
@@ -7590,6 +7641,54 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
     int * column = column_ + block->startIndices_;
     int nBlock=numberPrice>>COIN_AVX2_SHIFT;
     numberPrice -= roundDown(numberPrice);
+#if defined(HASWELL) || defined(SKYLAKE)
+    double * newValues = roundUpDouble((array+numberNonZero)); 
+#ifdef HASWELL
+    assert(COIN_AVX2==4);
+    for (int jBlock=0;jBlock<nBlock;jBlock++) {
+      __m256d arrayX = _mm256_setzero_pd();
+      for (int j=0;j<nel;j++) {
+	__m128i rows = _mm_load_si128((const __m128i *)row); // was loadu
+	__m256d elements = _mm256_load_pd(element);
+	__m256d pis = _mm256_i32gather_pd(pi,rows,8);
+	arrayX = _mm256_fmadd_pd(pis,elements,arrayX);
+	row+=4;
+	element+=4;
+      }
+      _mm256_store_pd(newValues,arrayX);
+#else
+    assert(COIN_AVX2==8);
+    for (int jBlock=0;jBlock<nBlock;jBlock++) {
+      __m512d arrayX = _mm512_setzero_pd();
+      for (int j=0;j<nel;j++) {
+	__m256i rows = _mm256_load_si256((const __m256i *)row);
+	__m512d elements = _mm512_load_pd(element);
+	__m512d pis = _mm512_i32gather_pd(rows,pi,8);
+	arrayX = _mm512_fmadd_pd(pis,elements,arrayX);
+	row+=4;
+	element+=4;
+      }
+      _mm512_store_pd(newValues,arrayX);
+#endif
+      newValues += COIN_AVX2;
+      //row += (nel-1)*COIN_AVX2;
+      //element += (nel-1)*COIN_AVX2;
+      assert (row == row_ + block->startElements_ + nel*COIN_AVX2*(jBlock+1));
+    }
+    int n = nBlock*COIN_AVX2;
+    int nSave=newValues-array;
+    newValues = roundUpDouble((array+numberNonZero));
+    for (int j=0;j<n;j++) {
+      double value=newValues[j];
+      if (fabs(value) > zeroTolerance) {
+	array[numberNonZero] = value;
+	index[numberNonZero++] = *column;
+      }
+      column++;
+    }
+    for (int j=numberNonZero;j<nSave;j++)
+      array[j]=0.0;
+#else
     for (int jBlock=0;jBlock<nBlock;jBlock++) {
       for (int j=0; j < COIN_AVX2; j++) {
 	double value = 0.0;
@@ -7616,6 +7715,7 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
       assert (row == row_ + block->startElements_ + nel*COIN_AVX2*(jBlock+1));
 #endif
     }
+#endif
     // last lot
     for (int j=0; j < numberPrice; j++) {
       double value = 0.0;
@@ -7638,6 +7738,279 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
     }
   }
   output->setNumElements(numberNonZero);
+}
+/* Return <code>x * -1 * A in <code>z</code>.
+   Note - x packed and z will be packed mode
+   Squashes small elements and knows about ClpSimplex
+   - does dualColumn0 */
+void
+ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
+				 const double * COIN_RESTRICT pi,
+				 CoinIndexedVector * output,
+				 CoinIndexedVector * candidate,
+				 const CoinIndexedVector * rowArray) const
+{
+  int numberNonZero = 0;
+  int * index = output->getIndices();
+  double * array = output->denseVector();
+  double zeroTolerance = model->zeroTolerance();
+  int numberColumns=model->numberColumns();
+  const unsigned char * COIN_RESTRICT statusArray=model->statusArray() +
+    numberColumns;
+  int numberInRowArray = rowArray->getNumElements();
+  const int * COIN_RESTRICT whichRow = rowArray->getIndices();
+  const double * COIN_RESTRICT piOld = rowArray->denseVector();
+  int * COIN_RESTRICT spareIndex = candidate->getIndices();
+  double * COIN_RESTRICT spareArray = candidate->denseVector();
+  const double * COIN_RESTRICT reducedCost=model->djRegion(0);
+  double multiplier[] = { -1.0, 1.0};
+  double dualT = - model->currentDualTolerance();
+  double acceptablePivot = model->spareDoubleArray_[0];
+  double tentativeTheta = 1.0e15;
+  double upperTheta = 1.0e31;
+  int numberRemaining=0;
+  // dualColumn0 for slacks
+  for (int i = 0; i < numberInRowArray; i++) {
+    int iSequence = whichRow[i];
+    int iStatus = (statusArray[iSequence] & 3) - 1;
+    if (iStatus) {
+      double mult = multiplier[iStatus-1];
+      double alpha = piOld[i] * mult;
+      double oldValue;
+      double value;
+      if (alpha > 0.0) {
+	oldValue = reducedCost[iSequence] * mult;
+	value = oldValue - tentativeTheta * alpha;
+	if (value < dualT) {
+	  value = oldValue - upperTheta * alpha;
+	  if (value < dualT && alpha >= acceptablePivot) {
+	    upperTheta = (oldValue - dualT) / alpha;
+	  }
+	  // add to list
+	  spareArray[numberRemaining] = alpha * mult;
+	  spareIndex[numberRemaining++] = iSequence + numberColumns;
+	}
+      }
+    }
+  }
+  statusArray -= numberColumns;
+  reducedCost -= numberColumns;
+  double value = 0.0;
+  CoinBigIndex j;
+  int numberOdd = block_->startIndices_;
+  if (numberOdd) {
+    // A) as probably long may be worth unrolling
+    CoinBigIndex end = start_[1];
+    for (j = start_[0]; j < end; j++) {
+      int iRow = row_[j];
+      value += pi[iRow] * element_[j];
+    }
+    int iColumn;
+    // int jColumn=column_[0];
+    
+    for (iColumn = 0; iColumn < numberOdd - 1; iColumn++) {
+      CoinBigIndex start = end;
+      end = start_[iColumn+2];
+      if (fabs(value) > zeroTolerance) {
+	array[numberNonZero] = value;
+	index[numberNonZero++] = column_[iColumn];
+	//index[numberNonZero++]=jColumn;
+      }
+      // jColumn = column_[iColumn+1];
+      value = 0.0;
+      //if (model->getColumnStatus(jColumn)!=ClpSimplex::basic) {
+      for (j = start; j < end; j++) {
+	int iRow = row_[j];
+	value += pi[iRow] * element_[j];
+      }
+      //}
+    }
+    if (fabs(value) > zeroTolerance) {
+      array[numberNonZero] = value;
+      index[numberNonZero++] = column_[iColumn];
+      //index[numberNonZero++]=jColumn;
+    }
+  }
+  // do odd ones
+  for (int i=0;i<numberNonZero;i++) {
+    int iSequence = index[i];
+    double alpha;
+    double oldValue;
+    double value;
+    int iStatus = (statusArray[iSequence] & 3) - 1;
+    if (iStatus) {
+      double mult = multiplier[iStatus-1];
+      alpha = array[i] * mult;
+      if (alpha > 0.0) {
+	oldValue = reducedCost[iSequence] * mult;
+	value = oldValue - tentativeTheta * alpha;
+	if (value < dualT) {
+	  value = oldValue - upperTheta * alpha;
+	  if (value < dualT && alpha >= acceptablePivot) {
+	    upperTheta = (oldValue - dualT) / alpha;
+	  }
+	  // add to list
+	  spareArray[numberRemaining] = alpha * mult;
+	  spareIndex[numberRemaining++] = iSequence;
+	}
+      }
+    }
+  }
+  int numberOld=numberNonZero;
+  int nMax=0; 
+  for (int iBlock = 0; iBlock < numberBlocks_; iBlock++) {
+    // C) Can do two at a time (if so put odd one into start_)
+    // D) can use switch
+    blockStruct * block = block_ + iBlock;
+    //int numberPrice = block->numberInBlock_;
+    int numberPrice = block->firstBasic_;
+    int nel = block->numberElements_;
+    const int * COIN_RESTRICT row = row_ + block->startElements_;
+    const double * COIN_RESTRICT element = element_ + block->startElements_;
+    const int * COIN_RESTRICT column = column_ + block->startIndices_;
+    int nBlock=numberPrice>>COIN_AVX2_SHIFT;
+    numberPrice -= roundDown(numberPrice);
+#if defined(HASWELL) || defined(SKYLAKE)
+    double * COIN_RESTRICT newValues = roundUpDouble((array+numberNonZero)); 
+#ifdef HASWELL
+    assert(COIN_AVX2==4);
+    for (int jBlock=0;jBlock<nBlock;jBlock++) {
+      __m256d arrayX = _mm256_setzero_pd();
+      for (int j=0;j<nel;j++) {
+	__m128i rows = _mm_load_si128((const __m128i *)row); // was loadu
+	__m256d elements = _mm256_load_pd(element);
+	__m256d pis = _mm256_i32gather_pd(pi,rows,8);
+	arrayX = _mm256_fmadd_pd(pis,elements,arrayX);
+	row+=4;
+	element+=4;
+      }
+      _mm256_store_pd(newValues,arrayX);
+#else
+    assert(COIN_AVX2==8);
+    for (int jBlock=0;jBlock<nBlock;jBlock++) {
+      __m512d arrayX = _mm512_setzero_pd();
+      for (int j=0;j<nel;j++) {
+	__m256i rows = _mm256_load_si256((const __m256i *)row); // was loadu
+	__m512d elements = _mm512_load_pd(element);
+	__m512d pis = _mm512_i32gather_pd(rows,pi,8);
+	arrayX = _mm512_fmadd_pd(pis,elements,arrayX);
+	row+=4;
+	element+=4;
+      }
+      _mm512_store_pd(newValues,arrayX);
+#endif
+      newValues += COIN_AVX2;
+      //row += (nel-1)*COIN_AVX2;
+      //element += (nel-1)*COIN_AVX2;
+      assert (row == row_ + block->startElements_ + nel*COIN_AVX2*(jBlock+1));
+    }
+#else
+    double * COIN_RESTRICT newValues = array+numberNonZero; 
+    for (int jBlock=0;jBlock<nBlock;jBlock++) {
+      for (int j=0; j < COIN_AVX2; j++) {
+	double value = 0.0;
+	for (int i=0; i < nel; i++) {
+	  int iRow = row[i*COIN_AVX2];
+	  value += pi[iRow] * element[i*COIN_AVX2];
+	}
+#if COIN_AVX2>1
+	row++;
+	element++;
+#else
+	row+=nel;
+	element+=nel;
+#endif
+	*newValues=value;
+	newValues++;
+      }
+#if COIN_AVX2>1
+      row += (nel-1)*COIN_AVX2;
+      element += (nel-1)*COIN_AVX2;
+      assert (row == row_ + block->startElements_ + nel*COIN_AVX2*(jBlock+1));
+#endif
+    }
+#endif
+    for (int j=0; j < numberPrice; j++) {
+      double value = 0.0;
+      for (int i=0; i < nel; i++) {
+	int iRow = row[i*COIN_AVX2];
+	value += pi[iRow] * element[i*COIN_AVX2];
+      }
+#if COIN_AVX2>1
+      row++;
+      element++;
+#else
+      row+=nel;
+      element+=nel;
+#endif
+      *newValues=value;
+      newValues++;
+    }
+#ifdef HASWELL
+    newValues = roundUpDouble((array+numberNonZero));
+#else
+    newValues = array+numberNonZero;
+#endif
+    int n = block->firstBasic_;
+    int nL = block->firstAtUpper_;
+    nMax = (newValues-array) + n;
+    for (int j=0;j<nL;j++) {
+      double value2=newValues[j];
+      if (fabs(value2) > zeroTolerance) {
+	int iSequence = column[j];
+	double alpha;
+	double oldValue;
+	double value;
+	alpha = value2 ;
+	if (alpha > 0.0) {
+	  oldValue = reducedCost[iSequence];
+	  value = oldValue - tentativeTheta * alpha;
+	  if (value < dualT) {
+	    value = oldValue - upperTheta * alpha;
+	    if (value < dualT && alpha >= acceptablePivot) {
+	      upperTheta = (oldValue - dualT) / alpha;
+	    }
+	    // add to list
+	    spareArray[numberRemaining] = value2;
+	    spareIndex[numberRemaining++] = iSequence;
+	  }
+	}
+	array[numberNonZero] = value2;
+	index[numberNonZero++] = iSequence;
+      }
+    }
+    for (int j=nL;j<n;j++) {
+      double value2=newValues[j];
+      if (fabs(value2) > zeroTolerance) {
+	int iSequence = column[j];
+	double alpha;
+	double oldValue;
+	double value;
+	alpha = -value2;
+	if (alpha > 0.0) {
+	  oldValue = -reducedCost[iSequence];
+	  value = oldValue - tentativeTheta * alpha;
+	  if (value < dualT) {
+	    value = oldValue - upperTheta * alpha;
+	    if (value < dualT && alpha >= acceptablePivot) {
+	      upperTheta = (oldValue - dualT) / alpha;
+	    }
+	    // add to list
+	    spareArray[numberRemaining] = value2;
+	    spareIndex[numberRemaining++] = iSequence;
+	  }
+	}
+	array[numberNonZero] = value2;
+	index[numberNonZero++] = iSequence;
+      }
+    }
+    numberOld=numberNonZero;
+  }
+  for (int j=numberNonZero;j<nMax;j++)
+    array[j]=0.0;
+  output->setNumElements(numberNonZero);
+  candidate->setNumElements(numberRemaining);
+  model->spareDoubleArray_[0] = upperTheta;
 }
 static void
 transposeTimes3Bit2Odd(clpTempInfo & info)
@@ -7765,13 +8138,7 @@ transposeTimes3Bit2Odd(clpTempInfo & info)
     }
   }
   info.numberAdded = bestSequence;
-  info.bestPossible = bestRatio;
 }
-#ifdef _MSC_VER
-#include <intrin.h>
-#else
-#include <immintrin.h>
-#endif
 
 static void
 transposeTimes3Bit2(clpTempInfo & info)
@@ -7816,6 +8183,7 @@ transposeTimes3Bit2(clpTempInfo & info)
     const int * column = columnBlock + block->startIndices_;
 #if COIN_AVX2 > 1
     int numberDo = roundDown(numberPrice);
+#if defined(HASWELL) || defined(SKYLAKE)
 #ifdef HASWELL
     assert(COIN_AVX2==4);
     __m256d zero = _mm256_setzero_pd();
@@ -7825,7 +8193,7 @@ transposeTimes3Bit2(clpTempInfo & info)
 	__m256d arrayX = _mm256_setzero_pd();
 	__m256d tempX = _mm256_setzero_pd();
 	for (int j=0;j<nel;j++) {
-	  __m128i rows = _mm_loadu_si128((const __m128i *)row);
+	  __m128i rows = _mm_load_si128((const __m128i *)row); // was loadu
 	  __m256d elements = _mm256_load_pd(element);
 	  __m256d pis = _mm256_i32gather_pd(pi,rows,8);
 	  __m256d piWeights = _mm256_i32gather_pd(piWeight,rows,8);
@@ -7839,6 +8207,30 @@ transposeTimes3Bit2(clpTempInfo & info)
 	_mm256_store_pd(work+i,tempX);
 	_mm256_store_pd(work2+i,arrayX);
       }
+#else
+    assert(COIN_AVX2==8);
+    __m512d zero = _mm512_setzero_pd();
+    for (int kColumn=0;kColumn<numberDo;kColumn+=COIN_AVX2_CHUNK) {
+      int endBlock=CoinMin(COIN_AVX2_CHUNK,numberDo-kColumn);
+      for(int i=0;i<endBlock;i+=COIN_AVX2) {
+	__m512d arrayX = _mm512_setzero_pd();
+	__m512d tempX = _mm512_setzero_pd();
+	for (int j=0;j<nel;j++) {
+	  __m256i rows = _mm256_load_si256((const __m256i *)row); // was loadu
+	  __m512d elements = _mm512_load_pd(element);
+	  __m512d pis = _mm512_i32gather_pd(rows,pi,8);
+	  __m512d piWeights = _mm512_i32gather_pd(rows,piWeight,8);
+	  // should be better way using sub
+	  arrayX = _mm512_fmadd_pd(pis,elements,arrayX);
+	  tempX = _mm512_fmadd_pd(piWeights,elements,tempX);
+	  row+=4;
+	  element+=4;
+	}
+	arrayX = _mm512_sub_pd(zero,arrayX);
+	_mm512_store_pd(work+i,tempX);
+	_mm512_store_pd(work2+i,arrayX);
+      }
+#endif
       for (int i=0;i<endBlock;i++) {
 	double value=work2[i];
 	double modification = work[i];
@@ -7929,7 +8321,7 @@ transposeTimes3BitSlacks(clpTempInfo & info)
   assert (info.numberToDo==iBlock+1);
   const blockStruct * block = blocks + iBlock;
   int first = 0;
-  int last = block->firstAtUpper_;
+  int last = block->firstAtLower_;
   const int * column = columnBlock + block->startIndices_;
   for (int j=first;j<last;j++) {
     int iColumn=*column;
@@ -7947,13 +8339,14 @@ transposeTimes3BitSlacks(clpTempInfo & info)
     }
   }
   first = last;
-  last = block->firstAtLower_;
+  last = block->firstAtUpper_;
+  dualTolerance = - dualTolerance; //flip sign
   for (int j=first;j<last;j++) {
     int iColumn=*column;
     column++;
     double value = reducedCost[iColumn];
-    // at upper
-    if (value > dualTolerance) {
+    // at lower
+    if (value < dualTolerance) {
       value *= value;
       if (value>bestRatio*weights[iColumn]) {
 	bestSequence = iColumn;
@@ -7968,8 +8361,8 @@ transposeTimes3BitSlacks(clpTempInfo & info)
     int iColumn=*column;
     column++;
     double value = reducedCost[iColumn];
-    // at lower
-    if (value < dualTolerance) {
+    // at upper
+    if (value > dualTolerance) {
       value *= value;
       if (value>bestRatio*weights[iColumn]) {
 	bestSequence = iColumn;
@@ -8391,5 +8784,449 @@ ClpPackedMatrix::transposeTimes(CoinWorkDouble scalar,
 #ifdef CLP_ALL_ONE_FILE
 #undef reference
 #endif
- 
- 
+ #if 0
+#undef ABCSTATE_LITE
+#if ABOCA_LITE
+/* Meat of transposeTimes by column when not scaled and skipping
+   and doing part of dualColumn */
+static void
+dualColumn00(clpTempInfo & info)
+{
+  const int * COIN_RESTRICT which = info.which;
+  const double * COIN_RESTRICT work = info.work;
+  int * COIN_RESTRICT index = info.index;
+  double * COIN_RESTRICT spare = info.spare;
+  const unsigned char * COIN_RESTRICT status = info.status;
+  const double * COIN_RESTRICT reducedCost = info.reducedCost;
+  double upperTheta = info.upperTheta;
+  double acceptablePivot = info.acceptablePivot;
+  double dualTolerance = info.tolerance;
+  int numberToDo=info.numberToDo;
+  double tentativeTheta = 1.0e15;
+  int numberRemaining = 0;
+  double multiplier[] = { -1.0, 1.0};
+  double dualT = - dualTolerance;
+  for (int i = 0; i < numberToDo; i++) {
+    int iSequence = which[i];
+    int wanted = (status[iSequence] & 3) - 1;
+    if (wanted) {
+      double mult = multiplier[wanted-1];
+      double alpha = work[i] * mult;
+      if (alpha > 0.0) {
+	double oldValue = reducedCost[iSequence] * mult;
+	double value = oldValue - tentativeTheta * alpha;
+	if (value < dualT) {
+	  value = oldValue - upperTheta * alpha;
+	  if (value < dualT && alpha >= acceptablePivot) {
+	    upperTheta = (oldValue - dualT) / alpha;
+	  }
+	  // add to list
+	  spare[numberRemaining] = alpha * mult;
+	  index[numberRemaining++] = iSequence;
+	}
+      }
+    }
+  }
+  info.numberRemaining = numberRemaining;
+  info.upperTheta = upperTheta;
+}
+#endif
+int
+ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
+                            const CoinIndexedVector * columnArray,
+                            CoinIndexedVector * spareArray,
+                            double acceptablePivot,
+                            double & upperReturn, double &bestReturn, double & badFree)
+{
+     // do first pass to get possibles
+     double * spare = spareArray->denseVector();
+     int * index = spareArray->getIndices();
+     const double * work;
+     int number;
+     const int * which;
+     const double * reducedCost;
+     // We can also see if infeasible or pivoting on free
+     double tentativeTheta = 1.0e15;
+     double upperTheta = 1.0e31;
+     double freePivot = acceptablePivot;
+     double bestPossible = 0.0;
+     int numberRemaining = 0;
+     int i;
+     badFree = 0.0;
+     if ((moreSpecialOptions_ & 8) != 0) {
+          // No free or super basic
+       // bestPossible will re recomputed if necessary
+       bestPossible=1.0;
+       //#define COIN_AVX7
+#ifndef COIN_AVX2
+          double multiplier[] = { -1.0, 1.0};
+#else
+	  double multiplier[4]={0.0,0.0,-1.0,1.0};
+#endif
+          double dualT = - dualTolerance_;
+#if ABOCA_LITE==0
+	  int nSections=2;
+#else
+	  int numberThreads=abcState();
+	  int nSections=numberThreads ? 1 : 2;
+#endif
+          for (int iSection = 0; iSection < nSections; iSection++) {
+
+               int addSequence;
+               unsigned char * statusArray;
+               if (!iSection) {
+                    work = rowArray->denseVector();
+                    number = rowArray->getNumElements();
+                    which = rowArray->getIndices();
+                    reducedCost = rowReducedCost_;
+                    addSequence = numberColumns_;
+                    statusArray = status_ + numberColumns_;
+               } else {
+                    work = columnArray->denseVector();
+                    number = columnArray->getNumElements();
+                    which = columnArray->getIndices();
+                    reducedCost = reducedCostWork_;
+                    addSequence = 0;
+                    statusArray = status_;
+               }
+#ifndef COIN_AVX2
+               for (i = 0; i < number; i++) {
+                    int iSequence = which[i];
+                    double alpha;
+                    double oldValue;
+                    double value;
+
+                    assert (getStatus(iSequence + addSequence) != isFree
+                            && getStatus(iSequence + addSequence) != superBasic);
+                    int iStatus = (statusArray[iSequence] & 3) - 1;
+                    if (iStatus) {
+                         double mult = multiplier[iStatus-1];
+                         alpha = work[i] * mult;
+                         if (alpha > 0.0) {
+                              oldValue = reducedCost[iSequence] * mult;
+                              value = oldValue - tentativeTheta * alpha;
+                              if (value < dualT) {
+                                   value = oldValue - upperTheta * alpha;
+                                   if (value < dualT && alpha >= acceptablePivot) {
+                                        upperTheta = (oldValue - dualT) / alpha;
+                                        //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+                                   }
+                                   // add to list
+                                   spare[numberRemaining] = alpha * mult;
+                                   index[numberRemaining++] = iSequence + addSequence;
+                              }
+                         }
+                    }
+               }
+	       //
+#else
+	       //#define COIN_AVX2 4 // temp
+#if COIN_AVX2 == 1
+#define COIN_AVX2_SHIFT 0
+#elif COIN_AVX2 == 2
+#define COIN_AVX2_SHIFT 1
+#elif COIN_AVX2 == 4
+#define COIN_AVX2_SHIFT 2
+#elif COIN_AVX2 == 8
+#define COIN_AVX2_SHIFT 3
+#else
+  error;
+#endif
+  //#define COIN_ALIGN 8*COIN_AVX2 // later
+  //#define COIN_ALIGN_DOUBLE COIN_AVX2
+#define CHECK_CHUNK 4
+	       // round up
+	       int * whichX = const_cast<int *>(which);
+	       int nBlocks = (number+CHECK_CHUNK-1)/CHECK_CHUNK;
+	       int n=nBlocks*CHECK_CHUNK+1;
+	       for (int i=number;i<n;i++)
+		 whichX[i]=0; // alpha will be zero so not chosen
+	       bool acceptableX[CHECK_CHUNK+1];
+	       double oldValueX[CHECK_CHUNK+1];
+	       double newValueX[CHECK_CHUNK+1];
+	       double alphaX[CHECK_CHUNK+1];
+	       newValueX[CHECK_CHUNK]=0.0;
+	       #define USE_USE_AVX
+	       //#define CHECK_H 1
+#ifdef USE_USE_AVX
+#define NEED_AVX
+#elif CHECK_H
+#define NEED_AVX
+#endif
+#ifdef NEED_AVX
+	       double mult2[CHECK_CHUNK];
+	       CoinInt64 acceptableY[CHECK_CHUNK];
+	       CoinInt64 goodDj[CHECK_CHUNK];
+	       double oldValueY[CHECK_CHUNK];
+	       double alphaY[CHECK_CHUNK+1];
+	       memset(acceptableY,0,sizeof(acceptableY));
+	       memset(goodDj,0,sizeof(goodDj));
+	       memset(oldValueY,0,sizeof(oldValueY));
+	       memset(alphaY,0,sizeof(alphaY));
+	       __m256d tentative2 = _mm256_set1_pd(-tentativeTheta);
+	       __m256d dualT2 = _mm256_set1_pd(dualT);
+	       __m256d acceptable2 = _mm256_set1_pd(acceptablePivot);
+#endif
+	       for (int iBlock=0;iBlock<nBlocks;iBlock++) {
+		 bool store=false;
+		 double alpha=0.0;
+		 double oldValue=0.0;
+		 double newValue=0.0;
+		 double trueAlpha=0.0;
+		 int jSequence=0;
+#ifndef USE_USE_AVX
+		 for (int i = 0; i < CHECK_CHUNK+1; i++) {
+		   int iSequence = which[i];
+		   int iStatus = (statusArray[iSequence] & 3);
+		   double mult = multiplier[iStatus];
+		   double newAlpha = work[i]*mult;
+		   double oldDj = reducedCost[iSequence]*mult;
+		   newValue = (oldDj - tentativeTheta * newAlpha)-dualT;
+		   acceptableX[i]=newAlpha>= acceptablePivot;
+		   oldValueX[i]=oldDj;
+		   newValueX[i]=newValue;
+		   alphaX[i]=newAlpha;
+		 }
+#endif
+#ifdef NEED_AVX
+		 __m128i columns = _mm_load_si128((const __m128i *)which);
+		 // what do we get - this must be wrong
+		 // probably only 1 and 2 - can we be clever
+		 // fix
+		 //__m128i status; // = _mm256_i32gather_ps(statusArray,columns,1);
+		 //status.m128i_i32[0]=statusArray[columns.m128i_i32[0]];
+		 for (int i=0;i<CHECK_CHUNK;i++) {
+		   int iSequence = which[i];
+		   int iStatus = (statusArray[iSequence] & 3);
+		   mult2[i] = multiplier[iStatus];
+		 }
+		 //__m256d newAlpha2 = _mm256_i32gather_pd(multiplier,status,1); // mult here
+		 __m256d newAlpha2 = _mm256_load_pd(mult2);
+		 __m256d oldDj = _mm256_i32gather_pd(reducedCost,columns,8);
+		 oldDj=_mm256_mul_pd(oldDj,newAlpha2); // remember newAlpha==mult
+		 _mm256_store_pd(oldValueY,oldDj); // redo later
+		 __m256d work2 = _mm256_load_pd(work);
+		 newAlpha2=_mm256_mul_pd(newAlpha2,work2); // now really newAlpha
+		 //__m256d newValue2 = _mm256_fmadd_pd(tentative2,newAlpha2,oldDj);
+		 oldDj=_mm256_fmadd_pd(newAlpha2,tentative2,oldDj);
+		 __v4df bitsDj=_mm256_cmp_pd(oldDj,dualT2,_CMP_LT_OS);
+		 __v4df bitsAcceptable = _mm256_cmp_pd(newAlpha2,acceptable2,_CMP_GE_OS);
+		 _mm256_store_pd(reinterpret_cast<double *>(goodDj),bitsDj);
+		 _mm256_store_pd(reinterpret_cast<double *>(acceptableY),bitsAcceptable);
+		 _mm256_store_pd(alphaY,newAlpha2);
+#ifndef USE_USE_AVX
+#undef NDEBUG
+		 for (int i = 0; i < CHECK_CHUNK; i++) {
+		   assert(newValueX[i]>0.0==(goodDj[i]));
+		   //assert(acceptableX[i]==(acceptableY[i]));
+		   assert(oldValueX[i]==oldValueY[i]);
+		   assert(alphaX[i]==alphaY[i]);
+		 }
+		 for (int i = 0; i < CHECK_CHUNK; i++) {
+		   bool g1=newValueX[i]<0.0;
+		   bool g2=goodDj[i]!=0;
+		   if(g1!=g2)abort();
+		   //if(acceptableX[i]!=(acceptableY[i]))abort();
+		   if(fabs(oldValueX[i]-oldValueY[i])>1.0e-5+
+		      +(1.0e-10*fabs(oldValueX[i])))abort();
+		   if(alphaX[i]!=alphaY[i])abort();
+		 }
+#endif
+#endif
+		 for (int i = 0; i < CHECK_CHUNK+1; i++) {
+#ifndef USE_USE_AVX
+		   double newValue=newValueX[i];
+		   bool newStore = newValue < 0.0;
+		   if (store) {
+		     // add to list
+		     bool acceptable = acceptableX[i-1];
+		     spare[numberRemaining] = work[i-1];
+		     index[numberRemaining++] = which[i-1] + addSequence;
+		     double value = oldValueX[i-1] - upperTheta * alphaX[i-1];
+		     if (value < dualT && acceptable) {
+		       upperTheta = (oldValueX[i-1] - dualT) / alphaX[i-1];
+		     }
+		   }
+#else
+		   bool newStore = goodDj[i]!=0;
+		   if (store) {
+		     // add to list
+		     bool acceptable = acceptableY[i-1];
+		     spare[numberRemaining] = work[i-1];
+		     index[numberRemaining++] = which[i-1] + addSequence;
+		     double value = oldValueY[i-1] - upperTheta * alphaY[i-1];
+		     if (value < dualT && acceptable) {
+		       upperTheta = (oldValueY[i-1] - dualT) / alphaY[i-1];
+		     }
+		   }
+#endif
+		   store=newStore;
+		 }
+		 which += CHECK_CHUNK;
+		 work += CHECK_CHUNK;
+	       }
+#endif
+          }
+#if ABOCA_LITE
+	  if (numberThreads) {
+	  work = columnArray->denseVector();
+	  number = columnArray->getNumElements();
+	  which = columnArray->getIndices();
+	  reducedCost = reducedCostWork_;
+	  unsigned char * statusArray = status_;
+	  
+	  clpTempInfo info[ABOCA_LITE];
+	  int chunk = (number+numberThreads-1)/numberThreads;
+	  int n=0;
+	  int nR=numberRemaining;
+	  for (int i=0;i<numberThreads;i++) {
+	    info[i].which=const_cast<int *>(which+n);
+	    info[i].work=const_cast<double *>(work+n);
+	    info[i].numberToDo=CoinMin(chunk,number-n);
+	    n += chunk;
+	    info[i].index = index+nR;
+	    info[i].spare = spare+nR;
+	    nR += chunk;
+	    info[i].reducedCost = const_cast<double *>(reducedCost);
+	    info[i].upperTheta = upperTheta;
+	    info[i].acceptablePivot = acceptablePivot;
+	    info[i].status = statusArray;
+	    info[i].tolerance=dualTolerance_;
+	  }
+	  for (int i=0;i<numberThreads;i++) {
+	    cilk_spawn dualColumn00(info[i]);
+	  }
+	  cilk_sync;
+	  moveAndZero(info,1,NULL);
+	  for (int i=0;i<numberThreads;i++) {
+	    numberRemaining += info[i].numberRemaining;
+	    upperTheta = CoinMin(upperTheta,static_cast<double>(info[i].upperTheta));
+	  }
+	  }
+#endif
+     } else {
+          // some free or super basic
+          for (int iSection = 0; iSection < 2; iSection++) {
+
+               int addSequence;
+
+               if (!iSection) {
+                    work = rowArray->denseVector();
+                    number = rowArray->getNumElements();
+                    which = rowArray->getIndices();
+                    reducedCost = rowReducedCost_;
+                    addSequence = numberColumns_;
+               } else {
+                    work = columnArray->denseVector();
+                    number = columnArray->getNumElements();
+                    which = columnArray->getIndices();
+                    reducedCost = reducedCostWork_;
+                    addSequence = 0;
+               }
+
+               for (i = 0; i < number; i++) {
+                    int iSequence = which[i];
+                    double alpha;
+                    double oldValue;
+                    double value;
+                    bool keep;
+
+                    switch(getStatus(iSequence + addSequence)) {
+
+                    case basic:
+                    case ClpSimplex::isFixed:
+                         break;
+                    case isFree:
+                    case superBasic:
+                         alpha = work[i];
+                         bestPossible = CoinMax(bestPossible, fabs(alpha));
+                         oldValue = reducedCost[iSequence];
+                         // If free has to be very large - should come in via dualRow
+                         //if (getStatus(iSequence+addSequence)==isFree&&fabs(alpha)<1.0e-3)
+                         //break;
+                         if (oldValue > dualTolerance_) {
+                              keep = true;
+                         } else if (oldValue < -dualTolerance_) {
+                              keep = true;
+                         } else {
+                              if (fabs(alpha) > CoinMax(10.0 * acceptablePivot, 1.0e-5)) {
+                                   keep = true;
+                              } else {
+                                   keep = false;
+                                   badFree = CoinMax(badFree, fabs(alpha));
+                              }
+                         }
+                         if (keep) {
+                              // free - choose largest
+                              if (fabs(alpha) > freePivot) {
+                                   freePivot = fabs(alpha);
+                                   sequenceIn_ = iSequence + addSequence;
+                                   theta_ = oldValue / alpha;
+                                   alpha_ = alpha;
+                              }
+			      // give fake bounds if possible
+			      int jSequence=iSequence+addSequence;
+			      if (2.0*fabs(solution_[jSequence])<
+				  dualBound_) {
+				FakeBound bound = getFakeBound(jSequence);
+				assert (bound == ClpSimplexDual::noFake);
+				setFakeBound(jSequence,ClpSimplexDual::bothFake);
+				numberFake_++;
+				value = oldValue - tentativeTheta * alpha;
+				if (value > dualTolerance_) {
+				  // pretend coming in from upper bound
+				  upper_[jSequence] = solution_[jSequence];
+				  lower_[jSequence] = upper_[jSequence] - dualBound_;
+				  setColumnStatus(jSequence,ClpSimplex::atUpperBound);
+				} else {
+				  // pretend coming in from lower bound
+				  lower_[jSequence] = solution_[jSequence];
+				  upper_[jSequence] = lower_[jSequence] + dualBound_;
+				  setColumnStatus(jSequence,ClpSimplex::atLowerBound);
+				}
+			      }
+                         }
+                         break;
+                    case atUpperBound:
+                         alpha = work[i];
+                         oldValue = reducedCost[iSequence];
+                         value = oldValue - tentativeTheta * alpha;
+                         //assert (oldValue<=dualTolerance_*1.0001);
+                         if (value > dualTolerance_) {
+                              bestPossible = CoinMax(bestPossible, -alpha);
+                              value = oldValue - upperTheta * alpha;
+                              if (value > dualTolerance_ && -alpha >= acceptablePivot) {
+                                   upperTheta = (oldValue - dualTolerance_) / alpha;
+                                   //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+                              }
+                              // add to list
+                              spare[numberRemaining] = alpha;
+                              index[numberRemaining++] = iSequence + addSequence;
+                         }
+                         break;
+                    case atLowerBound:
+                         alpha = work[i];
+                         oldValue = reducedCost[iSequence];
+                         value = oldValue - tentativeTheta * alpha;
+                         //assert (oldValue>=-dualTolerance_*1.0001);
+                         if (value < -dualTolerance_) {
+                              bestPossible = CoinMax(bestPossible, alpha);
+                              value = oldValue - upperTheta * alpha;
+                              if (value < -dualTolerance_ && alpha >= acceptablePivot) {
+                                   upperTheta = (oldValue + dualTolerance_) / alpha;
+                                   //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+                              }
+                              // add to list
+                              spare[numberRemaining] = alpha;
+                              index[numberRemaining++] = iSequence + addSequence;
+                         }
+                         break;
+                    }
+               }
+          }
+     }
+     upperReturn = upperTheta;
+     bestReturn = bestPossible;
+     return numberRemaining;
+}
+#endif 

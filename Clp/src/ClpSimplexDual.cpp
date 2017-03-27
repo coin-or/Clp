@@ -630,6 +630,9 @@ ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
                !numberPrimalInfeasibilities_ && perturbation_ < 101) {
           returnCode = 1; // to skip gutsOfDual
           problemStatus_ = 0;
+     } else if (maximumIterations()==0) {
+          returnCode = 1; // to skip gutsOfDual
+          problemStatus_ = 3;
      }
 
      if (!returnCode)
@@ -3380,7 +3383,6 @@ dualColumn00(clpTempInfo & info)
   double upperTheta = info.upperTheta;
   double acceptablePivot = info.acceptablePivot;
   double dualTolerance = info.tolerance;
-  double bestPossible = info.bestPossible;
   int numberToDo=info.numberToDo;
   double tentativeTheta = 1.0e15;
   int numberRemaining = 0;
@@ -3396,7 +3398,6 @@ dualColumn00(clpTempInfo & info)
 	double oldValue = reducedCost[iSequence] * mult;
 	double value = oldValue - tentativeTheta * alpha;
 	if (value < dualT) {
-	  bestPossible = CoinMax(bestPossible, alpha);
 	  value = oldValue - upperTheta * alpha;
 	  if (value < dualT && alpha >= acceptablePivot) {
 	    upperTheta = (oldValue - dualT) / alpha;
@@ -3410,7 +3411,14 @@ dualColumn00(clpTempInfo & info)
   }
   info.numberRemaining = numberRemaining;
   info.upperTheta = upperTheta;
-  info.bestPossible = bestPossible;
+}
+static void
+dualColumn000(int numberThreads,clpTempInfo * info)
+{
+  for (int i=0;i<numberThreads;i++) {
+    cilk_spawn dualColumn00(info[i]);
+  }
+  cilk_sync;
 }
 void moveAndZero(clpTempInfo * info,int type,void * extra)
 {
@@ -3482,12 +3490,18 @@ void moveAndZero(clpTempInfo * info,int type,void * extra)
   }
 }
 #endif
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <immintrin.h>
+//#include <fmaintrin.h>
+#endif
 int
 ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                             const CoinIndexedVector * columnArray,
                             CoinIndexedVector * spareArray,
                             double acceptablePivot,
-                            double & upperReturn, double &bestReturn, double & badFree)
+                            double & upperReturn, double & badFree)
 {
      // do first pass to get possibles
      double * spare = spareArray->denseVector();
@@ -3500,13 +3514,17 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
      double tentativeTheta = 1.0e15;
      double upperTheta = 1.0e31;
      double freePivot = acceptablePivot;
-     double bestPossible = 0.0;
      int numberRemaining = 0;
      int i;
      badFree = 0.0;
      if ((moreSpecialOptions_ & 8) != 0) {
           // No free or super basic
+       // bestPossible will re recomputed if necessary
+#ifndef COIN_AVX2
           double multiplier[] = { -1.0, 1.0};
+#else
+	  double multiplier[4]={0.0,0.0,-1.0,1.0};
+#endif
           double dualT = - dualTolerance_;
 #if ABOCA_LITE==0
 	  int nSections=2;
@@ -3533,7 +3551,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                     addSequence = 0;
                     statusArray = status_;
                }
-
+#ifndef COIN_AVX2
                for (i = 0; i < number; i++) {
                     int iSequence = which[i];
                     double alpha;
@@ -3550,7 +3568,6 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                               oldValue = reducedCost[iSequence] * mult;
                               value = oldValue - tentativeTheta * alpha;
                               if (value < dualT) {
-                                   bestPossible = CoinMax(bestPossible, alpha);
                                    value = oldValue - upperTheta * alpha;
                                    if (value < dualT && alpha >= acceptablePivot) {
                                         upperTheta = (oldValue - dualT) / alpha;
@@ -3563,6 +3580,154 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                          }
                     }
                }
+	       //
+#else
+	       //#define COIN_AVX2 4 // temp
+#if COIN_AVX2 == 1
+#define COIN_AVX2_SHIFT 0
+#elif COIN_AVX2 == 2
+#define COIN_AVX2_SHIFT 1
+#elif COIN_AVX2 == 4
+#define COIN_AVX2_SHIFT 2
+#elif COIN_AVX2 == 8
+#define COIN_AVX2_SHIFT 3
+#else
+  error;
+#endif
+  //#define COIN_ALIGN 8*COIN_AVX2 // later
+  //#define COIN_ALIGN_DOUBLE COIN_AVX2
+#define CHECK_CHUNK 4
+	       // round up
+	       int * whichX = const_cast<int *>(which);
+	       int nBlocks = (number+CHECK_CHUNK-1)/CHECK_CHUNK;
+	       int n=nBlocks*CHECK_CHUNK+1;
+	       for (int i=number;i<n;i++)
+		 whichX[i]=0; // alpha will be zero so not chosen
+	       bool acceptableX[CHECK_CHUNK+1];
+	       double oldValueX[CHECK_CHUNK+1];
+	       double newValueX[CHECK_CHUNK+1];
+	       double alphaX[CHECK_CHUNK+1];
+	       newValueX[CHECK_CHUNK]=0.0;
+	       #define USE_USE_AVX
+	       //#define CHECK_H 1
+#ifdef USE_USE_AVX
+#define NEED_AVX
+#elif CHECK_H
+#define NEED_AVX
+#endif
+#ifdef NEED_AVX
+	       double mult2[CHECK_CHUNK] __attribute__((aligned(64)));
+	       CoinInt64 acceptableY[CHECK_CHUNK] __attribute__((aligned(64)));
+	       CoinInt64 goodDj[CHECK_CHUNK] __attribute__((aligned(64)));
+	       double oldValueY[CHECK_CHUNK] __attribute__((aligned(64)));
+	       double alphaY[CHECK_CHUNK+1] __attribute__((aligned(64)));
+	       memset(acceptableY,0,sizeof(acceptableY));
+	       memset(goodDj,0,sizeof(goodDj));
+	       memset(oldValueY,0,sizeof(oldValueY));
+	       memset(alphaY,0,sizeof(alphaY));
+	       __m256d tentative2 = _mm256_set1_pd(-tentativeTheta);
+	       __m256d dualT2 = _mm256_set1_pd(dualT);
+	       __m256d acceptable2 = _mm256_set1_pd(acceptablePivot);
+#endif
+	       for (int iBlock=0;iBlock<nBlocks;iBlock++) {
+		 bool store=false;
+		 double alpha=0.0;
+		 double oldValue=0.0;
+		 double newValue=0.0;
+		 double trueAlpha=0.0;
+		 int jSequence=0;
+#ifndef USE_USE_AVX
+		 for (int i = 0; i < CHECK_CHUNK+1; i++) {
+		   int iSequence = which[i];
+		   int iStatus = (statusArray[iSequence] & 3);
+		   double mult = multiplier[iStatus];
+		   double newAlpha = work[i]*mult;
+		   double oldDj = reducedCost[iSequence]*mult;
+		   newValue = (oldDj - tentativeTheta * newAlpha)-dualT;
+		   acceptableX[i]=newAlpha>= acceptablePivot;
+		   oldValueX[i]=oldDj;
+		   newValueX[i]=newValue;
+		   alphaX[i]=newAlpha;
+		 }
+#endif
+#ifdef NEED_AVX
+		 __m128i columns = _mm_load_si128((const __m128i *)which);
+		 // what do we get - this must be wrong
+		 // probably only 1 and 2 - can we be clever
+		 // fix
+		 //__m128i status; // = _mm256_i32gather_ps(statusArray,columns,1);
+		 //status.m128i_i32[0]=statusArray[columns.m128i_i32[0]];
+		 for (int i=0;i<CHECK_CHUNK;i++) {
+		   int iSequence = which[i];
+		   int iStatus = (statusArray[iSequence] & 3);
+		   mult2[i] = multiplier[iStatus];
+		 }
+		 //__m256d newAlpha2 = _mm256_i32gather_pd(multiplier,status,1); // mult here
+		 __m256d newAlpha2 = _mm256_load_pd(mult2);
+		 __m256d oldDj = _mm256_i32gather_pd(reducedCost,columns,8);
+		 oldDj=_mm256_mul_pd(oldDj,newAlpha2); // remember newAlpha==mult
+		 _mm256_store_pd(oldValueY,oldDj); // redo later
+		 __m256d work2 = _mm256_load_pd(work);
+		 newAlpha2=_mm256_mul_pd(newAlpha2,work2); // now really newAlpha
+		 //__m256d newValue2 = _mm256_fmadd_pd(tentative2,newAlpha2,oldDj);
+		 oldDj=_mm256_fmadd_pd(newAlpha2,tentative2,oldDj);
+		 __v4df bitsDj=_mm256_cmp_pd(oldDj,dualT2,_CMP_LT_OS);
+		 __v4df bitsAcceptable = _mm256_cmp_pd(newAlpha2,acceptable2,_CMP_GE_OS);
+		 _mm256_store_pd(reinterpret_cast<double *>(goodDj),bitsDj);
+		 _mm256_store_pd(reinterpret_cast<double *>(acceptableY),bitsAcceptable);
+		 _mm256_store_pd(alphaY,newAlpha2);
+#ifndef USE_USE_AVX
+#undef NDEBUG
+		 for (int i = 0; i < CHECK_CHUNK; i++) {
+		   assert(newValueX[i]>0.0==(goodDj[i]));
+		   //assert(acceptableX[i]==(acceptableY[i]));
+		   assert(oldValueX[i]==oldValueY[i]);
+		   assert(alphaX[i]==alphaY[i]);
+		 }
+		 for (int i = 0; i < CHECK_CHUNK; i++) {
+		   bool g1=newValueX[i]<0.0;
+		   bool g2=goodDj[i]!=0;
+		   if(g1!=g2)abort();
+		   //if(acceptableX[i]!=(acceptableY[i]))abort();
+		   if(fabs(oldValueX[i]-oldValueY[i])>1.0e-5+
+		      +(1.0e-10*fabs(oldValueX[i])))abort();
+		   if(alphaX[i]!=alphaY[i])abort();
+		 }
+#endif
+#endif
+		 for (int i = 0; i < CHECK_CHUNK+1; i++) {
+#ifndef USE_USE_AVX
+		   double newValue=newValueX[i];
+		   bool newStore = newValue < 0.0;
+		   if (store) {
+		     // add to list
+		     bool acceptable = acceptableX[i-1];
+		     spare[numberRemaining] = work[i-1];
+		     index[numberRemaining++] = which[i-1] + addSequence;
+		     double value = oldValueX[i-1] - upperTheta * alphaX[i-1];
+		     if (value < dualT && acceptable) {
+		       upperTheta = (oldValueX[i-1] - dualT) / alphaX[i-1];
+		     }
+		   }
+#else
+		   bool newStore = goodDj[i]!=0;
+		   if (store) {
+		     // add to list
+		     bool acceptable = acceptableY[i-1];
+		     spare[numberRemaining] = work[i-1];
+		     index[numberRemaining++] = which[i-1] + addSequence;
+		     double value = oldValueY[i-1] - upperTheta * alphaY[i-1];
+		     if (value < dualT && acceptable) {
+		       upperTheta = (oldValueY[i-1] - dualT) / alphaY[i-1];
+		     }
+		   }
+#endif
+		   store=newStore;
+		 }
+		 which += CHECK_CHUNK;
+		 work += CHECK_CHUNK;
+	       }
+#endif
           }
 #if ABOCA_LITE
 	  if (numberThreads) {
@@ -3586,19 +3751,15 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
 	    nR += chunk;
 	    info[i].reducedCost = const_cast<double *>(reducedCost);
 	    info[i].upperTheta = upperTheta;
-	    info[i].bestPossible = bestPossible;
 	    info[i].acceptablePivot = acceptablePivot;
 	    info[i].status = statusArray;
 	    info[i].tolerance=dualTolerance_;
 	  }
-	  for (int i=0;i<numberThreads;i++) {
-	    cilk_spawn dualColumn00(info[i]);
-	  }
-	  cilk_sync;
+	  // for gcc - get cilk out of function to stop avx2 error
+	  dualColumn000(numberThreads,info);
 	  moveAndZero(info,1,NULL);
 	  for (int i=0;i<numberThreads;i++) {
 	    numberRemaining += info[i].numberRemaining;
-	    bestPossible = CoinMax(bestPossible,static_cast<double>(info[i].bestPossible));
 	    upperTheta = CoinMin(upperTheta,static_cast<double>(info[i].upperTheta));
 	  }
 	  }
@@ -3638,7 +3799,6 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                     case isFree:
                     case superBasic:
                          alpha = work[i];
-                         bestPossible = CoinMax(bestPossible, fabs(alpha));
                          oldValue = reducedCost[iSequence];
                          // If free has to be very large - should come in via dualRow
                          //if (getStatus(iSequence+addSequence)==isFree&&fabs(alpha)<1.0e-3)
@@ -3692,7 +3852,6 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                          value = oldValue - tentativeTheta * alpha;
                          //assert (oldValue<=dualTolerance_*1.0001);
                          if (value > dualTolerance_) {
-                              bestPossible = CoinMax(bestPossible, -alpha);
                               value = oldValue - upperTheta * alpha;
                               if (value > dualTolerance_ && -alpha >= acceptablePivot) {
                                    upperTheta = (oldValue - dualTolerance_) / alpha;
@@ -3709,7 +3868,6 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                          value = oldValue - tentativeTheta * alpha;
                          //assert (oldValue>=-dualTolerance_*1.0001);
                          if (value < -dualTolerance_) {
-                              bestPossible = CoinMax(bestPossible, alpha);
                               value = oldValue - upperTheta * alpha;
                               if (value < -dualTolerance_ && alpha >= acceptablePivot) {
                                    upperTheta = (oldValue + dualTolerance_) / alpha;
@@ -3725,7 +3883,6 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
           }
      }
      upperReturn = upperTheta;
-     bestReturn = bestPossible;
      return numberRemaining;
 }
 /*
@@ -3813,33 +3970,41 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
 
      // do first pass to get possibles
      upperTheta = 1.0e31;
-     double bestPossible = 0.0;
+     double bestPossible = 1.0;
      double badFree = 0.0;
      alpha_ = 0.0;
      if (spareIntArray_[0] >= 0) {
           numberRemaining = dualColumn0(rowArray, columnArray, spareArray,
-                                        acceptablePivot, upperTheta, bestPossible, badFree);
+                                        acceptablePivot, upperTheta, badFree);
      } else {
           // already done
           numberRemaining = spareArray->getNumElements();
           spareArray->setNumElements(0);
           upperTheta = spareDoubleArray_[0];
-          bestPossible = spareDoubleArray_[1];
           if (spareIntArray_[0] == -1) {
                theta_ = spareDoubleArray_[2];
                alpha_ = spareDoubleArray_[3];
                sequenceIn_ = spareIntArray_[1];
           } else {
 #if 0
+#undef NDEBUG
                int n = numberRemaining;
                double u = upperTheta;
-               double b = bestPossible;
                upperTheta = 1.0e31;
-               bestPossible = 0.0;
-               numberRemaining = dualColumn0(rowArray, columnArray, spareArray,
-                                             acceptablePivot, upperTheta, bestPossible, badFree);
+	       CoinIndexedVector temp(4000);
+               numberRemaining = dualColumn0(rowArray, columnArray, &temp,
+                                             acceptablePivot, upperTheta, badFree);
                assert (n == numberRemaining);
-               assert (fabs(b - bestPossible) < 1.0e-7);
+	       double * spare = spareArray->denseVector();
+	       int * index = spareArray->getIndices();
+	       double * spareX = temp.denseVector();
+	       int * indexX = temp.getIndices();
+	       CoinSort_2(spare,spare+n,index);
+	       CoinSort_2(spareX,spareX+n,indexX);
+	       for (int i=0;i<n;i++) {
+		 assert (index[i]==indexX[i]);
+		 assert (fabs(spare[i]-spareX[i])<1.0e-6);
+	       }
                assert (fabs(u - upperTheta) < 1.0e-7);
 #endif
           }
@@ -4419,6 +4584,67 @@ ClpSimplexDual::dualColumn(CoinIndexedVector * rowArray,
                directionIn_ = 1;
                lowerIn_ = valueIn_;
           }
+	  if (fabs(alpha_)<1.0e-6) {
+	    // need bestPossible
+	    const double * work;
+	    int number;
+	    const int * which;
+	    const double * reducedCost;
+	    double tentativeTheta = 1.0e15;
+	    double upperTheta = 1.0e31;
+	    bestPossible = 0.0;
+	    double multiplier[] = { -1.0, 1.0};
+	    double dualT = - dualTolerance_;
+	    int nSections=2;
+	    int addSequence;
+	    for (int iSection = 0; iSection < nSections; iSection++) {
+	      if (!iSection) {
+		work = rowArray->denseVector();
+		number = rowArray->getNumElements();
+		which = rowArray->getIndices();
+		reducedCost = rowReducedCost_;
+		addSequence = numberColumns_;
+	      } else {
+		work = columnArray->denseVector();
+		number = columnArray->getNumElements();
+		which = columnArray->getIndices();
+		reducedCost = reducedCostWork_;
+		addSequence = 0;
+	      }
+	      for (i = 0; i < number; i++) {
+		int iSequence = which[i];
+		double alpha;
+		double oldValue;
+		double value;
+		double mult=1.0;
+		switch(getStatus(iSequence + addSequence)) {
+		  
+		case basic:
+		case ClpSimplex::isFixed:
+		  break;
+		case isFree:
+		case superBasic:
+		  alpha = work[i];
+		  bestPossible = CoinMax(bestPossible, fabs(alpha));
+		  break;
+		case atUpperBound:
+		  mult = -1.0;
+		case atLowerBound:
+		  alpha = work[i] * mult;
+		  if (alpha > 0.0) {
+		    oldValue = reducedCost[iSequence] * mult;
+		    value = oldValue - tentativeTheta * alpha;
+		    if (value < dualT) {
+		      bestPossible = CoinMax(bestPossible, alpha);
+		    }
+		  }
+		  break;
+		}
+	      }
+	    }
+	  } else {
+	    bestPossible=fabs(alpha_);
+	  }
      } else {
           // no pivot
           bestPossible = 0.0;
@@ -5882,13 +6108,19 @@ ClpSimplexDual::flipBounds(CoinIndexedVector * rowArray,
                     break;
                case atUpperBound:
                     // to lower bound
-                    setStatus(iSequence + addSequence, atLowerBound);
+                    setStatus(iSequence+addSequence, atLowerBound);
                     solution[iSequence] = lower[iSequence];
+		    // correct in vector copy
+  		    iSequence += addSequence;
+		    matrix_->correctSequence(this,iSequence,iSequence);
                     break;
                case atLowerBound:
                     // to upper bound
-                    setStatus(iSequence + addSequence, atUpperBound);
+                    setStatus(iSequence+addSequence, atUpperBound);
                     solution[iSequence] = upper[iSequence];
+		    // correct in vector copy
+		    iSequence += addSequence;
+		    matrix_->correctSequence(this,iSequence,iSequence);
                     break;
                }
           }
@@ -5901,7 +6133,7 @@ void
 ClpSimplexDual::originalBound( int iSequence)
 {
      if (getFakeBound(iSequence) != noFake) {
-          numberFake_--;;
+          numberFake_--;
           setFakeBound(iSequence, noFake);
           if (iSequence >= numberColumns_) {
                // rows

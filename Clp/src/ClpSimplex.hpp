@@ -17,6 +17,7 @@
 #include "ClpMatrixBase.hpp"
 #include "ClpSolve.hpp"
 #include "ClpConfig.h"
+#include "CoinIndexedVector.hpp"
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
@@ -1287,6 +1288,10 @@ public:
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
      }
+     /// Get vector mode
+     inline int vectorMode() const {
+          return vectorMode_;
+     }
      /** Set more special options
          1 bit - if presolve says infeasible in ClpSolve return
          2 bit - if presolved problem infeasible return
@@ -1311,10 +1316,13 @@ public:
 	 2097152 bit - no primal in fastDual2 if feasible
 	 4194304 bit - tolerances have been changed by code
 	 8388608 bit - tolerances are dynamic (at first)
-	 16777216 bit - try vector matrix
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;
+     }
+     /// Set vector mode
+     inline void setVectorMode(int value) {
+          vectorMode_ = value;
      }
      //@}
      /**@name status methods */
@@ -1582,6 +1590,8 @@ protected:
      int moreSpecialOptions_;
      /// Iteration when we entered dual or primal
      int baseIteration_;
+     /// Vector mode - try and use vector instructions
+     int vectorMode_;
      /// Primal tolerance needed to make dual feasible (<largeTolerance)
      double primalToleranceToGetOptimal_;
      /// Large bound value (for complementarity etc)

@@ -409,7 +409,6 @@ private:
                                       double * COIN_RESTRICT spareArray,
                                       const double * COIN_RESTRICT reducedCost,
                                       double & upperTheta,
-                                      double & bestPossible,
                                       double acceptablePivot,
                                       double dualTolerance,
                                       int & numberRemaining,
@@ -487,7 +486,7 @@ typedef struct {
      double * arrayTemp;
      int * indexTemp;
      int * numberInPtr;
-     double * bestPossiblePtr;
+  //double * bestPossiblePtr;
      double * upperThetaPtr;
      int * posFreePtr;
      double * freePivotPtr;
@@ -572,11 +571,11 @@ typedef struct {
   int numberScan_; // i.e. miss out basic and fixed
   /* order is -
      free or superbasic
-     at upper
      at lower
+     at upper
      fixed or basic */
-  int firstAtUpper_;
   int firstAtLower_;
+  int firstAtUpper_;
   int firstBasic_; // or fixed
   int numberElements_; // number elements per column
   int numberOnes_; // later
@@ -592,7 +591,13 @@ public:
      void transposeTimes(const ClpSimplex * model,
                          const double * pi,
                          CoinIndexedVector * output) const;
+     /// This version does dualColumn0
      /// Updates two arrays for steepest
+     void transposeTimes(const ClpSimplex * model,
+                         const double * pi,
+                         CoinIndexedVector * output,
+                         CoinIndexedVector * candidate,
+			 const CoinIndexedVector * rowArray) const;
      void transposeTimes2(const ClpSimplex * model,
                           const double * pi, CoinIndexedVector * dj1,
                           const double * piWeight,
@@ -630,6 +635,8 @@ public:
                   int iColumn);
      /// Part of above
      void swapOne(int iBlock, int kA, int kB);
+     /** Debug - check blocks */
+     void checkBlocks(const ClpSimplex * model);
      /**
 	type - 1 redo infeasible, 2 choose sequenceIn, 3 both
 	returns sequenceIn (or -1) for type 2
@@ -675,6 +682,8 @@ protected:
 #endif
      /// Blocks (ordinary start at 0 and go to first block)
      blockStruct * block_;
+     /// If active
+     int ifActive_;
      //@}
 };
 #elif INCLUDE_MATRIX3_PRICING

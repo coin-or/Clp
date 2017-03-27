@@ -709,6 +709,9 @@ CbcOrClpParam::setIntParameterWithMessage ( ClpSimplex * model, int value , int 
           case CLP_PARAM_INT_MORESPECIALOPTIONS:
                model->setMoreSpecialOptions(value);
 	       break;
+          case CLP_PARAM_INT_VECTOR_MODE:
+               model->setVectorMode(value);
+	       break;
 #ifndef COIN_HAS_CBC
 #ifdef CBC_THREAD
           case CBC_PARAM_INT_THREADS:
@@ -750,6 +753,9 @@ CbcOrClpParam::intParameter (ClpSimplex * model) const
           break;
      case CLP_PARAM_INT_MORESPECIALOPTIONS:
           value = model->moreSpecialOptions();
+          break;
+     case CLP_PARAM_INT_VECTOR_MODE:
+          value = model->vectorMode();
           break;
 #ifndef COIN_HAS_CBC
 #ifdef CBC_THREAD
@@ -3924,6 +3930,20 @@ Look for USERCLP in main driver and modify sample code."
 Look for USERCBC in main driver and modify sample code. \
 It is possible you can get same effect by using example driver4.cpp."
      );
+#endif
+#ifdef COIN_AVX2
+     parameters[numberParameters++] =
+          CbcOrClpParam("vector!Mode", "Try and use vector instructions",
+                        0, 1, CLP_PARAM_INT_VECTOR_MODE);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "At present only for Intel architectures - but could be extended.  \
+Uses avx2 or avx512 instructions. Uses different storage for matrix - can be \
+of benefit without instruction set on some problems."
+     );
+     parameters[numberParameters-1].setIntValue(0);
+#endif
+#ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
           CbcOrClpParam("Vnd!VariableNeighborhoodSearch", "Whether to try Variable Neighborhood Search",
                         "off", CBC_PARAM_STR_VND);

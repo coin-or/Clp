@@ -211,10 +211,10 @@ public:
      }
      /// Set whole group
      inline int presolveActions() const {
-          return independentOptions_[1] & 0xffff;
+          return independentOptions_[1] & 0xffffff;
      }
      inline void setPresolveActions(int action) {
-          independentOptions_[1]  = (independentOptions_[1] & 0xffff0000) | (action & 0xffff);
+          independentOptions_[1]  = (independentOptions_[1] & 0xff000000) | (action & 0xffffff);
      }
      /// Largest column for substitution (normally 3)
      inline int substitution() const {

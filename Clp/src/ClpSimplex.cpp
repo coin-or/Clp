@@ -52,6 +52,7 @@ ClpSimplex::ClpSimplex (bool emptyMessages) :
      bestObjectiveValue_(-COIN_DBL_MAX),
      moreSpecialOptions_(2),
      baseIteration_(0),
+     vectorMode_(0),
      primalToleranceToGetOptimal_(-1.0),
      largeValue_(1.0e15),
      largestPrimalError_(0.0),
@@ -167,6 +168,7 @@ ClpSimplex::ClpSimplex ( const ClpModel * rhs,
      bestObjectiveValue_(-COIN_DBL_MAX),
      moreSpecialOptions_(2),
      baseIteration_(0),
+     vectorMode_(0),
      primalToleranceToGetOptimal_(-1.0),
      largeValue_(1.0e15),
      largestPrimalError_(0.0),
@@ -319,6 +321,7 @@ ClpSimplex::ClpSimplex ( const ClpSimplex * rhs,
      bestObjectiveValue_(-COIN_DBL_MAX),
      moreSpecialOptions_(2),
      baseIteration_(0),
+     vectorMode_(0),
      primalToleranceToGetOptimal_(-1.0),
      largeValue_(1.0e15),
      largestPrimalError_(0.0),
@@ -2330,6 +2333,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs, int scalingMode) :
      bestObjectiveValue_(rhs.bestObjectiveValue_),
      moreSpecialOptions_(2),
      baseIteration_(0),
+     vectorMode_(0),
      primalToleranceToGetOptimal_(-1.0),
      largeValue_(1.0e15),
      largestPrimalError_(0.0),
@@ -2438,6 +2442,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode) :
      bestObjectiveValue_(-COIN_DBL_MAX),
      moreSpecialOptions_(2),
      baseIteration_(0),
+     vectorMode_(0),
      primalToleranceToGetOptimal_(-1.0),
      largeValue_(1.0e15),
      largestPrimalError_(0.0),
@@ -2641,6 +2646,7 @@ ClpSimplex::gutsOfCopy(const ClpSimplex & rhs)
      rowPrimalSequence_ = rhs.rowPrimalSequence_;
      bestObjectiveValue_ = rhs.bestObjectiveValue_;
      baseIteration_ = rhs.baseIteration_;
+     vectorMode_ = rhs.vectorMode_;
      primalToleranceToGetOptimal_ = rhs.primalToleranceToGetOptimal_;
      largeValue_ = rhs.largeValue_;
      largestPrimalError_ = rhs.largestPrimalError_;
@@ -6250,7 +6256,7 @@ ClpSimplex::barrier(bool crossover)
           ClpCholeskyWssmpKKT * cholesky = new ClpCholeskyWssmpKKT(CoinMax(100, model2->numberRows() / 10));
           barrier.setCholesky(cholesky);
      }
-#elif defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD)
+#elif 0 //defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD)
      if (!doKKT) {
           ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
           barrier.setCholesky(cholesky);
@@ -9217,6 +9223,7 @@ ClpSimplex::returnModel(ClpSimplex & otherModel)
      otherModel.bestObjectiveValue_ = bestObjectiveValue_;
      otherModel.moreSpecialOptions_ = moreSpecialOptions_;
      otherModel.baseIteration_ = baseIteration_;
+     otherModel.vectorMode_ = vectorMode_;
      otherModel.primalToleranceToGetOptimal_ = primalToleranceToGetOptimal_;
      otherModel.largestPrimalError_ = largestPrimalError_;
      otherModel.largestDualError_ = largestDualError_;
