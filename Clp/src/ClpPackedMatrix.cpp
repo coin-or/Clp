@@ -7648,7 +7648,7 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
     for (int jBlock=0;jBlock<nBlock;jBlock++) {
       __m256d arrayX = _mm256_setzero_pd();
       for (int j=0;j<nel;j++) {
-	__m128i rows = _mm_load_si128((const __m128i *)row); // was loadu
+	__m128i rows = _mm_loadu_si128((const __m128i *)row);
 	__m256d elements = _mm256_load_pd(element);
 	__m256d pis = _mm256_i32gather_pd(pi,rows,8);
 	arrayX = _mm256_fmadd_pd(pis,elements,arrayX);
@@ -7854,7 +7854,7 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
 	  spareIndex[numberRemaining++] = iSequence;
 	}
       }
-    }
+    } 
   }
   int numberOld=numberNonZero;
   int nMax=0; 
@@ -7877,7 +7877,7 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
     for (int jBlock=0;jBlock<nBlock;jBlock++) {
       __m256d arrayX = _mm256_setzero_pd();
       for (int j=0;j<nel;j++) {
-	__m128i rows = _mm_load_si128((const __m128i *)row); // was loadu
+	__m128i rows = _mm_loadu_si128((const __m128i *)row);
 	__m256d elements = _mm256_load_pd(element);
 	__m256d pis = _mm256_i32gather_pd(pi,rows,8);
 	arrayX = _mm256_fmadd_pd(pis,elements,arrayX);
@@ -7890,7 +7890,7 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
     for (int jBlock=0;jBlock<nBlock;jBlock++) {
       __m512d arrayX = _mm512_setzero_pd();
       for (int j=0;j<nel;j++) {
-	__m256i rows = _mm256_load_si256((const __m256i *)row); // was loadu
+	__m256i rows = _mm256_loadu_si256((const __m256i *)row);
 	__m512d elements = _mm512_load_pd(element);
 	__m512d pis = _mm512_i32gather_pd(rows,pi,8);
 	arrayX = _mm512_fmadd_pd(pis,elements,arrayX);
@@ -8193,7 +8193,7 @@ transposeTimes3Bit2(clpTempInfo & info)
 	__m256d arrayX = _mm256_setzero_pd();
 	__m256d tempX = _mm256_setzero_pd();
 	for (int j=0;j<nel;j++) {
-	  __m128i rows = _mm_load_si128((const __m128i *)row); // was loadu
+	  __m128i rows = _mm_loadu_si128((const __m128i *)row);
 	  __m256d elements = _mm256_load_pd(element);
 	  __m256d pis = _mm256_i32gather_pd(pi,rows,8);
 	  __m256d piWeights = _mm256_i32gather_pd(piWeight,rows,8);
@@ -8207,7 +8207,7 @@ transposeTimes3Bit2(clpTempInfo & info)
 	_mm256_store_pd(work+i,tempX);
 	_mm256_store_pd(work2+i,arrayX);
       }
-#else
+#else 
     assert(COIN_AVX2==8);
     __m512d zero = _mm512_setzero_pd();
     for (int kColumn=0;kColumn<numberDo;kColumn+=COIN_AVX2_CHUNK) {
@@ -8216,7 +8216,7 @@ transposeTimes3Bit2(clpTempInfo & info)
 	__m512d arrayX = _mm512_setzero_pd();
 	__m512d tempX = _mm512_setzero_pd();
 	for (int j=0;j<nel;j++) {
-	  __m256i rows = _mm256_load_si256((const __m256i *)row); // was loadu
+	  __m256i rows = _mm256_loadu_si256((const __m256i *)row); 
 	  __m512d elements = _mm512_load_pd(element);
 	  __m512d pis = _mm512_i32gather_pd(rows,pi,8);
 	  __m512d piWeights = _mm512_i32gather_pd(rows,piWeight,8);
