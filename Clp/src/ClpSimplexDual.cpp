@@ -3618,7 +3618,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
 #ifdef NEED_AVX
 	       double mult2[CHECK_CHUNK] __attribute__((aligned(64)));
 	       CoinInt64 acceptableY[CHECK_CHUNK] __attribute__((aligned(64)));
-	       CoinInt64 goodDj[CHECK_CHUNK] __attribute__((aligned(64)));
+	       CoinInt64 goodDj[CHECK_CHUNK+1] __attribute__((aligned(64)));
 	       double oldValueY[CHECK_CHUNK] __attribute__((aligned(64)));
 	       double alphaY[CHECK_CHUNK+1] __attribute__((aligned(64)));
 	       memset(acceptableY,0,sizeof(acceptableY));
