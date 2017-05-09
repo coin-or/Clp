@@ -5067,9 +5067,9 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
 					   (moreSpecialOptions_&2097152)!=0))
           problemStatus_ = 10;
      // dual bound coming in
-     //double saveDualBound = dualBound_;
+     double saveDualBound = dualBound_;
      bool needCleanFake = false;
-     while (problemStatus_ <= -3) {
+     while (problemStatus_ <= -3 && saveDualBound == dualBound_) {
           int cleanDuals = 0;
           if (situationChanged != 0)
                cleanDuals = 1;
