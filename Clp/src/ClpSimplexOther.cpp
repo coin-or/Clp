@@ -1512,8 +1512,8 @@ ClpSimplexOther::crunch(double * rhs, int * whichRow, int * whichColumn,
           if (!numberRows2 || !numberColumns2)
                tightenBounds = false;
 
-          int numberElements = getNumElements();
-          int numberElements2 = small->getNumElements();
+          CoinBigIndex numberElements = getNumElements();
+          CoinBigIndex numberElements2 = small->getNumElements();
           small->setObjectiveOffset(objectiveOffset() - offset);
           handler_->message(CLP_CRUNCH_STATS, messages_)
                     << numberRows2 << -(numberRows_ - numberRows2)
@@ -5899,7 +5899,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
   double * fixedRow = new double [numberRows];
   for (iRow = 0 ; iRow < numberRows ; iRow++) {
     double sumFixed=0.0;
-    for (int j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
+    for (CoinBigIndex j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
       int iColumn = column[j];
       double value = columnLower[iColumn];
       if (value) 
@@ -5912,7 +5912,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
     int numberInRow=0;
     double sumFixed=0.0;
     double gap = fixedRow[iRow]-1.0e-12;
-    for (int j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
+    for (CoinBigIndex j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
       int iColumn = column[j];
       if (columnIsGub[iColumn]!=-2) {
 	if (element[j] != 1.0||columnIsGub[iColumn]==-3||
@@ -5938,7 +5938,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
 	count = numberInRow;
 	smallestGubRow=iRow;
       }
-      for (int j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
+      for (CoinBigIndex j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
 	int iColumn = column[j];
 	if (columnIsGub[iColumn]!=-2) 
 	  columnIsGub[iColumn] = iRow;
@@ -5974,7 +5974,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
 	<< message << CoinMessageEol;
       rowIsGub[smallestGubRow]=-1;
       whichRows[numberNonGub++] = smallestGubRow;
-      for (int j = rowStart[smallestGubRow]; 
+      for (CoinBigIndex j = rowStart[smallestGubRow]; 
 	   j < rowStart[smallestGubRow] + rowLength[smallestGubRow]; j++) {
 	int iColumn = column[j];
 	if (columnIsGub[iColumn]>=0) {
@@ -5999,7 +5999,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
       if (columnIsGub[iColumn] ==-2) {
 	whichColumns[put2++] = iColumn;
 	double value = columnLower[iColumn];
-	for (int j = columnStart[iColumn]; 
+	for (CoinBigIndex j = columnStart[iColumn]; 
 	     j < columnStart[iColumn] + columnLength[iColumn]; j++) {
 	  int iRow = row[j];
 	  if (lower[iRow]>-1.0e20)
@@ -6019,7 +6019,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
       if (rowIsGub[i]==-1) {
 	double largest = 1.0e-30;
 	double smallest = 1.0e30;
-	for (int j = rowStart[i]; j < rowStart[i] + rowLength[i]; j++) {
+	for (CoinBigIndex j = rowStart[i]; j < rowStart[i] + rowLength[i]; j++) {
 	  int iColumn = column[j];
 	  if (columnIsGub[iColumn]!=-2) {
 	    double value =fabs(element[j]);
@@ -6043,7 +6043,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
       const CoinBigIndex * columnStart = matrix->getVectorStarts();
       double * element = matrix->getMutableElements();
       for (int i=0;i<numberNormal;i++) {
-	for (int j = columnStart[i]; 
+	for (CoinBigIndex j = columnStart[i]; 
 	     j < columnStart[i] + columnLength[i]; j++) {
 	  int iRow = row[j];
 	  iRow = whichRows[iRow];
@@ -6103,7 +6103,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
     CoinFillN(lowerColumn2, numberGubColumnsPlus, 0.0);
     double * upperColumn2 = new double [numberGubColumnsPlus];
     CoinFillN(upperColumn2, numberGubColumnsPlus, COIN_DBL_MAX);
-    int * start2 = new int[numberGubColumnsPlus+1];
+    CoinBigIndex * start2 = new CoinBigIndex[numberGubColumnsPlus+1];
     int * row2 = new int[numberElements];
     double * element2 = new double[numberElements];
     double * cost2 = new double [numberGubColumnsPlus];
@@ -6147,7 +6147,7 @@ ClpSimplexOther::gubVersion(int * whichRows, int * whichColumns,
 	lowerColumn2[i] = columnLower[iColumn];
 	upperColumn2[i] = columnUpper[iColumn];
 	upperColumn2[i] = COIN_DBL_MAX; 
-	for (int j = columnStart[iColumn]; j < columnStart[iColumn] + columnLength[iColumn]; j++) {
+	for (CoinBigIndex j = columnStart[iColumn]; j < columnStart[iColumn] + columnLength[iColumn]; j++) {
 	  int iRow = row[j];
 	  double scaleBy = scaleArray[iRow];
 	  iRow = rowIsGub[iRow];
@@ -6592,7 +6592,7 @@ ClpSimplexOther::setGubBasis(ClpSimplex &original,const int * whichRows,
       int fewest=numberRows+1;
       int chosen=-1;
       for (int j=startSet[i];j<startSet[i+1];j++) {
-	int length=columnStart[j+1]-columnStart[j];
+	int length=static_cast<int>(columnStart[j+1]-columnStart[j]);
 	int iOrig = whichColumns[j+numberNormal];
 	double value;
 	if (iOrig<numberColumns) {
@@ -6926,7 +6926,7 @@ ClpSimplex::modifyCoefficientsAndPivot(int number,
 	  }
 	}
       }
-      int numberElements = matrix->getNumElements();
+      CoinBigIndex numberElements = matrix->getNumElements();
       assert (numberElements==columnStart[numberColumns_]);
       if (needed>0) {
 	// need more space
@@ -7015,7 +7015,7 @@ ClpSimplex::modifyCoefficientsAndPivot(int number,
       if (tempVector)
 	delete rowVector;
       for (int i=0;i<numberColumns_;i++) {
-	columnLength[i]=columnStart[i+1]-columnStart[i];
+	columnLength[i]=static_cast<int>(columnStart[i+1]-columnStart[i]);
       }
     }
 #endif
@@ -7921,7 +7921,7 @@ ClpSimplex::outDuplicateRows(int numberLook,int * whichRows, bool noOverlaps,
 #ifdef PRINT_DUP
 	char line[520],temp[50];
 #endif
-	int ishift = rowStart[iLast] - start;
+	CoinBigIndex ishift = rowStart[iLast] - start;
 	CoinBigIndex k;
 #ifdef PRINT_DUP
 	sprintf(line,"dupj %d,%d %d els ",
@@ -8437,7 +8437,7 @@ void ClpCopyToMiniSave(saveInfo & where, const char * info, unsigned int sizeInf
 			 const int * indices, const double * elements)
 {
   char * put = where.putStuff;
-  int n = numberElements*static_cast<int>(sizeof(int)+sizeof(double))+static_cast<int>(sizeInfo);
+  CoinBigIndex n = numberElements*static_cast<int>(sizeof(int)+sizeof(double))+static_cast<int>(sizeInfo);
   if (n+(put-where.startStuff)>where.maxStuff) {
     where.maxStuff += CoinMax(where.maxStuff/2 + 10000, 2*n);
     char * temp = new char[where.maxStuff];
@@ -8587,7 +8587,7 @@ void moveAround(int numberColumns,CoinBigIndex numberElementsOriginal,
     }
     // replace length (may mean copying uninitialized)
     columnLength[iColumn]=lengthNeeded;
-    int spare = (2*lastElement-put-(lengthNeeded-length)-numberElementsOriginal)/numberColumns;
+    CoinBigIndex spare = (2*lastElement-put-(lengthNeeded-length)-numberElementsOriginal)/numberColumns;
     assert (spare>=0);
     // copy back
     put=0;
@@ -8668,7 +8668,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
   // Big enough structure
   int numberTotal=numberRows_+numberColumns_;
   CoinBigIndex lastElement = matrix_->getNumElements();
-  int maxInfoStuff = 5*lastElement*static_cast<int>(sizeof(double))+numberTotal*static_cast<int>(sizeof(clpPresolveInfo2));
+  CoinBigIndex maxInfoStuff = 5*lastElement*static_cast<int>(sizeof(double))+numberTotal*static_cast<int>(sizeof(clpPresolveInfo2));
   clpPresolveInfo * infoA = new clpPresolveInfo[numberTotal];
   char * startStuff = new char [maxInfoStuff];
   memset(infoA,'B',numberTotal*sizeof(clpPresolveInfo));
@@ -8780,7 +8780,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
       if (length) {
 	double solValue=columnLower[iColumn];
 	if (solValue) {
-	  for (int j=start;j<start+length;j++) {
+	  for (CoinBigIndex j=start;j<start+length;j++) {
 	    int iRow=row[j];
 	    double value = element[j]*solValue;
 	    double lower = rowLower[iRow];
@@ -8803,7 +8803,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	element[put++]=element[i];
       }
     }
-    columnLength[iColumn]=put-columnStart[iColumn];
+    columnLength[iColumn]=static_cast<int>(put-columnStart[iColumn]);
   }
   int numberInitial=nActions;
   columnStart[numberColumns_]=put;
@@ -9004,7 +9004,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	}
 	int n=0;
 	start = columnStart[iColumn1];
-	for (int i=start;i<start+columnLength[iColumn1];
+	for (CoinBigIndex i=start;i<start+columnLength[iColumn1];
 	     i++) {
 	  int jRow=row[i];
 	  if (jRow!=iRow) {
@@ -9014,7 +9014,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	}
 	rowLength[iRow]=0;
 	start = columnStart[iColumn2];
-	for (int i=start;i<start+columnLength[iColumn2];
+	for (CoinBigIndex i=start;i<start+columnLength[iColumn2];
 	     i++) {
 	  int jRow=row[i];
 	  if (jRow!=iRow) {
@@ -9051,7 +9051,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 		element[put++]=element[j];
 	      }
 	    }
-	    int numberElements = put-lastElement;
+	    CoinBigIndex numberElements = put-lastElement;
 	    columnStart[numberColumns_]=numberElements;
 	    memcpy(row,row+lastElement,numberElements*sizeof(int));
 	    memcpy(element,element+lastElement,numberElements*sizeof(double));
@@ -9082,9 +9082,9 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	    }
 	  }
 	  // take out of row copy
-	  int startR = rowStart[jRow];
-	  int putR=startR;
-	  for (int i=startR;i<startR+rowLength[jRow];i++) {
+	  CoinBigIndex startR = rowStart[jRow];
+	  CoinBigIndex putR=startR;
+	  for (CoinBigIndex i=startR;i<startR+rowLength[jRow];i++) {
 	    int iColumn = column[i];
 	    if (iColumn!=iColumn1&&iColumn!=iColumn2) {
 	      column[putR]=iColumn;
@@ -9095,7 +9095,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	      value=0.0;
 	    }
 	  }
-	  int rowLength2=putR-startR;
+	  int rowLength2=static_cast<int>(putR-startR);
 #ifndef CLP_NO_SUBS
 	  if (rowLength2<=1&&rowLength[jRow]>1&&jRow<iRow) {
 	    // may be interesting
@@ -9109,7 +9109,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 #endif
 	  rowLength[jRow]=rowLength2;
 	}
-	columnLength[iColumn1]=put-start;
+	columnLength[iColumn1]=static_cast<int>(put-start);
 	lastElement=CoinMax(lastElement,put);
 #endif
       }
@@ -9274,7 +9274,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	  }
 	}
       }
-      int put=start;
+      CoinBigIndex put=start;
       int iFlag=0;
       int nonFree=0;
       int numberNonBasicSlacksOut=0;
@@ -9390,7 +9390,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	}
       }
       double cost = objective[iColumn]*optimizationDirection_;
-      int length = put-columnStart[iColumn];
+      int length = static_cast<int>(put-columnStart[iColumn]);
       if (!length) {
 	if (!cost) {
 	  // put to closest to zero
@@ -9439,7 +9439,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	  // need to put status somewhere else
 	  int shortestNumber=numberColumns_;
 	  int shortest=-1;
-	  for (int j=start;j<start+length;j++) {
+	  for (CoinBigIndex j=start;j<start+length;j++) {
 	    int iRow=row[j];
 	    if (rowLength[iRow]<shortestNumber&&
 		newModel->getRowStatus(iRow)!=
@@ -9456,11 +9456,11 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	    // put on a column
 	    shortestNumber=numberColumns_;
 	    shortest=-1;
-	    for (int j=start;j<start+length;j++) {
+	    for (CoinBigIndex j=start;j<start+length;j++) {
 	      int iRow=row[j];
 	      if (rowLength[iRow]<shortestNumber) {
-		int start = rowStart[iRow];
-		for (int i=start;i<start+rowLength[iRow];i++) {
+		CoinBigIndex start = rowStart[iRow];
+		for (CoinBigIndex i=start;i<start+rowLength[iRow];i++) {
 		  int jColumn = column[i];
 		  if (iColumn!=jColumn&&
 		      newModel->getColumnStatus(jColumn)!=
@@ -9499,7 +9499,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	// adjust rhs and take out of rows
 	columnLength[iColumn]=0;
 	nChanged++;
-	for (int j=start;j<start+length;j++) {
+	for (CoinBigIndex j=start;j<start+length;j++) {
 	  int iRow=row[j];
 	  double value = element[j]*newValue;
 	  double lower = rowLower[iRow];
@@ -9516,16 +9516,16 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	    whichRows[numberRowsLook++]=iRow;
 	    assert (numberRowsLook<=numberRows_);
 	  }
-	  int start = rowStart[iRow];
-	  int put=start;
-	  for (int i=start;i<start+rowLength[iRow];i++) {
+	  CoinBigIndex start = rowStart[iRow];
+	  CoinBigIndex put=start;
+	  for (CoinBigIndex i=start;i<start+rowLength[iRow];i++) {
 	    int jColumn = column[i];
 	    if (iColumn!=jColumn) {
 	      column[put]=jColumn;
 	      elementByRow[put++]=elementByRow[i];
 	    }
 	  }
-	  rowLength[iRow]=put-start;
+	  rowLength[iRow]=static_cast<int>(put-start);
 	}
       }
     }
@@ -9617,7 +9617,7 @@ ClpSimplex::miniPresolve(char * rowType, char * columnType,void ** infoOut)
 	  element[put++]=element[j];
 	}
       }
-      int numberElements = put-lastElement;
+      CoinBigIndex numberElements = put-lastElement;
       columnStart[numberColumns_]=numberElements;
       memcpy(row,row+lastElement,numberElements*sizeof(int));
       memcpy(element,element+lastElement,numberElements*sizeof(double));
@@ -9833,7 +9833,7 @@ ClpSimplex::miniPostsolve(const ClpSimplex * presolvedModel, void * infoIn)
   }
   assert (iGet==presolvedModel->numberRows());
   CoinPackedMatrix matrixX;
-  int numberElementsOriginal=matrix_->getNumElements();
+  CoinBigIndex numberElementsOriginal=matrix_->getNumElements();
   const int * rowY = presolvedModel->matrix()->getIndices();
   const CoinBigIndex * columnStartY = presolvedModel->matrix()->getVectorStarts();
   const int * columnLengthY = presolvedModel->matrix()->getVectorLengths();
@@ -9848,8 +9848,8 @@ ClpSimplex::miniPostsolve(const ClpSimplex * presolvedModel, void * infoIn)
       put += columnLength[iColumn];
     }
   }
-  int lastElement=2*(put+numberColumns_)+1000;
-  int spare = (lastElement-put)/numberColumns_;
+  CoinBigIndex lastElement=2*(put+numberColumns_)+1000;
+  int spare = static_cast<int>((lastElement-put)/numberColumns_);
   //printf("spare %d\n",spare);
   matrixX.reserve(numberColumns_,lastElement+2*numberElementsOriginal);
   int * rowX = matrixX.getMutableIndices();
@@ -10192,7 +10192,7 @@ ClpSimplex::miniPostsolve(const ClpSimplex * presolvedModel, void * infoIn)
 	double solValue=thisInfo.fixedTo;
 	columnActivity_[iColumn]=solValue;
 	if (solValue) { 
-	  for (int j=columnStartX[iColumn];
+	  for (CoinBigIndex j=columnStartX[iColumn];
 	       j<columnStartX[iColumn]+columnLengthX[iColumn];j++) {
 	    int jRow=rowX[j];
 	    double value=elementX[j]*solValue;
@@ -10260,7 +10260,7 @@ ClpSimplex::miniPostsolve(const ClpSimplex * presolvedModel, void * infoIn)
 	double solValue=columnLower_[iColumn];
 	columnActivity_[iColumn]=solValue;
 	if (newLength&&solValue) {
-	  for (int j=startOriginal;j<startOriginal+newLength;j++) {
+	  for (CoinBigIndex j=startOriginal;j<startOriginal+newLength;j++) {
 	    int iRow=row[j];
 	    double value = element[j]*solValue;
 	    rowActivity_[iRow] += value;

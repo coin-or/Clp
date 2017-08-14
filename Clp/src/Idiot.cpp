@@ -751,7 +751,7 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
                          rowupper[irow] *= multiplier;
                     rowsol[irow] *= multiplier;
                }
-               int length = columnStart[ncols-1] + columnLength[ncols-1];
+               CoinBigIndex length = columnStart[ncols-1] + columnLength[ncols-1];
                double * elemYY = new double[length];
                for (i = 0; i < ncols; i++) {
                     CoinBigIndex j;

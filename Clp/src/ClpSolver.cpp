@@ -129,7 +129,9 @@ int mainTest (int argc, const char *argv[], int algorithm,
 int mainTest (int argc, const char *argv[], int algorithm,
               AbcSimplex empty, ClpSolve solveOptions, int switchOff, bool doVector);
 #endif
+#if COIN_BIG_INDEX==0
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model);
+#endif
 static void generateCode(const char * fileName, int type);
 // Returns next valid field
 int CbcOrClpRead_mode = 1;
@@ -1339,6 +1341,7 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                               }
                               break;
                          case CLP_PARAM_ACTION_STATISTICS:
+#if COIN_BIG_INDEX==0
                               if (goodModels[iModel]) {
                                    // If presolve on look at presolved
                                    bool deleteModel2 = false;
@@ -1373,6 +1376,7 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                               } else {
                                    std::cout << "** Current model not valid" << std::endl;
                               }
+#endif
                               break;
                          case CLP_PARAM_ACTION_TIGHTEN:
                               if (goodModels[iModel]) {
@@ -2999,6 +3003,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 #endif
      return 0;
 }
+#if COIN_BIG_INDEX==0
 static void breakdown(const char * name, int numberLook, const double * region)
 {
      double range[] = {
@@ -3045,6 +3050,7 @@ static void breakdown(const char * name, int numberLook, const double * region)
      delete [] number;
      delete [] numberExact;
 }
+#endif
 void sortOnOther(int * column,
                  const CoinBigIndex * rowStart,
                  int * order,
@@ -3086,6 +3092,7 @@ void sortOnOther(int * column,
           first = kRow;
      }
 }
+#if COIN_BIG_INDEX==0
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 {
      int numberColumns = originalModel->numberColumns();
@@ -4468,6 +4475,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
        breakdown("Integer objective", n, obj);
      }
 }
+#endif
 static bool maskMatches(const int * starts, char ** masks,
                         std::string & check)
 {

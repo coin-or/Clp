@@ -1351,7 +1351,7 @@ ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
 	       }
 #endif
 #define COIN_SPARSE_MATRIX 2
-	       int numberCovered=0;
+	       CoinBigIndex numberCovered=0;
 	       int numberColumns = matrix_->getNumCols();
 	       bool sparse=true;
 	       for (int i = 0; i < numberInRowArray; i++) {
@@ -1621,7 +1621,7 @@ transposeTimesUnscaledBit(clpTempInfo & info)
       CoinBigIndex start = columnStart[iColumn];
       CoinBigIndex end = columnStart[iColumn+1];
       jColumn = iColumn;
-      int n = end - start;
+      int n = static_cast<int>(end - start);
       bool odd = (n & 1) != 0;
       n = n >> 1;
       const int * COIN_RESTRICT rowThis = row + start;
@@ -1701,7 +1701,7 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
                CoinBigIndex start = columnStart[iColumn];
                CoinBigIndex end = columnStart[iColumn+1];
                jColumn = iColumn;
-               int n = end - start;
+               int n = static_cast<int>(end - start);
                bool odd = (n & 1) != 0;
                n = n >> 1;
                const int * COIN_RESTRICT rowThis = row + start;
@@ -1760,7 +1760,7 @@ transposeTimesUnscaledBit2(clpTempInfo & info)
       double value = 0.0;
       CoinBigIndex start = columnStart[iColumn];
       CoinBigIndex end = columnStart[iColumn+1];
-      int n = end - start;
+      int n = static_cast<int>(end - start);
       bool odd = (n & 1) != 0;
       n = n >> 1;
       const int * COIN_RESTRICT rowThis = row + start;
@@ -1874,7 +1874,7 @@ ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double * COIN_RESTRICT pi,
                double value = 0.0;
                CoinBigIndex start = columnStart[iColumn];
                CoinBigIndex end = columnStart[iColumn+1];
-               int n = end - start;
+               int n = static_cast<int>(end - start);
 #if 1
                bool odd = (n & 1) != 0;
                n = n >> 1;
@@ -2082,7 +2082,7 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowGEK(const CoinIndexedVector * COIN_RES
           double value = pi[i] * scalar;
           CoinBigIndex start = rowStart[iRow];
           CoinBigIndex end = rowStart[iRow+1];
-          int n = end - start;
+          int n = static_cast<int>(end - start);
           const int * COIN_RESTRICT columnThis = column + start;
           const double * COIN_RESTRICT elementThis = element + start;
 
@@ -2180,7 +2180,6 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowEQ2(const CoinIndexedVector * piVector
           lookup[iColumn] = numberNonZero;
           index[numberNonZero++] = iColumn;
      }
-     int numberOriginal = numberNonZero;
      value = pi1 * scalar;
      for (j = rowStart[iRow1]; j < rowStart[iRow1+1]; j++) {
           int iColumn = column[j];
@@ -2199,43 +2198,17 @@ ClpPackedMatrix::gutsOfTransposeTimesByRowEQ2(const CoinIndexedVector * piVector
      }
      // get rid of tiny values and zero out marked
      int i;
-     int iFirst = numberNonZero;
-     for (i = 0; i < numberOriginal; i++) {
+     int n = numberNonZero;
+     numberNonZero=0;
+     for (i = 0; i < n; i++) {
           int iColumn = index[i];
           marked[iColumn] = 0;
-          if (fabs(array[i]) <= tolerance) {
-               if (numberNonZero > numberOriginal) {
-                    numberNonZero--;
-                    double value = array[numberNonZero];
-                    array[numberNonZero] = 0.0;
-                    array[i] = value;
-                    index[i] = index[numberNonZero];
-               } else {
-                    iFirst = i;
-               }
+          if (fabs(array[i]) > tolerance) {
+	    array[numberNonZero] = array[i];
+	    index[numberNonZero++] = index[i];
           }
      }
-
-     if (iFirst < numberNonZero) {
-          int n = iFirst;
-          for (i = n; i < numberOriginal; i++) {
-               int iColumn = index[i];
-               double value = array[i];
-               array[i] = 0.0;
-               if (fabs(value) > tolerance) {
-                    array[n] = value;
-                    index[n++] = iColumn;
-               }
-          }
-          for (; i < numberNonZero; i++) {
-               int iColumn = index[i];
-               double value = array[i];
-               array[i] = 0.0;
-               array[n] = value;
-               index[n++] = iColumn;
-          }
-          numberNonZero = n;
-     }
+     memset(array+numberNonZero,0,(n-numberNonZero)*sizeof(double));
      output->setNumElements(numberNonZero);
      spareVector->setNumElements(0);
 }
@@ -2474,7 +2447,7 @@ transposeTimes2UnscaledBit(clpTempInfo & info)
       double value = 0.0;
       CoinBigIndex start = columnStart[iColumn];
       CoinBigIndex end = columnStart[iColumn+1];
-      int n = end - start;
+      int n = static_cast<int>(end - start);
       const int * COIN_RESTRICT rowThis = row + start;
       const double * COIN_RESTRICT elementThis = elementByColumn + start;
       for (int i=0; i < n; i ++) {
@@ -2575,7 +2548,7 @@ transposeTimes2ScaledBit(clpTempInfo & info)
       double scale = columnScale[iColumn];
       CoinBigIndex start = columnStart[iColumn];
       CoinBigIndex end = columnStart[iColumn+1];
-      int n = end - start;
+      int n = static_cast<int>(end - start);
       bool odd = (n & 1) != 0;
       n &= ~1;
       const int * COIN_RESTRICT rowThis = row + start;
@@ -3354,7 +3327,7 @@ ClpPackedMatrix::subsetTimes2(const ClpSimplex * model,
      }
 }
 /// returns number of elements in column part of basis,
-CoinBigIndex
+int
 ClpPackedMatrix::countBasis( const int * whichColumn,
                              int & numberColumnBasic)
 {
@@ -3366,7 +3339,13 @@ ClpPackedMatrix::countBasis( const int * whichColumn,
           int iColumn = whichColumn[i];
           numberElements += columnLength[iColumn];
      }
-     return numberElements;
+#if COIN_BIG_INDEX
+     if (numberElements>COIN_INT_MAX) {
+       printf("Factorization too large\n");
+       abort();
+     }
+#endif
+     return static_cast<int>(numberElements);
 }
 void
 ClpPackedMatrix::fillBasis(ClpSimplex * model,
@@ -3410,7 +3389,7 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
                          assert (elementByColumn[j]);
                          elementU[numberElements++] = elementByColumn[j];
                     }
-                    start[i+1] = numberElements;
+                    start[i+1] = static_cast<int>(numberElements);
                }
           } else {
                // scaling
@@ -3430,7 +3409,7 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
                          elementU[numberElements++] =
                               elementByColumn[j] * scale * rowScale[iRow];
                     }
-                    start[i+1] = numberElements;
+                    start[i+1] = static_cast<int>(numberElements);
                }
           }
      } else {
@@ -3450,8 +3429,8 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
                               elementU[numberElements++] = value;
                          }
                     }
-                    start[i+1] = numberElements;
-                    columnCount[i] = numberElements - start[i];
+                    start[i+1] = static_cast<int>(numberElements);
+                    columnCount[i] = static_cast<int>(numberElements) - start[i];
                }
           } else {
                // scaling
@@ -3470,11 +3449,15 @@ ClpPackedMatrix::fillBasis(ClpSimplex * model,
                               elementU[numberElements++] = value * scale * rowScale[iRow];
                          }
                     }
-                    start[i+1] = numberElements;
-                    columnCount[i] = numberElements - start[i];
+                    start[i+1] = static_cast<int>(numberElements);
+                    columnCount[i] = static_cast<int>(numberElements) - start[i];
                }
           }
      }
+#if COIN_BIG_INDEX
+     if (numberElements>COIN_INT_MAX)
+       abort();
+#endif
 }
 #if 0
 int
@@ -4236,13 +4219,13 @@ ClpPackedMatrix::scale(ClpModel * model, ClpSimplex * simplex) const
      const CoinBigIndex * COIN_RESTRICT columnStart = matrix_->getVectorStarts();
      int * COIN_RESTRICT columnLength = matrix_->getMutableVectorLengths();
      double * COIN_RESTRICT elementByColumn = matrix_->getMutableElements();
-     int deletedElements = 0;
+     CoinBigIndex deletedElements = 0;
      for (iColumn = 0; iColumn < numberColumns; iColumn++) {
           CoinBigIndex j;
           char useful = 0;
           bool deleteSome = false;
-          int start = columnStart[iColumn];
-          int end = start + columnLength[iColumn];
+          CoinBigIndex start = columnStart[iColumn];
+          CoinBigIndex end = start + columnLength[iColumn];
 #ifndef LEAVE_FIXED
           if (columnUpper[iColumn] >
                     columnLower[iColumn] + 1.0e-12) {
@@ -4282,7 +4265,7 @@ ClpPackedMatrix::scale(ClpModel * model, ClpSimplex * simplex) const
                     }
                }
                deletedElements += end - put;
-               columnLength[iColumn] = put - start;
+               columnLength[iColumn] = static_cast<int>(put - start);
           }
      }
      // don't scale integers if option set
@@ -4766,7 +4749,7 @@ ClpPackedMatrix::scale(ClpModel * model, ClpSimplex * simplex) const
                     double scale = rowScale[iRow];
                     double * COIN_RESTRICT elementsInThisRow = element + rowStart[iRow];
                     const int * COIN_RESTRICT columnsInThisRow = column + rowStart[iRow];
-                    int number = rowStart[iRow+1] - rowStart[iRow];
+                    int number = static_cast<int>(rowStart[iRow+1] - rowStart[iRow]);
                     assert (number <= numberColumns);
                     for (j = 0; j < number; j++) {
                          int iColumn = columnsInThisRow[j];
@@ -5038,7 +5021,7 @@ ClpPackedMatrix::allElementsInRange(ClpModel * model,
      }
      assert (check == 15 || check == 11);
      if (check == 15) {
-          int * COIN_RESTRICT mark = new int [numberRows];
+          CoinBigIndex * COIN_RESTRICT mark = new CoinBigIndex [numberRows];
           int i;
           for (i = 0; i < numberRows; i++)
                mark[i] = -1;
@@ -5685,7 +5668,7 @@ ClpPackedMatrix::scaleRowCopy(ClpModel * model) const
                double scale = rowScale[iRow];
                double * COIN_RESTRICT elementsInThisRow = element + rowStart[iRow];
                const int * COIN_RESTRICT columnsInThisRow = column + rowStart[iRow];
-               int number = rowStart[iRow+1] - rowStart[iRow];
+               int number = static_cast<int>(rowStart[iRow+1] - rowStart[iRow]);
                assert (number <= numberColumns);
                for (j = 0; j < number; j++) {
                     int iColumn = columnsInThisRow[j];
@@ -5870,7 +5853,7 @@ void
 ClpPackedMatrix::specialColumnCopy(ClpSimplex * model)
 {
      delete columnCopy_;
-     if (model->vectorMode()) {
+     if (model->vectorMode()==1) {
        flags_ |= 16;
        // go to exact devex (unless full steepest)
        ClpPrimalColumnSteepest * pricing =
@@ -6298,7 +6281,7 @@ static int doOneBlock(double * array, int * index,
                       const unsigned short * column, int numberInRowArray, int numberLook)
 {
      int iWhich = 0;
-     int nextN = 0;
+     CoinBigIndex nextN = 0;
      CoinBigIndex nextStart = 0;
      double nextPi = 0.0;
      for (; iWhich < numberInRowArray; iWhich++) {
@@ -6314,7 +6297,7 @@ static int doOneBlock(double * array, int * index,
      while (iWhich < numberInRowArray) {
           double value = nextPi;
           CoinBigIndex j =  nextStart;
-          int n = nextN;
+          CoinBigIndex n = nextN;
           // get next
           iWhich++;
           for (; iWhich < numberInRowArray; iWhich++) {
@@ -7676,7 +7659,7 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
       assert (row == row_ + block->startElements_ + nel*COIN_AVX2*(jBlock+1));
     }
     int n = nBlock*COIN_AVX2;
-    int nSave=newValues-array;
+    int nSave=static_cast<int>(newValues-array);
     newValues = roundUpDouble((array+numberNonZero));
     for (int j=0;j<n;j++) {
       double value=newValues[j];
@@ -7953,7 +7936,7 @@ ClpPackedMatrix3::transposeTimes(const ClpSimplex * model,
 #endif
     int n = block->firstBasic_;
     int nL = block->firstAtUpper_;
-    nMax = (newValues-array) + n;
+    nMax = static_cast<int>(newValues-array) + n;
     for (int j=0;j<nL;j++) {
       double value2=newValues[j];
       if (fabs(value2) > zeroTolerance) {

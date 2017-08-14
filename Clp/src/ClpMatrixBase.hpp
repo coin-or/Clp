@@ -98,7 +98,7 @@ public:
      }
 
      /// Returns number of elements in column part of basis
-     virtual CoinBigIndex countBasis(const int * whichColumn,
+     virtual int countBasis(const int * whichColumn,
                                      int & numberColumnBasic) = 0;
      /// Fills in column part of basis
      virtual void fillBasis(ClpSimplex * model,

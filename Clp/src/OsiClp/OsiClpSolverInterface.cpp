@@ -4097,7 +4097,7 @@ OsiClpSolverInterface::addCols(const int numcols,
 }
 void 
 OsiClpSolverInterface::addCols(const int numcols,
-			       const int * columnStarts, const int * rows, const double * elements,
+			       const CoinBigIndex * columnStarts, const int * rows, const double * elements,
 			       const double* collb, const double* colub,   
 			       const double* obj)
 {
@@ -4325,7 +4325,7 @@ OsiClpSolverInterface::addRows(const int numrows,
 }
 void 
 OsiClpSolverInterface::addRows(const int numrows,
-			       const int * rowStarts, const int * columns, const double * element,
+			       const CoinBigIndex * rowStarts, const int * columns, const double * element,
 			       const double* rowlb, const double* rowub)
 {
   modelPtr_->whatsChanged_ &= (0xffff&~(1|2|4|16|32));
@@ -5791,10 +5791,10 @@ OsiClpSolverInterface::readMps(const char *filename,bool keepNames,bool allowErr
     int nCols=m.getNumCols();
     // get quadratic part
     if (m.reader()->whichSection (  ) == COIN_QUAD_SECTION ) {
-      int * start=NULL;
+      CoinBigIndex * start=NULL;
       int * column = NULL;
       double * element = NULL;
-      int status=m.readQuadraticMps(NULL,start,column,element,2);
+      CoinBigIndex status=m.readQuadraticMps(NULL,start,column,element,2);
       if (!status) 
 	modelPtr_->loadQuadraticObjective(nCols,start,column,element);
       delete [] start;
@@ -6980,7 +6980,9 @@ OsiClpSolverInterface::getBInvARow(int row, double* z, double * slack) const
   rowArray0->clear();
   rowArray1->clear();
   columnArray0->clear();
+#if SHORT_REGION==2
   columnArray1->clear();
+#endif
   int numberRows = modelPtr_->numberRows();
   int numberColumns = modelPtr_->numberColumns();
   // put +1 in row 

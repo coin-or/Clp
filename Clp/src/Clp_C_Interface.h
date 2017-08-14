@@ -114,7 +114,7 @@ extern "C" {
      /** Add rows */
      COINLIBAPI void COINLINKAGE Clp_addRows(Clp_Simplex * model, int number, const double * rowLower,
                                              const double * rowUpper,
-                                             const int * rowStarts, const int * columns,
+                                             const CoinBigIndex * rowStarts, const int * columns,
                                              const double * elements);
 
      /** Deletes columns */
@@ -123,7 +123,7 @@ extern "C" {
      COINLIBAPI void COINLINKAGE Clp_addColumns(Clp_Simplex * model, int number, const double * columnLower,
                const double * columnUpper,
                const double * objective,
-               const int * columnStarts, const int * rows,
+               const CoinBigIndex * columnStarts, const int * rows,
                const double * elements);
      /** Change row lower bounds */
      COINLIBAPI void COINLINKAGE Clp_chgRowLower(Clp_Simplex * model, const double * rowLower);
@@ -217,7 +217,7 @@ extern "C" {
      /** Column Upper */
      COINLIBAPI double * COINLINKAGE Clp_columnUpper(Clp_Simplex * model);
      /** Number of elements in matrix */
-     COINLIBAPI int COINLINKAGE Clp_getNumElements(Clp_Simplex * model);
+     COINLIBAPI CoinBigIndex COINLINKAGE Clp_getNumElements(Clp_Simplex * model);
      /* Column starts in matrix */
      COINLIBAPI const CoinBigIndex * COINLINKAGE Clp_getVectorStarts(Clp_Simplex * model);
      /* Row indices in matrix */

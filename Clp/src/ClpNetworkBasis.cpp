@@ -43,7 +43,7 @@ ClpNetworkBasis::ClpNetworkBasis ()
 ClpNetworkBasis::ClpNetworkBasis(const ClpSimplex * model,
                                  int numberRows, const CoinFactorizationDouble * pivotRegion,
                                  const int * permuteBack,
-                                 const CoinBigIndex * startColumn,
+                                 const int * startColumn,
                                  const int * numberInColumn,
                                  const int * indexRow, const CoinFactorizationDouble * /*element*/)
 {

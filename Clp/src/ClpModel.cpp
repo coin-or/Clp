@@ -379,7 +379,7 @@ ClpModel::loadProblem (
 {
      gutsOfLoadModel(numrows, numcols,
                      collb, colub, obj, rowlb, rowub, rowObjective);
-     int numberElements = start ? start[numcols] : 0;
+     CoinBigIndex numberElements = start ? start[numcols] : 0;
      CoinPackedMatrix matrix(true, numrows, numrows ? numcols : 0, numberElements,
                              value, index, start, NULL);
      matrix_ = new ClpPackedMatrix(matrix);
@@ -406,6 +406,7 @@ ClpModel::loadProblem (
                              value, index, start, length);
      matrix_ = new ClpPackedMatrix(matrix);
 }
+#if COIN_BIG_INDEX==0
 #ifndef SLIM_NOIO
 // This loads a model from a coinModel object - returns number of errors
 int
@@ -503,6 +504,7 @@ ClpModel::loadProblem (  CoinModel & modelObject, bool tryPlusMinusOne)
      matrix_->setDimensions(numberRows_, numberColumns_);
      return numberErrors;
 }
+#endif
 #endif
 void
 ClpModel::getRowBound(int iRow, double& lower, double& upper) const
@@ -1242,7 +1244,7 @@ ClpModel::createEmptyMatrix()
    d) orders elements
    returns number of elements eliminated or -1 if not ClpMatrix
 */
-int
+CoinBigIndex
 ClpModel::cleanMatrix(double threshold)
 {
      ClpPackedMatrix * matrix = (dynamic_cast< ClpPackedMatrix*>(matrix_));
@@ -1733,7 +1735,7 @@ ClpModel::deleteRowsAndColumns(int numberRows, const int * whichRows,
       for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
 	if (backColumns[iColumn]>=0) {
 	  CoinBigIndex start = columnStart[iColumn];
-	  int nSave=n;
+	  CoinBigIndex nSave=n;
 	  columnStart[newNumberColumns]=n;
 	  for (CoinBigIndex j=start;j<start+columnLength[iColumn];j++) {
 	    int iRow=row[j];
@@ -1743,7 +1745,7 @@ ClpModel::deleteRowsAndColumns(int numberRows, const int * whichRows,
 	      element[n++]=element[j];
 	    }
 	  }
-	  columnLength[newNumberColumns++]=n-nSave;
+	  columnLength[newNumberColumns++]=static_cast<int>(n-nSave);
 	}
       }
       columnStart[newNumberColumns]=n;
@@ -1862,13 +1864,13 @@ ClpModel::addRows(int number, const double * rowLower,
           int iRow;
           for (iRow = 0; iRow < number; iRow++)
                numberElements += rowLengths[iRow];
-          int * newStarts = new int[number+1];
+          CoinBigIndex * newStarts = new CoinBigIndex[number+1];
           int * newIndex = new int[numberElements];
           double * newElements = new double[numberElements];
           numberElements = 0;
           newStarts[0] = 0;
           for (iRow = 0; iRow < number; iRow++) {
-               int iStart = rowStarts[iRow];
+               CoinBigIndex iStart = rowStarts[iRow];
                int length = rowLengths[iRow];
                CoinMemcpyN(columns + iStart, length, newIndex + numberElements);
                CoinMemcpyN(elements + iStart, length, newElements + numberElements);
@@ -2116,6 +2118,7 @@ ClpModel::addRows(const CoinBuild & buildObject, bool tryPlusMinusOne, bool chec
      return numberErrors;
 }
 #endif
+#if COIN_BIG_INDEX==0
 #ifndef SLIM_NOIO
 // Add rows from a model object
 int
@@ -2247,6 +2250,7 @@ ClpModel::addRows( CoinModel & modelObject, bool tryPlusMinusOne, bool checkDupl
      }
 }
 #endif
+#endif
 // Add one column
 void
 ClpModel::addColumn(int numberInColumn,
@@ -2266,7 +2270,7 @@ void
 ClpModel::addColumns(int number, const double * columnLower,
                      const double * columnUpper,
                      const double * objIn,
-                     const int * columnStarts, const int * rows,
+                     const CoinBigIndex * columnStarts, const int * rows,
                      const double * elements)
 {
      // Create a list of CoinPackedVectors
@@ -2335,7 +2339,7 @@ void
 ClpModel::addColumns(int number, const double * columnLower,
                      const double * columnUpper,
                      const double * objIn,
-                     const int * columnStarts,
+                     const CoinBigIndex * columnStarts,
                      const int * columnLengths, const int * rows,
                      const double * elements)
 {
@@ -2344,13 +2348,13 @@ ClpModel::addColumns(int number, const double * columnLower,
           int iColumn;
           for (iColumn = 0; iColumn < number; iColumn++)
                numberElements += columnLengths[iColumn];
-          int * newStarts = new int[number+1];
+          CoinBigIndex * newStarts = new CoinBigIndex[number+1];
           int * newIndex = new int[numberElements];
           double * newElements = new double[numberElements];
           numberElements = 0;
           newStarts[0] = 0;
           for (iColumn = 0; iColumn < number; iColumn++) {
-               int iStart = columnStarts[iColumn];
+               CoinBigIndex iStart = columnStarts[iColumn];
                int length = columnLengths[iColumn];
                CoinMemcpyN(rows + iStart, length, newIndex + numberElements);
                CoinMemcpyN(elements + iStart, length, newElements + numberElements);
@@ -2567,6 +2571,7 @@ ClpModel::addColumns(const CoinBuild & buildObject, bool tryPlusMinusOne, bool c
 }
 #endif
 #ifndef SLIM_NOIO
+#if COIN_BIG_INDEX==0
 // Add columns from a model object
 int
 ClpModel::addColumns( CoinModel & modelObject, bool tryPlusMinusOne, bool checkDuplicates)
@@ -2689,6 +2694,7 @@ ClpModel::addColumns( CoinModel & modelObject, bool tryPlusMinusOne, bool checkD
           return -1;
      }
 }
+#endif
 #endif
 // chgRowLower
 void
@@ -2953,7 +2959,7 @@ ClpModel::readMps(const char *fileName,
 #ifndef SLIM_CLP
           // get quadratic part
           if (m.reader()->whichSection (  ) == COIN_QUAD_SECTION ) {
-               int * start = NULL;
+               CoinBigIndex * start = NULL;
                int * column = NULL;
                double * element = NULL;
                status = m.readQuadraticMps(NULL, start, column, element, 2);
@@ -4085,6 +4091,7 @@ ClpModel::setSpecialOptions(unsigned int value)
 }
 /* This creates a coinModel object
  */
+#if COIN_BIG_INDEX==0
 CoinModel *
 ClpModel::createCoinModel() const
 {
@@ -4184,6 +4191,7 @@ ClpModel::createCoinModel() const
      }
      return coinModel;
 }
+#endif
 // Start or reset using maximumRows_ and Columns_
 void
 ClpModel::startPermanentArrays()

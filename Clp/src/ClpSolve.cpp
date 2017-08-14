@@ -1249,6 +1249,24 @@ ClpSimplex::initialSolve(ClpSolve & options)
      int doSlp = 0;
      int primalStartup = 1;
      model2->eventHandler()->event(ClpEventHandler::presolveBeforeSolve);
+#if CLP_POOL_MATRIX
+     if (vectorMode()>=10) {
+       ClpPoolMatrix * poolMatrix = new ClpPoolMatrix(*model2->matrix());
+       char output[80];
+       int numberDifferent=poolMatrix->getNumDifferentElements();
+       if (numberDifferent>0) {
+	 sprintf(output,"Pool matrix has %d different values",
+		 numberDifferent);
+	 model2->replaceMatrix(poolMatrix,true);
+       } else {
+	 delete poolMatrix;
+	 sprintf(output,"Pool matrix has more than %d different values - no good",
+		 -numberDifferent);
+       }
+       handler_->message(CLP_GENERAL, messages_) << output
+	 << CoinMessageEol;
+     }
+#endif
      int tryItSave = 0;
 #if CLPSOLVE_ACTIONS 
      if (method == ClpSolve::automatic )
@@ -1443,7 +1461,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
      int maxSprintPass = 100;
      // See if worth trying +- one matrix
      bool plusMinus = false;
-     int numberElements = model2->getNumElements();
+     CoinBigIndex numberElements = model2->getNumElements();
 #ifndef SLIM_CLP
 #ifndef NO_RTTI
      if (dynamic_cast< ClpNetworkMatrix*>(matrix_)) {
@@ -1678,6 +1696,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
           }
      }
+#if COIN_BIG_INDEX==0
      if (method == ClpSolve::tryBenders) {
        // Now build model
        int lengthNames=model2->lengthNames();
@@ -1709,6 +1728,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
      } else if (method == ClpSolve::tryDantzigWolfe) {
 	 abort();
      }
+#endif
      if (method == ClpSolve::usePrimalorSprint) {
           if (doSprint < 0) {
                if (numberElements < 500000) {
@@ -2602,7 +2622,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                network = true;
                nRow *= 2;
           }
-          int * addStarts = new int [nRow+1];
+          CoinBigIndex * addStarts = new CoinBigIndex [nRow+1];
           int * addRow = new int[nRow];
           double * addElement = new double[nRow];
           addStarts[0] = 0;
@@ -2716,6 +2736,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
           int smallNumberColumns = static_cast<int> (CoinMin(ratio * numberRows, static_cast<double> (numberColumns)));
           smallNumberColumns = CoinMax(smallNumberColumns, 3000);
           smallNumberColumns = CoinMin(smallNumberColumns, numberColumns);
+	  int saveSmallNumber = smallNumberColumns;
+	  bool emergencyMode=false;
           //int smallNumberColumns = CoinMin(12*numberRows/10,numberColumns);
           //smallNumberColumns = CoinMax(smallNumberColumns,3000);
           //smallNumberColumns = CoinMax(smallNumberColumns,numberRows+1000);
@@ -2818,6 +2840,13 @@ ClpSimplex::initialSolve(ClpSolve & options)
                if (interrupt)
                     currentModel = &small;
                small.defaultFactorizationFrequency();
+	       if (emergencyMode) {
+		 // not much happening so big model
+		 int options=small.moreSpecialOptions();
+		 small.setMoreSpecialOptions(options|1048576);
+		 small.setMaximumIterations(1000400);
+		 small.setPerturbation(100);
+	       }
                if (dynamic_cast< ClpPackedMatrix*>(matrix_)) {
                     // See if original wanted vector
                     ClpPackedMatrix * clpMatrixO = dynamic_cast< ClpPackedMatrix*>(matrix_);
@@ -2841,6 +2870,37 @@ ClpSimplex::initialSolve(ClpSolve & options)
 		      else
 		         small.dual(0);
 #endif
+		      if (emergencyMode) {
+			if (small.problemStatus()==3)
+			  small.setProblemStatus(0);
+			smallNumberColumns=saveSmallNumber;
+			emergencyMode=false;
+			double * temp = new double [numberRows];
+			memset(temp,0,numberRows*sizeof(double));
+			double * solution = small.primalColumnSolution();
+			small.matrix()->times(solution,temp);
+			double sumInf=0.0;
+			double * lower = small.rowLower();
+			double * upper = small.rowUpper();
+			for (int iRow=0;iRow<numberRows;iRow++) {
+			  if (temp[iRow]>upper[iRow])
+			    sumInf += temp[iRow]-upper[iRow];
+			  else if (temp[iRow]<lower[iRow])
+			    sumInf += lower[iRow]-temp[iRow];
+			}
+			printf("row inf %g\n",sumInf);
+			sumInf=0.0;
+			lower = small.columnLower();
+			upper = small.columnUpper();
+			for (int iColumn=0;iColumn<small.numberColumns();iColumn++) {
+			  if (solution[iColumn]>upper[iColumn])
+			    sumInf += solution[iColumn]-upper[iColumn];
+			  else if (solution[iColumn]<lower[iColumn])
+			    sumInf += lower[iColumn]-solution[iColumn];
+			}
+			printf("column inf %g\n",sumInf);
+			delete [] temp;
+		      }
 		      if (small.problemStatus()) {
 			int numberIterations=small.numberIterations();
 			small.dual(0);
@@ -2885,7 +2945,28 @@ ClpSimplex::initialSolve(ClpSolve & options)
                } else {
                     small.primal(1);
                }
-               totalIterations += small.numberIterations();
+	       int smallIterations=small.numberIterations();
+               totalIterations += smallIterations;
+	       if (2*smallIterations<CoinMin(numberRows,1000) && iPass) {
+		 int oldNumber=smallNumberColumns;
+		 if (smallIterations<100)
+		   smallNumberColumns *= 1.2;
+		 else
+		   smallNumberColumns *= 1.1;
+		 smallNumberColumns = CoinMin(smallNumberColumns, numberColumns);
+		 if (smallIterations<200 && smallNumberColumns>2*saveSmallNumber) {
+		   // try kicking it
+		   emergencyMode=true;
+		   smallNumberColumns=numberColumns;
+		 }
+		 //		 smallNumberColumns = CoinMin(smallNumberColumns, 3*saveSmallNumber);
+		 char line[100];
+		 sprintf(line,"sample size increased from %d to %d",
+			 oldNumber,smallNumberColumns);  
+		 handler_->message(CLP_GENERAL, messages_)
+		   << line
+		   << CoinMessageEol;
+	       }
                // move solution back
                const double * solution = small.primalColumnSolution();
                for (iColumn = 0; iColumn < numberSort; iColumn++) {
@@ -2940,7 +3021,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                }
                if (iPass > 20)
                     sumArtificials = 0.0;
-               if ((small.objectiveValue()*optimizationDirection_ > lastObjective[1] - 1.0e-7 && iPass > 5 && sumArtificials < 1.0e-8 && maxSprintPass<200) ||
+               if ((small.objectiveValue()*optimizationDirection_ > lastObjective[1] - 1.0e-7 && iPass > 15 && sumArtificials < 1.0e-8 && maxSprintPass<200) ||
                          (!small.numberIterations() && iPass) ||
                          iPass == maxSprintPass - 1 || small.status() == 3) {
 
@@ -2950,10 +3031,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     lastObjective[0] = small.objectiveValue() * optimizationDirection_;
                     double tolerance;
                     double averageNegDj = sumNegative / static_cast<double> (numberNegative + 1);
-                    if (numberNegative + numberSort > smallNumberColumns)
+                    if (numberNegative + numberSort > smallNumberColumns && false)
                          tolerance = -dualTolerance_;
                     else
                          tolerance = 10.0 * averageNegDj;
+		    if (emergencyMode)
+		      tolerance=1.0e100;
                     int saveN = numberSort;
                     for (iColumn = 0; iColumn < numberColumns; iColumn++) {
                          double dj = djs[iColumn] * optimizationDirection_;
@@ -2975,7 +3058,22 @@ ClpSimplex::initialSolve(ClpSolve & options)
                     }
                     // sort
                     CoinSort_2(weight + saveN, weight + numberSort, sort + saveN);
+		    if (numberSort<smallNumberColumns)
+		      printf("using %d columns not %d\n",numberSort,smallNumberColumns);
                     numberSort = CoinMin(smallNumberColumns, numberSort);
+		    // try singletons
+		    char * markX = new char[numberColumns];
+		    memset(markX,0,numberColumns);
+		    for (int i=0;i<numberSort;i++)
+		      markX[sort[i]]=1;
+		    int n=numberSort;
+		    for (int i=0;i<numberColumns;i++) {
+		      if (columnLength[i]==1&&!markX[i])
+			sort[numberSort++]=i;
+		    }
+		    if (n<numberSort)
+		      printf("%d slacks added\n",numberSort-n);
+		    delete [] markX;
                }
           }
           if (interrupt)
@@ -4550,6 +4648,7 @@ ClpSimplexProgress::cycle(int in, int out, int wayIn, int wayOut)
      way_[CLP_CYCLE-1] = static_cast<char>(way);
      return matched;
 }
+#if COIN_BIG_INDEX==0
 #include "CoinStructuredModel.hpp"
 // Solve using structure of model and maybe in parallel
 int
@@ -4912,6 +5011,7 @@ ClpSimplex::loadProblem (  CoinStructuredModel & coinModel,
      optimizationDirection_ = coinModel.optimizationDirection();
      return returnCode;
 }
+#endif
 /*  If input negative scales objective so maximum <= -value
     and returns scale factor used.  If positive unscales and also
     redoes dual stuff
@@ -5022,6 +5122,7 @@ void * clp_parallelManager(void * stuff)
   }
 }
 #endif
+#if COIN_BIG_INDEX==0
 // Solve using Dantzig-Wolfe decomposition and maybe in parallel
 int
 ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
@@ -5211,7 +5312,7 @@ ClpSimplex::solveDW(CoinStructuredModel * model,ClpSolve & options)
      int * rowAdd = new int[spaceNeeded];
      double * elementAdd = new double[spaceNeeded];
      spaceNeeded = numberBlocks;
-     int * columnAdd = new int[spaceNeeded+1];
+     CoinBigIndex * columnAdd = new CoinBigIndex[spaceNeeded+1];
      double * objective = new double[spaceNeeded];
      // Add in costed slacks
      int firstArtificial = master.numberColumns();
@@ -5857,6 +5958,7 @@ static ClpSimplex * deBound(ClpSimplex * oldModel)
   delete [] change;
   return model;
 }
+#endif
 #if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
 CoinPthreadStuff::CoinPthreadStuff(int numberThreads,
 				   void * parallelManager(void * stuff))
@@ -6002,6 +6104,7 @@ CoinPthreadStuff::waitAllTasks()
   }
 }
 #endif
+#if COIN_BIG_INDEX==0
 // Solve using Benders decomposition and maybe in parallel
 int
 ClpSimplex::solveBenders(CoinStructuredModel * model,ClpSolve & options)
@@ -7952,3 +8055,4 @@ ClpSimplex::solveBenders(CoinStructuredModel * model,ClpSolve & options)
      delete [] sub;
      return 0;
 }
+#endif

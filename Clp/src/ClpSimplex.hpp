@@ -76,6 +76,10 @@ class AbcSimplex;
 #else
 #define SHORT_REGION 2
 #endif
+// for now keep simple
+#undef LONG_REGION_2
+#undef SHORT_REGION
+#define SHORT_REGION 2
 #else
 //ABC_INHERIT
 #define LONG_REGION_2 1
@@ -1284,6 +1288,7 @@ public:
 	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
 	 131072 bit (*3) initial stateDualColumn
 	 524288 bit - stop when primal feasible
+	 1048576 bit - stop when primal feasible after n-1000000 iterations
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;

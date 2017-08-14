@@ -112,7 +112,8 @@ model_(model), epsDegeneracy_(1.0e-07), epsCompatibility_(1.0e-07),
 tempRandom_(NULL), 
 coPrimalDegeneratesAvg_(0), coDualDegeneratesAvg_(0), coCompatibleColsAvg_(0), coCompatibleRowsAvg_(0),
 coUpdateDegenerates_(0), coIdentifyCompatibles_(0),
-coDegeneratePivots_(0), coCompatiblePivots_(0),  coDegeneratePivotsConsecutive_(0), coDegenerateCompatiblePivots_(0),
+coDegeneratePivots_(0), coCompatiblePivots_(0),
+coDegenerateCompatiblePivots_(0),coDegeneratePivotsConsecutive_(0),
 coPriorityPivots_(0),doStatistics_(0),
 lastObjectiveValue_(COIN_DBL_MAX), isLastPivotCompatible_(false), 
 timeCompatibility_(0.0), timeMultRandom_(0.0), timeLinearSystem_(0.0), timeTmp_(0.0) {
@@ -366,7 +367,7 @@ void ClpPESimplex::identifyCompatibleCols(int number, const int * which,
       double dotProduct=0.0;
       if (jColumn<numberColumns_) {
 	if (!rowScale) {
-	  for (int i = columnStart[jColumn]; i < columnStart[jColumn] + columnLength[jColumn]; i++) {
+	  for (CoinBigIndex i = columnStart[jColumn]; i < columnStart[jColumn] + columnLength[jColumn]; i++) {
               int iRow = row[i];
               dotProduct += values[iRow]*elementByColumn[i];
           }
@@ -374,7 +375,7 @@ void ClpPESimplex::identifyCompatibleCols(int number, const int * which,
 	else {
           // apply scaling
           double scale = model_->columnScale()[jColumn];
-          for (int i = columnStart[jColumn]; i < columnStart[jColumn] + columnLength[jColumn]; i++) {
+          for (CoinBigIndex i = columnStart[jColumn]; i < columnStart[jColumn] + columnLength[jColumn]; i++) {
 	    int iRow = row[i];
 	    dotProduct += values[iRow]*elementByColumn[i] * rowScale[iRow];
           }

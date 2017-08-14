@@ -78,7 +78,7 @@ public:
      /** Returns a new matrix in reverse order without gaps */
      virtual ClpMatrixBase * reverseOrderedCopy() const;
      /// Returns number of elements in column part of basis
-     virtual CoinBigIndex countBasis(
+     virtual int countBasis(
           const int * whichColumn,
           int & numberColumnBasic);
      /// Fills in column part of basis

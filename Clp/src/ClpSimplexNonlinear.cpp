@@ -2750,7 +2750,7 @@ ClpSimplexNonlinear::primalDualCuts(char * rowsIn, int startUp,int algorithm)
     int takeOutPass = 30;
     int iPass;
     
-    const int * start = this->clpMatrix()->getVectorStarts();
+    const CoinBigIndex * start = this->clpMatrix()->getVectorStarts();
     const int * length = this->clpMatrix()->getVectorLengths();
     const int * row = this->clpMatrix()->getIndices();
     problemStatus_=1;
@@ -3733,7 +3733,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
      if (numberArtificials) {
           numberArtificials *= SEGMENTS;
           numberColumns2 += numberArtificials;
-          int * addStarts = new int [numberArtificials+1];
+          CoinBigIndex * addStarts = new CoinBigIndex [numberArtificials+1];
           int * addRow = new int[numberArtificials];
           double * addElement = new double[numberArtificials];
           double * addUpper = new double[numberArtificials];

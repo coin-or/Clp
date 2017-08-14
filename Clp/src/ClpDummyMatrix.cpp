@@ -149,7 +149,7 @@ ClpDummyMatrix::subsetTransposeTimes(const ClpSimplex * ,
      abort();
 }
 /// returns number of elements in column part of basis,
-CoinBigIndex
+int
 ClpDummyMatrix::countBasis(const int * ,
                            int & )
 {

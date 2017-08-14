@@ -375,8 +375,8 @@ public:
     return modelPtr_->numberRows(); }
   
   /// Get number of nonzero elements
-  virtual int getNumElements() const {
-    int retVal = 0;
+  virtual CoinBigIndex getNumElements() const {
+    CoinBigIndex retVal = 0;
     const CoinPackedMatrix * matrix =modelPtr_->matrix();
     if ( matrix != NULL ) retVal=matrix->getNumElements();
     return retVal; }
@@ -752,7 +752,7 @@ public:
                        const double* obj);
   /**  */
   virtual void addCols(const int numcols,
-		       const int * columnStarts, const int * rows, const double * elements,
+		       const CoinBigIndex * columnStarts, const int * rows, const double * elements,
 		       const double* collb, const double* colub,   
 		       const double* obj);
   /** */
@@ -793,7 +793,7 @@ public:
 
   /** */
   virtual void addRows(const int numrows,
-		       const int * rowStarts, const int * columns, const double * element,
+		       const CoinBigIndex * rowStarts, const int * columns, const double * element,
 		       const double* rowlb, const double* rowub);
   ///
   void modifyCoefficient(int row, int column, double newElement,

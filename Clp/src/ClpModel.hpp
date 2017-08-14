@@ -259,7 +259,7 @@ public:
          d) orders elements
          returns number of elements eliminated or -1 if not ClpPackedMatrix
      */
-     int cleanMatrix(double threshold = 1.0e-20);
+     CoinBigIndex cleanMatrix(double threshold = 1.0e-20);
      /// Copy contents - resizing if necessary - otherwise re-use memory
      void copy(const ClpMatrixBase * from, ClpMatrixBase * & to);
 #ifndef CLP_NO_STD
@@ -699,7 +699,7 @@ public:
           else return matrix_->getPackedMatrix();
      }
      /// Number of elements in matrix
-     inline int getNumElements() const {
+     inline CoinBigIndex getNumElements() const {
           return matrix_->getNumElements();
      }
      /** Small element value - elements less than this set to zero,

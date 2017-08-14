@@ -153,7 +153,7 @@ CMessageHandler::print()
                vDouble[i] = doubleValue(i);
           int nInt = numberIntFields();
           assert (nInt <= 10);
-          int vInt[10];
+          CoinBigIndex vInt[10];
           for (i = 0; i < nInt; i++)
                vInt[i] = intValue(i);
           int nString = numberStringFields();
@@ -320,7 +320,7 @@ Clp_deleteRows(Clp_Simplex * model, int number, const int * which)
 COINLIBAPI void COINLINKAGE
 Clp_addRows(Clp_Simplex * model, int number, const double * rowLower,
             const double * rowUpper,
-            const int * rowStarts, const int * columns,
+            const CoinBigIndex * rowStarts, const int * columns,
             const double * elements)
 {
      model->model_->addRows(number, rowLower, rowUpper, rowStarts, columns, elements);
@@ -337,7 +337,7 @@ COINLIBAPI void COINLINKAGE
 Clp_addColumns(Clp_Simplex * model, int number, const double * columnLower,
                const double * columnUpper,
                const double * objective,
-               const int * columnStarts, const int * rows,
+               const CoinBigIndex * columnStarts, const int * rows,
                const double * elements)
 {
      model->model_->addColumns(number, columnLower, columnUpper, objective,
@@ -613,7 +613,7 @@ Clp_columnUpper(Clp_Simplex * model)
      return model->model_->columnUpper();
 }
 /* Number of elements in matrix */
-COINLIBAPI int COINLINKAGE
+COINLIBAPI CoinBigIndex COINLINKAGE
 Clp_getNumElements(Clp_Simplex * model)
 {
      return model->model_->getNumElements();
@@ -1180,7 +1180,7 @@ Clp_printModel(Clp_Simplex * model, const char * prefix)
      ClpSimplex *clp_simplex = model->model_;
      int numrows    = clp_simplex->numberRows();
      int numcols    = clp_simplex->numberColumns();
-     int numelem    = clp_simplex->getNumElements();
+     CoinBigIndex numelem    = clp_simplex->getNumElements();
      const CoinBigIndex *start = clp_simplex->matrix()->getVectorStarts();
      const int *index     = clp_simplex->matrix()->getIndices();
      const double *value  = clp_simplex->matrix()->getElements();

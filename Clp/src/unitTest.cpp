@@ -2171,8 +2171,8 @@ ClpSimplexUnitTest(const std::string & dirSample)
                double * saveUpper = new double[numberRows+numberColumns];
                int * which = new int [numberRows+numberColumns];
 
-               int numberElements = m.getMatrixByCol()->getNumElements();
-               int * starts = new int[numberRows+numberColumns];
+               CoinBigIndex numberElements = m.getMatrixByCol()->getNumElements();
+               CoinBigIndex * starts = new CoinBigIndex[numberRows+numberColumns];
                int * index = new int[numberElements];
                double * element = new double[numberElements];
 
@@ -2200,7 +2200,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
                          saveObj[n] = objective[iColumn];
                          saveLower[n] = lower[iColumn];
                          saveUpper[n] = upper[iColumn];
-                         int j;
+                         CoinBigIndex j;
                          for (j = startM[iColumn]; j < startM[iColumn] + lengthM[iColumn]; j++) {
                               index[nel] = indexM[j];
                               element[nel++] = elementM[j];
@@ -2227,7 +2227,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
                     saveObj[n] = objective[iColumn];
                     saveLower[n] = lower[iColumn];
                     saveUpper[n] = upper[iColumn];
-                    int j;
+                    CoinBigIndex j;
                     for (j = startM[iColumn]; j < startM[iColumn] + lengthM[iColumn]; j++) {
                          index[nel] = indexM[j];
                          element[nel++] = elementM[j];
@@ -2261,7 +2261,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
                     if ((iRow & 1) == 0) {
                          saveLower[n] = lower[iRow];
                          saveUpper[n] = upper[iRow];
-                         int j;
+                         CoinBigIndex j;
                          for (j = startM[iRow]; j < startM[iRow] + lengthM[iRow]; j++) {
                               index[nel] = indexM[j];
                               element[nel++] = elementM[j];
@@ -2287,7 +2287,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
                for (iRow = 0; iRow < numberRows; iRow++) {
                     saveLower[n] = lower[iRow];
                     saveUpper[n] = upper[iRow];
-                    int j;
+                    CoinBigIndex j;
                     for (j = startM[iRow]; j < startM[iRow] + lengthM[iRow]; j++) {
                          index[nel] = indexM[j];
                          element[nel++] = elementM[j];
@@ -2348,6 +2348,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
           }
      }
 #endif
+#if COIN_BIG_INDEX==0
      // test network
 #define QUADRATIC
      if (1) {
@@ -2801,4 +2802,5 @@ ClpSimplexUnitTest(const std::string & dirSample)
           fullModel.dropNames();
           fullModel.writeMps("test2.mps");
      }
+#endif
 }

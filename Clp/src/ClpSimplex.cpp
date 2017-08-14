@@ -7205,13 +7205,13 @@ ClpSimplex::restoreModel(const char * fileName)
           // Pack down
           length = 0;
           for (i = 0; i < numberColumns_; i++) {
-               int start = starts[i];
+               CoinBigIndex start = starts[i];
                starts[i] = length;
                for (CoinBigIndex j = start; j < start + lengths[i]; j++) {
                     elements[length] = elements[j];
                     indices[length++] = indices[j];
                }
-               lengths[i] = length - starts[i];
+               lengths[i] = static_cast<int>(length - starts[i]);
           }
           starts[numberColumns_] = length;
           matrix->assignMatrix(true, numberRows_, numberColumns_,
@@ -7517,6 +7517,7 @@ ClpSimplex::loadProblem (  const int numcols, const int numrows,
      createStatus();
 }
 #ifndef SLIM_NOIO
+#if COIN_BIG_INDEX==0
 // This loads a model from a coinModel object - returns number of errors
 int
 ClpSimplex::loadProblem (  CoinModel & modelObject, bool /*keepSolution*/)
@@ -7558,6 +7559,7 @@ ClpSimplex::loadProblem (  CoinModel & modelObject, bool /*keepSolution*/)
      optimizationDirection_ = modelObject.optimizationDirection();
      return returnCode;
 }
+#endif
 #endif
 void
 ClpSimplex::loadProblem (  const int numcols, const int numrows,
@@ -8256,7 +8258,7 @@ ClpSimplex::crash(double gap, int pivot)
                               double upperBound = rowUpper_[iRow];
                               if (getRowStatus(iRow) == basic) {
                                    // see if we can find a column to pivot on
-                                   int j;
+                                   CoinBigIndex j;
                                    // down is amount pi can go down
                                    double maximumDown = COIN_DBL_MAX;
                                    double maximumUp = COIN_DBL_MAX;

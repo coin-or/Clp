@@ -63,9 +63,9 @@ public:
          will be sanitized so can be deleted (to avoid a very small memory leak)
       */
      ClpDynamicExampleMatrix(ClpSimplex * model, int numberSets,
-                             int numberColumns, const int * starts,
+                             int numberColumns, const CoinBigIndex * starts,
                              const double * lower, const double * upper,
-                             const int * startColumn, const int * row,
+                             const CoinBigIndex * startColumn, const int * row,
                              const double * element, const double * cost,
                              const double * columnLower = NULL, const double * columnUpper = NULL,
                              const unsigned char * status = NULL,
@@ -114,7 +114,7 @@ public:
           return costGen_;
      }
      /// full starts
-     inline int * fullStartGen() const {
+     inline CoinBigIndex * fullStartGen() const {
           return fullStartGen_;
      }
      /// ids in next level matrix
@@ -169,7 +169,7 @@ protected:
      /// costs
      double * costGen_;
      /// start of each set
-     int * fullStartGen_;
+     CoinBigIndex * fullStartGen_;
      /// for status and which bound
      unsigned char * dynamicStatusGen_;
      /** identifier for each variable up one level (startColumn_, etc).  This is

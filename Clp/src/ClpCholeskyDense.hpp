@@ -38,7 +38,7 @@ public:
       Returns non-zero if not enough memory */
      int reserveSpace(const ClpCholeskyBase * factor, int numberRows) ;
      /** Returns space needed */
-     CoinBigIndex space( int numberRows) const;
+     int space( int numberRows) const;
      /** part 2 of Factorize - filling in rowsDropped */
      void factorizePart2(int * rowsDropped) ;
      /** part 2 of Factorize - filling in rowsDropped - blocked */

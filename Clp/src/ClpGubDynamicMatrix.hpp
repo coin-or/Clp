@@ -85,7 +85,7 @@ public:
      ClpGubDynamicMatrix(ClpSimplex * model, int numberSets,
                          int numberColumns, const int * starts,
                          const double * lower, const double * upper,
-                         const int * startColumn, const int * row,
+                         const CoinBigIndex * startColumn, const int * row,
                          const double * element, const double * cost,
                          const double * lowerColumn = NULL, const double * upperColumn = NULL,
                          const unsigned char * status = NULL);
@@ -240,7 +240,7 @@ protected:
      /// number of columns in dynamic model
      int lastDynamic_;
      /// size of working matrix (max)
-     int numberElements_;
+     CoinBigIndex numberElements_;
      //@}
 };
 

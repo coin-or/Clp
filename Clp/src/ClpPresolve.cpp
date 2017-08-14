@@ -167,7 +167,7 @@ ClpPresolve::presolveStatus() const
     // feasible (or not done yet)
     return 0;
   } else {
-    int presolveStatus = - nelems_;
+    int presolveStatus = - static_cast<int>(nelems_);
     // If both infeasible and unbounded - say infeasible
     if (presolveStatus>2)
       presolveStatus = 1;
@@ -821,8 +821,8 @@ static int tightenDoubletons2(CoinPresolveMatrix * prob)
 	  cost[icol] = costThis;
 	  clo[icol]=lowerX;
 	  cup[icol]=upperX;
-	  int startCol[2];
-	  int endCol[2];
+	  CoinBigIndex startCol[2];
+	  CoinBigIndex endCol[2];
 	  startCol[0]=mcstrt[icol];
 	  endCol[0]=startCol[0]+2;
 	  startCol[1]=mcstrt[otherCol];
@@ -1444,7 +1444,7 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
           int *hrow		= prob.hrow_;
           CoinBigIndex *mcstrt		= prob.mcstrt_;
           int *hincol		= prob.hincol_;
-          int *link		= prob.link_;
+          CoinBigIndex *link		= prob.link_;
           int ncols		= prob.ncols_;
 
           char *cdone	= prob.cdone_;
@@ -1766,7 +1766,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
      numberNextRowsToDo_(0),
      presolveOptions_(0)
 {
-     const int bufsize = bulk0_;
+     const CoinBigIndex bufsize = bulk0_;
 
      nrows_ = si->getNumRows() ;
 
@@ -1799,7 +1799,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
                     colels_[nel++] = element[j];
           }
           mcstrt_[icol+1] = nel;
-          hincol_[icol] = nel - mcstrt_[icol];
+          hincol_[icol] = static_cast<int>(nel - mcstrt_[icol]);
      }
 
      // same thing for row rep
@@ -1848,7 +1848,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
                }
                start = mrstrt_[irow+1];
                mrstrt_[irow+1] = nel;
-               hinrow_[irow] = nel - mrstrt_[irow];
+               hinrow_[irow] = static_cast<int>(nel - mrstrt_[irow]);
           }
      }
 
@@ -1872,7 +1872,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
      if (nonLinearValue) {
           anyProhibited_ = true;
           for (icol = 0; icol < ncols_; icol++) {
-               int j;
+               CoinBigIndex j;
                bool nonLinearColumn = false;
                if (cost_[icol] == nonLinearValue)
                     nonLinearColumn = true;
@@ -2028,7 +2028,7 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
      free_list_(0),
      // link, free_list, maxlink
      maxlink_(bulk0_),
-     link_(new int[/*maxlink*/ bulk0_]),
+     link_(new CoinBigIndex[/*maxlink*/ bulk0_]),
 
      cdone_(new char[ncols0_]),
      rdone_(new char[nrows0_in])
@@ -2139,7 +2139,7 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
 #endif
      }
      {
-          int ml = maxlink_;
+          CoinBigIndex ml = maxlink_;
           for (CoinBigIndex k = nelemsr; k < ml; ++k)
                link_[k] = k + 1;
           if (ml)
@@ -2279,7 +2279,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 
                for (colx = 0; colx < ncols; ++colx) {
                     double solutionValue = csol[colx];
-                    for (int i = mcstrt[colx]; i < mcstrt[colx] + hincol[colx]; ++i) {
+                    for (CoinBigIndex i = mcstrt[colx]; i < mcstrt[colx] + hincol[colx]; ++i) {
                          int row = hrow[i];
                          double coeff = colels[i];
                          acts[row] += solutionValue * coeff;

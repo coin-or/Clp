@@ -3934,12 +3934,13 @@ It is possible you can get same effect by using example driver4.cpp."
 #ifdef COIN_AVX2
      parameters[numberParameters++] =
           CbcOrClpParam("vector!Mode", "Try and use vector instructions",
-                        0, 1, CLP_PARAM_INT_VECTOR_MODE);
+                        0, 11, CLP_PARAM_INT_VECTOR_MODE);
      parameters[numberParameters-1].setLonghelp
      (
           "At present only for Intel architectures - but could be extended.  \
 Uses avx2 or avx512 instructions. Uses different storage for matrix - can be \
-of benefit without instruction set on some problems."
+of benefit without instruction set on some problems.  \
+Being lazy I have used 10 to switch on a pool matrix (11 may come later)"
      );
      parameters[numberParameters-1].setIntValue(0);
 #endif

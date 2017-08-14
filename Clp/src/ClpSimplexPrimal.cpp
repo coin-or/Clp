@@ -483,7 +483,17 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 
                // Say no pivot has occurred (for steepest edge and updates)
                pivotRow_ = -2;
-
+	       // exit if feasible and done enough iterations
+	       if ((moreSpecialOptions_&1048576)!=0) {
+		 int maxIterations=maximumIterations()-1000000;
+		 if (maxIterations>0&&maxIterations<200000) {
+		   if (!nonLinearCost_->numberInfeasibilities()&&
+		       numberIterations_>=maxIterations) {
+		     problemStatus_ = 3;
+		     secondaryStatus_ = 10;
+		   }
+		 }
+	       }
                // exit if victory declared
 	       if (problemStatus_ >= 0) {
 #ifdef CLP_USER_DRIVEN

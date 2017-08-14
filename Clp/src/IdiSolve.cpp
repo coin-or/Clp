@@ -142,7 +142,8 @@ Idiot::IdiSolve(
      CoinThreadRandom * randomNumberGenerator)
 {
      IdiotResult result;
-     int  i, j, k, iter;
+     int  i, k, iter;
+     CoinBigIndex j;
      double value = 0.0, objvalue = 0.0, weightedObj = 0.0;
      double tolerance = 1.0e-8;
      double * history[HISTORY+1];
