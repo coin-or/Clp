@@ -5146,7 +5146,11 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                          saveColumnSolution = CoinCopyOfArray(columnActivityWork_, numberColumns_);
                          saveRowSolution = CoinCopyOfArray(rowActivityWork_, numberRows_);
                     }
-                    numberChangedBounds = changeBounds(0, rowArray_[3], changeCost);
+#ifndef COIN_MAX_DUAL_BOUND
+#define COIN_MAX_DUAL_BOUND 1.0e20
+#endif
+                    numberChangedBounds = (dualBound_<COIN_MAX_DUAL_BOUND) ?
+		      changeBounds(0, rowArray_[3], changeCost) : 0;
                     if (numberChangedBounds <= 0 && !numberDualInfeasibilities_) {
                          //looks optimal - do we need to reset tolerance
                          if (perturbation_ == 101) {
