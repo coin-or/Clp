@@ -233,7 +233,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       OSIUNITTEST_ASSERT_ERROR(eq(ev[12],  1.0), {}, "clp", "getMatrixByRow: elements");
       OSIUNITTEST_ASSERT_ERROR(eq(ev[13],  1.9), {}, "clp", "getMatrixByRow: elements");
       
-      const int * mi = smP->getVectorStarts();
+      const CoinBigIndex * mi = smP->getVectorStarts();
       OSIUNITTEST_ASSERT_ERROR(mi[0] ==  0, {}, "clp", "getMatrixByRow: vector starts");
       OSIUNITTEST_ASSERT_ERROR(mi[1] ==  5, {}, "clp", "getMatrixByRow: vector starts");
       OSIUNITTEST_ASSERT_ERROR(mi[2] ==  7, {}, "clp", "getMatrixByRow: vector starts");
@@ -588,8 +588,8 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
   }
 
   // Test ClpPlusMinusOneMatrix by way of loadProblem(ClpMatrixBase, ... )
-  { int pos_start[4] = {0,5,9,12};
-    int neg_start[4] = {3,7,11,12};
+  { CoinBigIndex pos_start[4] = {0,5,9,12};
+    CoinBigIndex neg_start[4] = {3,7,11,12};
     int col[12] = {0,1,2,3,4,5,6,7,0,1,2,3};
     double rhs[3] = {0.0,0.0,0.0};
     double cost[8];
