@@ -4191,6 +4191,14 @@ ClpModel::createCoinModel() const
      }
      return coinModel;
 }
+#else
+CoinModel *
+ClpModel::createCoinModel() const
+{
+  fprintf(stderr,"createCoinModel not available with COIN_BIG_INDEX\n");
+  abort();
+  return NULL;
+}
 #endif
 // Start or reset using maximumRows_ and Columns_
 void

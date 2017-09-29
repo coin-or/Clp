@@ -5576,6 +5576,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      ClpSimplex saveModel = *this;
 #endif
      int returnCode = static_cast<ClpSimplexDual *> (this)->dual(ifValuesPass, startFinishOptions);
+     eventHandler_->event(ClpEventHandler::looksEndInDual);
 #ifdef EXPENSIVE
      if (problemStatus_ == 1) {
           saveModel.allSlackBasis(true);
@@ -5996,6 +5997,7 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
          As far as I can see this is perfectly safe.
      */
      int returnCode = static_cast<ClpSimplexPrimal *> (this)->primal(ifValuesPass, startFinishOptions);
+     eventHandler_->event(ClpEventHandler::looksEndInPrimal);
      //int lastAlgorithm=1;
      if (problemStatus_ == 10) {
           //lastAlgorithm=-1;
@@ -7558,6 +7560,14 @@ ClpSimplex::loadProblem (  CoinModel & modelObject, bool /*keepSolution*/)
      }
      optimizationDirection_ = modelObject.optimizationDirection();
      return returnCode;
+}
+#else
+int
+ClpSimplex::loadProblem (  CoinModel & modelObject, bool /*keepSolution*/)
+{
+  fprintf(stderr,"loadProblem from CoinModel not available with COIN_BIG_INDEX\n");
+  abort();
+  return 0;
 }
 #endif
 #endif

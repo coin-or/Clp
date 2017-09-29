@@ -33,7 +33,7 @@ static Clp_message clp_us_english[] = {
      {CLP_SIMPLEX_GIVINGUP, 11, 2, "Stopping as close enough"},
      {CLP_DUAL_CHECKB, 12, 2, "New dual bound of %g"},
      {CLP_DUAL_ORIGINAL, 13, 3, "Going back to original objective"},
-     {CLP_SIMPLEX_PERTURB, 14, 1, "Perturbing problem by %g%%of %g - largest nonzero change %g ( %g%%) - largest zero change %g"},
+     {CLP_SIMPLEX_PERTURB, 14, 1, "Perturbing problem by %g%% of %g - largest nonzero change %g ( %g%%) - largest zero change %g"},
      {CLP_PRIMAL_ORIGINAL, 15, 2, "Going back to original tolerance"},
      {CLP_PRIMAL_WEIGHT, 16, 2, "New infeasibility weight of %g"},
      {CLP_PRIMAL_OPTIMAL, 17, 2, "Looking optimal with tolerance of %g"},

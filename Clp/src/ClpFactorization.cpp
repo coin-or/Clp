@@ -1214,6 +1214,7 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
 #ifdef CLP_REUSE_ETAS
      model_=rhs.model_;
 #endif
+#if COIN_BIG_INDEX==0
      if (denseIfSmaller > 0 && denseIfSmaller <= goDenseThreshold_) {
           CoinDenseFactorization * denseR =
                dynamic_cast<CoinDenseFactorization *>(rhs.coinFactorizationB_);
@@ -1235,6 +1236,7 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
           else if (-denseIfSmaller <= goOslThreshold_)
                goDense = 3;
      }
+#endif
      if (rhs.coinFactorizationA_ && !goDense)
           coinFactorizationA_ = new CoinFactorization(*(rhs.coinFactorizationA_));
      else
@@ -1243,16 +1245,15 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
           coinFactorizationB_ = rhs.coinFactorizationB_->clone();
      else
           coinFactorizationB_ = NULL;
+#if COIN_BIG_INDEX==0
      if (goDense) {
           delete coinFactorizationB_;
           if (goDense == 1)
                coinFactorizationB_ = new CoinDenseFactorization();
-#if COIN_BIG_INDEX==0
           else if (goDense == 2)
                coinFactorizationB_ = new CoinSimpFactorization();
           else
                coinFactorizationB_ = new CoinOslFactorization();
-#endif
           if (rhs.coinFactorizationA_) {
                coinFactorizationB_->maximumPivots(rhs.coinFactorizationA_->maximumPivots());
                coinFactorizationB_->pivotTolerance(rhs.coinFactorizationA_->pivotTolerance());
@@ -1264,6 +1265,7 @@ ClpFactorization::ClpFactorization (const ClpFactorization & rhs,
                coinFactorizationB_->zeroTolerance(rhs.coinFactorizationB_->zeroTolerance());
           }
      }
+#endif
      assert (!coinFactorizationA_ || !coinFactorizationB_);
 #ifdef CLP_FACTORIZATION_INSTRUMENT
      factorization_instrument(1);
