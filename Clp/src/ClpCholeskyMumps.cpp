@@ -173,7 +173,7 @@ ClpCholeskyMumps::order(ClpInterior * model)
      // NOT COMPRESSED FOR NOW ??? - Space for starts
      mumps_->ICNTL(5) = 0; // say NOT compressed format
      try {
-          choleskyStart_ = new CoinBigIndex[numberRows_+1+sizeFactor_];
+          choleskyStart_ = new int[numberRows_+1+sizeFactor_];
      } catch (...) {
           // no memory
           return -1;
@@ -376,7 +376,7 @@ ClpCholeskyMumps::factorize(const double * diagonal, int * rowsDropped)
           // Move to int array
           rowsDropped[iRow] = dropped;
           if (!dropped) {
-               CoinBigIndex start = choleskyStart_[iRow] - 1; // to Fortran
+               int start = choleskyStart_[iRow] - 1; // to Fortran
                double diagonal = sparseFactor_[start];
                if (diagonal > largest2) {
                     sparseFactor_[start] = CoinMax(diagonal, 1.0e-10);
