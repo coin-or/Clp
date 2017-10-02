@@ -6122,7 +6122,7 @@ OsiClpSolverInterface::getObjValue() const
 void 
 OsiClpSolverInterface::setObjCoeff( int elementIndex, double elementValue )
 {
-  modelPtr_->whatsChanged_ &= 0xffff;
+  modelPtr_->whatsChanged_ &= (0xffff&~(64));
   // Say can't gurantee optimal basis etc
   lastAlgorithm_=999;
 #ifndef NDEBUG
