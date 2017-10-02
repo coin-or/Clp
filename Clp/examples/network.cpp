@@ -128,7 +128,7 @@ int main(int argc, const char *argv[])
      double * upperColumn = new double[numberColumns];
 
      double * element = new double [2*numberColumns];
-     int * start = new int[numberColumns+1];
+     CoinBigIndex * start = new CoinBigIndex[numberColumns+1];
      int * row = new int[2*numberColumns];
      start[numberColumns] = 2 * numberColumns;
      for (i = 0; i < numberColumns; i++) {

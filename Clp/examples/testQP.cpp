@@ -37,14 +37,14 @@ int main(int argc, const char *argv[])
                             m.getObjCoefficients(),
                             m.getRowLower(), m.getRowUpper());
           // get quadratic part
-          int * start = NULL;
+          CoinBigIndex * start = NULL;
           int * column = NULL;
           double * element = NULL;
           m.readQuadraticMps(NULL, start, column, element, 2);
           int j;
           for (j = 0; j < 79; j++) {
                if (start[j] < start[j+1]) {
-                    int i;
+                    CoinBigIndex i;
                     printf("Column %d ", j);
                     for (i = start[j]; i < start[j+1]; i++) {
                          printf("( %d, %g) ", column[i], element[i]);

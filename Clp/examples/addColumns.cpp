@@ -15,6 +15,7 @@
 
 int main(int argc, const char *argv[])
 {
+#if COIN_BIG_INDEX<2
      {
           // Empty model
           ClpSimplex  model;
@@ -277,5 +278,8 @@ int main(int argc, const char *argv[])
           model2.loadProblem(buildObject);
           model2.initialSolve();
      }
+#else
+     printf("addColumns not available with COIN_BIG_INDEX=2\n");
+#endif
      return 0;
 }

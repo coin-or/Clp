@@ -34,7 +34,7 @@ int main(int argc, const char *argv[])
      model1.dual();
      // Get data arrays
      const CoinPackedMatrix * matrix1 = m.getMatrixByCol();
-     const int * start1 = matrix1->getVectorStarts();
+     const CoinBigIndex * start1 = matrix1->getVectorStarts();
      const int * length1 = matrix1->getVectorLengths();
      const int * row1 = matrix1->getIndices();
      const double * element1 = matrix1->getElements();
@@ -47,11 +47,11 @@ int main(int argc, const char *argv[])
 
      int numberColumns = m.getNumCols();
      int numberRows = m.getNumRows();
-     int numberElements = m.getNumElements();
+     CoinBigIndex numberElements = m.getNumElements();
 
      // Get new arrays
      int numberColumns2 = (numberColumns + 1);
-     int * start2 = new int[numberColumns2+1];
+     CoinBigIndex * start2 = new CoinBigIndex[numberColumns2+1];
      int * row2 = new int[numberElements];
      double * element2 = new double[numberElements];
      int * segstart = new int[numberColumns+1];
@@ -91,7 +91,7 @@ int main(int argc, const char *argv[])
           bool ifcopy = 1;
           if (iColumn < numberColumns - 1) {
                int  joff = length1[iColumn];
-               for (int j = start1[iColumn]; j < start1[iColumn] + length1[iColumn]; j++) {
+               for (CoinBigIndex j = start1[iColumn]; j < start1[iColumn] + length1[iColumn]; j++) {
                     if (row1[j] != row1[j+joff]) {
                          ifcopy = 0;
                          break;
@@ -136,7 +136,7 @@ int main(int argc, const char *argv[])
                double fixed = up1;
                // do offset
                objectiveOffset += fixed * obj2;
-               for (int j = start1[iColumn]; j < start1[iColumn] + length1[iColumn]; j++) {
+               for (CoinBigIndex j = start1[iColumn]; j < start1[iColumn] + length1[iColumn]; j++) {
                     int iRow = row1[j];
                     double value = element1[j];
                     if (rowLower2[iRow] > -1.0e30)
@@ -156,7 +156,7 @@ int main(int argc, const char *argv[])
                slope[segptr++] = obj1;
                breakpt[segptr] = lo2;
                slope[segptr++] = obj2;
-               for (int j = start1[iColumn]; j < start1[iColumn] + length1[iColumn]; j++) {
+               for (CoinBigIndex j = start1[iColumn]; j < start1[iColumn] + length1[iColumn]; j++) {
                     row2[numberElements] = row1[j];
                     element2[numberElements++] = element1[j];
                }
@@ -172,7 +172,7 @@ int main(int argc, const char *argv[])
                objective2[numberColumns2] = objective1[iColumn];
                breakpt[segptr] = columnLower1[iColumn];
                slope[segptr++] = objective1[iColumn];
-               for (int j = start1[iColumn]; j < start1[iColumn] + length1[iColumn]; j++) {
+               for (CoinBigIndex j = start1[iColumn]; j < start1[iColumn] + length1[iColumn]; j++) {
                     row2[numberElements] = row1[j];
                     element2[numberElements++] = element1[j];
                }

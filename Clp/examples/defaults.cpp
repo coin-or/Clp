@@ -315,12 +315,12 @@ int main(int argc, const char *argv[])
 
      const double * element = matrix->getElements();
      const int * row = matrix->getIndices();
-     const int * start = matrix->getVectorStarts();
+     const CoinBigIndex * start = matrix->getVectorStarts();
      const int * length = matrix->getVectorLengths();
 
      for (iColumn = 0; iColumn < numberColumns; iColumn++) {
           std::cout << "Column " << iColumn;
-          int j;
+          CoinBigIndex j;
           for (j = start[iColumn]; j < start[iColumn] + length[iColumn]; j++)
                std::cout << " ( " << row[j] << ", " << element[j] << ")";
           std::cout << std::endl;

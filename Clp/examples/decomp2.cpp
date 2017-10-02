@@ -9,6 +9,7 @@
 
 int main(int argc, const char *argv[])
 {
+#if COIN_BIG_INDEX<2
      /* Create a structured model by reading mps file and trying
         Dantzig-Wolfe decomposition (that's the 1 parameter)
      */
@@ -33,5 +34,8 @@ int main(int argc, const char *argv[])
      solver.solve(&model);
      // Double check
      solver.primal(1);
+#else
+     printf("decomp2 not available with COIN_BIG_INDEX=2\n");
+#endif
      return 0;
 }
