@@ -129,9 +129,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
 int mainTest (int argc, const char *argv[], int algorithm,
               AbcSimplex empty, ClpSolve solveOptions, int switchOff, bool doVector);
 #endif
-#if COIN_BIG_INDEX==0
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model);
-#endif
 static void generateCode(const char * fileName, int type);
 // Returns next valid field
 int CbcOrClpRead_mode = 1;
@@ -372,10 +370,22 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                            info.numberRows, info.numberColumns, info.numberElements);
                 if (!coinModelStart.model) {
 		  // linear
+#if COIN_BIG_INDEX==0
                     models->loadProblem(info.numberColumns, info.numberRows, info.starts,
                                         info.rows, info.elements,
                                         info.columnLower, info.columnUpper, info.objective,
                                         info.rowLower, info.rowUpper);
+#else
+		    int numberColumns=info.numberColumns;
+		    CoinBigIndex * starts = new CoinBigIndex[numberColumns+1];
+		    for (int i=0;i<numberColumns+1;i++)
+		      starts[i]=info.starts[i];
+                    models->loadProblem(info.numberColumns, info.numberRows, starts,
+                                        info.rows, info.elements,
+                                        info.columnLower, info.columnUpper, info.objective,
+                                        info.rowLower, info.rowUpper);
+		    delete [] starts;
+#endif
 		} else {
 		  // QP
 		  models->loadProblem(*(coinModelStart.model));
@@ -1341,7 +1351,6 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                               }
                               break;
                          case CLP_PARAM_ACTION_STATISTICS:
-#if COIN_BIG_INDEX==0
                               if (goodModels[iModel]) {
                                    // If presolve on look at presolved
                                    bool deleteModel2 = false;
@@ -1376,7 +1385,6 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                               } else {
                                    std::cout << "** Current model not valid" << std::endl;
                               }
-#endif
                               break;
                          case CLP_PARAM_ACTION_TIGHTEN:
                               if (goodModels[iModel]) {
@@ -3003,8 +3011,7 @@ clp watson.mps -\nscaling off\nprimalsimplex"
 #endif
      return 0;
 }
-#if COIN_BIG_INDEX==0
-static void breakdown(const char * name, int numberLook, const double * region)
+static void breakdown(const char * name, CoinBigIndex numberLook, const double * region)
 {
      double range[] = {
           -COIN_DBL_MAX,
@@ -3050,7 +3057,6 @@ static void breakdown(const char * name, int numberLook, const double * region)
      delete [] number;
      delete [] numberExact;
 }
-#endif
 void sortOnOther(int * column,
                  const CoinBigIndex * rowStart,
                  int * order,
@@ -3092,7 +3098,6 @@ void sortOnOther(int * column,
           first = kRow;
      }
 }
-#if COIN_BIG_INDEX==0
 static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 {
      int numberColumns = originalModel->numberColumns();
@@ -3200,15 +3205,16 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 		    numberSort-iLast,last);
 	     if (saveModel) {
 	       int spaceNeeded=numberSort+numberDifferentObj;
-	       int * columnAdd = new int[spaceNeeded+numberDifferentObj+1];
+	       int * columnAdd = new int[spaceNeeded];
+	       CoinBigIndex * startAdd = new CoinBigIndex[numberDifferentObj+1];
 	       double * elementAdd = new double[spaceNeeded];
-	       int * rowAdd = new int[2*numberDifferentObj+1];
-	       int * newIsInteger = rowAdd+numberDifferentObj+1;
+	       CoinBigIndex * rowAdd = new CoinBigIndex[2*numberDifferentObj+1];
+	       int * newIsInteger = reinterpret_cast<int *>(rowAdd+numberDifferentObj+1);
 	       double * objectiveNew = new double[3*numberDifferentObj];
 	       double * lowerNew = objectiveNew+numberDifferentObj;
 	       double * upperNew = lowerNew+numberDifferentObj;
-	       memset(columnAdd+spaceNeeded,0,
-		      (numberDifferentObj+1)*sizeof(int));
+	       memset(startAdd,0,
+		      (numberDifferentObj+1)*sizeof(CoinBigIndex));
 	       ClpSimplex tempModel=*model;
 	       int iLast=0;
 	       double last=obj[0];
@@ -3268,7 +3274,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	       // add columns
 	       tempModel.addColumns(numberDifferentObj, lowerNew, upperNew,
 				    objectiveNew,
-				    columnAdd+spaceNeeded, NULL, NULL);
+				    startAdd, NULL, NULL);
 	       // add constraints and make integer if all integer in group
 	       for (int iObj=0; iObj < numberDifferentObj; iObj++) {
 		 lowerNew[iObj]=0.0;
@@ -3279,6 +3285,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	       tempModel.addRows(numberDifferentObj, lowerNew, upperNew,
 				 rowAdd,columnAdd,elementAdd);
 	       delete [] columnAdd;
+	       delete [] startAdd;
 	       delete [] elementAdd;
 	       delete [] rowAdd;
 	       delete [] objectiveNew;
@@ -3550,7 +3557,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
        const CoinBigIndex * columnStart = columnCopy.getVectorStarts();
        const double * element = columnCopy.getElements();
        const double * elementByRow = rowCopy.getElements();
-       const int * rowStart = rowCopy.getVectorStarts();
+       const CoinBigIndex * rowStart = rowCopy.getVectorStarts();
        const int * column = rowCopy.getIndices();
        int nPossibleZeroCost=0;
        int nPossibleNonzeroCost=0;
@@ -3575,7 +3582,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
 	 if (length==1) {
 	   int iRow=row[columnStart[iColumn]];
 	   double value=COIN_DBL_MAX;
-	   for (int i=rowStart[iRow];i<rowStart[iRow]+rowLength[iRow];i++) {
+	   for (CoinBigIndex i=rowStart[iRow];i<rowStart[iRow]+rowLength[iRow];i++) {
 	     int jColumn=column[i];
 	     if (jColumn!=iColumn) {
 	       if (value!=elementByRow[i]) {
@@ -3953,7 +3960,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
           double randomLower = CoinDrand48();
           double randomUpper = CoinDrand48();
           double randomInteger = CoinDrand48();
-          int * startAdd = new int[numberRows+1];
+          CoinBigIndex * startAdd = new CoinBigIndex[numberRows+1];
           int * columnAdd = new int [2*numberElements];
           double * elementAdd = new double[2*numberElements];
           int nAddRows = 0;
@@ -4293,7 +4300,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
                                         if (mapRow[iRow] == iRow) {
                                              for (CoinBigIndex i = start; i < start + length; i++) {
                                                   int jColumn = column[i];
-                                                  backColumn2[jColumn] = i - start;
+                                                  backColumn2[jColumn] = static_cast<int>(i - start);
                                              }
                                              for (CoinBigIndex i = start; i < start + length; i++) {
                                                   int jColumn = column[i];
@@ -4475,7 +4482,6 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model)
        breakdown("Integer objective", n, obj);
      }
 }
-#endif
 static bool maskMatches(const int * starts, char ** masks,
                         std::string & check)
 {

@@ -406,7 +406,6 @@ ClpModel::loadProblem (
                              value, index, start, length);
      matrix_ = new ClpPackedMatrix(matrix);
 }
-#if COIN_BIG_INDEX==0
 #ifndef SLIM_NOIO
 // This loads a model from a coinModel object - returns number of errors
 int
@@ -504,7 +503,6 @@ ClpModel::loadProblem (  CoinModel & modelObject, bool tryPlusMinusOne)
      matrix_->setDimensions(numberRows_, numberColumns_);
      return numberErrors;
 }
-#endif
 #endif
 void
 ClpModel::getRowBound(int iRow, double& lower, double& upper) const
@@ -2118,7 +2116,6 @@ ClpModel::addRows(const CoinBuild & buildObject, bool tryPlusMinusOne, bool chec
      return numberErrors;
 }
 #endif
-#if COIN_BIG_INDEX==0
 #ifndef SLIM_NOIO
 // Add rows from a model object
 int
@@ -2249,7 +2246,6 @@ ClpModel::addRows( CoinModel & modelObject, bool tryPlusMinusOne, bool checkDupl
           return -1;
      }
 }
-#endif
 #endif
 // Add one column
 void
@@ -2571,7 +2567,6 @@ ClpModel::addColumns(const CoinBuild & buildObject, bool tryPlusMinusOne, bool c
 }
 #endif
 #ifndef SLIM_NOIO
-#if COIN_BIG_INDEX==0
 // Add columns from a model object
 int
 ClpModel::addColumns( CoinModel & modelObject, bool tryPlusMinusOne, bool checkDuplicates)
@@ -2694,7 +2689,6 @@ ClpModel::addColumns( CoinModel & modelObject, bool tryPlusMinusOne, bool checkD
           return -1;
      }
 }
-#endif
 #endif
 // chgRowLower
 void
@@ -4091,7 +4085,6 @@ ClpModel::setSpecialOptions(unsigned int value)
 }
 /* This creates a coinModel object
  */
-#if COIN_BIG_INDEX==0
 CoinModel *
 ClpModel::createCoinModel() const
 {
@@ -4191,15 +4184,6 @@ ClpModel::createCoinModel() const
      }
      return coinModel;
 }
-#else
-CoinModel *
-ClpModel::createCoinModel() const
-{
-  fprintf(stderr,"createCoinModel not available with COIN_BIG_INDEX\n");
-  abort();
-  return NULL;
-}
-#endif
 // Start or reset using maximumRows_ and Columns_
 void
 ClpModel::startPermanentArrays()

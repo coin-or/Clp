@@ -185,7 +185,7 @@ public:
           return lastDynamic_;
      }
      /// size of working matrix (max)
-     inline int numberElements() const {
+     inline CoinBigIndex numberElements() const {
           return numberElements_;
      }
      /// Status region for gub slacks
