@@ -370,22 +370,11 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                            info.numberRows, info.numberColumns, info.numberElements);
                 if (!coinModelStart.model) {
 		  // linear
-#if COIN_BIG_INDEX==0
-                    models->loadProblem(info.numberColumns, info.numberRows, info.starts,
+		  models->loadProblem(info.numberColumns, info.numberRows,
+				      reinterpret_cast<const CoinBigIndex *>(info.starts),
                                         info.rows, info.elements,
                                         info.columnLower, info.columnUpper, info.objective,
                                         info.rowLower, info.rowUpper);
-#else
-		    int numberColumns=info.numberColumns;
-		    CoinBigIndex * starts = new CoinBigIndex[numberColumns+1];
-		    for (int i=0;i<numberColumns+1;i++)
-		      starts[i]=info.starts[i];
-                    models->loadProblem(info.numberColumns, info.numberRows, starts,
-                                        info.rows, info.elements,
-                                        info.columnLower, info.columnUpper, info.objective,
-                                        info.rowLower, info.rowUpper);
-		    delete [] starts;
-#endif
 		} else {
 		  // QP
 		  models->loadProblem(*(coinModelStart.model));
