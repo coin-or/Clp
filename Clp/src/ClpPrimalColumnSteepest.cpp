@@ -3372,12 +3372,22 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model, int mode)
 #endif
                } else {
                     // Just clean up
-                    if (alternateWeights_)
-                         alternateWeights_->clear();
+		    /* If this happens when alternateWeights_ is
+		       in "save" mode then alternateWeights_->clear() 
+		       is disastrous.
+		       As will be fairly dense anyway and this
+		       rarely happens just zero out */
+		    if (alternateWeights_ &&
+			alternateWeights_->getNumElements()) {
+		      //alternateWeights_->clear();
+		      CoinZeroN(alternateWeights_->denseVector(),
+				alternateWeights_->capacity());
+		      alternateWeights_->setNumElements(0);
+		    }
                }
           }
           // Save size of factorization
-          if (!model->factorization()->pivots())
+          if (!model_->factorization()->pivots())
                sizeFactorization_ = model_->factorization()->numberElements();
           if(!doInfeasibilities)
                return; // don't disturb infeasibilities
