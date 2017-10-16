@@ -810,6 +810,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 {
      int dummy; // for use in generalExpanded
      int saveFirstFree = firstFree_;
+     double saveOriginalWeight = infeasibilityCost_;
      // number of pivots done
      int numberPivots = factorization_->pivots();
      if (type == 2) {
@@ -1355,10 +1356,13 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     infeasibilityCost_ = saveWeight;
                     nonLinearCost_->checkInfeasibilities(primalTolerance_);
                } else {
+#ifndef MAX_INFEASIBILITY_COST
+#define MAX_INFEASIBILITY_COST 1.0e18
+#endif
 		    infeasibilityCost_ = 1.0e30;
                     gutsOfSolution(NULL, NULL, ifValuesPass != 0 && firstFree_>=0);
-                    infeasibilityCost_ = saveWeight;
-                    if ((infeasibilityCost_ >= 1.0e18 ||
+                    infeasibilityCost_ = CoinMax(saveWeight,saveOriginalWeight);
+                    if ((infeasibilityCost_ >= MAX_INFEASIBILITY_COST ||
                               numberDualInfeasibilities_ == 0) && perturbation_ == 101) {
                          goToDual = unPerturb(); // stop any further perturbation
                          if (nonLinearCost_->sumInfeasibilities() > 1.0e-1)
@@ -1372,7 +1376,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          factorization_->pivotTolerance(CoinMax(0.9, factorization_->pivotTolerance()));
                     }
                     if (!goToDual) {
-                         if (infeasibilityCost_ >= 1.0e20 ||
+                         if (infeasibilityCost_ >= MAX_INFEASIBILITY_COST ||
                                    numberDualInfeasibilities_ == 0) {
                               // we are infeasible - use as ray
                               delete [] ray_;
@@ -1395,8 +1399,31 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                               numberPrimalInfeasibilities_ =
                                    nonLinearCost_->numberInfeasibilities();
                          }
-                         if (infeasibilityCost_ < 1.0e20) {
+                         if (infeasibilityCost_ < MAX_INFEASIBILITY_COST) {
+			   double testValue = MAX_INFEASIBILITY_COST;
+			   if (testValue == 1.0e18) {
+			     // Check it is not just noise
+			     const double * obj = objective();
+			     double largestCost=0.0;
+			     if (columnScale_) {
+			       for (int i=0; i<numberColumns_;i++) {
+				 largestCost =
+				   CoinMax(largestCost,fabs(obj[i]*columnScale_[i]));
+			       }
+			     } else {
+			       for (int i=0; i<numberColumns_;i++) {
+				 largestCost =
+				   CoinMax(largestCost,fabs(obj[i]));
+			       }
+			     }
+			     testValue = 1.0e12*(largestCost+1.0e-6);
+			     testValue =
+			       CoinMin(testValue,MAX_INFEASIBILITY_COST);
+			   }
+			   if (infeasibilityCost_<testValue) {
                               infeasibilityCost_ *= 5.0;
+			      //if (infeasibilityCost_>1.0e16)
+			      //infeasibilityCost_=
                               // reset looping criterion
                               progress->reset();
                               changeMade_++; // say change made
@@ -1409,6 +1436,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                               gutsOfSolution(NULL, NULL, ifValuesPass != 0);
                               problemStatus_ = -1; //continue
                               goToDual = false;
+			   } else {
+			     // say infeasible
+			     problemStatus_ = 1;
+			   }
                          } else {
                               // say infeasible
                               problemStatus_ = 1;
@@ -1512,7 +1543,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           // see if looks unbounded
           if (problemStatus_ == -5) {
                if (nonLinearCost_->numberInfeasibilities()) {
-                    if (infeasibilityCost_ > 1.0e18 && perturbation_ == 101) {
+                    if (infeasibilityCost_ >= MAX_INFEASIBILITY_COST && perturbation_ == 101) {
                          // back off weight
                          infeasibilityCost_ = 1.0e13;
                          // reset looping criterion
@@ -1520,7 +1551,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          unPerturb(); // stop any further perturbation
                     }
                     //we need infeasiblity cost changed
-                    if (infeasibilityCost_ < 1.0e20) {
+                    if (infeasibilityCost_ < MAX_INFEASIBILITY_COST) {
                          infeasibilityCost_ *= 5.0;
                          // reset looping criterion
                          progress->reset();
@@ -1641,6 +1672,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                factorization_->sparseThreshold(0);
                factorization_->goSparse();
           }
+     }
+     if (problemStatus_==1) {
+       // compute true objective value
+       computeObjectiveValue(true);
      }
      // Allow matrices to be sorted etc
      int fake = -999; // signal sort
