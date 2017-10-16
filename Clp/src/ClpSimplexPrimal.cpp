@@ -1426,6 +1426,27 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                                    nonLinearCost_->numberInfeasibilities();
                          }
                          if (infeasibilityCost_ < MAX_INFEASIBILITY_COST) {
+			   double testValue = MAX_INFEASIBILITY_COST;
+			   if (testValue == 1.0e18) {
+			     // Check it is not just noise
+			     const double * obj = objective();
+			     double largestCost=0.0;
+			     if (columnScale_) {
+			       for (int i=0; i<numberColumns_;i++) {
+				 largestCost =
+				   CoinMax(largestCost,fabs(obj[i]*columnScale_[i]));
+			       }
+			     } else {
+			       for (int i=0; i<numberColumns_;i++) {
+				 largestCost =
+				   CoinMax(largestCost,fabs(obj[i]));
+			       }
+			     }
+			     testValue = 1.0e12*(largestCost+1.0e-6);
+			     testValue =
+			       CoinMin(testValue,MAX_INFEASIBILITY_COST);
+			   }
+			   if (infeasibilityCost_<testValue) {
                               infeasibilityCost_ *= 5.0;
                               // reset looping criterion
                               progress->reset();
@@ -1439,6 +1460,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                               gutsOfSolution(NULL, NULL, ifValuesPass != 0);
                               problemStatus_ = -1; //continue
                               goToDual = false;
+			   } else {
+			     // say infeasible
+			     problemStatus_ = 1;
+			   }
                          } else {
                               // say infeasible
                               problemStatus_ = 1;
@@ -1551,8 +1576,8 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     }
                     //we need infeasiblity cost changed
                     if (infeasibilityCost_ < MAX_INFEASIBILITY_COST) {
-                         infeasibilityCost_ *= 5.0;
-                         // reset looping criterion
+			infeasibilityCost_ *= 5.0;
+			// reset looping criterion
                          progress->reset();
                          changeMade_++; // say change made
                          handler_->message(CLP_PRIMAL_WEIGHT, messages_)
@@ -1671,6 +1696,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                factorization_->sparseThreshold(0);
                factorization_->goSparse();
           }
+     }
+     if (problemStatus_==1) {
+       // compute true objective value
+       computeObjectiveValue(true);
      }
      // Allow matrices to be sorted etc
      int fake = -999; // signal sort
