@@ -4215,8 +4215,8 @@ ClpSimplexProgress::looping()
                          iSequence = in_[CLP_CYCLE-1];
                     } else {
                          // primal
-                         if (model_->infeasibilityCost() > 1.0e14)
-                              model_->setInfeasibilityCost(1.0e14);
+                         //if (model_->infeasibilityCost() > 1.0e14)
+		      //   model_->setInfeasibilityCost(1.0e14);
                          iSequence = out_[CLP_CYCLE-1];
                     }
                     if (iSequence >= 0) {
