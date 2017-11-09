@@ -498,9 +498,9 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
 	  if (sumPrimalInfeasibilities_>1.0e5 &&
 	      sumPrimalInfeasibilities_>1.0e5*smallestPrimalInfeasibility &&
 	      (moreSpecialOptions_&256)==0 && 
-	      progress_.lastObjective(0)<-1.0e10 &&
-	      progress_.lastObjective(1)>-1.0e5) {
-	    // problems - try dual
+	      ((progress_.lastObjective(0)<-1.0e10 &&
+		progress_.lastObjective(1)>-1.0e5)||sumPrimalInfeasibilities_>1.0e10*smallestPrimalInfeasibility)) {
+	    // problems - try primal
 	    problemStatus_=10;
 	    // mark as large infeasibility cost wanted
 	    sumPrimalInfeasibilities_ = -123456789.0;
@@ -649,7 +649,7 @@ ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
                secondaryStatus_ = 1;
           }
      }
-     // If infeasible but primal errors - try dual
+     // If infeasible but primal errors - try primal
      if (problemStatus_==1 && numberPrimalInfeasibilities_) {
        bool inCbcOrOther = (specialOptions_ & 0x03000000) != 0;
        double factor = (!inCbcOrOther) ? 1.0 : 0.3;
@@ -4993,14 +4993,32 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
           // get correct bounds on all variables
           resetFakeBounds(1);
           // need to reject something
-          char x = isColumn(sequenceOut_) ? 'C' : 'R';
+	  int rejectedVariable=sequenceOut_;
+	  if (flagged(rejectedVariable)) {
+	    rejectedVariable=-1;
+	    for (int i=0;i<numberRows_;i++) {
+	      int iSequence=pivotVariable_[i];
+	      if (!flagged(iSequence)) {
+		rejectedVariable=iSequence;
+		break;
+	      }
+	    }
+	    if (rejectedVariable<0) {
+	      if (handler_->logLevel()>1)
+		printf("real trouble at line %d of ClpSimplexDual\n",
+		       __LINE__);
+	      problemStatus_=10;
+	      return;
+	    }
+	  }
+          char x = isColumn(rejectedVariable) ? 'C' : 'R';
           handler_->message(CLP_SIMPLEX_FLAG, messages_)
-                    << x << sequenceWithin(sequenceOut_)
+                    << x << sequenceWithin(rejectedVariable)
                     << CoinMessageEol;
 #ifdef COIN_DEVELOP
           printf("flag e\n");
 #endif
-          setFlagged(sequenceOut_);
+          setFlagged(rejectedVariable);
           progress_.clearBadTimes();
 
           // Go to safer

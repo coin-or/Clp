@@ -607,6 +607,7 @@ ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector * updates,
 	     iSequence = index[i];
 	     double value = infeas[iSequence];
 	     double weight = weights_[iSequence];
+	     assert (weight);
 	     if (value > tolerance) {
 	       //weight=1.0;
 	       if (value > bestDj * weight) {
