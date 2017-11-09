@@ -6795,6 +6795,8 @@ OsiClpSolverInterface::setColumnStatus(int iColumn, ClpSimplex::Status status)
       basis_.setStructStatus(iColumn,CoinWarmStartBasis::atLowerBound);
       break;
     case ClpSimplex::superBasic:
+      basis_.setStructStatus(iColumn,CoinWarmStartBasis::superBasic);
+      break;
     case ClpSimplex::isFree:
       basis_.setStructStatus(iColumn,CoinWarmStartBasis::isFree);
       break;
