@@ -499,7 +499,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
 	      sumPrimalInfeasibilities_>1.0e5*smallestPrimalInfeasibility &&
 	      (moreSpecialOptions_&256)==0 && 
 	      ((progress_.lastObjective(0)<-1.0e10 &&
-		progress_.lastObjective(1)>-1.0e5)||sumPrimalInfeasibilities_>1.0e10*smallestPrimalInfeasibility)) {
+		progress_.lastObjective(1)>-1.0e5))) {
 	    // problems - try primal
 	    problemStatus_=10;
 	    // mark as large infeasibility cost wanted

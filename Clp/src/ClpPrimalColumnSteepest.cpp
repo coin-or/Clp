@@ -3887,6 +3887,10 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
                }
           }
      }
+     if (devex_<1.001e-30) {
+       COIN_DETAIL_PRINT(printf("devex of incoming tiny %d %g\n",sequenceIn,devex_));
+       devex_=1.0e-30;
+     }
      double oldDevex = weights_[sequenceIn];
 #ifdef CLP_DEBUG
      if ((model_->messageHandler()->logLevel() & 32))
@@ -3923,7 +3927,12 @@ ClpPrimalColumnSteepest::updateWeights(CoinIndexedVector * input)
      }
      if (pivotRow >= 0) {
           // set outgoing weight here
-          weights_[model_->sequenceOut()] = devex_ / (model_->alpha() * model_->alpha());
+       double alpha = model_->alpha();
+       if (fabs(alpha)>1.0e15) {
+	 COIN_DETAIL_PRINT(printf("alpha %g for %d !!\n",alpha,model_->sequenceOut()));
+	 alpha = 1.0e15;
+       }
+       weights_[model_->sequenceOut()] = devex_ / (alpha*alpha);
      }
 }
 // Checks accuracy - just for debug
