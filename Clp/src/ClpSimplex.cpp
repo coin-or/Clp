@@ -9004,7 +9004,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
                                         }
                                    }
                                    if (!numberBasic) {
-                                        allSlackBasis(true);
+                                        allSlackBasis(ifValuesPass==0);
                                         numberThrownOut = 1; // force another go
                                    } else {
                                         CoinSort_2(array, array + numberThrownOut, sort);

@@ -1682,8 +1682,12 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
      }
      // make sure first free monotonic
      if (firstFree_ >= 0 && saveFirstFree >= 0) {
-          firstFree_ = (numberIterations_) ? saveFirstFree : -1;
-          nextSuperBasic(1, NULL);
+       if (numberIterations_) {
+	 firstFree_=saveFirstFree;
+       } else {
+	 firstFree_ = -1;
+	 nextSuperBasic(1, NULL);
+       }
      }
      if (doFactorization) {
           // restore weights (if saved) - also recompute infeasibility list

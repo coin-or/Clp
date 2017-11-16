@@ -1022,10 +1022,8 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                                              solveOptions.setSpecialOption(1, 2, doIdiot);
                                    } else {
                                         method = ClpSolve::useBarrier;
-#ifdef ABC_INHERIT
                                         if (doIdiot > 0) 
                                              solveOptions.setSpecialOption(1, 2, doIdiot); // dense threshold
-#endif
                                         if (crossover == 1) {
                                              method = ClpSolve::useBarrierNoCross;
                                         } else if (crossover == 2) {
