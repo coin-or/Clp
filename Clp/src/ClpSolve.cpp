@@ -3050,7 +3050,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
 #ifdef UFL_BARRIER
           case 4:
                if (!doKKT) {
-                    ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
+                    ClpCholeskyUfl * cholesky = new ClpCholeskyUfl(options.getExtraInfo(1));
                     barrier.setCholesky(cholesky);
                } else {
                     ClpCholeskyUfl * cholesky = new ClpCholeskyUfl();
@@ -3464,7 +3464,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
                                    // just dual values pass
                                    //model2->setLogLevel(63);
                                    //model2->setFactorizationFrequency(1);
-                                   model2->dual(2);
+				   if (!gap)
+				     model2->dual(2);
                                    CoinMemcpyN(saveCost, numberColumns, cost);
                                    delete [] saveCost;
                                    CoinMemcpyN(saveLower, numberColumns, lower);
