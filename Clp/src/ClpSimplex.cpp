@@ -4575,7 +4575,7 @@ ClpSimplex::deleteRim(int getRidOfFactorizationData)
        dblParam_[ClpDualTolerance]=dualTolerance_;
      }
      // ray may be null if in branch and bound
-     if (rowScale_) {
+     if (rowScale_ && solution_) {
           // Collect infeasibilities
           int numberPrimalScaled = 0;
           int numberPrimalUnscaled = 0;
