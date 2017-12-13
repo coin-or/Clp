@@ -499,7 +499,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
 	      sumPrimalInfeasibilities_>1.0e5*smallestPrimalInfeasibility &&
 	      (moreSpecialOptions_&256)==0 && 
 	      ((progress_.lastObjective(0)<-1.0e10 &&
-		progress_.lastObjective(1)>-1.0e5))) {
+-		progress_.lastObjective(1)>-1.0e5)||sumPrimalInfeasibilities_>1.0e10*smallestPrimalInfeasibility)) {
 	    // problems - try primal
 	    problemStatus_=10;
 	    // mark as large infeasibility cost wanted
@@ -1923,6 +1923,9 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                          }
                          // If we have just factorized and infeasibility reasonable say infeas
                          double dualTest = ((specialOptions_ & 4096) != 0) ? 1.0e8 : 1.0e13;
+			 // but if none at fake bounds
+			 if (!checkFakeBounds())
+			   dualTest=0.0;
                          if (((specialOptions_ & 4096) != 0 || bestPossiblePivot < 1.0e-11) && dualBound_ > dualTest) {
                               double testValue = 1.0e-4;
                               if (!factorization_->pivots() && numberPrimalInfeasibilities_ == 1)
@@ -3370,6 +3373,32 @@ ClpSimplexDual::changeBounds(int initialize,
           }
           return 0;
      }
+}
+// Just checks if any fake bounds active - if so returns number
+int
+ClpSimplexDual::checkFakeBounds() const
+{
+  int numberActive = 0;
+  for (int iSequence = 0; iSequence < numberRows_ + numberColumns_; iSequence++) {
+    switch(getStatus(iSequence)) {
+      
+    case basic:
+    case ClpSimplex::isFixed:
+      break;
+    case isFree:
+    case superBasic:
+      break;
+    case atUpperBound:
+	if ((getFakeBound(iSequence)&2)!=0)
+	  numberActive++;
+      break;
+    case atLowerBound:
+      if ((getFakeBound(iSequence)&1)!=0)
+	numberActive++;
+      break;
+    }
+  }
+  return numberActive;
 }
 #if ABOCA_LITE
 /* Meat of transposeTimes by column when not scaled and skipping
@@ -7122,7 +7151,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
      int returnCode = 0;
 
      int iRow, iColumn;
-     int maxPass = maximumIterations();
+     int maxPass = maximumIterations()/10;
      while (problemStatus_ < 0) {
           // clear
           for (iRow = 0; iRow < 4; iRow++) {
@@ -7162,6 +7191,9 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
 
           // Say good factorization
           factorType = 1;
+	  // but if large errors - probably not very useful
+	  if (maxPass>0&&(largestDualError_>0.001||largestPrimalError_>0.001))
+	    maxPass=-5;
           maxPass--;
           if (maxPass < -10) {
                // odd

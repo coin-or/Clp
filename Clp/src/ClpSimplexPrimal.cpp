@@ -1443,6 +1443,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 			       }
 			     }
 			     testValue = 1.0e12*(largestCost+1.0e-6);
+			     if (numberDualInfeasibilities_) {
+			       double average = sumDualInfeasibilities_/numberDualInfeasibilities_;
+			       testValue = CoinMax(testValue,average);
+			     }
 			     testValue =
 			       CoinMin(testValue,MAX_INFEASIBILITY_COST);
 			   }
@@ -1557,10 +1561,22 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          }
                     }
                } else {
-                    if (alwaysOptimal || !sumOfRelaxedPrimalInfeasibilities_)
-                         problemStatus_ = 0; // optimal
-                    else
-                         problemStatus_ = 1; // infeasible
+		 /* Previous code here mostly works but
+		    sumOfRelaxed is rubbish in primal 
+		 - so give benefit of doubt still */
+		 double error = CoinMin(1.0e-4, largestPrimalError_);
+		 // allow bigger tolerance than standard
+		 double saveTolerance = primalTolerance_;
+		 primalTolerance_ = 2.0*primalTolerance_ + error;
+		 nonLinearCost_->checkInfeasibilities(primalTolerance_);
+		 double relaxedSum = nonLinearCost_->sumInfeasibilities();
+		 // back
+		 primalTolerance_=saveTolerance;
+		 nonLinearCost_->checkInfeasibilities(primalTolerance_);
+		 if (alwaysOptimal || !relaxedSum)
+		   problemStatus_ = 0; // optimal
+		 else
+		   problemStatus_ = 1; // infeasible
                }
           }
      } else {

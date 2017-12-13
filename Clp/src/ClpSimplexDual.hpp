@@ -245,6 +245,8 @@ public:
      */
      int changeBounds(int initialize, CoinIndexedVector * outputArray,
                       double & changeCost);
+     /// Just checks if any fake bounds active - if so returns number
+     int checkFakeBounds() const;
      /** As changeBounds but just changes new bounds for a single variable.
          Returns true if change */
      bool changeBound( int iSequence);
