@@ -10851,6 +10851,14 @@ ClpSimplex::fathom(void * stuff)
                }
                if (returnCode) {
                     bool fixBounds = (info->nNodes_ >= 0) ? true : false;
+		    double * save = NULL;
+		    if (fixBounds) {
+		      save = new double [2*numberColumns_];
+		      memcpy(save,columnLower_,
+			     numberColumns_*sizeof(double));
+		      memcpy(save+numberColumns_,columnUpper_,
+			     numberColumns_*sizeof(double));
+		    }
                     //check this does everything
                     static_cast<ClpSimplexOther *> (this)->afterCrunch(*small,
                               whichRow, whichColumn, nBound);
@@ -10870,6 +10878,16 @@ ClpSimplex::fathom(void * stuff)
                               }
                          }
                     }
+		    if (fixBounds) {
+		      if (badSolution) {
+			// put back bounds
+			memcpy(columnLower_,save,
+			       numberColumns_*sizeof(double));
+			memcpy(columnUpper_,save+numberColumns_,
+			       numberColumns_*sizeof(double));
+		      }
+		      delete [] save;
+		    }
                     if (badSolution) {
                          info->nNodes_ = -1;
                          returnCode = 0;
@@ -11078,7 +11096,8 @@ ClpSimplex::fathom(void * stuff)
 #endif
           // Get fake bounds correctly
           (static_cast<ClpSimplexDual *>(this))->changeBounds(3, NULL, dummyChange);
-          int statusWeights = fastDual2(info);
+          //int statusWeights =
+	  fastDual2(info);
 #if 0
 	  if (statusWeights==100)
 	    printf("weights ok\n");
