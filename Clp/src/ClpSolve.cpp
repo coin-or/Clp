@@ -3793,7 +3793,14 @@ ClpSimplex::initialSolve(ClpSolve & options)
 	  int oldStatus=problemStatus_;
 	  setProblemStatus(finalStatus);
 	  setSecondaryStatus(finalSecondaryStatus);
+	  /* Code modified so rcode -1 as normal, >0 clean up, 0 say optimal */
 	  int rcode=eventHandler()->event(ClpEventHandler::presolveAfterFirstSolve);
+	  //#define TREAT_AS_OPTIMAL_TOLERANCE 1.0e-4
+#ifdef TREAT_AS_OPTIMAL_TOLERANCE
+	  if (rcode == -1 && sumPrimalInfeasibilities_ < TREAT_AS_OPTIMAL_TOLERANCE &&
+	      sumDualInfeasibilities_ < TREAT_AS_OPTIMAL_TOLERANCE)
+	    rcode=0;
+#endif
           if (finalStatus != 3 && rcode < 0 && (finalStatus || oldStatus == -1)) {
 	       double sumPrimal=sumPrimalInfeasibilities_;
 	       double sumDual=sumDualInfeasibilities_;
@@ -3857,7 +3864,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                          << "Cleanup" << time2 - timeX << time2 - time1
                          << CoinMessageEol;
                timeX = time2;
-          } else if (rcode >= 0) {
+          } else if (rcode > 0) { // was >= 0
 #ifdef ABC_INHERIT
 	    dealWithAbc(1,2,true);
 #else
