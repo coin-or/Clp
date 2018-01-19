@@ -5686,21 +5686,24 @@ OsiClpSolverInterface::readMps(const char *filename,
     loadProblem(*m.getMatrixByCol(),m.getColLower(),m.getColUpper(),
 		m.getObjCoefficients(),m.getRowSense(),m.getRightHandSide(),
 		m.getRowRange());
-    const char * integer = m.integerColumns();
+    char * integer = const_cast<char *>(m.integerColumns());
     int nCols=m.getNumCols();
     int nRows=m.getNumRows();
     if (integer) {
-      int i,n=0;
-      int * index = new int [nCols];
+      int i;
+      if (!integerInformation_) {
+	integerInformation_ = new char[modelPtr_->numberColumns()];
+	CoinFillN ( integerInformation_, modelPtr_->numberColumns(),static_cast<char> (0));
+      }
       for (i=0;i<nCols;i++) {
-	if (integer[i]) {
-	  index[n++]=i;
+	integerInformation_[i]=integer[i];
+	if (integer[i]==1||integer[i]==3) {
+	  modelPtr_->setInteger(i);
+	} else {
+	  integer[i]=0;
         }
       }
-      setInteger(index,n);
-      delete [] index;
-      if (n) 
-        modelPtr_->copyInIntegerInformation(integer);
+      modelPtr_->copyInIntegerInformation(integer);
     }
 
     // set objective name
@@ -5801,20 +5804,23 @@ OsiClpSolverInterface::readMps(const char *filename,bool keepNames,bool allowErr
       delete [] column;
       delete [] element;
     }
-    const char * integer = m.integerColumns();
+    char * integer = const_cast<char *>(m.integerColumns());
     int nRows=m.getNumRows();
     if (integer) {
-      int i,n=0;
-      int * index = new int [nCols];
+      int i;
+      if (!integerInformation_) {
+	integerInformation_ = new char[modelPtr_->numberColumns()];
+	CoinFillN ( integerInformation_, modelPtr_->numberColumns(),static_cast<char> (0));
+      }
       for (i=0;i<nCols;i++) {
-	if (integer[i]) {
-	  index[n++]=i;
+	integerInformation_[i]=integer[i];
+	if (integer[i]==1||integer[i]==3) {
+	  modelPtr_->setInteger(i);
+	} else {
+	  integer[i]=0;
         }
       }
-      setInteger(index,n);
-      delete [] index;
-      if (n) 
-        modelPtr_->copyInIntegerInformation(integer);
+      modelPtr_->copyInIntegerInformation(integer);
     }
     if (keepNames) {
       // keep names
@@ -5867,19 +5873,24 @@ OsiClpSolverInterface::readLp(const char *filename, const double epsilon )
   loadProblem(*m.getMatrixByRow(), m.getColLower(), m.getColUpper(),
 	      m.getObjCoefficients(), m.getRowLower(), m.getRowUpper());
 
-  const char *integer = m.integerColumns();
+  char *integer = const_cast<char *>(m.integerColumns());
   int nCols = m.getNumCols();
   int nRows = m.getNumRows();
   if (integer) {
-    int i, n = 0;
-    int *index = new int [nCols];
-    for (i=0; i<nCols; i++) {
-      if (integer[i]) {
-	index[n++] = i;
+      int i;
+      if (!integerInformation_) {
+	integerInformation_ = new char[modelPtr_->numberColumns()];
+	CoinFillN ( integerInformation_, modelPtr_->numberColumns(),static_cast<char> (0));
       }
-    }
-    setInteger(index,n);
-    delete [] index;
+      for (i=0;i<nCols;i++) {
+	integerInformation_[i]=integer[i];
+	if (integer[i]==1||integer[i]==3) {
+	  modelPtr_->setInteger(i);
+	} else {
+	  integer[i]=0;
+        }
+      }
+      modelPtr_->copyInIntegerInformation(integer);
   }
   // Always keep names
   int nameDiscipline;
@@ -5959,7 +5970,8 @@ OsiClpSolverInterface::writeLp(FILE * fp,
   // get names
   const char * const * const rowNames = modelPtr_->rowNamesAsChar();
   const char * const * const columnNames = modelPtr_->columnNamesAsChar();
-  if (!numberSOS_) {
+  // check if odd integers
+  if (!numberSOS_ && (specialOptions_&8388608)==0) {
     // Fall back on Osi version - possibly with names
     OsiSolverInterface::writeLpNative(fp,
 				      rowNames,columnNames, epsilon, numberAcross,
@@ -5971,8 +5983,8 @@ OsiClpSolverInterface::writeLp(FILE * fp,
    bool hasInteger = false;
 
    for (int i=0; i<numcols; i++) {
-     if (isInteger(i)) {
-       integrality[i] = 1;
+     if (integerType(i)) {
+       integrality[i] = integerType(i);
        hasInteger = true;
      } else {
        integrality[i] = 0;

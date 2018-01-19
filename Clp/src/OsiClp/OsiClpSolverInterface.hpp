@@ -481,6 +481,12 @@ public:
   /// Return true only if integer and not optional
   inline bool isHeuristicInteger(int colIndex) const
   { return ( integerInformation_&& integerInformation_[colIndex]==1 );} 
+  /// Return integer type (0,1,2=optional,3=sc,4=scint)
+  inline int integerType(int colIndex) const
+  { return integerInformation_[colIndex];} 
+  /// Set integer type (0,1,2=optional,3=sc,4=scint)
+  inline void setIntegerType(int colIndex,int value) 
+  { integerInformation_[colIndex] = value;} 
   /// Get pointer to row-wise copy of matrix
   virtual const CoinPackedMatrix * getMatrixByRow() const;
   
@@ -1400,6 +1406,7 @@ protected:
       524288 Fake objective and 0-1
       1048576 Don't recompute ray after crunch
       2097152 
+      8388608 Odd integers e.g. semi-continuous
   */
   mutable unsigned int specialOptions_;
   /// Copy of model when option 131072 set
