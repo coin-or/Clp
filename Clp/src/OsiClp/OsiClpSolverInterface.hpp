@@ -483,7 +483,7 @@ public:
   { return ( integerInformation_&& integerInformation_[colIndex]==1 );} 
   /// Return integer type (0,1,2=optional,3=sc,4=scint)
   inline int integerType(int colIndex) const
-  { return integerInformation_[colIndex];} 
+  { return integerInformation_ ? integerInformation_[colIndex] : 0;} 
   /// Set integer type (0,1,2=optional,3=sc,4=scint)
   inline void setIntegerType(int colIndex,int value) 
   { integerInformation_[colIndex] = value;} 

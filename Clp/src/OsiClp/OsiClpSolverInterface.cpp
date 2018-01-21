@@ -5857,7 +5857,13 @@ OsiClpSolverInterface::readLp(const char *filename, const double epsilon )
   CoinLpIO m;
   m.passInMessageHandler(modelPtr_->messageHandler());
   *m.messagesPointer()=modelPtr_->coinMessages();
-  m.readLp(filename, epsilon);
+  try {
+    m.readLp(filename, epsilon);
+  } catch (CoinError e) {
+    printf("ERROR: %s::%s, %s\n", 
+	   e.className().c_str(), e.methodName().c_str(), e.message().c_str());
+    return -1;
+  }
   freeCachedResults();
 
   // set objective function offest
