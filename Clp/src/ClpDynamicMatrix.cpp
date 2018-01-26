@@ -2354,7 +2354,7 @@ ClpDynamicMatrix::initialProblem()
 	   pivotVariable[i]=i+numberColumns;
        }
      }
-     if (rhsOffset_) {
+     if (rhsOffset_ && model_->costRegion()) {
        double * cost = model_->costRegion();
        double * columnLower = model_->lowerRegion();
        double * columnUpper = model_->upperRegion();
