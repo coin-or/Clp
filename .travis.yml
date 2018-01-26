@@ -9,9 +9,9 @@ matrix:
       addons:
         apt:
           packages:
-            - gfortran
+          - gfortran
     - os: osx
-      osx_image: xcode8.2
+      osx_image: xcode9.2
       env: OSX=10.12
       compiler: clang
     - os: osx
