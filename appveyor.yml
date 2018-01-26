@@ -28,7 +28,7 @@ install:
   - echo %VERSION%
   - IF %ARCH%==win32-msvc9 (CALL C:\"Program Files (x86)\Microsoft Visual Studio 9.0\VC\vcvarsall.bat")
   - IF %ARCH%==win32-msvc14 (CALL C:\"Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat")
-  - IF %ARCH%==win32-msvc15 (CALL C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat")
+  - IF %ARCH%==win32-msvc15 (CALL C:\"Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat")
   - C:\msys64\usr\bin\bash -lc ""
 
 build_script:
