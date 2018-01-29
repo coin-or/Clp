@@ -1835,14 +1835,22 @@ int ClpSimplex::internalFactorize ( int solveType)
                                          columnActivityWork_[iColumn] == upper)) {
                                    // status looks plausible
                               } else {
-                                   // set to sensible
-                                   if (fabs(lower) <= fabs(upper)) {
-                                        setColumnStatus(iColumn, atLowerBound);
-                                        columnActivityWork_[iColumn] = lower;
-                                   } else {
-                                        setColumnStatus(iColumn, atUpperBound);
-                                        columnActivityWork_[iColumn] = upper;
-                                   }
+				// set to sensible
+				if (getColumnStatus(iColumn) == atUpperBound
+				    && upper < 1.0e20) {
+				  columnActivityWork_[iColumn] = upper;
+				} else if (getColumnStatus(iColumn) == atLowerBound
+					   && lower > -1.0e20) {
+				  columnActivityWork_[iColumn] = lower;
+				} else {
+				  if (fabs(lower) <= fabs(upper)) {
+				    setColumnStatus(iColumn, atLowerBound);
+				    columnActivityWork_[iColumn] = lower;
+				  } else {
+				    setColumnStatus(iColumn, atUpperBound);
+				    columnActivityWork_[iColumn] = upper;
+				  }
+				}
                               }
                          } else {
                               setColumnStatus(iColumn, isFree);
