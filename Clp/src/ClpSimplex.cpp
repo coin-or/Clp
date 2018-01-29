@@ -1857,13 +1857,21 @@ int ClpSimplex::internalFactorize ( int solveType)
                                    // status looks plausible
                               } else {
                                    // set to sensible
-                                   if (fabs(lower-value) <= fabs(upper-value)) {
-                                        setColumnStatus(iColumn, atLowerBound);
-                                        columnActivityWork_[iColumn] = lower;
-                                   } else {
-                                        setColumnStatus(iColumn, atUpperBound);
-                                        columnActivityWork_[iColumn] = upper;
-                                   }
+				if (getColumnStatus(iColumn) == atUpperBound
+				    && upper < 1.0e20) {
+				  columnActivityWork_[iColumn] = upper;
+				} else if (getColumnStatus(iColumn) == atLowerBound
+					   && lower > -1.0e20) {
+				  columnActivityWork_[iColumn] = lower;
+				} else {
+				  if (fabs(lower) <= fabs(upper)) {
+				    setColumnStatus(iColumn, atLowerBound);
+				    columnActivityWork_[iColumn] = lower;
+				  } else {
+				    setColumnStatus(iColumn, atUpperBound);
+				    columnActivityWork_[iColumn] = upper;
+				  }
+				}
                               }
                          } else {
                               setColumnStatus(iColumn, isFree);
