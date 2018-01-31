@@ -8,6 +8,8 @@
 
 AUTOMAKE_OPTIONS = foreign
 
+include $(top_srcdir)/BuildTools/Makemain.inc
+
 ########################################################################
 #                         unitTest for OsiClp                          #
 ########################################################################
@@ -19,17 +21,14 @@ noinst_PROGRAMS = osiUnitTest
 osiUnitTest_SOURCES = osiUnitTest.cpp OsiClpSolverInterfaceTest.cpp
 
 osiUnitTest_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
-  $(CLPLIB_LIBS) $(OSICLP_LIBS) $(OSITESTS_LIBS)
-
-osiUnitTest_DEPENDENCIES = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
-  $(CLPLIB_DEPENDENCIES) $(OSICLP_DEPENDENCIES) $(OSITESTS_DEPENDENCIES)
+	$(CLPLIB_LIBS) $(OSICLPLIB_LIBS) $(OSICLPUNITTEST_LIBS)
 
 AM_CPPFLAGS = \
 	-I`$(CYGPATH_W) $(srcdir)/../src` \
 	-I`$(CYGPATH_W) $(srcdir)/../src/OsiClp` \
-	$(COINUTILS_CFLAGS) $(OSI_CFLAGS) $(OSITESTS_CFLAGS)
+	 $(OSICLPLIB_CFLAGS) $(OSICLPUNITTEST_CFLAGS)
 
-testdepend =  osiUnitTest$(EXEEXT)
+testdepend = osiUnitTest$(EXEEXT)
 endif
 
 ########################################################################

@@ -8,9 +8,15 @@
 
 AUTOMAKE_OPTIONS = foreign
 
+include $(top_srcdir)/BuildTools/Makemain.inc
+
 ########################################################################
 #                               libClp                                 #
 ########################################################################
+
+# Let the code know we're building the Clp library.
+
+AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCLP_BUILD
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
@@ -162,15 +168,13 @@ clp_SOURCES = \
 # List all additionally required libraries
 clp_LDADD = libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
 
-# List all dependency libraries (similar to LDADD, but without -l, -L flags)
-clp_DEPENDENCIES = libClp.la $(CLPLIB_DEPENDENCIES)
-
 ########################################################################
 #                            Additional flags                          #
 ########################################################################
 
-# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it is build within Clp
-AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCOIN_HAS_CLP
+# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
+# is built within Clp
+AM_CPPFLAGS += -DCOIN_HAS_CLP
 
 if COIN_HAS_CHOLMOD
 AM_CPPFLAGS += -I`$(CYGPATH_W) $(CHOLMODINCDIR)`
@@ -181,7 +185,7 @@ AM_CPPFLAGS += -I`$(CYGPATH_W) $(AMDINCDIR)`
 endif
 
 # This line is necessary to allow VPATH compilation
-DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)`
+# DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)`
 
 ########################################################################
 #                Headers that need to be installed                     #

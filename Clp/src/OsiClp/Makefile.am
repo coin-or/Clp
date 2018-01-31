@@ -8,6 +8,8 @@
 
 AUTOMAKE_OPTIONS = foreign
 
+include $(top_srcdir)/BuildTools/Makemain.inc
+
 ########################################################################
 #                             libOsiClp                                #
 ########################################################################
@@ -28,10 +30,10 @@ libOsiClp_la_LDFLAGS = $(LT_LDFLAGS)
 
 # Here list all include flags, relative to this "srcdir" directory.  This
 # "cygpath" stuff is necessary to compile with native compilers on Windows.
-AM_CPPFLAGS = -I`$(CYGPATH_W) $(srcdir)/..` $(COINUTILS_CFLAGS) $(OSI_CFLAGS)
+AM_CPPFLAGS = -I`$(CYGPATH_W) $(srcdir)/..` $(OSICLPLIB_CFLAGS)
 
 # This line is necessary to allow VPATH compilation
-DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)` -I..
+# DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)` -I..
 
 ########################################################################
 #                Headers that need to be installed                     #
@@ -39,5 +41,6 @@ DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)` -I..
 
 # Here list all the header files that are required by a user of the library,
 # and that therefore should be installed in 'include/coin'
+
 includecoindir = $(includedir)/coin
 includecoin_HEADERS = OsiClpSolverInterface.hpp
