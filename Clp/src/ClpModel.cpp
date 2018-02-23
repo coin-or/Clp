@@ -130,6 +130,7 @@ ClpModel::ClpModel (bool emptyMessages) :
      dblParam_[ClpPrimalTolerance] = 1e-7;
      dblParam_[ClpObjOffset] = 0.0;
      dblParam_[ClpMaxSeconds] = -1.0;
+     dblParam_[ClpMaxWallSeconds] = -1.0;
      dblParam_[ClpPresolveTolerance] = 1.0e-8;
 
 #ifndef CLP_NO_STD
@@ -378,7 +379,7 @@ ClpModel::loadProblem (
 {
      gutsOfLoadModel(numrows, numcols,
                      collb, colub, obj, rowlb, rowub, rowObjective);
-     int numberElements = start ? start[numcols] : 0;
+     CoinBigIndex numberElements = start ? start[numcols] : 0;
      CoinPackedMatrix matrix(true, numrows, numrows ? numcols : 0, numberElements,
                              value, index, start, NULL);
      matrix_ = new ClpPackedMatrix(matrix);
@@ -767,6 +768,7 @@ ClpModel::gutsOfCopy(const ClpModel & rhs, int trueCopy)
      dblParam_[ClpPrimalTolerance] = rhs.dblParam_[ClpPrimalTolerance];
      dblParam_[ClpObjOffset] = rhs.dblParam_[ClpObjOffset];
      dblParam_[ClpMaxSeconds] = rhs.dblParam_[ClpMaxSeconds];
+     dblParam_[ClpMaxWallSeconds] = rhs.dblParam_[ClpMaxWallSeconds];
      dblParam_[ClpPresolveTolerance] = rhs.dblParam_[ClpPresolveTolerance];
 #ifndef CLP_NO_STD
 
@@ -1109,6 +1111,13 @@ ClpModel::setDblParam(ClpDblParam key, double value)
                value = -1.0;
           break;
 
+     case ClpMaxWallSeconds:
+          if(value >= 0)
+               value += CoinWallclockTime();
+          else
+               value = -1.0;
+          break;
+
      case ClpPresolveTolerance:
           if (value <= 0.0 || value > 1.0e10)
                return false;
@@ -1233,7 +1242,7 @@ ClpModel::createEmptyMatrix()
    d) orders elements
    returns number of elements eliminated or -1 if not ClpMatrix
 */
-int
+CoinBigIndex
 ClpModel::cleanMatrix(double threshold)
 {
      ClpPackedMatrix * matrix = (dynamic_cast< ClpPackedMatrix*>(matrix_));
@@ -1351,21 +1360,26 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
      }
 #ifndef CLP_NO_STD
      if (lengthNames_) {
-          // redo row and column names
-          if (numberRows_ < newNumberRows) {
+          // redo row and column names (make sure clean)
+          int numberRowNames = 
+	    CoinMin(static_cast<int>(rowNames_.size()),numberRows_);
+          if (numberRowNames < newNumberRows) {
                rowNames_.resize(newNumberRows);
                lengthNames_ = CoinMax(lengthNames_, 8);
                char name[9];
-               for (int iRow = numberRows_; iRow < newNumberRows; iRow++) {
+               for (int iRow = numberRowNames; iRow < newNumberRows; iRow++) {
                     sprintf(name, "R%7.7d", iRow);
                     rowNames_[iRow] = name;
                }
           }
-          if (numberColumns_ < newNumberColumns) {
+          int numberColumnNames = 
+	    CoinMin(static_cast<int>(columnNames_.size()),numberColumns_);
+          if (numberColumnNames < newNumberColumns) {
                columnNames_.resize(newNumberColumns);
                lengthNames_ = CoinMax(lengthNames_, 8);
                char name[9];
-               for (int iColumn = numberColumns_; iColumn < newNumberColumns; iColumn++) {
+               for (int iColumn = numberColumnNames; 
+		    iColumn < newNumberColumns; iColumn++) {
                     sprintf(name, "C%7.7d", iColumn);
                     columnNames_[iColumn] = name;
                }
@@ -1409,6 +1423,33 @@ ClpModel::deleteRows(int number, const int * which)
           return; // nothing to do
      whatsChanged_ &= ~(1 + 2 + 4 + 8 + 16 + 32); // all except columns changed
      int newSize = 0;
+#define CLP_TIDY_DELETE_ROWS
+#ifdef CLP_TIDY_DELETE_ROWS
+     if (status_) {
+		    // try and get right number of basic
+		    int nChange=0;
+		    unsigned char * rowStatus = status_+numberColumns_;
+		    for (int i=0;i<number;i++) {
+		      int iRow = which[i];
+		      if ((rowStatus[iRow]&7) !=1)
+			nChange++;
+		    }
+		    // take out slacks at bound
+		    for (int iRow=0;iRow<numberRows_;iRow++) {
+			if (!nChange)
+			  break;
+			if ((rowStatus[iRow]&7) ==1) {
+			  if (fabs(rowActivity_[iRow]-rowLower_[iRow])<1.0e-8) {
+			    rowStatus[iRow]=3;
+			    nChange--;
+			  } else if (fabs(rowActivity_[iRow]-rowUpper_[iRow])<1.0e-8) {
+			    rowStatus[iRow]=2;
+			    nChange--;
+			  }
+			}
+		      }
+     }
+#endif
      if (maximumRows_ < 0) {
           rowActivity_ = deleteDouble(rowActivity_, numberRows_,
                                       number, which, newSize);
@@ -1692,7 +1733,7 @@ ClpModel::deleteRowsAndColumns(int numberRows, const int * whichRows,
       for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
 	if (backColumns[iColumn]>=0) {
 	  CoinBigIndex start = columnStart[iColumn];
-	  int nSave=n;
+	  CoinBigIndex nSave=n;
 	  columnStart[newNumberColumns]=n;
 	  for (CoinBigIndex j=start;j<start+columnLength[iColumn];j++) {
 	    int iRow=row[j];
@@ -1702,7 +1743,7 @@ ClpModel::deleteRowsAndColumns(int numberRows, const int * whichRows,
 	      element[n++]=element[j];
 	    }
 	  }
-	  columnLength[newNumberColumns++]=n-nSave;
+	  columnLength[newNumberColumns++]=static_cast<int>(n-nSave);
 	}
       }
       columnStart[newNumberColumns]=n;
@@ -1821,13 +1862,13 @@ ClpModel::addRows(int number, const double * rowLower,
           int iRow;
           for (iRow = 0; iRow < number; iRow++)
                numberElements += rowLengths[iRow];
-          int * newStarts = new int[number+1];
+          CoinBigIndex * newStarts = new CoinBigIndex[number+1];
           int * newIndex = new int[numberElements];
           double * newElements = new double[numberElements];
           numberElements = 0;
           newStarts[0] = 0;
           for (iRow = 0; iRow < number; iRow++) {
-               int iStart = rowStarts[iRow];
+               CoinBigIndex iStart = rowStarts[iRow];
                int length = rowLengths[iRow];
                CoinMemcpyN(columns + iStart, length, newIndex + numberElements);
                CoinMemcpyN(elements + iStart, length, newElements + numberElements);
@@ -2225,7 +2266,7 @@ void
 ClpModel::addColumns(int number, const double * columnLower,
                      const double * columnUpper,
                      const double * objIn,
-                     const int * columnStarts, const int * rows,
+                     const CoinBigIndex * columnStarts, const int * rows,
                      const double * elements)
 {
      // Create a list of CoinPackedVectors
@@ -2294,7 +2335,7 @@ void
 ClpModel::addColumns(int number, const double * columnLower,
                      const double * columnUpper,
                      const double * objIn,
-                     const int * columnStarts,
+                     const CoinBigIndex * columnStarts,
                      const int * columnLengths, const int * rows,
                      const double * elements)
 {
@@ -2303,13 +2344,13 @@ ClpModel::addColumns(int number, const double * columnLower,
           int iColumn;
           for (iColumn = 0; iColumn < number; iColumn++)
                numberElements += columnLengths[iColumn];
-          int * newStarts = new int[number+1];
+          CoinBigIndex * newStarts = new CoinBigIndex[number+1];
           int * newIndex = new int[numberElements];
           double * newElements = new double[numberElements];
           numberElements = 0;
           newStarts[0] = 0;
           for (iColumn = 0; iColumn < number; iColumn++) {
-               int iStart = columnStarts[iColumn];
+               CoinBigIndex iStart = columnStarts[iColumn];
                int length = columnLengths[iColumn];
                CoinMemcpyN(rows + iStart, length, newIndex + numberElements);
                CoinMemcpyN(elements + iStart, length, newElements + numberElements);
@@ -2483,7 +2524,7 @@ ClpModel::addColumns(const CoinBuild & buildObject, bool tryPlusMinusOne, bool c
                     for (int i = 0; i < numberElements; i++) {
                          int iRow = rows[i];
                          if (checkDuplicates) {
-                              if (iRow >= numberRows_) {
+                              if (iRow < numberRows_) {
                                    if(which[iRow])
                                         numberErrors++;
                                    else
@@ -2581,28 +2622,23 @@ ClpModel::addColumns( CoinModel & modelObject, bool tryPlusMinusOne, bool checkD
                     tryPlusMinusOne = false;
                }
                assert (columnLower);
-               addColumns(numberColumns2, columnLower, columnUpper, objective, NULL, NULL, NULL);
 #ifndef SLIM_CLP
                if (!tryPlusMinusOne) {
 #endif
                     CoinPackedMatrix matrix;
                     modelObject.createPackedMatrix(matrix, associated);
                     assert (!matrix.getExtraGap());
-                    if (matrix_->getNumCols()) {
-                         const int * row = matrix.getIndices();
-                         //const int * columnLength = matrix.getVectorLengths();
-                         const CoinBigIndex * columnStart = matrix.getVectorStarts();
-                         const double * element = matrix.getElements();
-                         // make sure matrix has enough rows
-                         matrix_->setDimensions(numberRows_, -1);
-                         numberErrors += matrix_->appendMatrix(numberColumns2, 1, columnStart, row, element,
-                                                               checkDuplicates ? numberRows_ : -1);
-                    } else {
-                         delete matrix_;
-                         matrix_ = new ClpPackedMatrix(matrix);
-                    }
+		    const int * row = matrix.getIndices();
+		    //const int * columnLength = matrix.getVectorLengths();
+		    const CoinBigIndex * columnStart = matrix.getVectorStarts();
+		    const double * element = matrix.getElements();
+		    // make sure matrix has enough rows
+		    matrix_->setDimensions(numberRows_, -1);
+		    addColumns(numberColumns2, columnLower, columnUpper, 
+			       objective, columnStart, row, element);
 #ifndef SLIM_CLP
                } else {
+                    addColumns(numberColumns2, columnLower, columnUpper, objective, NULL, NULL, NULL);
                     // create +-1 matrix
                     CoinBigIndex size = startPositive[numberColumns2];
                     int * indices = new int[size];
@@ -2791,6 +2827,14 @@ ClpModel::setMaximumSeconds(double value)
      else
           dblParam_[ClpMaxSeconds] = -1.0;
 }
+void
+ClpModel::setMaximumWallSeconds(double value)
+{
+     if(value >= 0)
+          dblParam_[ClpMaxWallSeconds] = value + CoinWallclockTime();
+     else
+          dblParam_[ClpMaxWallSeconds] = -1.0;
+}
 // Returns true if hit maximum iterations (or time)
 bool
 ClpModel::hitMaximumIterations() const
@@ -2800,6 +2844,9 @@ ClpModel::hitMaximumIterations() const
      if (dblParam_[ClpMaxSeconds] >= 0.0 && !hitMax) {
           hitMax = (CoinCpuTime() >= dblParam_[ClpMaxSeconds]);
      }
+     if (dblParam_[ClpMaxWallSeconds] >= 0.0 && !hitMax) {
+          hitMax = (CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds]);
+     }
      return hitMax;
 }
 // On stopped - sets secondary status
@@ -2808,7 +2855,8 @@ ClpModel::onStopped()
 {
      if (problemStatus_ == 3) {
           secondaryStatus_ = 0;
-          if (CoinCpuTime() >= dblParam_[ClpMaxSeconds] && dblParam_[ClpMaxSeconds] >= 0.0)
+          if ((CoinCpuTime() >= dblParam_[ClpMaxSeconds] && dblParam_[ClpMaxSeconds] >= 0.0) ||
+	      (CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds] && dblParam_[ClpMaxWallSeconds] >= 0.0))
                secondaryStatus_ = 9;
      }
 }
@@ -2905,7 +2953,7 @@ ClpModel::readMps(const char *fileName,
 #ifndef SLIM_CLP
           // get quadratic part
           if (m.reader()->whichSection (  ) == COIN_QUAD_SECTION ) {
-               int * start = NULL;
+               CoinBigIndex * start = NULL;
                int * column = NULL;
                double * element = NULL;
                status = m.readQuadraticMps(NULL, start, column, element, 2);
@@ -3304,6 +3352,7 @@ ClpModel::ClpModel ( const ClpModel * rhs,
      dblParam_[ClpPrimalTolerance] = rhs->dblParam_[ClpPrimalTolerance];
      dblParam_[ClpObjOffset] = rhs->dblParam_[ClpObjOffset];
      dblParam_[ClpMaxSeconds] = rhs->dblParam_[ClpMaxSeconds];
+     dblParam_[ClpMaxWallSeconds] = rhs->dblParam_[ClpMaxWallSeconds];
      dblParam_[ClpPresolveTolerance] = rhs->dblParam_[ClpPresolveTolerance];
 #ifndef CLP_NO_STD
      strParam_[ClpProbName] = rhs->strParam_[ClpProbName];
@@ -3802,6 +3851,8 @@ ClpModel::writeMps(const char *filename,
      // Pass in array saying if each variable integer
      writer.copyInIntegerInformation(integerInformation());
      writer.setObjectiveOffset(objectiveOffset());
+     // set name
+     writer.setProblemName(problemName().c_str());
      delete [] objective;
      CoinPackedMatrix * quadratic = NULL;
 #ifndef SLIM_CLP
@@ -4491,8 +4542,8 @@ ClpDataSave::operator=(const ClpDataSave& rhs)
           dualBound_ = rhs.dualBound_;
           infeasibilityCost_ = rhs.infeasibilityCost_;
           pivotTolerance_ = rhs.pivotTolerance_;
-          zeroFactorizationTolerance_ = zeroFactorizationTolerance_;
-          zeroSimplexTolerance_ = zeroSimplexTolerance_;
+          zeroFactorizationTolerance_ = rhs.zeroFactorizationTolerance_;
+          zeroSimplexTolerance_ = rhs.zeroSimplexTolerance_;
           acceptablePivot_ = rhs.acceptablePivot_;
           objectiveScale_ = rhs.objectiveScale_;
           sparseThreshold_ = rhs.sparseThreshold_;

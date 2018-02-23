@@ -28,6 +28,24 @@ typedef void Clp_Solve;
 extern "C" {
 #endif
 
+     /**@name Version info
+      * 
+      * A Clp library has a version number of the form <major>.<minor>.<release>,
+      * where each of major, minor, and release are nonnegative integers.
+      * For a checkout of the Clp stable branch, release is 9999.
+      * For a checkout of the Clp development branch, major, minor, and release are 9999.
+      */
+     /*@{*/
+     /** Clp library version number as string. */
+     COINLIBAPI const char* COINLINKAGE Clp_Version(void);
+     /** Major number of Clp library version. */
+     COINLIBAPI int COINLINKAGE Clp_VersionMajor(void);
+     /** Minor number of Clp library version. */
+     COINLIBAPI int COINLINKAGE Clp_VersionMinor(void);
+     /** Release number of Clp library version. */
+     COINLIBAPI int COINLINKAGE Clp_VersionRelease(void);
+     /*@}*/
+
      /**@name Constructors and destructor
         These do not have an exact analogue in C++.
         The user does not need to know structure of Clp_Simplex or Clp_Solve.
@@ -96,7 +114,7 @@ extern "C" {
      /** Add rows */
      COINLIBAPI void COINLINKAGE Clp_addRows(Clp_Simplex * model, int number, const double * rowLower,
                                              const double * rowUpper,
-                                             const int * rowStarts, const int * columns,
+                                             const CoinBigIndex * rowStarts, const int * columns,
                                              const double * elements);
 
      /** Deletes columns */
@@ -105,7 +123,7 @@ extern "C" {
      COINLIBAPI void COINLINKAGE Clp_addColumns(Clp_Simplex * model, int number, const double * columnLower,
                const double * columnUpper,
                const double * objective,
-               const int * columnStarts, const int * rows,
+               const CoinBigIndex * columnStarts, const int * rows,
                const double * elements);
      /** Change row lower bounds */
      COINLIBAPI void COINLINKAGE Clp_chgRowLower(Clp_Simplex * model, const double * rowLower);
@@ -199,7 +217,7 @@ extern "C" {
      /** Column Upper */
      COINLIBAPI double * COINLINKAGE Clp_columnUpper(Clp_Simplex * model);
      /** Number of elements in matrix */
-     COINLIBAPI int COINLINKAGE Clp_getNumElements(Clp_Simplex * model);
+     COINLIBAPI CoinBigIndex COINLINKAGE Clp_getNumElements(Clp_Simplex * model);
      /* Column starts in matrix */
      COINLIBAPI const CoinBigIndex * COINLINKAGE Clp_getVectorStarts(Clp_Simplex * model);
      /* Row indices in matrix */
@@ -212,10 +230,22 @@ extern "C" {
      COINLIBAPI double COINLINKAGE Clp_objectiveValue(Clp_Simplex * model);
      /** Integer information */
      COINLIBAPI char * COINLINKAGE Clp_integerInformation(Clp_Simplex * model);
-     /** Infeasibility/unbounded ray (NULL returned if none/wrong)
-         Up to user to use free() on these arrays.  */
+     /** Gives Infeasibility ray.
+      * 
+      * Use Clp_freeRay to free the returned array.
+      * 
+      * @return infeasibility ray, or NULL returned if none/wrong.
+      */
      COINLIBAPI double * COINLINKAGE Clp_infeasibilityRay(Clp_Simplex * model);
+     /** Gives ray in which the problem is unbounded.
+      * 
+      * Use Clp_freeRay to free the returned array.
+      * 
+      * @return unbounded ray, or NULL returned if none/wrong.
+      */
      COINLIBAPI double * COINLINKAGE Clp_unboundedRay(Clp_Simplex * model);
+     /** Frees a infeasibility or unbounded ray. */
+     COINLIBAPI void COINLINKAGE Clp_freeRay(Clp_Simplex * model, double * ray);
      /** See if status array exists (partly for OsiClp) */
      COINLIBAPI int COINLINKAGE Clp_statusExists(Clp_Simplex * model);
      /** Return address of status array (char[numberRows+numberColumns]) */

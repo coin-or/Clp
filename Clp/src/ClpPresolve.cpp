@@ -58,7 +58,7 @@ ClpPresolve::ClpPresolve() :
      ncols_(0),
      nrows_(0),
      nelems_(0),
-#ifdef ABC_INHERIT
+#ifdef CLP_INHERIT_MODE
      numberPasses_(20),
 #else
      numberPasses_(5),
@@ -167,7 +167,7 @@ ClpPresolve::presolveStatus() const
     // feasible (or not done yet)
     return 0;
   } else {
-    int presolveStatus = - nelems_;
+    int presolveStatus = - static_cast<int>(nelems_);
     // If both infeasible and unbounded - say infeasible
     if (presolveStatus>2)
       presolveStatus = 1;
@@ -388,8 +388,11 @@ static int ATOI(const char *name)
 #endif
 }
 #endif
-//#define PRESOLVE_DEBUG 1
-#if PRESOLVE_DEBUG
+#ifdef PRESOLVE_DEBUG
+#define PRESOLVE_CHECK_SOL 1
+#endif
+//#define PRESOLVE_CHECK_SOL 1
+#if PRESOLVE_CHECK_SOL
 void check_sol(CoinPresolveMatrix *prob, double tol)
 {
      double *colels	= prob->colels_;
@@ -818,8 +821,8 @@ static int tightenDoubletons2(CoinPresolveMatrix * prob)
 	  cost[icol] = costThis;
 	  clo[icol]=lowerX;
 	  cup[icol]=upperX;
-	  int startCol[2];
-	  int endCol[2];
+	  CoinBigIndex startCol[2];
+	  CoinBigIndex endCol[2];
 	  startCol[0]=mcstrt[icol];
 	  endCol[0]=startCol[0]+2;
 	  startCol[1]=mcstrt[otherCol];
@@ -892,7 +895,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
      // Messages
      CoinMessages messages = CoinMessage(prob->messages().language());
      paction_ = 0;
-     prob->maxSubstLevel_ = 3 ;
+     prob->maxSubstLevel_ = CoinMax(3,prob->maxSubstLevel_) ;
 #ifndef PRESOLVE_DETAIL
      if (prob->tuning_) {
 #endif
@@ -955,7 +958,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	  // Whether we want to allow duplicate intersections
 	  if (doIntersection())
 	    prob->presolveOptions_ |= 0x10;
-
+	  // zero small elements in aggregation
+	  prob->presolveOptions_ |= zeroSmall()*0x20000;
           // some things are expensive so just do once (normally)
 
           int i;
@@ -983,7 +987,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	    // need a transfer back at end of postsolve transferCosts(prob);
 
           int iLoop;
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
           check_sol(prob, 1.0e0);
 #endif
           if (dupcol) {
@@ -994,12 +998,10 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                paction_ = dupcol_action::presolve(prob, paction_);
 	       printProgress('C',0);
           }
-#ifdef ABC_INHERIT
           if (doTwoxTwo()) {
 	    possibleSkip;
 	    paction_ = twoxtwo_action::presolve(prob, paction_);
           }
-#endif
           if (duprow) {
 	    possibleSkip;
 	    if (doTwoxTwo()) {
@@ -1010,12 +1012,29 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 	    }
 	    paction_ = duprow_action::presolve(prob, paction_);
 	    printProgress('D',0);
+	    //paction_ = doubleton_action::presolve(prob, paction_);
+	    //printProgress('d',0);
+	    //if (doDependency()) {
+	      //paction_ = duprow3_action::presolve(prob, paction_);
+	      //printProgress('Z',0);
+	    //}
           }
           if (doGubrow()) {
 	    possibleSkip;
                paction_ = gubrow_action::presolve(prob, paction_);
 	       printProgress('E',0);
           }
+	  if (ifree) {
+	    int fill_level=CoinMax(10,prob->maxSubstLevel_);
+	    const CoinPresolveAction * lastAction = NULL;
+	    int iPass=4;
+	    while(lastAction!=paction_&&iPass) {
+	      lastAction=paction_;
+	      paction_ = implied_free_action::presolve(prob, paction_, fill_level);
+	      printProgress('l',0);
+	      iPass--;
+	    }
+	  }
 
           if ((presolveActions_ & 16384) != 0)
                prob->setPresolveOptions(prob->presolveOptions() | 16384);
@@ -1025,7 +1044,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
           // Check number rows dropped
           int lastDropped = 0;
           prob->pass_ = 0;
-#ifdef ABC_INHERIT
+#if CLP_INHERIT_MODE>1
 	  int numberRowsStart=nrows_-prob->countEmptyRows();
 	  int numberColumnsStart=ncols_-prob->countEmptyCols();
 	  int numberRowsLeft=numberRowsStart;
@@ -1083,6 +1102,13 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          if (prob->status_)
                               break;
                     }
+                    if (zerocost) {
+		      possibleBreak;
+                         paction_ = do_tighten_action::presolve(prob, paction_);
+                         if (prob->status_)
+                              break;
+			 printProgress('J',iLoop+1);
+                    }
                     if (dual && whichPass == 1) {
                          // this can also make E rows so do one bit here
 		      possibleBreak;
@@ -1107,13 +1133,6 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 			 printProgress('I',iLoop+1);
                     }
 
-                    if (zerocost) {
-		      possibleBreak;
-                         paction_ = do_tighten_action::presolve(prob, paction_);
-                         if (prob->status_)
-                              break;
-			 printProgress('J',iLoop+1);
-                    }
 #ifndef NO_FORCING
                     if (forcing) {
 		      possibleBreak;
@@ -1132,7 +1151,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 			 printProgress('L',iLoop+1);
                     }
 
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                     check_sol(prob, 1.0e0);
 #endif
 
@@ -1270,7 +1289,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          break;
 		    printProgress('O',iLoop+1);
                }
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                check_sol(prob, 1.0e0);
 #endif
                if (dupcol) {
@@ -1283,7 +1302,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                          break;
 		    printProgress('P',iLoop+1);
                }
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                check_sol(prob, 1.0e0);
 #endif
 
@@ -1296,7 +1315,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                }
 	       // Marginally slower on netlib if this call is enabled.
 	       // paction_ = testRedundant(prob,paction_) ;
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                check_sol(prob, 1.0e0);
 #endif
                bool stopLoop = false;
@@ -1327,17 +1346,24 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
                     } else {
                          // do costed if Clp (at end as ruins rest of presolve)
 		      possibleBreak;
+#ifndef CLP_MOVE_COSTS
                          paction_ = slack_singleton_action::presolve(prob, paction_, rowObjective_);
+#else
+			 double * fakeRowObjective=new double[prob->nrows_];
+			 memset(fakeRowObjective,0,prob->nrows_*sizeof(double));
+                         paction_ = slack_singleton_action::presolve(prob, paction_, fakeRowObjective);
+			 delete [] fakeRowObjective;
+#endif
                          stopLoop = true;
                     }
 		    printProgress('R',iLoop+1);
                }
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
                check_sol(prob, 1.0e0);
 #endif
                if (paction_ == paction0 || stopLoop)
                     break;
-#ifdef ABC_INHERIT
+#if CLP_INHERIT_MODE>1
 	       // see whether to stop anyway
 	       int numberRowsNow=nrows_-prob->countEmptyRows();
 	       int numberColumnsNow=ncols_-prob->countEmptyCols();
@@ -1367,16 +1393,20 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
 #endif
           }
      }
+     if (!prob->status_&&doDependency()) {
+       paction_ = duprow3_action::presolve(prob, paction_);
+       printProgress('Z',0);
+     }
      prob->presolveOptions_ &= ~0x10000;
      if (!prob->status_) {
           paction_ = drop_zero_coefficients(prob, paction_);
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
           check_sol(prob, 1.0e0);
 #endif
 
           paction_ = drop_empty_cols_action::presolve(prob, paction_);
           paction_ = drop_empty_rows_action::presolve(prob, paction_);
-#if	PRESOLVE_DEBUG
+#if	PRESOLVE_CHECK_SOL
           check_sol(prob, 1.0e0);
 #endif
      }
@@ -1414,7 +1444,7 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
           int *hrow		= prob.hrow_;
           CoinBigIndex *mcstrt		= prob.mcstrt_;
           int *hincol		= prob.hincol_;
-          int *link		= prob.link_;
+          CoinBigIndex *link		= prob.link_;
           int ncols		= prob.ncols_;
 
           char *cdone	= prob.cdone_;
@@ -1436,6 +1466,7 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
                          int row = hrow[k];
                          double coeff = colels[k];
                          k = link[k];
+			 assert (k!=NO_LINK||i==nx-1);
                          rsol[row] += solutionValue * coeff;
                     }
                }
@@ -1634,9 +1665,11 @@ CoinPrePostsolveMatrix::CoinPrePostsolveMatrix(const ClpSimplex * si,
        messages_()
 
 {
-     bulk0_ = static_cast<CoinBigIndex> (bulkRatio_ * nelems_in);
-     hrow_  = new int   [bulk0_];
-     colels_ = new double[bulk0_];
+     bulk0_ = static_cast<CoinBigIndex> (bulkRatio_ * 
+					 CoinMax(nelems_in,nelems_));
+     // allow for temporary overflow
+     hrow_  = new int   [bulk0_+ncols_in];
+     colels_ = new double[bulk0_+ncols_in];
      si->getDblParam(ClpObjOffset, originalOffset_);
      int ncols = si->getNumCols();
      int nrows = si->getNumRows();
@@ -1717,10 +1750,12 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
 
      // temporary init
      integerType_(new unsigned char[ncols0_in]),
+     anyInteger_(false),
      tuning_(false),
      startTime_(0.0),
      feasibilityTolerance_(0.0),
      status_(-1),
+     pass_(0),
      colsToDo_(new int [ncols0_in]),
      numberColsToDo_(0),
      nextColsToDo_(new int[ncols0_in]),
@@ -1731,7 +1766,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
      numberNextRowsToDo_(0),
      presolveOptions_(0)
 {
-     const int bufsize = bulk0_;
+     const CoinBigIndex bufsize = bulk0_;
 
      nrows_ = si->getNumRows() ;
 
@@ -1764,7 +1799,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
                     colels_[nel++] = element[j];
           }
           mcstrt_[icol+1] = nel;
-          hincol_[icol] = nel - mcstrt_[icol];
+          hincol_[icol] = static_cast<int>(nel - mcstrt_[icol]);
      }
 
      // same thing for row rep
@@ -1813,7 +1848,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
                }
                start = mrstrt_[irow+1];
                mrstrt_[irow+1] = nel;
-               hinrow_[irow] = nel - mrstrt_[irow];
+               hinrow_[irow] = static_cast<int>(nel - mrstrt_[irow]);
           }
      }
 
@@ -1837,7 +1872,7 @@ CoinPresolveMatrix::CoinPresolveMatrix(int ncols0_in,
      if (nonLinearValue) {
           anyProhibited_ = true;
           for (icol = 0; icol < ncols_; icol++) {
-               int j;
+               CoinBigIndex j;
                bool nonLinearColumn = false;
                if (cost_[icol] == nonLinearValue)
                     nonLinearColumn = true;
@@ -1993,7 +2028,7 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
      free_list_(0),
      // link, free_list, maxlink
      maxlink_(bulk0_),
-     link_(new int[/*maxlink*/ bulk0_]),
+     link_(new CoinBigIndex[/*maxlink*/ bulk0_]),
 
      cdone_(new char[ncols0_]),
      rdone_(new char[nrows0_in])
@@ -2104,7 +2139,7 @@ CoinPostsolveMatrix::CoinPostsolveMatrix(ClpSimplex*  si,
 #endif
      }
      {
-          int ml = maxlink_;
+          CoinBigIndex ml = maxlink_;
           for (CoinBigIndex k = nelemsr; k < ml; ++k)
                link_[k] = k + 1;
           if (ml)
@@ -2196,7 +2231,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 
           double ratio = 2.0;
           if (substitution_ > 3)
-               ratio = substitution_;
+	       ratio = sqrt((substitution_-3)+5.0);
           else if (substitution_ == 2)
                ratio = 1.5;
           CoinPresolveMatrix prob(ncols_,
@@ -2223,6 +2258,8 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
           // See if we want statistics
           if ((presolveActions_ & 0x80000000) != 0)
                prob.statistics();
+	  if (doTransfer())
+	      transferCosts(&prob);
           // make sure row solution correct
           {
                double *colels	= prob.colels_;
@@ -2242,7 +2279,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex * originalModel,
 
                for (colx = 0; colx < ncols; ++colx) {
                     double solutionValue = csol[colx];
-                    for (int i = mcstrt[colx]; i < mcstrt[colx] + hincol[colx]; ++i) {
+                    for (CoinBigIndex i = mcstrt[colx]; i < mcstrt[colx] + hincol[colx]; ++i) {
                          int row = hrow[i];
                          double coeff = colels[i];
                          acts[row] += solutionValue * coeff;

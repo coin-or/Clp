@@ -190,7 +190,7 @@ typedef const int cipfint;
 enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102 };
 enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113,
 		      AtlasConj=114};
-#define CLAPACK
+//#define CLAPACK
 // using simple lapack interface
 extern "C" 
 {

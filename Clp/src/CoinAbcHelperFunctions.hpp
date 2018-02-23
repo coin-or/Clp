@@ -95,9 +95,9 @@ void ABC_INLINE inline CoinAbcScatterUpdate(int number,CoinFactorizationDouble p
     region[iRow0] = regionValue0 - value0 * pivotValue;
     region[iRow1] = regionValue1 - value1 * pivotValue;
     number-=2;
-  }
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
-  for (CoinBigIndex j=number-1 ; j >=0; j-=4 ) {
+  } 
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
+  cilk_for (CoinBigIndex j=number-1 ; j >=0; j-=4 ) {
     CoinSimplexInt iRow0 = thisIndex[j];
     CoinSimplexInt iRow1 = thisIndex[j-1];
     CoinFactorizationDouble regionValue0 = region[iRow0];
@@ -335,8 +335,8 @@ void ABC_INLINE inline CoinAbcScatterUpdate(int number,CoinFactorizationDouble p
     region[iRow3] = temp[3];
   }
 #else
-#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
-  for (CoinBigIndex j=number-1 ; j >=0; j-=4 ) {
+#pragma cilk grainsize=CILK_FOR_GRAINSIZE
+  cilk_for (CoinBigIndex j=number-1 ; j >=0; j-=4 ) {
     CoinSimplexInt iRow0 = thisIndex[j];
     CoinSimplexInt iRow1 = thisIndex[j-1];
     CoinFactorizationDouble regionValue0 = region[iRow0];

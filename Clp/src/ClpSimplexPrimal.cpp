@@ -81,6 +81,7 @@
 #include "CoinPragma.hpp"
 
 #include <math.h>
+//#define FAKE_CILK
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpSimplexPrimal.hpp"
@@ -96,6 +97,13 @@
 #include <string>
 #include <stdio.h>
 #include <iostream>
+#if ABOCA_LITE
+#undef ALT_UPDATE_WEIGHTS
+#define ALT_UPDATE_WEIGHTS 2
+#endif
+#if ALT_UPDATE_WEIGHTS==1
+CoinIndexedVector * altVector[3]={NULL,NULL,NULL};
+#endif
 #ifdef CLP_USER_DRIVEN1
 /* Returns true if variable sequenceOut can leave basis when
    model->sequenceIn() enters.
@@ -212,6 +220,10 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 
      // save data
      ClpDataSave data = saveData();
+     if (problemStatus_==10&&sumPrimalInfeasibilities_==-123456789.0) {
+       // large infeasibility cost wanted
+       infeasibilityCost_ = CoinMax(infeasibilityCost_,1.0e13);
+     }
      matrix_->refresh(this); // make sure matrix okay
 
      // Save so can see if doing after dual
@@ -321,7 +333,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                     rowArray_[iRow]->clear();
                }
 
-               for (iColumn = 0; iColumn < 2; iColumn++) {
+               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                     columnArray_[iColumn]->clear();
                }
 
@@ -471,7 +483,17 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
 
                // Say no pivot has occurred (for steepest edge and updates)
                pivotRow_ = -2;
-
+	       // exit if feasible and done enough iterations
+	       if ((moreSpecialOptions_&1048576)!=0) {
+		 int maxIterations=maximumIterations()-1000000;
+		 if (maxIterations>0&&maxIterations<200000) {
+		   if (!nonLinearCost_->numberInfeasibilities()&&
+		       numberIterations_>=maxIterations) {
+		     problemStatus_ = 3;
+		     secondaryStatus_ = 10;
+		   }
+		 }
+	       }
                // exit if victory declared
 	       if (problemStatus_ >= 0) {
 #ifdef CLP_USER_DRIVEN
@@ -527,13 +549,21 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
                {
                     int status = eventHandler_->event(ClpEventHandler::endOfFactorization);
                     if (status >= 0) {
-                         problemStatus_ = 5;
-                         secondaryStatus_ = ClpEventHandler::endOfFactorization;
-                         break;
+		        // if >=100 - then special e.g. unperturb
+		        if (status!=101) {
+			  problemStatus_ = 5;
+			  secondaryStatus_ = ClpEventHandler::endOfFactorization;
+			  break;
+			} else {
+			  unPerturb();
+			  continue;
+			}
                     }
                }
                // Iterate
                whileIterating(ifValuesPass ? 1 : 0);
+	       if (sequenceIn_<0&&ifValuesPass==2)
+		 problemStatus_=3; // user wants to exit
           }
      }
      // if infeasible get real values
@@ -658,8 +688,13 @@ ClpSimplexPrimal::whileIterating(int valuesOption)
                // pass in list of cost changes so can do row updates (rowArray_[1])
                // NOTE rowArray_[0] is used by computeDuals which is a
                // slow way of getting duals but might be used
+#ifdef LONG_REGION_2 
+               primalColumn(rowArray_[1], rowArray_[0], rowArray_[3],
+                            columnArray_[0], rowArray_[2]);
+#else 
                primalColumn(rowArray_[1], rowArray_[2], rowArray_[3],
                             columnArray_[0], columnArray_[1]);
+#endif 
           } else {
                // in values pass
                int sequenceIn = nextSuperBasic(superBasicType, columnArray_[0]);
@@ -798,6 +833,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 {
      int dummy; // for use in generalExpanded
      int saveFirstFree = firstFree_;
+     double saveOriginalWeight = infeasibilityCost_;
      // number of pivots done
      int numberPivots = factorization_->pivots();
      if (type == 2) {
@@ -901,6 +937,36 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                if (problemStatus_ != -4)
                     problemStatus_ = -3;
           }
+	  if(progress->realInfeasibility_[0]<1.0e-1 &&
+	     primalTolerance_==1.0e-7&&progress->iterationNumber_[0]>0&&
+	     progress->iterationNumber_[CLP_PROGRESS-1]-progress->iterationNumber_[0]>25) {
+	    // default - so user did not set
+	    int iP;
+	    double minAverage=COIN_DBL_MAX;
+	    double maxAverage=0.0;
+	    for (iP=0;iP<CLP_PROGRESS;iP++) {
+	      int n=progress->numberInfeasibilities_[iP];
+	      if (!n) {
+		break;
+	      } else {
+		double average=progress->realInfeasibility_[iP];
+		if (average>0.1)
+		  break;
+		average /= static_cast<double>(n);
+		minAverage=CoinMin(minAverage,average);
+		maxAverage=CoinMax(maxAverage,average);
+	      }
+	    }
+	    if (iP==CLP_PROGRESS&&minAverage<1.0e-5&&maxAverage<1.0e-3) {
+	      // change tolerance
+#if CBC_USEFUL_PRINTING>0
+	      printf("CCchanging tolerance\n");
+#endif
+	      primalTolerance_=1.0e-6;
+	      dblParam_[ClpPrimalTolerance]=1.0e-6;
+	      moreSpecialOptions_ |= 4194304;
+	    }
+	  }
           // at this stage status is -3 or -5 if looks unbounded
           // get primal and dual solutions
           // put back original costs and then check
@@ -921,7 +987,14 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 	    lastSumInfeasibility = COIN_DBL_MAX;
 	  }
 #endif
-          numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
+	  if (ifValuesPass && firstFree_ <0) {
+	    largestPrimalError_=1.0e7;
+	    largestDualError_=1.0e7;
+	  }
+	  bool sayValuesPass = (firstFree_>=0);
+	  //if (ifValuesPass&&numberIterations_==baseIteration_)
+	  //sayValuesPass=true;
+          numberThrownOut = gutsOfSolution(NULL, NULL, sayValuesPass);
           double sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
           int reason2 = 0;
 #if CLP_CAUTION
@@ -946,7 +1019,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           if (reason2) {
                problemStatus_ = tentativeStatus;
                doFactorization = true;
-               if (numberPivots) {
+               if (numberPivots||numberThrownOut==-123456789) {
                     // go back
                     // trouble - restore solution
                     CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
@@ -982,7 +1055,12 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     }
                     numberPivots = 0;
                     numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
-                    assert (!numberThrownOut);
+                    //assert (!numberThrownOut);
+#ifdef CLP_USEFUL_PRINTOUT
+                    if (numberThrownOut)
+		      printf("OUCH! - %d thrownout at %s line %d\n",
+			     numberThrownOut,__FILE__,__LINE__);
+#endif
                     sumInfeasibility =  nonLinearCost_->sumInfeasibilities();
                }
           }
@@ -1135,19 +1213,26 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                }
                progress->initialWeight_ = -1.0;
           }
-          //printf("XXXX %d same, %d different, %d zero, -- free %d %d %d\n",
-          //   numberSame,numberDifferent,numberZero,
-          //   numberFreeSame,numberFreeDifferent,numberFreeZero);
+#ifdef CLP_USEFUL_PRINTOUT
+          printf("XXXX %d same, %d different, %d zero, -- free %d %d %d\n",
+             numberSame,numberDifferent,numberZero,
+             numberFreeSame,numberFreeDifferent,numberFreeZero);
+#endif
           // we want most to be same
           if (n) {
-               double most = 0.95;
                std::sort(dj_, dj_ + n);
+#ifdef CLP_USEFUL_PRINTOUT
+               double most = 0.95;
                int which = static_cast<int> ((1.0 - most) * static_cast<double> (n));
-               double take = -dj_[which] * infeasibilityCost_;
-               //printf("XXXXZ inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take,-dj_[0]*infeasibilityCost_,-dj_[n-1]*infeasibilityCost_);
-               take = -dj_[0] * infeasibilityCost_;
-               infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e8), 1.0000001e10);;
-               //printf("XXXX increasing weight to %g\n",infeasibilityCost_);
+               double take2 = -dj_[which] * infeasibilityCost_;
+               printf("XXXX inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take2,-dj_[0]*infeasibilityCost_,-dj_[n-1]*infeasibilityCost_);
+#endif
+               double take = -dj_[0] * infeasibilityCost_;
+               // was infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e8), 1.0000001e10);
+               infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e3), 1.0000001e10);
+#ifdef CLP_USEFUL_PRINTOUT
+               printf("XXXX changing weight to %g\n",infeasibilityCost_);
+#endif
           }
           delete [] dj_;
           delete [] cost_;
@@ -1180,8 +1265,11 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
           lastObj += infeasibilityCost_ * 2.0 * lastInf;
           double lastObj3 = progress->lastObjective(3);
           lastObj3 += infeasibilityCost_ * 2.0 * lastInf3;
+	  assert (thisObj<=COIN_DBL_MAX);
+	  assert (lastObj<=COIN_DBL_MAX);
+	  assert (lastObj3<=COIN_DBL_MAX);
           if (lastObj < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj)) - 1.0e-7
-                    && firstFree_ < 0) {
+                    && firstFree_ < 0 && thisInf >= lastInf) {
                if (handler_->logLevel() == 63)
                     printf("lastobj %g this %g force %d\n", lastObj, thisObj, forceFactorization_);
                int maxFactor = factorization_->maximumPivots();
@@ -1193,7 +1281,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          printf("Reducing factorization frequency to %d\n", forceFactorization_);
                }
           } else if (lastObj3 < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj3)) - 1.0e-7
-                     && firstFree_ < 0) {
+                     && firstFree_ < 0 && thisInf >= lastInf) {
                if (handler_->logLevel() == 63)
                     printf("lastobj3 %g this3 %g force %d\n", lastObj3, thisObj, forceFactorization_);
                int maxFactor = factorization_->maximumPivots();
@@ -1219,7 +1307,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
      bool alwaysOptimal = (specialOptions_ & 1) != 0;
      // give code benefit of doubt
      if (sumOfRelaxedDualInfeasibilities_ == 0.0 &&
-               sumOfRelaxedPrimalInfeasibilities_ == 0.0) {
+               sumOfRelaxedPrimalInfeasibilities_ == 0.0 &&
+	 progress->objective_[CLP_PROGRESS-1]>=
+	 progress->objective_[CLP_PROGRESS-2]-1.0e-9*(10.0+fabs(objectiveValue_))) {
           // say optimal (with these bounds etc)
           numberDualInfeasibilities_ = 0;
           sumDualInfeasibilities_ = 0.0;
@@ -1261,18 +1351,19 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                }
           }
      }
+     bool looksOptimal = (!numberDualInfeasibilities_&&!nonLinearCost_->sumInfeasibilities());
      // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
-     if ((dualFeasible() || problemStatus_ == -4) && !ifValuesPass) {
+     if ((dualFeasible() || problemStatus_ == -4) && (!ifValuesPass||looksOptimal||firstFree_<0)) {
           // see if extra helps
           if (nonLinearCost_->numberInfeasibilities() &&
                     (nonLinearCost_->sumInfeasibilities() > 1.0e-3 || sumOfRelaxedPrimalInfeasibilities_)
-                    && !alwaysOptimal) {
+	      /*&& alwaysOptimal*/) {
                //may need infeasiblity cost changed
                // we can see if we can construct a ray
                // make up a new objective
                double saveWeight = infeasibilityCost_;
                // save nonlinear cost as we are going to switch off costs
-               ClpNonLinearCost * nonLinear = nonLinearCost_;
+               //ClpNonLinearCost * nonLinear = nonLinearCost_;
                // do twice to make sure Primal solution has settled
                // put non-basics to bounds in case tolerance moved
                // put back original costs
@@ -1280,7 +1371,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                nonLinearCost_->checkInfeasibilities(0.0);
                gutsOfSolution(NULL, NULL, ifValuesPass != 0);
 
-               infeasibilityCost_ = 1.0e100;
+               //infeasibilityCost_ = 1.0e100;
                // put back original costs
                createRim(4);
                nonLinearCost_->checkInfeasibilities(primalTolerance_);
@@ -1291,15 +1382,13 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     infeasibilityCost_ = saveWeight;
                     nonLinearCost_->checkInfeasibilities(primalTolerance_);
                } else {
-                    nonLinearCost_ = NULL;
-                    // scale
-                    int i;
-                    for (i = 0; i < numberRows_ + numberColumns_; i++)
-                         cost_[i] *= 1.0e-95;
-                    gutsOfSolution(NULL, NULL, ifValuesPass != 0);
-                    nonLinearCost_ = nonLinear;
-                    infeasibilityCost_ = saveWeight;
-                    if ((infeasibilityCost_ >= 1.0e18 ||
+#ifndef MAX_INFEASIBILITY_COST
+#define MAX_INFEASIBILITY_COST 1.0e18
+#endif
+		    infeasibilityCost_ = 1.0e30;
+                    gutsOfSolution(NULL, NULL, ifValuesPass != 0 && firstFree_>=0);
+                    infeasibilityCost_ = CoinMax(saveWeight,saveOriginalWeight);
+                    if ((infeasibilityCost_ >= MAX_INFEASIBILITY_COST ||
                               numberDualInfeasibilities_ == 0) && perturbation_ == 101) {
                          goToDual = unPerturb(); // stop any further perturbation
                          if (nonLinearCost_->sumInfeasibilities() > 1.0e-1)
@@ -1313,7 +1402,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          factorization_->pivotTolerance(CoinMax(0.9, factorization_->pivotTolerance()));
                     }
                     if (!goToDual) {
-                         if (infeasibilityCost_ >= 1.0e20 ||
+                         if (infeasibilityCost_ >= MAX_INFEASIBILITY_COST ||
                                    numberDualInfeasibilities_ == 0) {
                               // we are infeasible - use as ray
                               delete [] ray_;
@@ -1336,7 +1425,32 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                               numberPrimalInfeasibilities_ =
                                    nonLinearCost_->numberInfeasibilities();
                          }
-                         if (infeasibilityCost_ < 1.0e20) {
+                         if (infeasibilityCost_ < MAX_INFEASIBILITY_COST) {
+			   double testValue = MAX_INFEASIBILITY_COST;
+			   if (testValue == 1.0e18) {
+			     // Check it is not just noise
+			     const double * obj = objective();
+			     double largestCost=0.0;
+			     if (columnScale_) {
+			       for (int i=0; i<numberColumns_;i++) {
+				 largestCost =
+				   CoinMax(largestCost,fabs(obj[i]*columnScale_[i]));
+			       }
+			     } else {
+			       for (int i=0; i<numberColumns_;i++) {
+				 largestCost =
+				   CoinMax(largestCost,fabs(obj[i]));
+			       }
+			     }
+			     testValue = 1.0e12*(largestCost+1.0e-6);
+			     if (numberDualInfeasibilities_) {
+			       double average = sumDualInfeasibilities_/numberDualInfeasibilities_;
+			       testValue = CoinMax(testValue,average);
+			     }
+			     testValue =
+			       CoinMin(testValue,MAX_INFEASIBILITY_COST);
+			   }
+			   if (infeasibilityCost_<testValue) {
                               infeasibilityCost_ *= 5.0;
                               // reset looping criterion
                               progress->reset();
@@ -1350,6 +1464,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                               gutsOfSolution(NULL, NULL, ifValuesPass != 0);
                               problemStatus_ = -1; //continue
                               goToDual = false;
+			   } else {
+			     // say infeasible
+			     problemStatus_ = 1;
+			   }
                          } else {
                               // say infeasible
                               problemStatus_ = 1;
@@ -1443,17 +1561,29 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          }
                     }
                } else {
-                    if (!alwaysOptimal || !sumOfRelaxedPrimalInfeasibilities_)
-                         problemStatus_ = 0; // optimal
-                    else
-                         problemStatus_ = 1; // infeasible
+		 /* Previous code here mostly works but
+		    sumOfRelaxed is rubbish in primal 
+		 - so give benefit of doubt still */
+		 double error = CoinMin(1.0e-4, largestPrimalError_);
+		 // allow bigger tolerance than standard
+		 double saveTolerance = primalTolerance_;
+		 primalTolerance_ = 2.0*primalTolerance_ + error;
+		 nonLinearCost_->checkInfeasibilities(primalTolerance_);
+		 double relaxedSum = nonLinearCost_->sumInfeasibilities();
+		 // back
+		 primalTolerance_=saveTolerance;
+		 nonLinearCost_->checkInfeasibilities(primalTolerance_);
+		 if (alwaysOptimal || !relaxedSum)
+		   problemStatus_ = 0; // optimal
+		 else
+		   problemStatus_ = 1; // infeasible
                }
           }
      } else {
           // see if looks unbounded
           if (problemStatus_ == -5) {
                if (nonLinearCost_->numberInfeasibilities()) {
-                    if (infeasibilityCost_ > 1.0e18 && perturbation_ == 101) {
+                    if (infeasibilityCost_ >= MAX_INFEASIBILITY_COST && perturbation_ == 101) {
                          // back off weight
                          infeasibilityCost_ = 1.0e13;
                          // reset looping criterion
@@ -1461,9 +1591,9 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                          unPerturb(); // stop any further perturbation
                     }
                     //we need infeasiblity cost changed
-                    if (infeasibilityCost_ < 1.0e20) {
-                         infeasibilityCost_ *= 5.0;
-                         // reset looping criterion
+                    if (infeasibilityCost_ < MAX_INFEASIBILITY_COST) {
+			infeasibilityCost_ *= 5.0;
+			// reset looping criterion
                          progress->reset();
                          changeMade_++; // say change made
                          handler_->message(CLP_PRIMAL_WEIGHT, messages_)
@@ -1558,18 +1688,22 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                       && largestDualError_ > 1.0e6)) {
           problemStatus_ = 10; // try dual
           // See if second call
-          if ((moreSpecialOptions_ & 256) != 0||nonLinearCost_->sumInfeasibilities()>1.0e2) {
+          if ((moreSpecialOptions_ & 256) != 0&&nonLinearCost_->sumInfeasibilities()>1.0e2) {
                numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
                sumPrimalInfeasibilities_ = nonLinearCost_->sumInfeasibilities();
                // say infeasible
-               if (numberPrimalInfeasibilities_)
+               if (numberPrimalInfeasibilities_ && largestPrimalError_<1.0e-1)
                     problemStatus_ = 1;
           }
      }
      // make sure first free monotonic
      if (firstFree_ >= 0 && saveFirstFree >= 0) {
-          firstFree_ = (numberIterations_) ? saveFirstFree : -1;
-          nextSuperBasic(1, NULL);
+       if (numberIterations_) {
+	 firstFree_=saveFirstFree;
+       } else {
+	 firstFree_ = -1;
+	 nextSuperBasic(1, NULL);
+       }
      }
      if (doFactorization) {
           // restore weights (if saved) - also recompute infeasibility list
@@ -1582,6 +1716,10 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                factorization_->sparseThreshold(0);
                factorization_->goSparse();
           }
+     }
+     if (problemStatus_==1) {
+       // compute true objective value
+       computeObjectiveValue(true);
      }
      // Allow matrices to be sorted etc
      int fake = -999; // signal sort
@@ -1734,6 +1872,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
      while (true) {
           pivotOne = -1;
           totalThru = 0.0;
+	  //double totalThruFake=0.0;
+	  //int nThru=0;
           // We also re-compute reduced cost
           numberRemaining = 0;
           dualIn_ = cost_[sequenceIn_];
@@ -1745,8 +1885,8 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                int iRow = which[iIndex];
                double alpha = work[iIndex];
                int iPivot = pivotVariable_[iRow];
-               if (cost_[iPivot])
-                    dualIn_ -= alpha * cost_[iPivot];
+               // faster without if (cost_[iPivot])
+	       dualIn_ -= alpha * cost_[iPivot];
                alpha *= way;
                double oldValue = solution_[iPivot];
                // get where in bound sequence
@@ -1787,13 +1927,47 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                     rhs[numberRemaining] = oldValue;
                     indexPoint[numberRemaining] = iIndex;
                     index[numberRemaining++] = iRow;
-                    totalThru += alpha;
+                    totalThru += alpha; // need more if dubious pricing
+#if 0 // wasdef CLP_USER_DRIVEN
+		    clpUserStruct info;
+		    info.type=1;
+		    info.row=iRow;
+		    info.sequence=pivotVariable_[iRow];
+		    info.alpha=way*work[iIndex];
+		    double tempThru=totalThruFake+alpha;
+		    info.totalThru=totalThruFake+alpha;
+		    info.rhs=oldValue;
+		    info.printing=printing;
+		    eventHandler_->eventWithInfo(ClpEventHandler::pivotRow,
+						 &info);
+		    totalThruFake=info.totalThru;
+		    if (fabs(totalThruFake-tempThru)>1.0e-4)
+		      printf("%d thru - fake %g real %g\n",nThru,totalThruFake,totalThru);
+		    nThru++;
+#endif		    
                     setActive(iRow);
                     //} else if (value<primalTolerance_*1.002) {
                     // May change if is a flip
                     //indexRhs[numberFlip++]=iRow;
                }
           }
+#if 0 // was def CLP_USER_DRIVEN
+	  clpUserStruct info;
+	  info.type=4;
+	  info.alpha=(upperTheta+1.0e-5)*way;
+	  eventHandler_->eventWithInfo(ClpEventHandler::pivotRow,
+				       &info);
+          if (upperTheta < maximumMovement && totalThru*infeasibilityCost_ >= 1.0001 * dualCheck) {
+	    if (totalThruFake*infeasibilityCost_ < 1.0001 * dualCheck) {
+	      printf("fake allows through - it %d - fake %g real %g - dj %g\n",
+		     numberIterations_,totalThruFake,totalThru,dualCheck);
+	    } else if (totalThruFake!=totalThru) {
+	      printf("it %d - fake %g real %g - dj %g - ratio %g\n",
+		     numberIterations_,totalThruFake,totalThru,dualCheck,
+		     dualCheck/totalThruFake);
+	    }
+	  }
+#endif		    
           if (upperTheta < maximumMovement && totalThru*infeasibilityCost_ >= 1.0001 * dualCheck) {
                // Can pivot here
                break;
@@ -1853,7 +2027,6 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                          iBest = iIndex; // just in case weird numbers
                     }
                }
-
                // now look at best in this lot
                // But also see how infeasible small pivots will make
                double sumInfeasibilities = 0.0;
@@ -1869,7 +2042,24 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                     if (value <= 0 || iBest == iIndex) {
                          // how much would it cost to go thru and modify bound
                          double trueAlpha = way * work[indexPoint[iIndex]];
-                         totalThru += nonLinearCost_->changeInCost(pivotVariable_[iRow], trueAlpha, rhs[iIndex]);
+			 int jSequence=pivotVariable_[iRow];
+			 //if (printing)
+			 //jSequence += 1000000;
+                         totalThru += nonLinearCost_->changeInCost(jSequence, trueAlpha, rhs[iIndex]);
+#if 0 //was def CLP_USER_DRIVEN
+			 clpUserStruct info;
+			 info.type=2;
+			 info.row=iRow;
+			 info.sequence=pivotVariable_[iRow];
+			 info.alpha=trueAlpha;
+			 info.totalThru=totalThru;
+			 info.rhs=rhs[iIndex];
+			 info.printing=printing;
+			 eventHandler_->eventWithInfo(ClpEventHandler::pivotRow,
+						      &info);
+			 totalThru=info.totalThru;
+			 rhs[iIndex]=info.rhs;
+#endif		    
                          setActive(iRow);
                          if (alpha > bestPivot) {
                               bestPivot = alpha;
@@ -1886,6 +2076,13 @@ ClpSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                          }
                     }
                }
+#if 0 // was def CLP_USER_DRIVEN
+	       clpUserStruct info;
+	       info.type=5;
+	       info.alpha=(theta_+1.0e-5)*way;
+	       eventHandler_->eventWithInfo(ClpEventHandler::pivotRow,
+				       &info);
+#endif		    
                if (bestPivot < 0.1 * bestEverPivot &&
                          bestEverPivot > 1.0e-6 && bestPivot < 1.0e-3) {
                     // back to previous one
@@ -2463,8 +2660,8 @@ ClpSimplexPrimal::perturb(int type)
                perturbation = 1.0e-1;
           if (perturbation_ > 50 && perturbation_ < 55) {
                // reduce
-               while (perturbation_ > 50) {
-                    perturbation_--;
+               while (perturbation_ < 55) {
+                    perturbation_++;
                     perturbation *= 0.25;
                     bias *= 0.25;
                }
@@ -2520,6 +2717,7 @@ ClpSimplexPrimal::perturb(int type)
 #endif
      if (type == 1) {
           double tolerance = 100.0 * primalTolerance_;
+          tolerance = 10.0 * primalTolerance_; // try smaller
           //double multiplier = perturbation*maximumFraction;
           for (iSequence = 0; iSequence < numberRows_ + numberColumns_; iSequence++) {
                if (getStatus(iSequence) == basic) {
@@ -2538,6 +2736,10 @@ ClpSimplexPrimal::perturb(int type)
 #else
                          value *= perturbationArray_[2*iSequence];
 #endif
+			 if (value) {
+			   while (value<tolerance)
+			     value *= 3.0;
+			 }
                          if (solutionValue - lowerValue <= primalTolerance_) {
                               lower_[iSequence] -= value;
                          } else if (upperValue - solutionValue <= primalTolerance_) {
@@ -2560,7 +2762,7 @@ ClpSimplexPrimal::perturb(int type)
                          if (value) {
                               if (printOut)
                                    printf("col %d lower from %g to %g, upper from %g to %g\n",
-                                          iSequence, lower_[iSequence], lowerValue, upper_[iSequence], upperValue);
+                                          iSequence, lowerValue, lower_[iSequence], upperValue , upper_[iSequence]);
                               if (solutionValue) {
                                    largest = CoinMax(largest, value);
                                    if (value > (fabs(solutionValue) + 1.0)*largestPerCent)
@@ -2574,6 +2776,7 @@ ClpSimplexPrimal::perturb(int type)
           }
      } else {
           double tolerance = 100.0 * primalTolerance_;
+          tolerance = 10.0 * primalTolerance_; // try smaller
           for (i = 0; i < numberColumns_; i++) {
                double lowerValue = lower_[i], upperValue = upper_[i];
                if (upperValue > lowerValue + primalTolerance_) {
@@ -2586,22 +2789,19 @@ ClpSimplexPrimal::perturb(int type)
 #endif
                     value *= randomNumberGenerator_.randomDouble();
                     if (savePerturbation != 50) {
-                         if (fabs(value) <= primalTolerance_)
-                              value = 0.0;
-                         if (lowerValue > -1.0e20 && lowerValue)
-                              lowerValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
-                         if (upperValue < 1.0e20 && upperValue)
-                              upperValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(upperValue)));
-                    } else if (value) {
+		      if (fabs(value) <= primalTolerance_) 
+			value = 0.0;
+		    }
+                    if (value) {
                          double valueL = value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
                          // get in range
                          if (valueL <= tolerance) {
                               valueL *= 10.0;
                               while (valueL <= tolerance)
                                    valueL *= 10.0;
-                         } else if (valueL > 1.0) {
+                         } else if (valueL > 1.0e-3) {
                               valueL *= 0.1;
-                              while (valueL > 1.0)
+                              while (valueL > 1.0e-3)
                                    valueL *= 0.1;
                          }
                          if (lowerValue > -1.0e20 && lowerValue)
@@ -2612,9 +2812,9 @@ ClpSimplexPrimal::perturb(int type)
                               valueU *= 10.0;
                               while (valueU <= tolerance)
                                    valueU *= 10.0;
-                         } else if (valueU > 1.0) {
+                         } else if (valueU > 1.0e-3) {
                               valueU *= 0.1;
-                              while (valueU > 1.0)
+                              while (valueU > 1.0e-3)
                                    valueU *= 0.1;
                          }
                          if (upperValue < 1.0e20 && upperValue)
@@ -2639,12 +2839,16 @@ ClpSimplexPrimal::perturb(int type)
                lower_[i] = lowerValue;
                upper_[i] = upperValue;
           }
+	  // biased
+	  const double * rowLower = rowLower_-numberColumns_;
+	  const double * rowUpper = rowUpper_-numberColumns_;
           for (; i < numberColumns_ + numberRows_; i++) {
                double lowerValue = lower_[i], upperValue = upper_[i];
                double value = perturbation * maximumFraction;
                value = CoinMin(value, 0.1);
                value *= randomNumberGenerator_.randomDouble();
-               if (upperValue > lowerValue + tolerance) {
+               if (rowLower[i]!=rowUpper[i] &&
+		   upperValue > lowerValue + tolerance) {
                     if (savePerturbation != 50) {
                          if (fabs(value) <= primalTolerance_)
                               value = 0.0;
@@ -2681,11 +2885,11 @@ ClpSimplexPrimal::perturb(int type)
                               upperValue += valueU;
                     }
                } else if (upperValue > 0.0) {
-                    upperValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
-                    lowerValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+		 //upperValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+		 // lowerValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
                } else if (upperValue < 0.0) {
-                    upperValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
-                    lowerValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+		 // upperValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+		 // lowerValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
                } else {
                }
                if (lowerValue != lower_[i]) {
@@ -2726,12 +2930,16 @@ ClpSimplexPrimal::perturb(int type)
                break;
           }
      }
-     handler_->message(CLP_SIMPLEX_PERTURB, messages_)
+     if (largest || largestZero) {
+       handler_->message(CLP_SIMPLEX_PERTURB, messages_)
                << 100.0 * maximumFraction << perturbation << largest << 100.0 * largestPerCent << largestZero
                << CoinMessageEol;
-     // redo nonlinear costs
-     // say perturbed
-     perturbation_ = 101;
+       // say perturbed
+       perturbation_ = 101;
+     } else {
+       // say no need
+       perturbation_ = 102;
+     }
 }
 // un perturb
 bool
@@ -2810,6 +3018,52 @@ ClpSimplexPrimal::exactOutgoing() const
 {
      return (specialOptions_ & 4) != 0;
 }
+#if ALT_UPDATE_WEIGHTS
+static void doAlternate(ClpSimplex * model)
+{
+  // copy rowArray_[1]
+  ClpPrimalColumnSteepest * steep =
+    dynamic_cast<ClpPrimalColumnSteepest *>(model->primalColumnPivot());
+  if (steep) {
+#if ALT_UPDATE_WEIGHTS==1
+    if (!altVector[0]) {
+      altVector[1]=new CoinIndexedVector(2000);
+    }
+    CoinIndexedVector * alternateWeights2 = altVector[1];
+#else
+    CoinIndexedVector * alternateWeights2 = steep->alternateWeights();
+#endif
+    double * other2 = alternateWeights2->denseVector();
+    int * index2 = alternateWeights2->getIndices();
+    //rowArray packed
+    double * array = model->rowArray(1)->denseVector();
+    int * index = model->rowArray(1)->getIndices();
+    int n=model->rowArray(1)->getNumElements();
+    const int * pivotVariable = model->pivotVariable();
+    int n2=0;
+    alternateWeights2->clear();
+    if (steep->mode()!=1) {
+      for (int i=0;i<n;i++) {
+	int iRow = index[i];
+	int iPivot = pivotVariable[iRow];
+	if (steep->reference(iPivot)) {
+	  other2[iRow] = -2.0*array[i];
+	  index2[n2++] = iRow;
+	}
+      }
+    } else {
+      for (int i=0;i<n;i++) {
+	int iRow = index[i];
+	other2[iRow] = -2.0*array[i];
+	index2[n2++] = iRow;
+      }
+    }
+    alternateWeights2->setNumElements(n2);
+    model->factorization()->updateColumnTranspose(model->rowArray(0),
+					   alternateWeights2);
+  }
+}
+#endif
 /*
   Reasons to come out (normal mode/user mode):
   -1 normal
@@ -2880,6 +3134,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
           factorization_->updateColumnFT(rowArray_[2], rowArray_[1]);
           // Get extra rows
           matrix_->extendUpdated(this, rowArray_[1], 0);
+#ifdef ALT_UPDATE_WEIGHTS
+	  cilk_spawn doAlternate(this);
+#endif
           // do ratio test and re-compute dj
 #ifdef CLP_USER_DRIVEN
           if (solveType_ != 2 || (moreSpecialOptions_ & 512) == 0) {
@@ -2931,6 +3188,9 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                     }
                }
           }
+#ifdef ALT_UPDATE_WEIGHTS
+	  cilk_sync;
+#endif
           // need to clear toIndex_ in gub
           // ? when can I clear stuff
           // Clean up any gub stuff
@@ -2971,9 +3231,11 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                          break;
                     } else {
                          // take on more relaxed criterion
-                         if (saveDj * dualIn_ < test1 ||
+		         if ((saveDj * dualIn_ < test1 ||
                                    fabs(saveDj - dualIn_) > 2.0e-1 * (1.0 + fabs(dualIn_)) ||
-                                   fabs(dualIn_) < test2) {
+			      fabs(dualIn_) < test2) && 
+			     (fabs(saveDj)>fabs(dualIn_)
+						||saveDj*dualIn_<1.0e-4||factorization_->pivots())) {
                               // need to reject something
                               char x = isColumn(sequenceIn_) ? 'C' : 'R';
                               handler_->message(CLP_SIMPLEX_FLAG, messages_)
@@ -2981,8 +3243,29 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                                         << CoinMessageEol;
                               setFlagged(sequenceIn_);
 #if 1 //def FEB_TRY
+			      // could do conditional reset of weights to get larger djs
+			      primalColumnPivot_->saveWeights(this,6);
                               // Make safer?
+			      double oldTolerance=factorization_->pivotTolerance();
                               factorization_->saferTolerances (-0.99, -1.03);
+			      if (factorization_->pivotTolerance()<1.029*oldTolerance
+				  &&oldTolerance<0.995
+				  &&!factorization_->pivots()) {
+#ifdef CLP_USEFUL_PRINTOUT
+				printf("Changing pivot tolerance from %g to %g and factorizing\n",
+				       oldTolerance,factorization_->pivotTolerance());
+#endif
+				clearAll();
+				pivotRow_ = -1; // say no weights update
+				returnCode = -4;
+				if(lastGoodIteration_ + 1 == numberIterations_) {
+				  // not looking wonderful - try cleaning bounds
+				  // put non-basics to bounds in case tolerance moved
+				  nonLinearCost_->checkInfeasibilities(0.0);
+				}
+				sequenceOut_ = -1;
+				break;
+			      }
 #endif
                               progress_.clearBadTimes();
                               lastBadIteration_ = numberIterations_; // say be more cautious
@@ -3022,7 +3305,13 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                     factorization_->updateColumnTranspose(rowArray_[2], rowArray_[0]);
                     // put row of tableau in rowArray[0] and columnArray[0]
                     matrix_->transposeTimes(this, -1.0,
-                                            rowArray_[0], columnArray_[1], columnArray_[0]);
+                                            rowArray_[0], 
+#ifdef LONG_REGION_2 
+					    rowArray_[2],
+#else 
+					    columnArray_[1],
+#endif 
+					    columnArray_[0]);
                     // update column djs
                     int i;
                     int * index = columnArray_[0]->getIndices();
@@ -3280,6 +3569,11 @@ ClpSimplexPrimal::pivotResult(int ifValuesPass)
                     secondaryStatus_ = ClpEventHandler::endOfIteration;
                     returnCode = 3;
                }
+#if CLP_USER_DRIVEN
+	       int in = sequenceIn_;
+	       int out = sequenceOut_;
+	       matrix_->correctSequence(this, in, out);
+#endif
           }
      }
      if ((solveType_ == 2 && (moreSpecialOptions_ & 512) == 0) &&
@@ -3565,7 +3859,7 @@ ClpSimplexPrimal::lexSolve()
                     rowArray_[iRow]->clear();
                }
 
-               for (iColumn = 0; iColumn < 2; iColumn++) {
+               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                     columnArray_[iColumn]->clear();
                }
 

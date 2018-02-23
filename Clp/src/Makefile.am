@@ -20,7 +20,7 @@ AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCLP_BUILD
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
-lib_LTLIBRARIES = libClp.la
+lib_LTLIBRARIES = libClp.la libClpSolver.la
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = \
@@ -71,7 +71,13 @@ libClp_la_SOURCES = \
 	ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp \
 	Idiot.cpp Idiot.hpp \
-	IdiSolve.cpp
+	IdiSolve.cpp \
+	ClpCholeskyPardiso.cpp ClpCholeskyPardiso.hpp \
+	ClpPESimplex.cpp ClpPESimplex.hpp \
+        ClpPEPrimalColumnDantzig.cpp ClpPEPrimalColumnDantzig.hpp \
+ 	ClpPEPrimalColumnSteepest.cpp ClpPEPrimalColumnSteepest.hpp \
+ 	ClpPEDualRowDantzig.cpp ClpPEDualRowDantzig.hpp \
+ 	ClpPEDualRowSteepest.cpp ClpPEDualRowSteepest.hpp
 
 if COIN_HAS_ABC
 libClp_la_SOURCES += \
@@ -119,6 +125,14 @@ libClp_la_SOURCES += \
 	CoinAbcSmallFactorization5.cpp
 endif
 
+libClpSolver_la_SOURCES = \
+	ClpSolver.cpp \
+	CbcOrClpParam.cpp CbcOrClpParam.hpp \
+	Clp_ampl.cpp Clp_ampl.h \
+	MyEventHandler.cpp MyEventHandler.hpp \
+	MyMessageHandler.cpp MyMessageHandler.hpp \
+	unitTest.cpp
+
 # if AMD, CHOLMOD, or GLPK is available, then compile ClpCholeskyUfl.cpp
 if COIN_HAS_AMD
 libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
@@ -143,10 +157,12 @@ endif
 # List all additionally required libraries
 if DEPENDENCY_LINKING
 libClp_la_LIBADD = $(CLPLIB_LIBS)
+libClpSolver_la_LIBADD = $(CLPLIB_LIBS) libClp.la
 endif
 
 # This is for libtool
 libClp_la_LDFLAGS = $(LT_LDFLAGS)
+libClpSolver_la_LDFLAGS = $(LT_LDFLAGS)
 
 ########################################################################
 #                            clp program                               #
@@ -157,16 +173,10 @@ libClp_la_LDFLAGS = $(LT_LDFLAGS)
 bin_PROGRAMS = clp
 
 # List all source files for this executable, including headers
-clp_SOURCES = \
-	ClpMain.cpp \
-	CbcOrClpParam.cpp CbcOrClpParam.hpp \
-	Clp_ampl.cpp Clp_ampl.h \
-	MyEventHandler.cpp MyEventHandler.hpp \
-	MyMessageHandler.cpp MyMessageHandler.hpp \
-	unitTest.cpp
+clp_SOURCES = ClpMain.cpp 
 
 # List all additionally required libraries
-clp_LDADD = libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
+clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
 
 ########################################################################
 #                            Additional flags                          #
@@ -236,10 +246,16 @@ includecoin_HEADERS = \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
-	Idiot.hpp
+	Idiot.hpp \
+	ClpCholeskyPardiso.hpp \
+	ClpPESimplex.hpp \
+        ClpPEPrimalColumnDantzig.hpp \
+        ClpPEPrimalColumnSteepest.hpp \
+        ClpPEDualRowDantzig.hpp \
+        ClpPEDualRowSteepest.hpp
 
 if COIN_HAS_ABC
-includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp
+includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
 endif
 
 
@@ -264,7 +280,7 @@ if COIN_HAS_WSMP
 includecoin_HEADERS += ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp
 endif
 
-# needed by Cbc
+# needed by Clp
 includecoin_HEADERS += CbcOrClpParam.cpp
 
 ########################################################################

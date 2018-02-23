@@ -81,7 +81,13 @@ AbcPrimalColumnSteepest::AbcPrimalColumnSteepest (const AbcPrimalColumnSteepest 
                savedWeights_ = NULL;
           }
           if (rhs.alternateWeights_) {
+#ifndef ABC_USE_COIN_FACTORIZATIONz
                alternateWeights_ = new CoinIndexedVector(rhs.alternateWeights_);
+	       // zero
+	       CoinZeroN(alternateWeights_->getIndices(),
+			 alternateWeights_->capacity());
+#else
+#endif
           } else {
                alternateWeights_ = NULL;
           }
@@ -151,7 +157,13 @@ AbcPrimalColumnSteepest::operator=(const AbcPrimalColumnSteepest& rhs)
                weights_ = NULL;
           }
           if (rhs.alternateWeights_ != NULL) {
+#ifndef ABC_USE_COIN_FACTORIZATIONz
                alternateWeights_ = new CoinIndexedVector(rhs.alternateWeights_);
+	       // zero
+	       CoinZeroN(alternateWeights_->getIndices(),
+			 alternateWeights_->capacity());
+#else
+#endif
           } else {
                alternateWeights_ = NULL;
           }
@@ -483,7 +495,7 @@ AbcPrimalColumnSteepest::pivotColumn(CoinPartitionedVector * updates,
           infeas[sequenceOut] = 0.0;
      }
      if (model_->factorization()->pivots() && model_->numberPrimalInfeasibilities())
-          tolerance = CoinMax(tolerance, 1.0e-10 * model_->infeasibilityCost());
+          tolerance = CoinMax(tolerance, 1.0e-15 * model_->infeasibilityCost());
      tolerance *= tolerance; // as we are using squares
 
      int iPass;
@@ -1394,9 +1406,18 @@ AbcPrimalColumnSteepest::maximumPivotsChanged()
           delete alternateWeights_;
           alternateWeights_ = new CoinIndexedVector();
           // enough space so can use it for factorization
-	  // enoughfor ordered
+#ifndef ABC_USE_COIN_FACTORIZATION
+	  // enough for ordered
           alternateWeights_->reserve(2*model_->numberRows() +
                                      model_->factorization()->maximumPivots());
+#else
+	  int n=(2*model_->numberRows()+
+	     model_->factorization()->maximumPivots()+7)&~3;
+          alternateWeights_->reserve(n);
+	  // zero
+	  CoinZeroN(alternateWeights_->getIndices(),
+		    alternateWeights_->capacity());
+#endif
      }
 }
 /*
@@ -1465,8 +1486,17 @@ AbcPrimalColumnSteepest::saveWeights(AbcSimplex * model, int mode)
 	weights_ = new double[numberRows+numberColumns];
 	alternateWeights_ = new CoinIndexedVector();
 	// enough space so can use it for factorization
+#ifndef ABC_USE_COIN_FACTORIZATION
 	alternateWeights_->reserve(2*numberRows +
 				   model_->factorization()->maximumPivots());
+#else
+	int n=(2*model_->numberRows()+
+	   model_->factorization()->maximumPivots()+7)&~3;
+	alternateWeights_->reserve(n);
+	// zero
+	CoinZeroN(alternateWeights_->getIndices(),
+		  alternateWeights_->capacity());
+#endif
 	initializeWeights();
 	// create saved weights
 	delete [] savedWeights_;
@@ -1902,8 +1932,11 @@ AbcPrimalColumnSteepest::initializeWeights()
           }
      } else {
           CoinIndexedVector * temp = new CoinIndexedVector();
+#ifndef ABC_USE_COIN_FACTORIZATIONz
           temp->reserve(numberRows +
                         model_->factorization()->maximumPivots());
+#else
+#endif
           double * array = alternateWeights_->denseVector();
           int * which = alternateWeights_->getIndices();
 
@@ -2031,7 +2064,7 @@ AbcPrimalColumnSteepest::partialPricing(CoinIndexedVector * updates,
           tolerance = CoinMin(1000.0, tolerance);
      }
      if (model_->factorization()->pivots() && model_->numberPrimalInfeasibilities())
-       tolerance = CoinMax(tolerance, 1.0e-10 * model_->infeasibilityCost());
+       tolerance = CoinMax(tolerance, 1.0e-15 * model_->infeasibilityCost());
      // So partial pricing can use
      model_->setCurrentDualTolerance(tolerance);
      model_->factorization()->updateColumnTranspose(*updates);

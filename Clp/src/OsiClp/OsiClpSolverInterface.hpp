@@ -339,6 +339,16 @@ public:
   void stopFastDual();
   /// Sets integer tolerance and increment
   void setStuff(double tolerance,double increment);
+  /// Return a conflict analysis cut from small model
+  OsiRowCut * smallModelCut(const double * originalLower, const double * originalUpper,
+			    int numberRowsAtContinuous,const int * whichGenerator,
+			    int typeCut=0);
+  /** Return a conflict analysis cut from model
+      If type is 0 then genuine cut, if 1 then only partially processed
+   */
+  OsiRowCut * modelCut(const double * originalLower, const double * originalUpper,
+		       int numberRowsAtContinuous,const int * whichGenerator,
+		       int typeCut=0);
   //@}
   
   //---------------------------------------------------------------------------
@@ -365,8 +375,8 @@ public:
     return modelPtr_->numberRows(); }
   
   /// Get number of nonzero elements
-  virtual int getNumElements() const {
-    int retVal = 0;
+  virtual CoinBigIndex getNumElements() const {
+    CoinBigIndex retVal = 0;
     const CoinPackedMatrix * matrix =modelPtr_->matrix();
     if ( matrix != NULL ) retVal=matrix->getNumElements();
     return retVal; }
@@ -468,7 +478,15 @@ public:
   bool isOptionalInteger(int colIndex) const;
   /** Set the index-th variable to be an optional integer variable */
   void setOptionalInteger(int index);
-  
+  /// Return true only if integer and not optional
+  inline bool isHeuristicInteger(int colIndex) const
+  { return ( integerInformation_&& integerInformation_[colIndex]==1 );} 
+  /// Return integer type (0,1,2=optional,3=sc,4=scint)
+  inline int integerType(int colIndex) const
+  { return integerInformation_ ? integerInformation_[colIndex] : 0;} 
+  /// Set integer type (0,1,2=optional,3=sc,4=scint)
+  inline void setIntegerType(int colIndex,int value) 
+  { integerInformation_[colIndex] = value;} 
   /// Get pointer to row-wise copy of matrix
   virtual const CoinPackedMatrix * getMatrixByRow() const;
   
@@ -740,7 +758,7 @@ public:
                        const double* obj);
   /**  */
   virtual void addCols(const int numcols,
-		       const int * columnStarts, const int * rows, const double * elements,
+		       const CoinBigIndex * columnStarts, const int * rows, const double * elements,
 		       const double* collb, const double* colub,   
 		       const double* obj);
   /** */
@@ -781,7 +799,7 @@ public:
 
   /** */
   virtual void addRows(const int numrows,
-		       const int * rowStarts, const int * columns, const double * element,
+		       const CoinBigIndex * rowStarts, const int * columns, const double * element,
 		       const double* rowlb, const double* rowub);
   ///
   void modifyCoefficient(int row, int column, double newElement,
@@ -1079,6 +1097,8 @@ public:
       0 - normal, 1 lightweight but just integers, 2 lightweight and all
   */
   virtual int tightenBounds(int lightweight=0);
+  /// See if any integer variables make infeasible other way
+  int infeasibleOtherWay(char * whichWay);
   /// Return number of entries in L part of current factorization
   virtual CoinBigIndex getSizeL() const;
   /// Return number of entries in U part of current factorization
@@ -1386,6 +1406,7 @@ protected:
       524288 Fake objective and 0-1
       1048576 Don't recompute ray after crunch
       2097152 
+      8388608 Odd integers e.g. semi-continuous
   */
   mutable unsigned int specialOptions_;
   /// Copy of model when option 131072 set
@@ -1458,8 +1479,7 @@ public:
   inline int phase() const
   { return phase_;}
   /// are we in trouble
-  inline bool inTrouble() const
-  { return inTrouble_;}
+  bool inTrouble() const;
   
   //@}
   

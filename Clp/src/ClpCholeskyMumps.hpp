@@ -43,7 +43,7 @@ public:
      //@{
      /** Constructor which has dense columns activated.
          Default is off. */
-     ClpCholeskyMumps(int denseThreshold = -1);
+     ClpCholeskyMumps(int denseThreshold = -1,int logLevel=0);
      /** Destructor  */
      virtual ~ClpCholeskyMumps();
      /// Clone

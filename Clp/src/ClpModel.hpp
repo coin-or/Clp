@@ -259,7 +259,7 @@ public:
          d) orders elements
          returns number of elements eliminated or -1 if not ClpPackedMatrix
      */
-     int cleanMatrix(double threshold = 1.0e-20);
+     CoinBigIndex cleanMatrix(double threshold = 1.0e-20);
      /// Copy contents - resizing if necessary - otherwise re-use memory
      void copy(const ClpMatrixBase * from, ClpMatrixBase * & to);
 #ifndef CLP_NO_STD
@@ -386,6 +386,7 @@ public:
           return dblParam_[ClpMaxSeconds];
      }
      void setMaximumSeconds(double value);
+     void setMaximumWallSeconds(double value);
      /// Returns true if hit maximum iterations (or time)
      bool hitMaximumIterations() const;
      /** Status of problem:
@@ -698,7 +699,7 @@ public:
           else return matrix_->getPackedMatrix();
      }
      /// Number of elements in matrix
-     inline int getNumElements() const {
+     inline CoinBigIndex getNumElements() const {
           return matrix_->getNumElements();
      }
      /** Small element value - elements less than this set to zero,
@@ -1039,6 +1040,7 @@ public:
          1048576 - don't need to finish dual (can return 3)
 	 2097152 - zero costs!
 	 4194304 - don't scale integer variables
+	 8388608 - Idiot when not really sure about it
          NOTE - many applications can call Clp but there may be some short cuts
                 which are taken which are not guaranteed safe from all applications.
                 Vetted applications will have a bit set and the code may test this

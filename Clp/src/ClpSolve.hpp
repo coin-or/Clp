@@ -29,6 +29,8 @@ public:
           useBarrier,
           useBarrierNoCross,
           automatic,
+	  tryDantzigWolfe,
+	  tryBenders,
           notImplemented
      };
      enum PresolveType {
@@ -97,8 +99,8 @@ public:
                       32 - Use KKT
          5 - for presolve
                       1 - switch off dual stuff
-         6 - for detailed printout (initially just presolve)
-                      1 - presolve statistics
+         6 - extra switches
+                      
      */
      void setSpecialOption(int which, int value, int extraInfo = -1);
      int getSpecialOption(int which) const;
@@ -201,18 +203,18 @@ public:
      }
      /// Whether we want to kill small substitutions
      inline bool doKillSmall() const {
-          return (independentOptions_[1] & 1024) == 0;
+          return (independentOptions_[1] & 8192) == 0;
      }
      inline void setDoKillSmall(bool doKill) {
-          if (doKill) independentOptions_[1]  &= ~1024;
-          else independentOptions_[1] |= 1024;
+          if (doKill) independentOptions_[1]  &= ~8192;
+          else independentOptions_[1] |= 8192;
      }
      /// Set whole group
      inline int presolveActions() const {
-          return independentOptions_[1] & 0xffff;
+          return independentOptions_[1] & 0xffffff;
      }
      inline void setPresolveActions(int action) {
-          independentOptions_[1]  = (independentOptions_[1] & 0xffff0000) | (action & 0xffff);
+          independentOptions_[1]  = (independentOptions_[1] & 0xff000000) | (action & 0xffffff);
      }
      /// Largest column for substitution (normally 3)
      inline int substitution() const {
@@ -220,6 +222,12 @@ public:
      }
      inline void setSubstitution(int value) {
           independentOptions_[2] = value;
+     }
+     inline void setIndependentOption(int type,int value) {
+          independentOptions_[type]  = value;
+     }
+     inline int independentOption(int type) const {
+          return independentOptions_[type];
      }
      //@}
 
@@ -243,6 +251,7 @@ private:
          0 - if set return from clpsolve if infeasible
          1 - To be copied over to presolve options
          2 - max substitution level
+	 If Dantzig Wolfe/benders 0 is number blocks, 2 is #passes (notional)
      */
      int independentOptions_[3];
      //@}
@@ -293,6 +302,8 @@ public:
      void setInfeasibility(double value);
      /// Returns real primal infeasibility (if -1) - current if (0)
      double lastInfeasibility(int back = 1) const;
+     /// Returns number of primal infeasibilities (if -1) - current if (0)
+     int numberInfeasibilities(int back = 1) const;
      /// Modify objective e.g. if dual infeasible in dual
      void modifyObjective(double value);
      /// Returns previous iteration number (if -1) - current if (0)

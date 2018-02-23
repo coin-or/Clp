@@ -54,6 +54,11 @@ public:
          5) for strong branching - initialize (uninitialized) , infeasibilities
      */
      virtual void saveWeights(ClpSimplex * model, int mode);
+     /// Pass in saved weights
+     void passInSavedWeights(const CoinIndexedVector * saved);
+     /// Get saved weights
+     inline CoinIndexedVector * savedWeights()
+     { return savedWeights_;} 
      /// Gets rid of last update
      virtual void unrollWeights();
      /// Gets rid of all arrays
@@ -104,6 +109,10 @@ public:
      inline int mode() const {
           return mode_;
      }
+     /// Set mode
+     inline void setMode(int mode) {
+          mode_ = mode;
+     }
      /// Set/ get persistence
      inline void setPersistence(Persistence life) {
           persistence_ = life;
@@ -115,8 +124,8 @@ public:
 
      //---------------------------------------------------------------------------
 
-private:
-     ///@name Private member data
+protected:
+     ///@name Protected member data
      /** Status
          0) Normal
          -1) Needs initialization

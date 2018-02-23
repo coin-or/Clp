@@ -4365,8 +4365,10 @@ CoinAbcTypeFactorization::goSparse2 ( )
 #endif
     if (numberRows_<largeRowsSparse) {
       sparseThreshold_=CoinMin(numberRows_/mediumRowsDivider,mediumRowsMinCount);
+      sparseThreshold_=CoinMin(numberRows_/6,500);
     } else {
       sparseThreshold_=CoinMax(largeRowsCount,numberRows_>>3);
+      sparseThreshold_=500;
     }
 #if FACTORIZATION_STATISTICS
     ftranTwiddleFactor1_=ftranTwiddleFactor1X;
@@ -4585,6 +4587,9 @@ CoinAbcTypeFactorization::checkSparse()
       btranAverageAfterU_ = INITIAL_AVERAGE2;
       btranAverageAfterR_ = INITIAL_AVERAGE2;
       btranAverageAfterL_ = INITIAL_AVERAGE2;
+      btranFullCountAfterL_ = INITIAL_AVERAGE2;
+      btranFullCountAfterR_ = INITIAL_AVERAGE2;
+      btranFullCountAfterU_ = INITIAL_AVERAGE2;
     }
     ftranFullCountInput_= CoinMax(ftranFullCountInput_,1.0);
     ftranFullAverageAfterL_ = CoinMax(ftranFullCountAfterL_/ftranFullCountInput_,INITIAL_AVERAGE2);

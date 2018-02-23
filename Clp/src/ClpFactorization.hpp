@@ -24,6 +24,9 @@ class CoinOtherFactorization;
 #ifndef COIN_FAST_CODE
 #define COIN_FAST_CODE
 #endif
+#ifndef CLP_FACTORIZATION_NEW_TIMING
+#define CLP_FACTORIZATION_NEW_TIMING 1
+#endif
 
 /** This just implements CoinFactorization when an ClpMatrixBase object
     is passed.  If a network then has a dummy CoinFactorization and
@@ -92,6 +95,14 @@ public:
                          double pivotCheck ,
                          bool checkBeforeModifying = false,
                          double acceptablePivot = 1.0e-8);
+#if ABOCA_LITE_FACTORIZATION
+  /// Does btranU part of replaceColumn (skipping entries)
+  void replaceColumn1(CoinIndexedVector * regionSparse, int pivotRow);
+  /// Does replaceColumn - having already done btranU
+  int replaceColumn2 ( CoinIndexedVector * regionSparse,
+		      int pivotRow,
+		       double pivotCheck);
+#endif
      //@}
 
      /**@name various uses of factorization (return code number elements)
@@ -125,6 +136,13 @@ public:
          region1 starts as zero and is zero at end */
      int updateColumnTranspose ( CoinIndexedVector * regionSparse,
                                  CoinIndexedVector * regionSparse2) const;
+     /** Updates two columns (BTRAN) from regionSparse2 and 3
+	 regionSparse starts as zero and is zero at end 
+	 Note - if regionSparse2 packed on input - will be packed on output - same for 3
+     */
+     void updateTwoColumnsTranspose ( CoinIndexedVector * regionSparse,
+				      CoinIndexedVector * regionSparse2,
+				      CoinIndexedVector * regionSparse3) const;
      //@}
 #ifdef CLP_MULTIPLE_FACTORIZATIONS
      /**@name Lifted from CoinFactorization */
@@ -221,16 +239,10 @@ public:
           else return 0 ;
      }
 #endif
-     inline bool timeToRefactorize() const {
-          if (coinFactorizationA_) {
-               return (coinFactorizationA_->pivots() * 3 > coinFactorizationA_->maximumPivots() * 2 &&
-                       coinFactorizationA_->numberElementsR() * 3 > (coinFactorizationA_->numberElementsL() +
-                                 coinFactorizationA_->numberElementsU()) * 2 + 1000 &&
-                       !coinFactorizationA_->numberDense());
-          } else {
-               return coinFactorizationB_->pivots() > coinFactorizationB_->numberRows() / 2.45 + 20;
-          }
-     }
+     bool timeToRefactorize() const;
+#if CLP_FACTORIZATION_NEW_TIMING>1
+     void statsRefactor(char when) const;
+#endif
      /// Level of detail of messages
      inline int messageLevel (  ) const {
           if (coinFactorizationA_) return coinFactorizationA_->messageLevel();
@@ -351,6 +363,10 @@ public:
      inline int isDenseOrSmall() const {
           return coinFactorizationB_ ? 1 : 0;
      }
+     /// Return coinFactorizationA_
+     inline CoinFactorization * coinFactorization() const {
+          return coinFactorizationA_;
+     }
 #else
      inline bool timeToRefactorize() const {
           return (pivots() * 3 > maximumPivots() * 2 &&
@@ -378,6 +394,9 @@ public:
      void cleanUp();
      /// Says whether to redo pivot order
      bool needToReorder() const;
+     /// To switch statistics on or off
+     inline void doStatistics(bool trueFalse) const
+     { doStatistics_ = trueFalse;}
 #ifndef SLIM_CLP
      /// Says if a network basis
      inline bool networkBasis() const {
@@ -420,7 +439,18 @@ private:
      /// Switch to dense if number rows <= this
      int goDenseThreshold_;
 #endif
+#ifdef CLP_FACTORIZATION_NEW_TIMING
+     /// For guessing when to re-factorize
+     mutable double shortestAverage_;
+     mutable double totalInR_;
+     mutable double totalInIncreasingU_;
+     mutable int endLengthU_;
+     mutable int lastNumberPivots_;
+     mutable int effectiveStartNumberU_;
+#endif
+     /// To switch statistics on or off
+     mutable bool doStatistics_;
      //@}
 };
-
+ 
 #endif

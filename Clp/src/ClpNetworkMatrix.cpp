@@ -523,7 +523,7 @@ ClpNetworkMatrix::subsetTransposeTimes(const ClpSimplex * /*model*/,
      }
 }
 /// returns number of elements in column part of basis,
-CoinBigIndex
+int
 ClpNetworkMatrix::countBasis( const int * whichColumn,
                               int & numberColumnBasic)
 {
@@ -543,7 +543,13 @@ ClpNetworkMatrix::countBasis( const int * whichColumn,
                     numberElements ++;
           }
      }
-     return numberElements;
+#if COIN_BIG_INDEX
+     if (numberElements>COIN_INT_MAX) {
+       printf("Factorization too large\n");
+       abort();
+     }
+#endif
+     return static_cast<int>(numberElements);
 }
 void
 ClpNetworkMatrix::fillBasis(ClpSimplex * /*model*/,
@@ -568,7 +574,7 @@ ClpNetworkMatrix::fillBasis(ClpSimplex * /*model*/,
                rowCount[iRowP]++;
                elementU[numberElements+1] = 1.0;
                numberElements += 2;
-               start[i+1] = numberElements;
+               start[i+1] = static_cast<int>(numberElements);
                columnCount[i] = 2;
           }
      } else {
@@ -587,10 +593,14 @@ ClpNetworkMatrix::fillBasis(ClpSimplex * /*model*/,
                     rowCount[iRowP]++;
                     elementU[numberElements++] = 1.0;
                }
-               start[i+1] = numberElements;
-               columnCount[i] = numberElements - start[i];
+               start[i+1] = static_cast<int>(numberElements);
+               columnCount[i] = static_cast<int>(numberElements) - start[i];
           }
      }
+#if COIN_BIG_INDEX
+     if (numberElements>COIN_INT_MAX)
+       abort();
+#endif
 }
 /* Unpacks a column into an CoinIndexedvector
  */
@@ -1187,9 +1197,9 @@ ClpNetworkMatrix::appendMatrix(int number, int type,
           new CoinPackedVectorBase * [number];
      int iVector;
      for (iVector = 0; iVector < number; iVector++) {
-          int iStart = starts[iVector];
+          CoinBigIndex iStart = starts[iVector];
           vectors[iVector] =
-               new CoinPackedVector(starts[iVector+1] - iStart,
+	    new CoinPackedVector(static_cast<int>(starts[iVector+1] - iStart),
                                     index + iStart, element + iStart);
      }
      if (type == 0) {

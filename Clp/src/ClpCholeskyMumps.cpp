@@ -14,7 +14,13 @@
 #define USE_COMM_WORLD -987654
 extern "C" {
 #include "dmumps_c.h"
+// In newer ThirdParty/Mumps, mpi.h is renamed to mumps_mpi.h.
+// We get informed about this by having COIN_USE_MUMPS_MPI_H defined.
+#ifdef COIN_USE_MUMPS_MPI_H
+#include "mumps_mpi.h"
+#else
 #include "mpi.h"
+#endif
 }
 
 #include "ClpCholeskyMumps.hpp"
@@ -29,7 +35,7 @@ extern "C" {
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
-ClpCholeskyMumps::ClpCholeskyMumps (int denseThreshold)
+ClpCholeskyMumps::ClpCholeskyMumps (int denseThreshold,int logLevel)
      : ClpCholeskyBase(denseThreshold)
 {
      mumps_ = (DMUMPS_STRUC_C*)malloc(sizeof(DMUMPS_STRUC_C));
@@ -59,11 +65,13 @@ ClpCholeskyMumps::ClpCholeskyMumps (int denseThreshold)
      mumps_->ICNTL(4) = 2; // log messages
      mumps_->ICNTL(24) = 1; // Deal with zeros on diagonal
      mumps_->CNTL(3) = 1.0e-20; // drop if diagonal less than this
-     // output off
-     mumps_->ICNTL(1) = -1;
-     mumps_->ICNTL(2) = -1;
-     mumps_->ICNTL(3) = -1;
-     mumps_->ICNTL(4) = 0;
+     if (!logLevel) {
+       // output off
+       mumps_->ICNTL(1) = -1;
+       mumps_->ICNTL(2) = -1;
+       mumps_->ICNTL(3) = -1;
+       mumps_->ICNTL(4) = 0;
+     }
 }
 
 //-------------------------------------------------------------------
@@ -165,7 +173,7 @@ ClpCholeskyMumps::order(ClpInterior * model)
      // NOT COMPRESSED FOR NOW ??? - Space for starts
      mumps_->ICNTL(5) = 0; // say NOT compressed format
      try {
-          choleskyStart_ = new CoinBigIndex[numberRows_+1+sizeFactor_];
+          choleskyStart_ = new int[numberRows_+1+sizeFactor_];
      } catch (...) {
           // no memory
           return -1;
@@ -368,7 +376,7 @@ ClpCholeskyMumps::factorize(const double * diagonal, int * rowsDropped)
           // Move to int array
           rowsDropped[iRow] = dropped;
           if (!dropped) {
-               CoinBigIndex start = choleskyStart_[iRow] - 1; // to Fortran
+               int start = choleskyStart_[iRow] - 1; // to Fortran
                double diagonal = sparseFactor_[start];
                if (diagonal > largest2) {
                     sparseFactor_[start] = CoinMax(diagonal, 1.0e-10);

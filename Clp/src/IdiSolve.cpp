@@ -124,6 +124,7 @@ Idiot::objval(int nrows, int ncols, double * rowsol , double * colsol,
      result.infeas = sum1;
      result.objval = objvalue;
      result.weighted = objvalue + weight * sum2;
+     result.dropThis = 0.0;
      result.sumSquared = sum2;
      return result;
 }
@@ -141,7 +142,8 @@ Idiot::IdiSolve(
      CoinThreadRandom * randomNumberGenerator)
 {
      IdiotResult result;
-     int  i, j, k, iter;
+     int  i, k, iter;
+     CoinBigIndex j;
      double value = 0.0, objvalue = 0.0, weightedObj = 0.0;
      double tolerance = 1.0e-8;
      double * history[HISTORY+1];
@@ -336,6 +338,24 @@ Idiot::IdiSolve(
      for (i = 0; i < DJTEST; i++) {
           djSave[i] = 1.0e30;
      }
+#ifndef OSI_IDIOT
+     int numberColumns = model_->numberColumns();
+     for (int i=0;i<numberColumns;i++) {
+       if (model_->getColumnStatus(i)!=ClpSimplex::isFixed)
+	 statusSave[i] = 0;
+       else 
+	 statusSave[i] = 2;
+     }
+     memset(statusSave+numberColumns,0,ncols-numberColumns);
+     if ((strategy_&131072)==0) {
+       for (int i=0;i<numberColumns;i++) {
+	 if (model_->getColumnStatus(i)==ClpSimplex::isFixed) {
+	   assert (colsol[i]<lower[i]+tolerance||
+		   colsol[i]>upper[i]-tolerance);
+	 }
+       }
+     }
+#else
      for (i = 0; i < ncols; i++) {
           if (upper[i] - lower[i]) {
                statusSave[i] = 0;
@@ -343,6 +363,7 @@ Idiot::IdiSolve(
                statusSave[i] = 1;
           }
      }
+#endif
      // for two pass method
      int start[2];
      int stop[2];

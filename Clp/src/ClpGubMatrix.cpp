@@ -892,7 +892,7 @@ ClpGubMatrix::subsetTransposeTimes(const ClpSimplex * model,
      }
 }
 /// returns number of elements in column part of basis,
-CoinBigIndex
+int
 ClpGubMatrix::countBasis(const int * whichColumn,
                          int & numberColumnBasic)
 {
@@ -965,7 +965,13 @@ ClpGubMatrix::countBasis(const int * whichColumn,
      delete [] mark;
      // update number of column basic
      numberColumnBasic = numberBasic;
-     return numberElements;
+#if COIN_BIG_INDEX
+     if (numberElements>COIN_INT_MAX) {
+       printf("Factorization too large\n");
+       abort();
+     }
+#endif
+     return static_cast<int>(numberElements);
 }
 void
 ClpGubMatrix::fillBasis(ClpSimplex * model,

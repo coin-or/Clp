@@ -37,6 +37,9 @@
 #endif
 #ifndef ABC_INHERIT
 #define ABC_INHERIT
+#ifndef CLP_INHERIT_MODE
+#define CLP_INHERIT_MODE 2
+#endif
 #endif
 #elif CLP_HAS_ABC==3
 #ifndef ABC_PARALLEL

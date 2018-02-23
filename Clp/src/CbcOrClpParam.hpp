@@ -58,6 +58,7 @@ enum CbcOrClpParameterType
      CLP_PARAM_DBL_OBJSCALE,
      CLP_PARAM_DBL_RHSSCALE,
      CLP_PARAM_DBL_ZEROTOLERANCE,
+     CLP_PARAM_DBL_PSI,
 
      CBC_PARAM_DBL_INFEASIBILITYWEIGHT = 51,
      CBC_PARAM_DBL_CUTOFF,
@@ -103,6 +104,7 @@ enum CbcOrClpParameterType
      CLP_PARAM_INT_RANDOMSEED,
      CLP_PARAM_INT_MORESPECIALOPTIONS,
      CLP_PARAM_INT_DECOMPOSE_BLOCKS,
+     CLP_PARAM_INT_VECTOR_MODE,
 
      CBC_PARAM_INT_STRONGBRANCHING = 151,
      CBC_PARAM_INT_CUTDEPTH,
@@ -128,6 +130,7 @@ enum CbcOrClpParameterType
      CBC_PARAM_INT_DENSE,
      CBC_PARAM_INT_EXPERIMENT,
      CBC_PARAM_INT_DIVEOPT,
+     CBC_PARAM_INT_DIVEOPTSOLVES,
      CBC_PARAM_INT_STRATEGY,
      CBC_PARAM_INT_SMALLFACT,
      CBC_PARAM_INT_HOPTIONS,
@@ -169,6 +172,7 @@ enum CbcOrClpParameterType
      CLP_PARAM_STR_ALLCOMMANDS,
      CLP_PARAM_STR_TIME_MODE,
      CLP_PARAM_STR_ABCWANTED,
+     CLP_PARAM_STR_BUFFER_MODE,
 
      CBC_PARAM_STR_NODESTRATEGY = 251,
      CBC_PARAM_STR_BRANCHSTRATEGY,
@@ -218,6 +222,7 @@ enum CbcOrClpParameterType
      CBC_PARAM_STR_GMICUTS,
      CBC_PARAM_STR_CUTOFF_CONSTRAINT,
      CBC_PARAM_STR_DW,
+     CBC_PARAM_STR_ORBITAL,
 
      CLP_PARAM_ACTION_DIRECTORY = 301,
      CLP_PARAM_ACTION_DIRSAMPLE,
@@ -268,8 +273,9 @@ enum CbcOrClpParameterType
      CLP_PARAM_ACTION_ENVIRONMENT,
      CLP_PARAM_ACTION_PARAMETRICS,
      CLP_PARAM_ACTION_GMPL_SOLUTION,
+     CLP_PARAM_ACTION_RESTORESOL,
 
-     CBC_PARAM_ACTION_BAB = 351,
+     CBC_PARAM_ACTION_BAB = 361,
      CBC_PARAM_ACTION_MIPLIB,
      CBC_PARAM_ACTION_STRENGTHEN,
      CBC_PARAM_ACTION_PRIORITYIN,
@@ -382,6 +388,8 @@ public:
      const char * setCurrentOptionWithMessage ( int value );
      /// Sets current parameter option using string
      void setCurrentOption (const std::string value );
+     /// Sets current parameter option using string with message
+     const char * setCurrentOptionWithMessage (const std::string value );
      /// Returns current parameter option position
      int currentOptionAsInteger (  ) const ;
      /** Returns current parameter option position
@@ -391,11 +399,15 @@ public:
      int currentOptionAsInteger ( int & fakeInteger ) const;
      /// Sets int value
      void setIntValue ( int value );
+     /// Sets int value with message
+     const char * setIntValueWithMessage ( int value );
      inline int intValue () const {
           return intValue_;
      }
      /// Sets double value
      void setDoubleValue ( double value );
+     /// Sets double value with message
+     const char * setDoubleValueWithMessage ( double value );
      inline double doubleValue () const {
           return doubleValue_;
      }
@@ -516,6 +528,7 @@ void establishParams (int &numberParameters, CbcOrClpParam *const parameters);
 // Given a parameter type - returns its number in list
 int whichParam (CbcOrClpParameterType name,
                 int numberParameters, CbcOrClpParam *const parameters);
-// Dump a solution to file
+// Dump/restore a solution to file
 void saveSolution(const ClpSimplex * lpSolver, std::string fileName);
+void restoreSolution(ClpSimplex * lpSolver, std::string fileName, int mode);
 #endif	/* CbcOrClpParam_H */

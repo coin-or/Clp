@@ -225,8 +225,12 @@ public:
      /** Restores solution from dualized problem
          non-zero return code indicates minor problems
      */
-  int restoreFromDual(const ClpSimplex * dualProblem,
-		      bool checkAccuracy=false);
+     int restoreFromDual(const ClpSimplex * dualProblem,
+			 bool checkAccuracy=false);
+     /** Sets solution in dualized problem
+         non-zero return code indicates minor problems
+     */
+     int setInDual(ClpSimplex * dualProblem);
      /** Does very cursory presolve.
          rhs is numberRows, whichRows is 3*numberRows and whichColumns is 2*numberColumns.
      */

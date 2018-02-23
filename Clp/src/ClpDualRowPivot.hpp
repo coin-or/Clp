@@ -54,7 +54,9 @@ public:
          3) after something happened but no factorization
             (e.g. check for infeasible)
          4) as 2 but restore weights from previous snapshot
-         5) for strong branching - initialize  , infeasibilities
+         5) for strong branching - initialize to 1 , infeasibilities
+	 6) scale back
+         7) for strong branching - initialize full weights , infeasibilities
      */
      virtual void saveWeights(ClpSimplex * model, int mode);
      /// checks accuracy and may re-initialize (may be empty)

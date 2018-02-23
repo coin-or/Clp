@@ -41,7 +41,7 @@ ClpConstraintQuadratic::ClpConstraintQuadratic (int row, int numberQuadraticColu
      numberColumns_ = numberColumns;
      numberQuadraticColumns_ = numberQuadraticColumns;
      start_ = CoinCopyOfArray(start, numberQuadraticColumns + 1);
-     int numberElements = start_[numberQuadraticColumns_];
+     CoinBigIndex numberElements = start_[numberQuadraticColumns_];
      column_ = CoinCopyOfArray(column, numberElements);
      coefficient_ = CoinCopyOfArray(coefficient, numberElements);
      char * mark = new char [numberQuadraticColumns_];
@@ -76,7 +76,7 @@ ClpConstraintQuadratic::ClpConstraintQuadratic (const ClpConstraintQuadratic & r
      numberCoefficients_ = rhs.numberCoefficients_;
      numberQuadraticColumns_ = rhs.numberQuadraticColumns_;
      start_ = CoinCopyOfArray(rhs.start_, numberQuadraticColumns_ + 1);
-     int numberElements = start_[numberQuadraticColumns_];
+     CoinBigIndex numberElements = start_[numberQuadraticColumns_];
      column_ = CoinCopyOfArray(rhs.column_, numberElements);
      coefficient_ = CoinCopyOfArray(rhs.coefficient_, numberElements);
 }
@@ -106,7 +106,7 @@ ClpConstraintQuadratic::operator=(const ClpConstraintQuadratic& rhs)
           numberCoefficients_ = rhs.numberCoefficients_;
           numberQuadraticColumns_ = rhs.numberQuadraticColumns_;
           start_ = CoinCopyOfArray(rhs.start_, numberQuadraticColumns_ + 1);
-          int numberElements = start_[numberQuadraticColumns_];
+          CoinBigIndex numberElements = start_[numberQuadraticColumns_];
           column_ = CoinCopyOfArray(rhs.column_, numberElements);
           coefficient_ = CoinCopyOfArray(rhs.coefficient_, numberElements);
      }

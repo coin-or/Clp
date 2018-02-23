@@ -119,7 +119,7 @@ public:
           return numberRows_;
      }
      /// Return size
-     inline CoinBigIndex size() const {
+     inline int size() const {
           return sizeFactor_;
      }
      /// Return sparseFactor
@@ -203,11 +203,11 @@ protected:
          Uses upper triangular as much easier.
          Returns size
       */
-     int symbolic1(const CoinBigIndex * Astart, const int * Arow);
+     int symbolic1(const int * Astart, const int * Arow);
      /** Symbolic2  - Fills in indices
          Uses lower triangular so can do cliques etc
       */
-     void symbolic2(const CoinBigIndex * Astart, const int * Arow);
+     void symbolic2(const int * Astart, const int * Arow);
      /** Factorize - filling in rowsDropped and returning number dropped
          in integerParam.
       */
@@ -253,11 +253,11 @@ protected:
      /// sparseFactor.
      longDouble * sparseFactor_;
      /// choleskyStart - element starts
-     CoinBigIndex * choleskyStart_;
+     int * choleskyStart_;
      /// choleskyRow (can be shorter than sparsefactor)
      int * choleskyRow_;
      /// Index starts
-     CoinBigIndex * indexStart_;
+     int * indexStart_;
      /// Diagonal
      longDouble * diagonal_;
      /// double work array
@@ -265,13 +265,13 @@ protected:
      /// link array
      int * link_;
      // Integer work array
-     CoinBigIndex * workInteger_;
+     int * workInteger_;
      // Clique information
      int * clique_;
      /// sizeFactor.
-     CoinBigIndex sizeFactor_;
+     int sizeFactor_;
      /// Size of index array
-     CoinBigIndex sizeIndex_;
+     int sizeIndex_;
      /// First dense row
      int firstDense_;
      /// integerParameters

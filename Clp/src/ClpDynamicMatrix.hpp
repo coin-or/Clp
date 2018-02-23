@@ -99,7 +99,7 @@ public:
      /// Populates initial matrix from dynamic status
      void initialProblem();
      /** Adds in a column to gub structure (called from descendant) and returns sequence */
-     int addColumn(int numberEntries, const int * row, const double * element,
+     int addColumn(CoinBigIndex numberEntries, const int * row, const double * element,
                    double cost, double lower, double upper, int iSet,
                    DynamicStatus status);
      /** If addColumn forces compression then this allows descendant to know what to do.
@@ -266,7 +266,7 @@ public:
           return numberStaticRows_;
      }
      /// size of working matrix (max)
-     inline int numberElements() const {
+     inline CoinBigIndex numberElements() const {
           return numberElements_;
      }
      inline int * keyVariable() const {
@@ -336,7 +336,7 @@ protected:
      /// number of rows in original model
      int numberStaticRows_;
      /// size of working matrix (max)
-     int numberElements_;
+     CoinBigIndex numberElements_;
      /// Number of dual infeasibilities
      int numberDualInfeasibilities_;
      /// Number of primal infeasibilities
@@ -354,7 +354,7 @@ protected:
      /// current maximum number of columns (then compress)
      int maximumGubColumns_;
      /// current maximum number of elemnts (then compress)
-     int maximumElements_;
+     CoinBigIndex maximumElements_;
      /// Start of each set
      int * startSet_;
      /// next in chain

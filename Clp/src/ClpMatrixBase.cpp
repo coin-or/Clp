@@ -563,11 +563,12 @@ ClpMatrixBase::reallyScale(const double * , const double * )
      abort();
 }
 // Updates two arrays for steepest
-void
+int
 ClpMatrixBase::transposeTimes2(const ClpSimplex * ,
                                const CoinIndexedVector * , CoinIndexedVector *,
                                const CoinIndexedVector * ,
                                CoinIndexedVector * ,
+			       double * , double * ,
                                double , double ,
                                // Array for exact devex to say what is in reference framework
                                unsigned int * ,
@@ -575,6 +576,7 @@ ClpMatrixBase::transposeTimes2(const ClpSimplex * ,
 {
      std::cerr << "transposeTimes2 not supported - ClpMatrixBase" << std::endl;
      abort();
+     return 0;
 }
 /* Set the dimensions of the matrix. In effect, append new empty
    columns/rows to the matrix. A negative number for either dimension

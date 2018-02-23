@@ -13,6 +13,14 @@
 class CoinIndexedVector;
 class ClpSimplex;
 class ClpModel;
+// Compilers can produce better code if they know about __restrict
+#ifndef COIN_RESTRICT
+#ifdef COIN_USE_RESTRICT
+#define COIN_RESTRICT __restrict
+#else
+#define COIN_RESTRICT
+#endif
+#endif
 
 /** Abstract base class for Clp Matrices
 
@@ -90,7 +98,7 @@ public:
      }
 
      /// Returns number of elements in column part of basis
-     virtual CoinBigIndex countBasis(const int * whichColumn,
+     virtual int countBasis(const int * whichColumn,
                                      int & numberColumnBasic) = 0;
      /// Fills in column part of basis
      virtual void fillBasis(ClpSimplex * model,
@@ -102,7 +110,7 @@ public:
      /** Creates scales for column copy (rowCopy in model may be modified)
          default does not allow scaling
          returns non-zero if no scaling done */
-     virtual int scale(ClpModel * , const ClpSimplex * = NULL) const {
+     virtual int scale(ClpModel * , ClpSimplex * = NULL) const {
           return 1;
      }
      /** Scales rowCopy if column copy scaled
@@ -263,33 +271,33 @@ public:
          @pre <code>x</code> must be of size <code>numColumns()</code>
          @pre <code>y</code> must be of size <code>numRows()</code> */
      virtual void times(double scalar,
-                        const double * x, double * y) const = 0;
+                        const double * COIN_RESTRICT x, double * COIN_RESTRICT y) const = 0;
      /** And for scaling - default aborts for when scaling not supported
          (unless pointers NULL when as normal)
      */
      virtual void times(double scalar,
-                        const double * x, double * y,
-                        const double * rowScale,
-                        const double * columnScale) const;
+                        const double * COIN_RESTRICT x, double * COIN_RESTRICT y,
+                        const double * COIN_RESTRICT rowScale,
+                        const double * COIN_RESTRICT columnScale) const;
      /** Return <code>y + x * scalar * A</code> in <code>y</code>.
          @pre <code>x</code> must be of size <code>numRows()</code>
          @pre <code>y</code> must be of size <code>numColumns()</code> */
      virtual void transposeTimes(double scalar,
-                                 const double * x, double * y) const = 0;
+                                 const double * COIN_RESTRICT x, double * COIN_RESTRICT y) const = 0;
      /** And for scaling - default aborts for when scaling not supported
          (unless pointers NULL when as normal)
      */
      virtual void transposeTimes(double scalar,
-                                 const double * x, double * y,
-                                 const double * rowScale,
-                                 const double * columnScale,
-                                 double * spare = NULL) const;
+                                 const double * COIN_RESTRICT x, double * COIN_RESTRICT y,
+                                 const double * COIN_RESTRICT rowScale,
+                                 const double * COIN_RESTRICT columnScale,
+                                 double * COIN_RESTRICT spare = NULL) const;
 #if COIN_LONG_WORK
      // For long double versions (aborts if not supported)
      virtual void times(CoinWorkDouble scalar,
-                        const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+                        const CoinWorkDouble * COIN_RESTRICT x, CoinWorkDouble * COIN_RESTRICT y) const ;
      virtual void transposeTimes(CoinWorkDouble scalar,
-                                 const CoinWorkDouble * x, CoinWorkDouble * y) const ;
+                                 const CoinWorkDouble * COIN_RESTRICT x, CoinWorkDouble * COIN_RESTRICT y) const ;
 #endif
      /** Return <code>x * scalar *A + y</code> in <code>z</code>.
          Can use y as temporary array (will be empty at end)
@@ -313,11 +321,15 @@ public:
                              const CoinIndexedVector * ) const {
           return false;
      }
-     /// Updates two arrays for steepest and does devex weights (need not be coded)
-     virtual void transposeTimes2(const ClpSimplex * model,
-                                  const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
-                                  const CoinIndexedVector * pi2,
-                                  CoinIndexedVector * spare,
+     /** Updates two arrays for steepest and does devex weights 
+	 (need not be coded)
+	 Returns nonzero if updates reduced cost and infeas -
+	 new infeas in dj1 */
+     virtual int transposeTimes2(const ClpSimplex * model,
+				 const CoinIndexedVector * pi1, CoinIndexedVector * dj1,
+				 const CoinIndexedVector * pi2,
+				 CoinIndexedVector * spare,
+				 double * infeas, double * reducedCost,
                                   double referenceIn, double devex,
                                   // Array for exact devex to say what is in reference framework
                                   unsigned int * reference,

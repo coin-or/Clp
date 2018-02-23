@@ -1,4 +1,4 @@
-/* $Id: Clp_ampl.cpp 1869 2013-02-07 10:21:05Z stefan $ */
+/* $Id: Clp_ampl.cpp 2030 2014-04-14 17:34:30Z forrest $ */
 /****************************************************************
 Copyright (C) 1997-2000 Lucent Technologies
 Modifications for Coin -  Copyright (C) 2006, International Business Machines Corporation and others.
@@ -152,7 +152,7 @@ static Option_Info Oinfo = {
     0,
     0,
     0,
-    20070606
+    20130502
 };
 // strdup used to avoid g++ compiler warning
 static SufDecl suftab[] = {
@@ -409,12 +409,20 @@ readAmpl(ampl_info * info, int argc, char **argv, void ** coinModel)
     want_xpi0 = 1;
     /* for basis info */
     info->columnStatus = (int *) malloc(n_var * sizeof(int));
+    for (int i=0;i<n_var;i++)
+      info->columnStatus[i]=3;
     info->rowStatus = (int *) malloc(n_con * sizeof(int));
+    for (int i=0;i<n_con;i++)
+      info->rowStatus[i]=1;
     csd = suf_iput("sstatus", ASL_Sufkind_var, info->columnStatus);
     rsd = suf_iput("sstatus", ASL_Sufkind_con, info->rowStatus);
     if (!(nlvc + nlvo) && nonLinearType < 10) {
         /* read linear model*/
+#if COIN_BIG_INDEX==2
+        f_read(nl, ASL_allow_Z|ASL_use_Z);
+#else
         f_read(nl, 0);
+#endif
         // see if any sos
         if (true) {
             char *sostype;
@@ -437,9 +445,9 @@ readAmpl(ampl_info * info, int argc, char **argv, void ** coinModel)
                 info->sosReference = (double *) malloc(nsosnz * sizeof(double));
                 sos_kludge(nsos, sosbeg, sosref, sosind);
                 for (int i = 0; i < nsos; i++) {
-                    int ichar = sostype[i];
+                    char ichar = sostype[i];
                     assert (ichar == '1' || ichar == '2');
-                    info->sosType[i] = ichar - '0';
+                    info->sosType[i] = static_cast<char>(ichar - '0');
                 }
                 memcpy(info->sosPriority, sospri, nsos*sizeof(int));
                 memcpy(info->sosStart, sosbeg, (nsos + 1)*sizeof(int));
@@ -497,7 +505,11 @@ readAmpl(ampl_info * info, int argc, char **argv, void ** coinModel)
         info->rowUpper = rowUpper;
         info->columnLower = columnLower;
         info->columnUpper = columnUpper;
+#if COIN_BIG_INDEX==0
         info->starts = A_colstarts;
+#else
+        info->starts = A_colstartsZ;
+#endif
         /*A_colstarts=NULL;*/
         info->rows = A_rownos;
         /*A_rownos=NULL;*/
@@ -615,7 +627,7 @@ readAmpl(ampl_info * info, int argc, char **argv, void ** coinModel)
             /* let user copy .nl file */
             fprintf(stderr, "You can copy .nl file %s for debug purposes or attach debugger\n", saveArgv[1]);
             fprintf(stderr, "Type q to quit, anything else to continue\n");
-            char getChar = getc(stdin);
+            int getChar = getc(stdin);
             if (getChar == 'q' || getChar == 'Q')
                 exit(1);
         }
@@ -690,7 +702,10 @@ void freeArgs(ampl_info * info)
 }
 int ampl_obj_prec()
 {
-    return obj_prec();
+    int precision = obj_prec();
+    if (precision<=0)
+        precision=15;
+    return precision;
 }
 void writeAmpl(ampl_info * info)
 {
@@ -762,6 +777,7 @@ CoinModel::CoinModel( int nonLinear, const char * fileName, const void * info)
         cut_(NULL),
         moreInfo_(NULL),
         type_(-1),
+	noNames_(false),
         links_(0)
 {
     problemName_ = "";
@@ -873,7 +889,11 @@ CoinModel::gdb( int nonLinear, const char * fileName, const void * info)
         csd = suf_iput("sstatus", ASL_Sufkind_var, columnStatus);
         rsd = suf_iput("sstatus", ASL_Sufkind_con, rowStatus);
         /* read linear model*/
+#if COIN_BIG_INDEX==2
+        f_read(nl, ASL_allow_Z|ASL_use_Z);
+#else
         f_read(nl, 0);
+#endif
         // see if any sos
         if (true) {
             char *sostype;
@@ -978,13 +998,19 @@ CoinModel::gdb( int nonLinear, const char * fileName, const void * info)
             columnStatus = NULL;
 #endif
         }
+#if COIN_BIG_INDEX==0
         CoinPackedMatrix columnCopy(true, numberRows, numberColumns, numberElements,
                                     A_vals, A_rownos, A_colstarts, NULL);
+#else
+        CoinPackedMatrix columnCopy(true, numberRows, numberColumns, numberElements,
+                                    A_vals, A_rownos,
+				    reinterpret_cast<const CoinBigIndex *>(A_colstartsZ), NULL);
+#endif
         matrixByRow.reverseOrderedCopyOf(columnCopy);
     } else if (nonLinear == 1) {
         // quadratic
         asl = ASL_alloc(ASL_read_fg);
-        nl = jac0dim(stub, (long) strlen(stub));
+        nl = jac0dim(stub, (ftnlen) strlen(stub));
         free(stub);
         suf_declare(suftab, sizeof(suftab) / sizeof(SufDecl));
         /* read  model*/
@@ -1090,7 +1116,7 @@ CoinModel::gdb( int nonLinear, const char * fileName, const void * info)
         // General nonlinear!
         //ASL_pfgh* asl = (ASL_pfgh*)ASL_alloc(ASL_read_pfgh);
         asl = ASL_alloc(ASL_read_pfgh);
-        nl = jac0dim(stub, (long) strlen(stub));
+        nl = jac0dim(stub, (ftnlen) strlen(stub));
         free(stub);
         suf_declare(suftab, sizeof(suftab) / sizeof(SufDecl));
         /* read  model*/

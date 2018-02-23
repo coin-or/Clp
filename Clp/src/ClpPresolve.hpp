@@ -151,6 +151,22 @@ public:
           if (doDuprow) presolveActions_  &= ~256;
           else presolveActions_ |= 256;
      }
+     /// Whether we want to do dependency part of presolve
+     inline bool doDependency() const {
+          return (presolveActions_ & 32768) != 0;
+     }
+     inline void setDoDependency(bool doDependency) {
+          if (doDependency) presolveActions_  |= 32768;
+          else presolveActions_ &= ~32768;
+     }
+     /// Whether we want to do transfer part of presolve
+     inline bool doTransfer() const {
+          return (presolveActions_ & 65536) != 0;
+     }
+     inline void setDoTransfer(bool doTransfer) {
+          if (doTransfer) presolveActions_  |= 65536;
+          else presolveActions_ &= ~65536;
+     }
      /// Whether we want to do singleton column part of presolve
      inline bool doSingletonColumn() const {
           return (presolveActions_ & 512) == 0;
@@ -183,12 +199,21 @@ public:
           if (doIntersection) presolveActions_  &= ~4096;
           else presolveActions_ |= 4096;
      }
+     /** How much we want to zero small values from aggregation - ratio
+	 0 - 1.0e-12, 1 1.0e-11, 2 1.0e-10, 3 1.0e-9 */
+     inline int zeroSmall() const {
+          return (presolveActions_&(8192|16384))>>13;
+     }
+     inline void setZeroSmall(int value) {
+         presolveActions_  &= ~(8192|16384);
+	 presolveActions_ |= value<<13;
+     }
      /// Set whole group
      inline int presolveActions() const {
-          return presolveActions_ & 0xffff;
+          return presolveActions_ & 0xffffff;
      }
      inline void setPresolveActions(int action) {
-          presolveActions_  = (presolveActions_ & 0xffff0000) | (action & 0xffff);
+          presolveActions_  = (presolveActions_ & 0xff000000) | (action & 0xffffff);
      }
      /// Substitution level
      inline void setSubstitution(int value) {

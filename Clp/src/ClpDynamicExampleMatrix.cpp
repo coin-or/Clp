@@ -62,7 +62,7 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix (const ClpDynamicExampleMatrix 
 
 /* This is the real constructor*/
 ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberSets,
-          int numberGubColumns, const int * starts,
+          int numberGubColumns, const CoinBigIndex * starts,
           const double * lower, const double * upper,
           const CoinBigIndex * startColumn, const int * row,
           const double * element, const double * cost,
@@ -166,20 +166,20 @@ ClpDynamicExampleMatrix::ClpDynamicExampleMatrix(ClpSimplex * model, int numberS
      } else {
           assert (!numberIds);
           memset(status_, 0, numberSets_);
-          for (i = 0; i < numberSets_; i++) {
+          for (int i = 0; i < numberSets_; i++) {
                // make slack key
                setStatus(i, ClpSimplex::basic);
           }
      }
      dynamicStatusGen_ = new unsigned char [numberColumns_];
      memset(dynamicStatusGen_, 0, numberColumns_); // for clarity
-     for (i = 0; i < numberColumns_; i++)
+     for (int i = 0; i < numberColumns_; i++)
           setDynamicStatusGen(i, atLowerBound);
      // Populate with enough columns
      if (!numberIds) {
           // This could be made more sophisticated
           for (iSet = 0; iSet < numberSets_; iSet++) {
-               int sequence = fullStartGen_[iSet];
+               CoinBigIndex sequence = fullStartGen_[iSet];
                CoinBigIndex start = startColumnGen_[sequence];
                addColumn(startColumnGen_[sequence+1] - start,
                          rowGen_ + start,
@@ -410,8 +410,8 @@ ClpDynamicExampleMatrix::operator=(const ClpDynamicExampleMatrix& rhs)
           delete [] columnUpperGen_;
           startColumnGen_ = ClpCopyOfArray(rhs.startColumnGen_, numberColumns_ + 1);
           CoinBigIndex numberElements = startColumnGen_[numberColumns_];
-          rowGen_ = ClpCopyOfArray(rhs.rowGen_, numberElements);;
-          elementGen_ = ClpCopyOfArray(rhs.elementGen_, numberElements);;
+          rowGen_ = ClpCopyOfArray(rhs.rowGen_, numberElements);
+          elementGen_ = ClpCopyOfArray(rhs.elementGen_, numberElements);
           costGen_ = ClpCopyOfArray(rhs.costGen_, numberColumns_);
           fullStartGen_ = ClpCopyOfArray(rhs.fullStartGen_, numberSets_ + 1);
           dynamicStatusGen_ = ClpCopyOfArray(rhs.dynamicStatusGen_, numberColumns_);
@@ -538,7 +538,7 @@ ClpDynamicExampleMatrix::partialPricing(ClpSimplex * model, double startFraction
                     }
                }
                // do ones in small
-               int iSequence = startSet_[iSet];
+               CoinBigIndex iSequence = startSet_[iSet];
                while (iSequence >= 0) {
                     DynamicStatus status = getDynamicStatus(iSequence);
                     if (status == atLowerBound || status == atUpperBound) {

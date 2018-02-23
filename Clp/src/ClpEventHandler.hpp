@@ -62,11 +62,17 @@ public:
 	  startOfStatusOfProblemInDual,
 	  startOfIterationInDual,
 	  updateDualsInDual,
+	  beforeDeleteRim,
 	  endOfCreateRim,
 	  slightlyInfeasible,
 	  modifyMatrixInMiniPresolve,
 	  moreMiniPresolve,
 	  modifyMatrixInMiniPostsolve,
+	  beforeChooseIncoming,
+	  afterChooseIncoming,
+	  beforeCreateNonLinear,
+	  afterCreateNonLinear,
+	  startOfCrossover, // in Idiot
 	  noTheta // At end (because no pivot)
      };
      /**@name Virtual method that the derived classes should provide.

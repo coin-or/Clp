@@ -124,13 +124,13 @@ ClpCholeskyDense::reserveSpace(const ClpCholeskyBase * factor, int numberRows)
      return 0;
 }
 /* Returns space needed */
-CoinBigIndex
+int
 ClpCholeskyDense::space( int numberRows) const
 {
      int numberBlocks = (numberRows + BLOCK - 1) >> BLOCKSHIFT;
      /* allow one stripe extra*/
      numberBlocks = numberBlocks + ((numberBlocks * (numberBlocks + 1)) / 2);
-     CoinBigIndex sizeFactor = numberBlocks * BLOCKSQ;
+     int sizeFactor = numberBlocks * BLOCKSQ;
 #ifdef CHOL_COMPARE
      sizeFactor += 95000;
 #endif

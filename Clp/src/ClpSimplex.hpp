@@ -17,9 +17,11 @@
 #include "ClpMatrixBase.hpp"
 #include "ClpSolve.hpp"
 #include "ClpConfig.h"
+#include "CoinIndexedVector.hpp"
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
+class CoinFactorization;
 class CoinIndexedVector;
 class ClpNonLinearCost;
 class ClpNodeStuff;
@@ -28,11 +30,60 @@ class OsiClpSolverInterface;
 class CoinWarmStartBasis;
 class ClpDisasterHandler;
 class ClpConstraint;
+/*
+  May want to use Clp defaults so that with ABC defined but not used
+  it behaves as Clp (and ABC used will be different than if not defined)
+ */
+#ifdef ABC_INHERIT
+#ifndef CLP_INHERIT_MODE
+#define CLP_INHERIT_MODE 1
+#endif
+#ifndef ABC_CLP_DEFAULTS
+#define ABC_CLP_DEFAULTS 0
+#endif
+#else
+#undef ABC_CLP_DEFAULTS
+#define ABC_CLP_DEFAULTS 1
+#endif
 #ifdef CLP_HAS_ABC
 #include "AbcCommon.hpp"
 class AbcTolerancesEtc;
 class AbcSimplex;
 #include "CoinAbcCommon.hpp"
+#endif
+#ifndef ABC_INHERIT
+#if ABOCA_LITE
+#ifndef FAKE_CILK
+#include <cilk/cilk.h>
+#else
+#undef cilk_for
+#undef cilk_spawn
+#undef cilk_sync
+#define cilk_for for
+#define cilk_spawn
+#define cilk_sync
+#endif
+#ifndef LONG_REGION_2
+#define LONG_REGION_2 1
+#endif
+#define SHORT_REGION 1
+#else
+#define cilk_spawn
+#define cilk_sync
+#endif
+#ifdef LONG_REGION_2
+#define SHORT_REGION 1
+#else
+#define SHORT_REGION 2
+#endif
+// for now keep simple
+#undef LONG_REGION_2
+#undef SHORT_REGION
+#define SHORT_REGION 2
+#else
+//ABC_INHERIT
+#define LONG_REGION_2 1
+#define SHORT_REGION 1
 #endif
 /** This solves LPs using the simplex method
 
@@ -121,11 +172,11 @@ public:
      /** This copies back stuff from miniModel and then deletes miniModel.
          Only to be used with mini constructor */
      void originalModel(ClpSimplex * miniModel);
+#ifdef ABC_INHERIT
   inline int abcState() const
   { return abcState_;}
   inline void setAbcState(int state)
   { abcState_=state;}
-#ifdef ABC_INHERIT
   inline AbcSimplex * abcSimplex() const
   { return abcSimplex_;}
   inline void setAbcSimplex(AbcSimplex * simplex)
@@ -212,6 +263,17 @@ public:
      /// Read file in LP format from file with name filename.
      /// See class CoinLpIO for description of this format.
      int readLp(const char *filename, const double epsilon = 1e-5);
+      /** Write the problem into an Lp file of the given filename.
+	  If objSense is non zero then -1.0 forces the code to write a
+	  maximization objective and +1.0 to write a minimization one.
+	  If 0.0 then solver can do what it wants.*/
+      void writeLp(const char *filename,
+		   const char *extension = "lp",
+		   double epsilon = 1e-5,
+		   int numberAcross = 10,
+		   int decimals = 5,
+		   double objSense = 0.0,
+		   bool useRowNames = true) const;
      /** Borrow model.  This is so we dont have to copy large amounts
          of data around.  It assumes a derived class wants to overwrite
          an empty model with a real one - while it does an algorithm.
@@ -252,7 +314,7 @@ public:
      int initialDualSolve();
      /// Primal initial solve
      int initialPrimalSolve();
-/// Barrier initial solve
+     /// Barrier initial solve
      int initialBarrierSolve();
      /// Barrier initial solve, not to be followed by crossover
      int initialBarrierNoCrossSolve();
@@ -305,8 +367,10 @@ public:
   /** solvetype 0 for dual, 1 for primal
       startup 1 for values pass
       interrupt whether to pass across interrupt handler
+      add 10 to return AbcSimplex 
   */
-  void dealWithAbc(int solveType,int startUp,bool interrupt=false);
+  AbcSimplex * dealWithAbc(int solveType,int startUp,bool interrupt=false);
+  //void dealWithAbc(int solveType,int startUp,bool interrupt=false);
 #endif
      /** This loads a model from a CoinStructuredModel object - returns number of errors.
          If originalOrder then keep to order stored in blocks,
@@ -331,6 +395,17 @@ public:
         return code as dual/primal
      */
      int cleanup(int cleanupScaling);
+     /** Clean primal solution
+	 If you expect solution to only have exact multiples of "exactMultiple" then
+	 this tries moving solution values to nearest multiple.  If still feasible
+	 then the solution is replaced.
+
+	 This is designed for the case where values should be integral, but Clp may
+	 have values at e.g. 1.0e-13
+	 Returns 0 if successful, n if n rhs violated
+	 The dual version may be written if this gets used.
+      */
+      int cleanPrimalSolution(double exactMultiple);
      /** Dual ranging.
          This computes increase/decrease in cost for each given variable and corresponding
          sequence numbers which would change basis.  Sequence numbers are 0..numberColumns
@@ -420,10 +495,8 @@ public:
      ClpSimplex * miniPresolve(char * rowType, char * columnType,void ** info);
      /// After mini presolve
      void miniPostsolve(const ClpSimplex * presolvedModel,void * info);
-     /// Scale real objective 
-     void scaleRealObjective(double multiplier);
-     /// Scale so no RHS (abs not infinite) > value
-     void scaleRealRhs(double maxValue, double killIfSmaller);
+     /// mini presolve and solve
+     void miniSolve(char * rowType, char *columnType,int algorithm, int startUp);
      /** Write the basis in MPS format to the specified file.
          If writeValues true writes values of structurals
          (and adds VALUES to end of NAME card)
@@ -483,6 +556,12 @@ public:
      void setDualRowPivotAlgorithm(ClpDualRowPivot & choice);
      /// Sets column pivot choice algorithm in primal
      void setPrimalColumnPivotAlgorithm(ClpPrimalColumnPivot & choice);
+     /// Create a hotstart point of the optimization process
+     void markHotStart(void * & saveStuff);
+     /// Optimize starting from the hotstart
+     void solveFromHotStart(void * saveStuff);
+     /// Delete the snapshot
+     void unmarkHotStart(void * saveStuff);
      /** For strong branching.  On input lower and upper are new bounds
          while on output they are change in objective function values
          (>1.0e50 infeasible).
@@ -820,9 +899,9 @@ protected:
      */
      double scaleObjective(double value);
      /// Solve using Dantzig-Wolfe decomposition and maybe in parallel
-     int solveDW(CoinStructuredModel * model);
+    int solveDW(CoinStructuredModel * model, ClpSolve & options);
      /// Solve using Benders decomposition and maybe in parallel
-     int solveBenders(CoinStructuredModel * model);
+     int solveBenders(CoinStructuredModel * model, ClpSolve & options);
 public:
      /** For advanced use.  When doing iterative solves things can get
          nasty so on values pass if incoming solution has largest
@@ -1078,6 +1157,14 @@ public:
      inline double valueOut() const {
           return valueOut_;
      }
+     /// Lower of out variable
+     inline double lowerOut() const {
+          return lowerOut_ ;
+     }
+     /// Upper of out variable
+     inline double upperOut() const {
+          return upperOut_ ;
+     }
      /// Set value of out variable
      inline void setValueOut(double value) {
           valueOut_ = value;
@@ -1161,6 +1248,15 @@ public:
      inline double theta() const {
           return theta_;
      }
+     /// Lower Bound on In variable
+     inline double lowerIn() const
+     { return lowerIn_;}
+     /// Value of In variable
+     inline double valueIn() const
+     { return valueIn_;} 
+     /// Upper Bound on In variable
+     inline double upperIn() const
+     { return upperIn_;}
      /** Best possible improvement using djs (primal) or
          obj change by flipping bounds to make dual feasible (dual) */
      inline double bestPossibleImprovement() const {
@@ -1170,6 +1266,8 @@ public:
      inline ClpNonLinearCost * nonLinearCost() const {
           return nonLinearCost_;
      }
+     /// Set pointer to details of costs
+     void setNonLinearCost(ClpNonLinearCost & nonLinearCost);
      /** Return more special options
          1 bit - if presolve says infeasible in ClpSolve return
          2 bit - if presolved problem infeasible return
@@ -1190,9 +1288,14 @@ public:
 	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
 	 131072 bit (*3) initial stateDualColumn
 	 524288 bit - stop when primal feasible
+	 1048576 bit - stop when primal feasible after n-1000000 iterations
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
+     }
+     /// Get vector mode
+     inline int vectorMode() const {
+          return vectorMode_;
      }
      /** Set more special options
          1 bit - if presolve says infeasible in ClpSolve return
@@ -1214,9 +1317,17 @@ public:
 	 65536 bit - perturb in postsolve cleanup (even if < 10000 rows)
 	 131072 bit (*3) initial stateDualColumn
 	 524288 bit - stop when primal feasible
+	 1048576 bit - don't perturb even if long time
+	 2097152 bit - no primal in fastDual2 if feasible
+	 4194304 bit - tolerances have been changed by code
+	 8388608 bit - tolerances are dynamic (at first)
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;
+     }
+     /// Set vector mode
+     inline void setVectorMode(int value) {
+          vectorMode_ = value;
      }
      //@}
      /**@name status methods */
@@ -1271,6 +1382,16 @@ public:
      }
      inline bool active(int iRow) const {
           return ((status_[iRow] & 128) != 0);
+     }
+     /// To say perturbed 
+     inline void setPerturbed( int iSequence) {
+          status_[iSequence] = static_cast<unsigned char>(status_[iSequence] | 128);
+     }
+     inline void clearPerturbed( int iSequence) {
+          status_[iSequence] = static_cast<unsigned char>(status_[iSequence] & ~128);
+     }
+     inline bool perturbed(int iSequence) const {
+          return ((status_[iSequence] & 128) != 0);
      }
      /** Set up status array (can be used by OsiClp).
          Also can be used to set up all slack basis */
@@ -1474,6 +1595,8 @@ protected:
      int moreSpecialOptions_;
      /// Iteration when we entered dual or primal
      int baseIteration_;
+     /// Vector mode - try and use vector instructions
+     int vectorMode_;
      /// Primal tolerance needed to make dual feasible (<largeTolerance)
      double primalToleranceToGetOptimal_;
      /// Large bound value (for complementarity etc)
@@ -1522,6 +1645,11 @@ protected:
      double sumOfRelaxedPrimalInfeasibilities_;
      /// Acceptable pivot value just after factorization
      double acceptablePivot_;
+     /// Minimum primal tolerance
+     double minimumPrimalTolerance_;
+     /// Last few infeasibilities
+#define CLP_INFEAS_SAVE 5
+     double averageInfeasibility_[CLP_INFEAS_SAVE];
      /// Working copy of lower bounds (Owner of arrays below)
      double * lower_;
      /// Row lower bounds - working copy
@@ -1546,7 +1674,7 @@ protected:
      CoinIndexedVector * columnArray_[6];
      /// Sequence of In variable
      int sequenceIn_;
-     /// Direction of In, 1 going up, -1 going down, 0 not a clude
+     /// Direction of In, 1 going up, -1 going down, 0 not a clue
      int directionIn_;
      /// Sequence of Out variable
      int sequenceOut_;
@@ -1656,13 +1784,15 @@ protected:
      ClpSimplexProgress progress_;
 #ifdef ABC_INHERIT
   AbcSimplex * abcSimplex_;
+  int abcState_;
 #define CLP_ABC_WANTED 1
 #define CLP_ABC_WANTED_PARALLEL 2
 #define CLP_ABC_FULL_DONE 8
   // bits 256,512,1024 for crash
 #endif
 #define CLP_ABC_BEEN_FEASIBLE 65536
-  int abcState_;
+  /// Number of degenerate pivots since last perturbed
+  int numberDegeneratePivots_;
 public:
      /// Spare int array for passing information [0]!=0 switches on
      mutable int spareIntArray_[4];
@@ -1671,6 +1801,8 @@ public:
 protected:
      /// Allow OsiClp certain perks
      friend class OsiClpSolverInterface;
+     /// And OsiCLP
+     friend class OsiCLPSolverInterface;
      //@}
 };
 //#############################################################################
@@ -1688,4 +1820,133 @@ ClpSimplexUnitTest(const std::string & mpsDir);
 // For Devex stuff
 #define DEVEX_TRY_NORM 1.0e-4
 #define DEVEX_ADD_ONE 1.0
+#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
+// Use pthreads
+#include <pthread.h>
+typedef struct {
+  double result;
+  //const CoinIndexedVector * constVector; // can get rid of
+  //CoinIndexedVector * vectors[2]; // can get rid of
+  void * extraInfo;
+  void * extraInfo2;
+  int status;
+  int stuff[4];
+} CoinThreadInfo;
+class CoinPthreadStuff {
+public:
+  /**@name Constructors and destructor and copy */
+  //@{
+  /** Main constructor
+  */
+  CoinPthreadStuff (int numberThreads=0,
+		    void * parallelManager(void * stuff)=NULL);
+  /// Assignment operator. This copies the data
+  CoinPthreadStuff & operator=(const CoinPthreadStuff & rhs);
+  /// Destructor
+  ~CoinPthreadStuff (  );
+  /// set stop start
+  inline void setStopStart(int value)
+  { stopStart_=value;}
+#ifndef NUMBER_THREADS 
+#define NUMBER_THREADS 8
+#endif
+  // For waking up thread
+  inline pthread_mutex_t * mutexPointer(int which,int thread=0) 
+  { return mutex_+which+3*thread;}
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
+  inline pthread_barrier_t * barrierPointer() 
+  { return &barrier_;}
+#endif
+  inline int whichLocked(int thread=0) const
+  { return locked_[thread];}
+  inline CoinThreadInfo * threadInfoPointer(int thread=0) 
+  { return threadInfo_+thread;}
+  void startParallelTask(int type,int iThread,void * info=NULL);
+  int waitParallelTask(int type, int & iThread,bool allowIdle);
+  void waitAllTasks();
+  /// so thread can find out which one it is 
+  int whichThread() const;
+  void sayIdle(int iThread);
+  //void startThreads(int numberThreads);
+  //void stopThreads();
+  // For waking up thread
+  pthread_mutex_t mutex_[3*(NUMBER_THREADS+1)];
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
+  pthread_barrier_t barrier_; 
+#endif
+  CoinThreadInfo threadInfo_[NUMBER_THREADS+1];
+  pthread_t abcThread_[NUMBER_THREADS+1];
+  int locked_[NUMBER_THREADS+1];
+  int stopStart_;
+  int numberThreads_;
+};
+void * clp_parallelManager(void * stuff);
+#endif
+typedef struct {
+  double upperTheta;
+  double bestPossible;
+  double acceptablePivot;
+  double tolerance; 
+  double dualTolerance; 
+  double theta; 
+  double primalRatio;
+  double changeObj;
+  const double * COIN_RESTRICT cost;
+  double  * COIN_RESTRICT solution;
+  double * COIN_RESTRICT reducedCost; 
+  const double * COIN_RESTRICT lower; 
+  const double * COIN_RESTRICT upper;
+  double * COIN_RESTRICT work; 
+  int * COIN_RESTRICT index;
+  double * COIN_RESTRICT spare;
+  const unsigned char * COIN_RESTRICT status; 
+  int * COIN_RESTRICT which; 
+  double * COIN_RESTRICT infeas;
+  const int * COIN_RESTRICT pivotVariable;
+  const double * COIN_RESTRICT element; 
+  const CoinBigIndex * COIN_RESTRICT start;
+  const int * COIN_RESTRICT row;
+  int numberAdded;
+  int numberInfeasibilities; 
+  int numberRemaining;
+  int startColumn;
+  int numberToDo;
+  int numberColumns;
+} clpTempInfo;
+#ifndef ABC_INHERIT
+#if ABOCA_LITE
+void moveAndZero(clpTempInfo * info,int type,void * extra);
+// 2 is owner of abcState_
+#ifdef ABCSTATE_LITE
+#if ABCSTATE_LITE==2
+int abcState_=0;
+#else
+extern int abcState_;
+#endif
+  inline int abcState() 
+  { return abcState_;}
+  inline void setAbcState(int state)
+  { abcState_=state;}
+#endif
+#else
+#define abcState 0
+#endif
+#endif
+#ifdef CLP_USER_DRIVEN
+// expand as needed
+typedef struct {
+  double alpha;
+  double totalThru;
+  double rhs;
+  double value;
+  double lower;
+  double upper;
+  double cost;
+  int type;
+  int row;
+  int sequence;
+  int printing;
+  int change;
+} clpUserStruct;
+#endif
 #endif

@@ -200,7 +200,7 @@ public:
                      const CoinIndexedVector * columnArray,
                      CoinIndexedVector * spareArray,
                      double acceptablePivot,
-                     double & upperReturn, double &bestReturn, double & badFree);
+                     double & upperReturn, double & badFree);
      /**
          Row array has row part of pivot row
          Column array has column part.
@@ -245,6 +245,8 @@ public:
      */
      int changeBounds(int initialize, CoinIndexedVector * outputArray,
                       double & changeCost);
+     /// Just checks if any fake bounds active - if so returns number
+     int checkFakeBounds() const;
      /** As changeBounds but just changes new bounds for a single variable.
          Returns true if change */
      bool changeBound( int iSequence);

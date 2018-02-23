@@ -163,7 +163,7 @@ host_triplet = @host@
 bin_PROGRAMS = clp$(EXEEXT)
 @COIN_HAS_CHOLMOD_TRUE@am__append_7 = -I`$(CYGPATH_W) $(CHOLMODINCDIR)`
 @COIN_HAS_AMD_TRUE@am__append_8 = -I`$(CYGPATH_W) $(AMDINCDIR)`
-@COIN_HAS_ABC_TRUE@am__append_9 = AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp
+@COIN_HAS_ABC_TRUE@am__append_9 = AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
 
 # if AMD, CHOLMOD, or GLPK is available, then install ClpCholeskyUfl.hpp (for advanced users)
 @COIN_HAS_AMD_TRUE@am__append_10 = ClpCholeskyUfl.hpp
@@ -269,9 +269,12 @@ am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
 	ClpPrimalColumnPivot.lo ClpPrimalColumnSteepest.lo \
 	ClpQuadraticObjective.lo ClpSimplex.lo ClpSimplexDual.lo \
 	ClpSimplexNonlinear.lo ClpSimplexOther.lo ClpSimplexPrimal.lo \
-	ClpSolve.lo Idiot.lo IdiSolve.lo $(am__objects_1) \
-	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
-	$(am__objects_5) $(am__objects_6)
+	ClpSolve.lo Idiot.lo IdiSolve.lo ClpCholeskyPardiso.lo \
+	ClpPESimplex.lo ClpPEPrimalColumnDantzig.lo \
+	ClpPEPrimalColumnSteepest.lo ClpPEDualRowDantzig.lo \
+	ClpPEDualRowSteepest.lo $(am__objects_1) $(am__objects_2) \
+	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
+	$(am__objects_6)
 libClp_la_OBJECTS = $(am_libClp_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -280,12 +283,19 @@ am__v_lt_1 =
 libClp_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(libClp_la_LDFLAGS) $(LDFLAGS) -o $@
+@DEPENDENCY_LINKING_TRUE@libClpSolver_la_DEPENDENCIES =  \
+@DEPENDENCY_LINKING_TRUE@	$(am__DEPENDENCIES_1) libClp.la
+am_libClpSolver_la_OBJECTS = ClpSolver.lo CbcOrClpParam.lo Clp_ampl.lo \
+	MyEventHandler.lo MyMessageHandler.lo unitTest.lo
+libClpSolver_la_OBJECTS = $(am_libClpSolver_la_OBJECTS)
+libClpSolver_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(AM_CXXFLAGS) $(CXXFLAGS) $(libClpSolver_la_LDFLAGS) \
+	$(LDFLAGS) -o $@
 PROGRAMS = $(bin_PROGRAMS)
-am_clp_OBJECTS = ClpMain.$(OBJEXT) CbcOrClpParam.$(OBJEXT) \
-	Clp_ampl.$(OBJEXT) MyEventHandler.$(OBJEXT) \
-	MyMessageHandler.$(OBJEXT) unitTest.$(OBJEXT)
+am_clp_OBJECTS = ClpMain.$(OBJEXT)
 clp_OBJECTS = $(am_clp_OBJECTS)
-clp_DEPENDENCIES = libClp.la $(am__DEPENDENCIES_1)
+clp_DEPENDENCIES = libClpSolver.la libClp.la $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -338,7 +348,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libClp_la_SOURCES) $(clp_SOURCES)
+SOURCES = $(libClp_la_SOURCES) $(libClpSolver_la_SOURCES) \
+	$(clp_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -360,9 +371,12 @@ am__includecoin_HEADERS_DIST = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpQuadraticObjective.hpp ClpSimplex.hpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp Idiot.hpp \
+	ClpCholeskyPardiso.hpp ClpPESimplex.hpp \
+	ClpPEPrimalColumnDantzig.hpp ClpPEPrimalColumnSteepest.hpp \
+	ClpPEDualRowDantzig.hpp ClpPEDualRowSteepest.hpp \
 	AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp \
-	ClpCholeskyUfl.hpp ClpCholeskyMumps.hpp ClpCholeskyWssmp.hpp \
-	ClpCholeskyWssmpKKT.hpp CbcOrClpParam.cpp
+	AbcNonLinearCost.hpp ClpCholeskyUfl.hpp ClpCholeskyMumps.hpp \
+	ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp CbcOrClpParam.cpp
 HEADERS = $(includecoin_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) \
 	$(LISP)config.h.in config_clp.h.in
@@ -584,7 +598,7 @@ AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCLP_BUILD -DCOIN_HAS_CLP \
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
-lib_LTLIBRARIES = libClp.la
+lib_LTLIBRARIES = libClp.la libClpSolver.la
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
@@ -621,18 +635,16 @@ libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.cpp \
 	ClpSimplexOther.hpp ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp Idiot.cpp Idiot.hpp IdiSolve.cpp \
-	$(am__append_1) $(am__append_2) $(am__append_3) \
-	$(am__append_4) $(am__append_5) $(am__append_6)
-
-# List all additionally required libraries
-@DEPENDENCY_LINKING_TRUE@libClp_la_LIBADD = $(CLPLIB_LIBS)
-
-# This is for libtool
-libClp_la_LDFLAGS = $(LT_LDFLAGS)
-
-# List all source files for this executable, including headers
-clp_SOURCES = \
-	ClpMain.cpp \
+	ClpCholeskyPardiso.cpp ClpCholeskyPardiso.hpp ClpPESimplex.cpp \
+	ClpPESimplex.hpp ClpPEPrimalColumnDantzig.cpp \
+	ClpPEPrimalColumnDantzig.hpp ClpPEPrimalColumnSteepest.cpp \
+	ClpPEPrimalColumnSteepest.hpp ClpPEDualRowDantzig.cpp \
+	ClpPEDualRowDantzig.hpp ClpPEDualRowSteepest.cpp \
+	ClpPEDualRowSteepest.hpp $(am__append_1) $(am__append_2) \
+	$(am__append_3) $(am__append_4) $(am__append_5) \
+	$(am__append_6)
+libClpSolver_la_SOURCES = \
+	ClpSolver.cpp \
 	CbcOrClpParam.cpp CbcOrClpParam.hpp \
 	Clp_ampl.cpp Clp_ampl.h \
 	MyEventHandler.cpp MyEventHandler.hpp \
@@ -641,7 +653,18 @@ clp_SOURCES = \
 
 
 # List all additionally required libraries
-clp_LDADD = libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
+@DEPENDENCY_LINKING_TRUE@libClp_la_LIBADD = $(CLPLIB_LIBS)
+@DEPENDENCY_LINKING_TRUE@libClpSolver_la_LIBADD = $(CLPLIB_LIBS) libClp.la
+
+# This is for libtool
+libClp_la_LDFLAGS = $(LT_LDFLAGS)
+libClpSolver_la_LDFLAGS = $(LT_LDFLAGS)
+
+# List all source files for this executable, including headers
+clp_SOURCES = ClpMain.cpp 
+
+# List all additionally required libraries
+clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
 
 # This line is necessary to allow VPATH compilation
 # DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)`
@@ -654,7 +677,7 @@ clp_LDADD = libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
 # and that therefore should be installed in 'include/coin'
 includecoindir = $(includedir)/coin
 
-# needed by Cbc
+# needed by Clp
 includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpCholeskyDense.hpp ClpConstraint.hpp ClpConstraintLinear.hpp \
 	ClpConstraintQuadratic.hpp ClpDualRowDantzig.hpp \
@@ -671,6 +694,9 @@ includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpQuadraticObjective.hpp ClpSimplex.hpp \
 	ClpSimplexNonlinear.hpp ClpSimplexOther.hpp ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp ClpSolve.hpp CbcOrClpParam.hpp Idiot.hpp \
+	ClpCholeskyPardiso.hpp ClpPESimplex.hpp \
+	ClpPEPrimalColumnDantzig.hpp ClpPEPrimalColumnSteepest.hpp \
+	ClpPEDualRowDantzig.hpp ClpPEDualRowSteepest.hpp \
 	$(am__append_9) $(am__append_10) $(am__append_11) \
 	$(am__append_12) $(am__append_13) $(am__append_14) \
 	CbcOrClpParam.cpp
@@ -770,6 +796,9 @@ clean-libLTLIBRARIES:
 
 libClp.la: $(libClp_la_OBJECTS) $(libClp_la_DEPENDENCIES) $(EXTRA_libClp_la_DEPENDENCIES) 
 	$(AM_V_CXXLD)$(libClp_la_LINK) -rpath $(libdir) $(libClp_la_OBJECTS) $(libClp_la_LIBADD) $(LIBS)
+
+libClpSolver.la: $(libClpSolver_la_OBJECTS) $(libClpSolver_la_DEPENDENCIES) $(EXTRA_libClpSolver_la_DEPENDENCIES) 
+	$(AM_V_CXXLD)$(libClpSolver_la_LINK) -rpath $(libdir) $(libClpSolver_la_OBJECTS) $(libClpSolver_la_LIBADD) $(LIBS)
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
@@ -844,10 +873,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcSimplexParallel.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcSimplexPrimal.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/AbcWarmStart.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CbcOrClpParam.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CbcOrClpParam.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyBase.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyDense.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyMumps.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyPardiso.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyUfl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyWssmp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpCholeskyWssmpKKT.Plo@am__quote@
@@ -877,6 +907,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpNode.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpNonLinearCost.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpObjective.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEDualRowDantzig.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEDualRowSteepest.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEPrimalColumnDantzig.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEPrimalColumnSteepest.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPESimplex.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPackedMatrix.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPdco.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPdcoBase.Plo@am__quote@
@@ -893,8 +928,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSimplexOther.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSimplexPrimal.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSolve.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSolver.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_C_Interface.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_ampl.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_ampl.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization1.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization2.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization3.Plo@am__quote@
@@ -919,9 +955,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcSmallFactorization5.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/IdiSolve.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Idiot.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyEventHandler.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyMessageHandler.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unitTest.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyEventHandler.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/MyMessageHandler.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unitTest.Plo@am__quote@
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXXCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

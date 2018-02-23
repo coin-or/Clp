@@ -146,8 +146,8 @@ void CoinAbcTypeFactorization::gutsOfInitialize(CoinSimplexInt type)
     relaxCheck_=1.0;
 #if ABC_SMALL<4
 #if ABC_DENSE_CODE>0
-    denseThreshold_=4;//16; //31;
-    //denseThreshold_=71;
+    //denseThreshold_=4;//16; //31;
+    denseThreshold_=71;
 #else
     denseThreshold_=-16;
 #endif
@@ -765,6 +765,7 @@ CoinAbcTypeFactorization::factor (AbcSimplex * model)
 #endif
   return status_;
 }
+#define ALWAYS_GIVE_UP 0 //1
 #ifdef ABC_USE_FUNCTION_POINTERS 
 #define DENSE_TRY
 #ifdef DENSE_TRY
@@ -775,7 +776,7 @@ static void pivotStartup(int first, int last, int numberInPivotColumn, int lengt
 			 const int * COIN_RESTRICT numberInColumn,
 			 const int * COIN_RESTRICT indexRowU)
 {
-  if (last-first>giveUp) {
+  if (last-first>giveUp && !ALWAYS_GIVE_UP) {
     int mid=(last+first)>>1;
     cilk_spawn pivotStartup(first,mid,numberInPivotColumn,lengthArea,giveUp,
 			    eArea,saveColumn,startColumnU,tempColumnCount,
@@ -807,7 +808,7 @@ static void pivotStartup(int first, int last, int numberInPivotColumn, int lengt
 static void pivotWhile(int first, int last, int numberInPivotColumn,int lengthArea,int giveUp,
 		       CoinFactorizationDouble * COIN_RESTRICT eArea,const CoinFactorizationDouble * COIN_RESTRICT multipliersL)
 {
-  if (last-first>giveUp) {
+  if (last-first>giveUp && !ALWAYS_GIVE_UP) {
     int mid=(last+first)>>1;
     cilk_spawn pivotWhile(first,mid,numberInPivotColumn,lengthArea,giveUp,
 			  eArea,multipliersL);
@@ -857,7 +858,7 @@ static void pivotSomeAfter(int first, int last, int numberInPivotColumn,int leng
 		      const int * COIN_RESTRICT indexL,
 		      const CoinFactorizationDouble * COIN_RESTRICT multipliersL, double tolerance)
 {
-  if (last-first>giveUp) {
+  if (last-first>giveUp && !ALWAYS_GIVE_UP) {
     int mid=(last+first)>>1;
     cilk_spawn pivotSomeAfter(first,mid,numberInPivotColumn,lengthArea,giveUp,
 	    eArea,saveColumn,startColumnU,tempColumnCount,
@@ -975,7 +976,7 @@ static void pivotSome(int first, int last, int numberInPivotColumn,int lengthAre
 		      const int * COIN_RESTRICT indexL,
 		      const CoinFactorizationDouble * COIN_RESTRICT multipliersL, double tolerance)
 {
-  if (last-first>giveUp) {
+  if (last-first>giveUp && !ALWAYS_GIVE_UP) {
     int mid=(last+first)>>1;
     cilk_spawn pivotSome(first,mid,numberInPivotColumn,lengthArea,giveUp,
 	    eArea,saveColumn,startColumnU,tempColumnCount,
@@ -1482,9 +1483,11 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
     pivotStartup(0,numberInPivotRow,numberInPivotColumn,lengthArea,giveUp,
 		 eArea,saveColumn,startColumnU,tempColumnCount,
 		 elementU,numberInColumn,indexRowU);
+    assert (tempColumnCount[0]>=0);
     for (int iTry=numberZeroOther-1;iTry>=0;iTry--) {
       pivotWhile(0,numberInPivotRow,numberInPivotColumn,lengthArea,giveUp,
 		 eArea,multipliersL);
+    assert (tempColumnCount[0]>=0);
       // find new pivot row
       int jPivotColumn=others[iTry];
       CoinFactorizationDouble * COIN_RESTRICT area =eArea+jPivotColumn*lengthArea;
@@ -1505,6 +1508,12 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	deleteLink ( pivotColumn + numberRows_ );
 	// put away last
 	afterPivot(pivotRow,pivotColumn);
+	if (reinterpret_cast<unsigned int *>(elementUColumnPlusAddress_+lastEntryByColumnUPlus_)>aBits) {
+#ifndef NDEBUG
+	  printf("? dense\n");
+#endif
+	  return -99;
+	}
 	// new ones
 	pivotRow=indexL[jPivotRow];
 	pivotColumn=saveColumn[jPivotColumn];
@@ -1526,6 +1535,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 #endif
 	lastRow[pivotRow] = -2;
 	numberInRow[pivotRow] = 0;
+    assert (tempColumnCount[0]>=0);
 	//store column in L, compress in U and take column out
 	CoinBigIndex l = lengthL_;
 	if ( l + numberInPivotColumn > lengthAreaL_ ) {
@@ -1538,6 +1548,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	numberGoodL_++;
 	// move to L and move last
 	numberInPivotColumn--;
+    assert (tempColumnCount[0]>=0);
 	if (jPivotRow!=numberInPivotColumn) {
 	  // swap
 	  for (int jColumn = 0; jColumn < numberInPivotRow; jColumn++ ) {
@@ -1555,6 +1566,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	  multipliersL[jPivotRow]=tempD;
 	  jPivotRow=numberInPivotColumn;
 	}
+    assert (tempColumnCount[0]>=0);
 	numberInPivotRow--;
 	CoinFactorizationDouble pivotElement = area[numberInPivotColumn];
 	area[numberInPivotColumn]=0.0;
@@ -1567,6 +1579,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	tempColumnCount[jPivotColumn]=tempColumnCount[numberInPivotRow];
 	totalElements_-=numberInColumn[pivotColumn];
 	mark[pivotColumn]=0;
+    assert (tempColumnCount[0]>=0);
 	for (int jRow=0;jRow<numberInPivotColumn+1;jRow++) {
 	  CoinFactorizationDouble temp=areaLast[jRow];
 	  areaLast[jRow]=area[jRow];
@@ -1577,6 +1590,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	for (int jColumn = 0; jColumn < numberInPivotRow; jColumn++ ) {
 	  CoinFactorizationDouble * COIN_RESTRICT area =eArea+jColumn*lengthArea;
 	  CoinFactorizationDouble thisPivotValue = area[numberInPivotColumn];
+    assert (tempColumnCount[0]>=0);
 	  area[numberInPivotColumn]=thisPivotValue;
 	  if (fabs(thisPivotValue)>tolerance) {
 	    CoinSimplexInt iColumn = saveColumn[jColumn];
@@ -1600,6 +1614,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	    //numberInColumn[iColumn]--;
 	  }
 	}
+    assert (tempColumnCount[0]>=0);
 	// put away last (but remember count is one out)
 	CoinAbcMemcpy(elementL+lSave,multipliersL,numberInPivotColumn+1);
 	lSave=l;
@@ -1630,6 +1645,7 @@ CoinAbcTypeFactorization::pivot ( CoinSimplexInt & pivotRow,
 	break;
       }
     }
+    assert (tempColumnCount[0]>=0);
 #if 0
     // zero out extra bits
     int add1=numberInPivotColumn>>5;
@@ -2404,15 +2420,16 @@ int CoinAbcTypeFactorization::wantToGoDense()
       //printf("at 100 %d elements\n",totalElements_);
       CoinSimplexDouble ratio;
       if (numberRowsLeft_>2000)
-	ratio=4.5;
+	ratio=3.5;
       else if (numberRowsLeft_>800)
-	ratio=3.0;//3.5;
+	ratio=2.75;//3.5;
       else if (numberRowsLeft_>256)
 	ratio=2.0;//2.5;
       //else if (numberRowsLeft_==8)
       //ratio=200.0;
       else
 	ratio=1.5;
+      //ratio=200.0;
       //ratio *=0.75;
       if ((ratio*leftElements>full&&numberRowsLeft_>abs(denseThreshold_))) {
 #if 0 //ndef NDEBUG
@@ -2433,7 +2450,7 @@ int CoinAbcTypeFactorization::wantToGoDense()
 	}
 #else
 	status=2;
-#if 0 //ABC_NORMAL_DEBUG>1
+#if ABC_NORMAL_DEBUG>1
 	std::cout<<"      Went dense at "<<numberRowsLeft_<<" rows "<<
 	  totalElements_<<" "<<full<<" "<<leftElements<<std::endl;
 #endif

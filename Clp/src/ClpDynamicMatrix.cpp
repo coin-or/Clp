@@ -2354,7 +2354,7 @@ ClpDynamicMatrix::initialProblem()
 	   pivotVariable[i]=i+numberColumns;
        }
      }
-     if (rhsOffset_) {
+     if (rhsOffset_ && model_->costRegion()) {
        double * cost = model_->costRegion();
        double * columnLower = model_->lowerRegion();
        double * columnUpper = model_->upperRegion();
@@ -2474,7 +2474,7 @@ ClpDynamicMatrix::writeMps(const char * name)
 }
 // Adds in a column to gub structure (called from descendant)
 int
-ClpDynamicMatrix::addColumn(int numberEntries, const int * row, const double * element,
+ClpDynamicMatrix::addColumn(CoinBigIndex numberEntries, const int * row, const double * element,
                             double cost, double lower, double upper, int iSet,
                             DynamicStatus status)
 {

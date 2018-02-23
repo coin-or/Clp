@@ -40,9 +40,11 @@ public:
      /** Primal algorithm for quadratic
          Using a semi-trust region approach as for pooling problem
          This is in because I have it lying around
-
      */
-     int primalSLP(int numberPasses, double deltaTolerance);
+     int primalSLP(int numberPasses, double deltaTolerance,
+		int otherOptions=0);
+     /// May use a cut approach for solving any LP
+     int primalDualCuts(char * rowsIn, int startUp, int algorithm);
      /** Primal algorithm for nonlinear constraints
          Using a semi-trust region approach as for pooling problem
          This is in because I have it lying around

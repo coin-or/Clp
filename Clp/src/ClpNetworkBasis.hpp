@@ -34,7 +34,7 @@ public:
      /// Constructor from CoinFactorization
      ClpNetworkBasis(const ClpSimplex * model,
                      int numberRows, const CoinFactorizationDouble * pivotRegion,
-                     const int * permuteBack, const CoinBigIndex * startColumn,
+                     const int * permuteBack, const int * startColumn,
                      const int * numberInColumn,
                      const int * indexRow, const CoinFactorizationDouble * element);
      /// Copy constructor

@@ -58,8 +58,10 @@ enum ClpDblParam {
      /** Objective function constant. This the value of the constant term in
          the objective function. */
      ClpObjOffset,
-     /// Maximum time in seconds - after this action is as max iterations
+     /// Maximum time in seconds - after, this action is as max iterations
      ClpMaxSeconds,
+     /// Maximum wallclock running time in seconds - after, this action is as max iterations
+     ClpMaxWallSeconds,
      /// Tolerance to use in presolve
      ClpPresolveTolerance,
      /** Just a marker, so that we can allocate a static sized array to store
@@ -79,21 +81,21 @@ enum ClpStrParam {
 
 /// Copy (I don't like complexity of Coin version)
 template <class T> inline void
-ClpDisjointCopyN( const T * array, const int size, T * newArray)
+ClpDisjointCopyN( const T * array, const CoinBigIndex size, T * newArray)
 {
      memcpy(reinterpret_cast<void *> (newArray), array, size * sizeof(T));
 }
 /// And set
 template <class T> inline void
-ClpFillN( T * array, const int size, T value)
+ClpFillN( T * array, const CoinBigIndex size, T value)
 {
-     int i;
+     CoinBigIndex i;
      for (i = 0; i < size; i++)
           array[i] = value;
 }
 /// This returns a non const array filled with input from scalar or actual array
 template <class T> inline T*
-ClpCopyOfArray( const T * array, const int size, T value)
+ClpCopyOfArray( const T * array, const CoinBigIndex size, T value)
 {
      T * arrayNew = new T[size];
      if (array)
@@ -105,7 +107,7 @@ ClpCopyOfArray( const T * array, const int size, T value)
 
 /// This returns a non const array filled with actual array (or NULL)
 template <class T> inline T*
-ClpCopyOfArray( const T * array, const int size)
+ClpCopyOfArray( const T * array, const CoinBigIndex size)
 {
      if (array) {
           T * arrayNew = new T[size];

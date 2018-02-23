@@ -96,6 +96,7 @@
 #include "AbcSimplexDual.hpp"
 #include "ClpEventHandler.hpp"
 #include "AbcSimplexFactorization.hpp"
+#include "AbcNonLinearCost.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
 #include "CoinFloatEqual.hpp"
@@ -593,7 +594,7 @@ AbcSimplexDual::updateDualsInDual()
     double * COIN_RESTRICT work=array.denseVector();
     const int * COIN_RESTRICT which=array.getIndices();
     double * COIN_RESTRICT reducedCost=abcDj_;
-#pragma cilk_grainsize=128
+#pragma cilk grainsize=128
     cilk_for (int i = 0; i < number; i++) {
       //for (int i = 0; i < number; i++) {
       int iSequence = which[i];
@@ -2336,6 +2337,8 @@ static int computeDualsAndCheck(AbcSimplexDual * model,const int whichArray[2])
 int
 AbcSimplex::gutsOfSolution(int type)
 {
+  double oldLargestPrimalError=largestPrimalError_;
+  double oldLargestDualError=largestDualError_;
   AbcSimplexDual * dual = reinterpret_cast<AbcSimplexDual *>(this);
   // do work and check
   int numberRefinements=0;
@@ -2385,7 +2388,7 @@ AbcSimplex::gutsOfSolution(int type)
 	startParallelStuff(1);
 #else
 	whichArray[0]=1;
-	CoinAbcThreadInfo info;
+	CoinThreadInfo info;
 	info.status=1;
 	info.stuff[0]=whichArray[1];
 	info.stuff[1]=whichArray[2];
@@ -2420,6 +2423,59 @@ AbcSimplex::gutsOfSolution(int type)
     // Change factorization tolerance
     //if (abcFactorization_->zeroTolerance() > 1.0e-18)
     //abcFactorization_->zeroTolerance(1.0e-18);
+  }
+  bool notChanged=true;
+  if (numberIterations_ && (forceFactorization_ > 2 || forceFactorization_<0 || abcFactorization_->pivotTolerance()<0.9899999999) && 
+      (oldLargestDualError||oldLargestPrimalError)) {
+    double useOldDualError=oldLargestDualError;
+    double useDualError=largestDualError_;
+    if (algorithm_>0&&abcNonLinearCost_&&
+	abcNonLinearCost_->sumInfeasibilities()) {
+      double factor=CoinMax(1.0,CoinMin(1.0e3,infeasibilityCost_*1.0e-6));
+      useOldDualError /= factor;
+      useDualError /= factor;
+    }
+    if ((largestPrimalError_>1.0e3&&
+	 oldLargestPrimalError*1.0e2<largestPrimalError_)||
+	(useDualError>1.0e3&&
+	 useOldDualError*1.0e2<useDualError)) {
+      double pivotTolerance = abcFactorization_->pivotTolerance();
+      double factor=(largestPrimalError_>1.0e10||largestDualError_>1.0e10)
+	? 2.0 : 1.2;
+      if (pivotTolerance<0.1)
+	abcFactorization_->pivotTolerance(0.1);
+      else if (pivotTolerance<0.98999999)
+	abcFactorization_->pivotTolerance(CoinMin(0.99,pivotTolerance*factor));
+      notChanged=pivotTolerance==abcFactorization_->pivotTolerance();
+#if defined(CLP_USEFUL_PRINTOUT) && !defined(GCC_4_9)
+      if (pivotTolerance<0.9899999) {
+	double newTolerance=abcFactorization_->pivotTolerance();
+	printf("Changing pivot tolerance from %g to %g and backtracking\n",
+	       pivotTolerance,newTolerance);
+      } 
+      printf("because old,new primal error %g,%g - dual %g,%g pivot_tol %g\n",
+	     oldLargestPrimalError,largestPrimalError_,
+	     oldLargestDualError,largestDualError_,
+	     pivotTolerance);
+#endif
+      if (pivotTolerance<0.9899999) {
+	//largestPrimalError_=0.0;
+	//largestDualError_=0.0;
+	//returnCode=1;
+      } 
+    }
+  }
+  if (progress_.iterationNumber_[0]>0&&
+      progress_.iterationNumber_[CLP_PROGRESS-1]
+      -progress_.iterationNumber_[0]<CLP_PROGRESS*3&&
+      abcFactorization_->pivotTolerance()<0.25&&notChanged) {
+    double pivotTolerance = abcFactorization_->pivotTolerance();
+    abcFactorization_->pivotTolerance(pivotTolerance*1.5);
+#if defined(CLP_USEFUL_PRINTOUT) && !defined(GCC_4_9)
+    double newTolerance=abcFactorization_->pivotTolerance();
+    printf("Changing pivot tolerance from %g to %g - inverting too often\n",
+	   pivotTolerance,newTolerance);
+#endif
   }
   return numberRefinements;
 }
@@ -3293,9 +3349,14 @@ AbcSimplexDual::statusOfProblemInDual(int type)
   // see if cutoff reached
   double limit = 0.0;
   getDblParam(ClpDualObjectiveLimit, limit);
+  int numberChangedBounds=0;
   if (primalFeasible()&&ignoreStuff!=2) {
     // may be optimal - or may be bounds are wrong
-    int numberChangedBounds = changeBounds(0, changeCost);
+    numberChangedBounds = changeBounds(0, changeCost);
+    if (numberChangedBounds)
+      gutsOfSolution(2);
+  }
+  if (primalFeasible()&&ignoreStuff!=2) {
     if (numberChangedBounds <= 0 && !numberDualInfeasibilities_) {
       //looks optimal - do we need to reset tolerance
       if (lastCleaned_ < numberIterations_ && /*numberTimesOptimal_*/ stateDualColumn_ < 4 &&
@@ -3366,7 +3427,7 @@ AbcSimplexDual::statusOfProblemInDual(int type)
       printf("numberChangedBounds %d numberAtFakeBound %d at line %d in file %s\n",
 	     numberChangedBounds,numberAtFakeBound(),__LINE__,__FILE__);
 #endif
-    } else if (numberAtFakeBound()) {
+    } else if (numberChangedBounds>0||numberAtFakeBound()) {
       handler_->message(CLP_DUAL_BOUNDS, messages_)
 	<< currentDualBound_
 	<< CoinMessageEol;
@@ -5764,7 +5825,7 @@ void * abc_parallelManager(void * simplex)
 {
   AbcSimplexDual * dual = reinterpret_cast<AbcSimplexDual *>(simplex);
   int whichThread=dual->whichThread();
-  CoinAbcThreadInfo * threadInfo = dual->threadInfoPointer(whichThread);
+  CoinThreadInfo * threadInfo = dual->threadInfoPointer(whichThread);
   pthread_mutex_lock(dual->mutexPointer(2,whichThread));
   pthread_barrier_wait(dual->barrierPointer());
 #if 0
@@ -5927,7 +5988,7 @@ AbcSimplexDual::dual()
   if (!lastDualBound_) {
     dualTolerance_ = dblParam_[ClpDualTolerance];
     primalTolerance_ = dblParam_[ClpPrimalTolerance];
-    int tryType=moreSpecialOptions_/131072;
+    int tryType=moreSpecialOptions_/65536;
     if (tryType<5) {
       currentDualBound_=1.0e8;
     } else {

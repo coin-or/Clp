@@ -9,10 +9,13 @@
 #include "CoinHelperFunctions.hpp"
 #include "ClpHelperFunctions.hpp"
 #include "ClpSimplexNonlinear.hpp"
+#include "ClpSimplexOther.hpp"
+#include "ClpSimplexDual.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpNonLinearCost.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpConstraint.hpp"
+#include "ClpPresolve.hpp"
 #include "ClpQuadraticObjective.hpp"
 #include "CoinPackedMatrix.hpp"
 #include "CoinIndexedVector.hpp"
@@ -93,7 +96,7 @@ int ClpSimplexNonlinear::primal ()
                     rowArray_[iRow]->clear();
                }
 
-               for (iColumn = 0; iColumn < 2; iColumn++) {
+               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
                     columnArray_[iColumn]->clear();
                }
 
@@ -1522,7 +1525,7 @@ ClpSimplexNonlinear::pivotColumn(CoinIndexedVector * longArray,
 #if MINTYPE==1
                     if (conjugate) {
                          double djNorm2 = djNorm;
-                         if (numberNonBasic && 0) {
+                         if (numberNonBasic && false) {
                               int iIndex;
                               djNorm2 = 0.0;
                               for (iIndex = 0; iIndex < numberNonBasic; iIndex++) {
@@ -2646,9 +2649,291 @@ ClpSimplexNonlinear::pivotNonlinearResult()
      }
      return returnCode;
 }
+// May use a cut approach for solving any LP
+int 
+ClpSimplexNonlinear::primalDualCuts(char * rowsIn, int startUp,int algorithm)
+{
+  if (!rowsIn) {
+    if (algorithm>0)
+      return ClpSimplex::primal(startUp);
+    else
+      //return static_cast<ClpSimplexDual *>(static_cast<ClpSimplex *>(this))->dual(startUp);
+      return ClpSimplex::dual(startUp);
+  } else {
+    int numberUsed=0;
+    int rowsThreshold=CoinMax(100,numberRows_/2);
+    //int rowsTry=CoinMax(50,numberRows_/4);
+    // Just add this number of rows each time in small problem
+    int smallNumberRows = 2 * numberColumns_;
+    smallNumberRows = CoinMin(smallNumberRows, numberRows_ / 20);
+    // We will need arrays to choose rows to add
+    double * weight = new double [numberRows_];
+    int * sort = new int [numberRows_+numberColumns_];
+    int * whichColumns = sort+numberRows_;
+    int numberSort = 0;
+    for (int i=0;i<numberRows_;i++) {
+      if (rowsIn[i])
+	numberUsed++;
+    }
+    if (numberUsed) {
+      // normal
+    } else {
+      // If non slack use that information
+      int numberBinding=0;
+      numberPrimalInfeasibilities_=0;
+      sumPrimalInfeasibilities_=0.0;
+      memset(rowActivity_, 0, numberRows_ * sizeof(double));
+      times(1.0, columnActivity_, rowActivity_);
+      for (int i=0;i<numberRows_;i++) {
+	double lowerDifference = rowActivity_[i]-rowLower_[i];
+	double upperDifference = rowActivity_[i]-rowUpper_[i];
+	if (lowerDifference<-10*primalTolerance_||upperDifference>10.0*primalTolerance_) {
+	  numberPrimalInfeasibilities_++;
+	  if (lowerDifference<0.0)
+	    sumPrimalInfeasibilities_ -= lowerDifference;
+	  else
+	    sumPrimalInfeasibilities_ += upperDifference;
+	  rowsIn[i]=1;
+	} else if (getRowStatus(i)!=basic) {
+	  numberBinding++;
+	  rowsIn[i]=1;
+	}
+      }
+      if (numberBinding<rowsThreshold) {
+	// try
+      } else {
+	// random?? - or give up
+	// Set up initial list
+	numberSort = 0;
+	for (int iRow = 0; iRow < numberRows_; iRow++) {
+          weight[iRow] = 1.123e50;
+          if (rowLower_[iRow] == rowUpper_[iRow]) {
+	    sort[numberSort++] = iRow;
+	    weight[iRow] = 0.0;
+          }
+	}
+	numberSort /= 2;
+	// and pad out with random rows
+	double ratio = ((double)(smallNumberRows - numberSort)) / ((double) numberRows_);
+	for (int iRow = 0; iRow < numberRows_; iRow++) {
+          if (weight[iRow] == 1.123e50 && CoinDrand48() < ratio)
+	    sort[numberSort++] = iRow;
+	}
+	// sort
+	CoinSort_2(weight, weight + numberRows_, sort);
+	numberSort = CoinMin(numberRows_, smallNumberRows);
+	memset(rowsIn, 0, numberRows_);
+	for (int iRow = 0; iRow < numberSort; iRow++)
+	  rowsIn[sort[iRow]] = 1;
+      }
+    }
+    // see if feasible
+    numberPrimalInfeasibilities_=0;
+    memset(rowActivity_, 0, numberRows_ * sizeof(double));
+    times(1.0, columnActivity_, rowActivity_);
+    for (int i=0;i<numberRows_;i++) {
+      double lowerDifference = rowActivity_[i]-rowLower_[i];
+      double upperDifference = rowActivity_[i]-rowUpper_[i];
+      if (lowerDifference<-10*primalTolerance_||upperDifference>10.0*primalTolerance_) {
+	if (lowerDifference<0.0)
+	  sumPrimalInfeasibilities_ -= lowerDifference;
+	else
+	  sumPrimalInfeasibilities_ += upperDifference;
+	numberPrimalInfeasibilities_++;
+      }
+    }
+    printf("Initial infeasibilities - %g (%d)\n",
+	   sumPrimalInfeasibilities_,numberPrimalInfeasibilities_);
+    // Just do this number of passes
+    int maxPass = 50;
+    // And take out slack rows until this pass
+    int takeOutPass = 30;
+    int iPass;
+    
+    const CoinBigIndex * start = this->clpMatrix()->getVectorStarts();
+    const int * length = this->clpMatrix()->getVectorLengths();
+    const int * row = this->clpMatrix()->getIndices();
+    problemStatus_=1;
+    for (iPass = 0; iPass < maxPass; iPass++) {
+      printf("Start of pass %d\n", iPass);
+      int numberSmallColumns = 0;
+      for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
+	int n = 0;
+	for (CoinBigIndex j = start[iColumn]; j < start[iColumn] + length[iColumn]; j++) {
+	  int iRow = row[j];
+	  if (rowsIn[iRow])
+	    n++;
+	}
+	if (n)
+	  whichColumns[numberSmallColumns++] = iColumn;
+      }
+      numberSort=0;
+      for (int i=0;i<numberRows_;i++) {
+	if (rowsIn[i])
+	  sort[numberSort++]=i;
+      }
+      // Create small problem
+      ClpSimplex small(this, numberSort, sort, numberSmallColumns, whichColumns);
+      printf("Small model has %d rows, %d columns and %d elements\n",
+	     small.numberRows(),small.numberColumns(),small.getNumElements());
+      small.setFactorizationFrequency(100 + numberSort / 200);
+      // Solve
+      small.setLogLevel(CoinMax(0,logLevel()-1));
+      if (iPass>20) {
+	if (sumPrimalInfeasibilities_>1.0e-1) {
+	  small.dual();
+	} else {
+	  small.primal(1);
+	}
+      } else {
+	// presolve
+#if 0
+	ClpSolve::SolveType method;
+	ClpSolve::PresolveType presolveType = ClpSolve::presolveOn;
+	ClpSolve solveOptions;
+	solveOptions.setPresolveType(presolveType, 5);
+	if (sumPrimalInfeasibilities_>1.0e-1) 
+	  method = ClpSolve::useDual;
+	else
+	  method = ClpSolve::usePrimalorSprint;
+	solveOptions.setSolveType(method);
+	small.initialSolve(solveOptions);
+#else
+#if 1
+	ClpPresolve * pinfo = new ClpPresolve();
+	ClpSimplex * small2 = pinfo->presolvedModel(small,1.0e-5);
+	assert (small2);
+	if (sumPrimalInfeasibilities_>1.0e-1) {
+	  small2->dual();
+	} else {
+	  small2->primal(1);
+	}
+	pinfo->postsolve(true);
+	delete pinfo;
+#else
+	char * types = new char[small.numberRows()+small.numberColumns()];
+	memset(types,0,small.numberRows()+small.numberColumns());
+	if (sumPrimalInfeasibilities_>1.0e-1) {
+	  small.miniSolve(types,types+small.numberRows(),
+			  -1,0);
+	} else {
+	  small.miniSolve(types,types+small.numberRows(),
+			  1,1);
+	}
+	delete [] types;
+#endif
+	if (small.sumPrimalInfeasibilities()>1.0)
+	  small.primal(1);
+#endif
+      }
+      bool dualInfeasible = (small.status() == 2);
+      // move solution back
+      const double * smallSolution = small.primalColumnSolution();
+      for (int j = 0; j < numberSmallColumns; j++) {
+	int iColumn = whichColumns[j];
+	columnActivity_[iColumn] = smallSolution[j];
+	this->setColumnStatus(iColumn, small.getColumnStatus(j));
+      }
+      for (int iRow = 0; iRow < numberSort; iRow++) {
+	int kRow = sort[iRow];
+	this->setRowStatus(kRow, small.getRowStatus(iRow));
+      }
+      // compute full solution
+      memset(rowActivity_, 0, numberRows_ * sizeof(double));
+      times(1.0, columnActivity_, rowActivity_);
+      if (iPass != maxPass - 1) {
+	// Mark row as not looked at
+	for (int iRow = 0; iRow < numberRows_; iRow++)
+	  weight[iRow] = 1.123e50;
+	// Look at rows already in small problem
+	int iSort;
+	int numberDropped = 0;
+	int numberKept = 0;
+	int numberBinding = 0;
+	numberPrimalInfeasibilities_ = 0;
+	sumPrimalInfeasibilities_ = 0.0;
+	bool allFeasible = small.numberIterations()==0;
+	for (iSort = 0; iSort < numberSort; iSort++) {
+	  int iRow = sort[iSort];
+	  //printf("%d %g %g\n",iRow,rowActivity_[iRow],small.primalRowSolution()[iSort]);
+	  if (getRowStatus(iRow) == ClpSimplex::basic) {
+	    // Basic - we can get rid of if early on
+	    if (iPass < takeOutPass && !dualInfeasible) {
+	      double infeasibility = CoinMax(rowActivity_[iRow] - rowUpper_[iRow],
+					     rowLower_[iRow] - rowActivity_[iRow]);
+	      weight[iRow] = -infeasibility;
+	      if (infeasibility > primalTolerance_&&!allFeasible) {
+		numberPrimalInfeasibilities_++;
+		sumPrimalInfeasibilities_ += infeasibility;
+	      } else {
+		weight[iRow] = 1.0;
+		numberDropped++;
+	      }
+	    } else {
+	      // keep
+	      weight[iRow] = -1.0e40;
+	      numberKept++;
+	    }
+	  } else {
+	    // keep
+	    weight[iRow] = -1.0e50;
+	    numberKept++;
+	    numberBinding++;
+	  }
+	}
+	// Now rest
+	for (int iRow = 0; iRow < numberRows_; iRow++) {
+	  sort[iRow] = iRow;
+	  if (weight[iRow] == 1.123e50) {
+	    // not looked at yet
+	    double infeasibility = CoinMax(rowActivity_[iRow] - rowUpper_[iRow],
+					   rowLower_[iRow] - rowActivity_[iRow]);
+	    weight[iRow] = -infeasibility;
+	    if (infeasibility > primalTolerance_) {
+	      numberPrimalInfeasibilities_++;
+	      sumPrimalInfeasibilities_ += infeasibility;
+	    }
+	  }
+	}
+	// sort
+	CoinSort_2(weight, weight + numberRows_, sort);
+	numberSort = CoinMin(numberRows_, smallNumberRows + numberKept);
+	memset(rowsIn, 0, numberRows_);
+	for (int iRow = 0; iRow < numberSort; iRow++)
+	  rowsIn[sort[iRow]] = 1;
+	printf("%d rows binding, %d rows kept, %d rows dropped - new size %d rows, %d columns\n",
+	       numberBinding, numberKept, numberDropped, numberSort, numberSmallColumns);
+	printf("%d rows are infeasible - sum is %g\n", numberPrimalInfeasibilities_,
+	       sumPrimalInfeasibilities_);
+	if (!numberPrimalInfeasibilities_) {
+	  problemStatus_=0;
+	  printf("Exiting as looks optimal\n");
+	  break;
+	}
+	numberPrimalInfeasibilities_ = 0;
+	sumPrimalInfeasibilities_ = 0.0;
+	for (iSort = 0; iSort < numberSort; iSort++) {
+	  if (weight[iSort] > -1.0e30 && weight[iSort] < -1.0e-8) {
+	    numberPrimalInfeasibilities_++;
+	    sumPrimalInfeasibilities_ += -weight[iSort];
+	  }
+	}
+	printf("in small model %d rows are infeasible - sum is %g\n", numberPrimalInfeasibilities_,
+	       sumPrimalInfeasibilities_);
+      } else {
+	// out of passes
+	problemStatus_=-1;
+      }
+    }
+    delete [] weight;
+    delete [] sort;
+    return 0;
+  }
+}
 // A sequential LP method
 int
-ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
+ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance,
+		int otherOptions)
 {
      // Are we minimizing or maximizing
      double whichWay = optimizationDirection();
@@ -2689,12 +2974,18 @@ ClpSimplexNonlinear::primalSLP(int numberPasses, double deltaTolerance)
      ClpObjective * trueObjective = objective_;
      objective_ = new ClpLinearObjective(NULL, numberColumns);
      double * objective = this->objective();
-
+     // See if user wants to use cuts
+     char * rowsIn=NULL;
+     if ((otherOptions&1)!=0||numberPasses<0) {
+       numberPasses=abs(numberPasses);
+       rowsIn=new char[numberRows_];
+       memset(rowsIn,0,numberRows_);
+     }
      // get feasible
      if (this->status() < 0 || numberPrimalInfeasibilities())
-          ClpSimplex::primal(1);
+       primalDualCuts(rowsIn,1,1);
      // still infeasible
-     if (numberPrimalInfeasibilities()) {
+     if (problemStatus_) {
           delete [] listNonLinearColumn;
           return 0;
      }
@@ -3264,7 +3555,7 @@ for (iPass = 0; iPass < numberPasses; iPass++)
           this->scaling(false);
           if (saveLogLevel == 1)
                setLogLevel(0);
-          ClpSimplex::primal(1);
+	  primalDualCuts(rowsIn,1,1);
           algorithm_ = 1;
           setLogLevel(saveLogLevel);
 #ifdef CLP_DEBUG
@@ -3338,8 +3629,9 @@ delete [] saveStatus;
 // redo objective
 CoinMemcpyN(trueObjective->gradient(this, solution, offset, true, 2),	numberColumns,
             objective);
-ClpSimplex::primal(1);
+primalDualCuts(rowsIn,1,1);
 delete objective_;
+delete [] rowsIn;
 objective_ = trueObjective;
 // redo values
 setDblParam(ClpObjOffset, objectiveOffset);
@@ -3441,7 +3733,7 @@ ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint ** constrain
      if (numberArtificials) {
           numberArtificials *= SEGMENTS;
           numberColumns2 += numberArtificials;
-          int * addStarts = new int [numberArtificials+1];
+          CoinBigIndex * addStarts = new CoinBigIndex [numberArtificials+1];
           int * addRow = new int[numberArtificials];
           double * addElement = new double[numberArtificials];
           double * addUpper = new double[numberArtificials];

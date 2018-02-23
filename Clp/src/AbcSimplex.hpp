@@ -20,7 +20,7 @@
 class AbcSimplex;
 #include "ClpSolve.hpp"
 #include "CoinAbcCommon.hpp"
-class ClpSimplex;
+#include "ClpSimplex.hpp"
 class AbcDualRowPivot;
 class AbcPrimalColumnPivot;
 class AbcSimplexFactorization;
@@ -59,14 +59,6 @@ class AbcTolerancesEtc;
 // Use pthreads
 #include <pthread.h>
 #endif
-typedef struct {
-  double result;
-  //const CoinIndexedVector * constVector; // can get rid of
-  //CoinIndexedVector * vectors[2]; // can get rid of
-  int status;
-  int stuff[4];
-} CoinAbcThreadInfo;
-#include "ClpSimplex.hpp"
 class AbcSimplex : public ClpSimplex {
   friend void AbcSimplexUnitTest(const std::string & mpsDir);
   
@@ -335,8 +327,8 @@ public:
   ClpDataSave saveData() ;
   /// Restore data
   void restoreData(ClpDataSave saved);
-  /// Clean up status
-  void cleanStatus();
+  /// Clean up status - make sure no superbasic etc
+  void cleanStatus(bool valuesPass=false);
   /** Computes duals from scratch. If givenDjs then
       allows for nonzero basic djs.  Returns number of refinements  */
   int computeDuals(double * givenDjs, CoinIndexedVector * array1, CoinIndexedVector * array2);
@@ -741,6 +733,12 @@ public:
   /// For dealing with all issues of cycling etc
   inline AbcSimplexProgress * abcProgress()
   { return &abcProgress_;}
+#ifdef ABC_SPRINT
+  /// Overwrite to create sub problem (just internal arrays) - save full stuff
+  AbcSimplex * createSubProblem(int numberColumns,const int * whichColumn);
+  /// Restore stuff from sub problem (and delete sub problem)
+  void restoreFromSubProblem(AbcSimplex * fullProblem, const int * whichColumn);
+#endif
 public:
   /** Clears an array and says available (-1 does all)
       when no possibility of going parallel */
@@ -861,7 +859,9 @@ public:
   double computeInternalObjectiveValue();
   /// Move status and solution across
   void moveInfo(const AbcSimplex & rhs, bool justStatus = false);
+#ifndef NUMBER_THREADS 
 #define NUMBER_THREADS 3
+#endif
 #if ABC_PARALLEL==1
   // For waking up thread
   inline pthread_mutex_t * mutexPointer(int which,int thread=0) 
@@ -870,14 +870,14 @@ public:
   { return &barrier_;}
   inline int whichLocked(int thread=0) const
   { return locked_[thread];}
-  inline CoinAbcThreadInfo * threadInfoPointer(int thread=0) 
+  inline CoinThreadInfo * threadInfoPointer(int thread=0) 
   { return threadInfo_+thread;}
   void startParallelStuff(int type);
   int stopParallelStuff(int type);
   /// so thread can find out which one it is 
   int whichThread() const; 
 #elif ABC_PARALLEL==2
-  //inline CoinAbcThreadInfo * threadInfoPointer(int thread=0) 
+  //inline CoinThreadInfo * threadInfoPointer(int thread=0) 
   //{ return threadInfo_+thread;}
 #endif
   //@}
@@ -1262,12 +1262,12 @@ protected:
   // For waking up thread
   pthread_mutex_t mutex_[3*NUMBER_THREADS];
   pthread_barrier_t barrier_; 
-  CoinAbcThreadInfo threadInfo_[NUMBER_THREADS];
+  CoinThreadInfo threadInfo_[NUMBER_THREADS];
   pthread_t abcThread_[NUMBER_THREADS];
   int locked_[NUMBER_THREADS];
   int stopStart_;
 #elif ABC_PARALLEL==2
-  //CoinAbcThreadInfo threadInfo_[NUMBER_THREADS];
+  //CoinThreadInfo threadInfo_[NUMBER_THREADS];
 #endif
   //@}
 };

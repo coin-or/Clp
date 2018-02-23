@@ -297,6 +297,7 @@ int AbcSimplexPrimal::primal (int ifValuesPass , int /*startFinishOptions*/)
     // Start check for cycles
     abcProgress_.fillFromModel(this);
     abcProgress_.startCheck();
+    bool needNewWeights=false;
     double pivotTolerance=abcFactorization_->pivotTolerance();
     /*
       Status of problem:
@@ -330,7 +331,11 @@ int AbcSimplexPrimal::primal (int ifValuesPass , int /*startFinishOptions*/)
       
       // may factorize, checks if problem finished
       if (factorType)
-	statusOfProblemInPrimal(factorType);
+	statusOfProblemInPrimal(factorType + (needNewWeights ? 10 : 0));
+      needNewWeights=false;
+      if (problemStatus_==10 && (moreSpecialOptions_ & 2048) != 0) {
+	problemStatus_=0;
+      }
       if (initialStatus == 10) {
 	initialStatus=-1;
 	// cleanup phase
@@ -377,7 +382,7 @@ int AbcSimplexPrimal::primal (int ifValuesPass , int /*startFinishOptions*/)
 #else
 	break;
 #endif
-      }
+      } 
       
       // test for maximum iterations
       if (hitMaximumIterations() || (ifValuesPass == 2 && firstFree_ < 0)) {
@@ -389,6 +394,7 @@ int AbcSimplexPrimal::primal (int ifValuesPass , int /*startFinishOptions*/)
 	if (ifValuesPass) {
 	  // end of values pass
 	  ifValuesPass = 0;
+	  needNewWeights=true;
 	  int status = eventHandler_->event(ClpEventHandler::endOfValuesPass);
 	  if (status >= 0) {
 	    problemStatus_ = 5;
@@ -405,6 +411,95 @@ int AbcSimplexPrimal::primal (int ifValuesPass , int /*startFinishOptions*/)
 	    perturb(0);
 #endif
 	}
+      }
+      if (abcNonLinearCost_->numberInfeasibilities() > 0 && !abcProgress_.initialWeight_ && !ifValuesPass && infeasibilityCost_ == 1.0e10 
+#ifdef TRY_SPLIT_VALUES_PASS
+	  && valuesStop<0
+#endif
+	  ) {
+	// first time infeasible - start up weight computation
+	// compute with original costs
+	CoinAbcMemcpy(djSaved_,abcDj_,numberTotal_);
+	CoinAbcMemcpy(abcCost_,costSaved_,numberTotal_);
+	CoinAbcGatherFrom(abcCost_,costBasic_,abcPivotVariable_,numberRows_);
+	gutsOfPrimalSolution(1);
+	int numberSame = 0;
+	int numberDifferent = 0;
+	int numberZero = 0;
+	int numberFreeSame = 0;
+	int numberFreeDifferent = 0;
+	int numberFreeZero = 0;
+	int n = 0;
+	for (int iSequence = 0; iSequence < numberTotal_; iSequence++) {
+	  if (getInternalStatus(iSequence) != basic && !flagged(iSequence)) {
+	    // not basic
+	    double distanceUp = abcUpper_[iSequence] - abcSolution_[iSequence];
+	    double distanceDown = abcSolution_[iSequence] - abcLower_[iSequence];
+	    double feasibleDj = abcDj_[iSequence];
+	    double infeasibleDj = djSaved_[iSequence] - feasibleDj;
+	    double value = feasibleDj * infeasibleDj;
+	    if (distanceUp > primalTolerance_) {
+	      // Check if "free"
+	      if (distanceDown > primalTolerance_) {
+		// free
+		if (value > dualTolerance_) {
+		  numberFreeSame++;
+		} else if(value < -dualTolerance_) {
+		  numberFreeDifferent++;
+		  abcDj_[n++] = feasibleDj / infeasibleDj;
+		} else {
+		  numberFreeZero++;
+		}
+	      } else {
+		// should not be negative
+		if (value > dualTolerance_) {
+		  numberSame++;
+		} else if(value < -dualTolerance_) {
+		  numberDifferent++;
+		  abcDj_[n++] = feasibleDj / infeasibleDj;
+		} else {
+		  numberZero++;
+		}
+	      }
+	    } else if (distanceDown > primalTolerance_) {
+	      // should not be positive
+	      if (value > dualTolerance_) {
+		numberSame++;
+	      } else if(value < -dualTolerance_) {
+		numberDifferent++;
+		abcDj_[n++] = feasibleDj / infeasibleDj;
+	      } else {
+		numberZero++;
+	      }
+	    }
+      }
+	  abcProgress_.initialWeight_ = -1.0;
+    }
+#ifdef CLP_USEFUL_PRINTOUT
+	printf("XXXX %d same, %d different, %d zero, -- free %d %d %d\n",
+	       numberSame,numberDifferent,numberZero,
+	       numberFreeSame,numberFreeDifferent,numberFreeZero);
+#endif
+	// we want most to be same
+	if (n) {
+	  std::sort(abcDj_, abcDj_ + n);
+#ifdef CLP_USEFUL_PRINTOUT
+	  double most = 0.95;
+	  int which = static_cast<int> ((1.0 - most) * static_cast<double> (n));
+	  double take2 = -abcDj_[which] * infeasibilityCost_;
+	  printf("XXXX inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take2,-abcDj_[0]*infeasibilityCost_,-abcDj_[n-1]*infeasibilityCost_);
+#endif
+	  double take = -abcDj_[0] * infeasibilityCost_;
+	  // was infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e8), 1.0000001e10);
+	  infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e3), 1.0000001e10);
+#ifdef CLP_USEFUL_PRINTOUT
+	  printf("XXXX changing weight to %g\n",infeasibilityCost_);
+#endif
+	  // may need to force redo of weights
+	  needNewWeights=true;
+	}
+	abcNonLinearCost_->checkInfeasibilities(0.0);
+	gutsOfPrimalSolution(3);
       }
       // Check event
       {
@@ -435,6 +530,7 @@ int AbcSimplexPrimal::primal (int ifValuesPass , int /*startFinishOptions*/)
   }
   // clean up
   unflag();
+  abcProgress_.clearTimesFlagged();
 #if ABC_PARALLEL>0
   if (parallelMode()) {
     for (int i = 0; i < 6; i++) {
@@ -511,6 +607,7 @@ AbcSimplexPrimal::whileIterating(int valuesOption)
   int numberStartingInfeasibilities=abcNonLinearCost_->numberInfeasibilities();
   // status stays at -1 while iterating, >=0 finished, -2 to invert
   // status -3 to go to top without an invert
+  int numberFlaggedStart =abcProgress_.timesFlagged();
   while (problemStatus_ == -1) {
     if (!ifValuesPass) {
       // choose column to come in
@@ -649,6 +746,8 @@ AbcSimplexPrimal::whileIterating(int valuesOption)
       if (returnCode < -1 && returnCode > -5) {
 	problemStatus_ = -2; //
       } else if (returnCode == -5) {
+	if (abcProgress_.timesFlagged()>10+numberFlaggedStart)
+	  problemStatus_ =-2;
 	if ((moreSpecialOptions_ & 16) == 0 && abcFactorization_->pivots()) {
 	  moreSpecialOptions_ |= 16;
 	  problemStatus_ = -2;
@@ -713,10 +812,13 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
   	 numberPivots,type,problemStatus_,forceFactorization_,dontFactorizePivots_);
 #endif
   //int saveType=type;
-  if (type>=4) {
+  if (type>3) {
     // force factorization
-    type &= 3;
     numberPivots=9999999;
+    if (type>10) 
+      type -=10;
+    else 
+      type &= 3;
   }
 #ifndef TRY_ABC_GUS
   bool doFactorization =  (type != 3&&(numberPivots>dontFactorizePivots_||numberIterations_==baseIteration_||problemStatus_==10));
@@ -794,6 +896,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	    } else if (sequenceOut_ >= 0 && getInternalStatus(sequenceOut_) != basic) {
 	      setFlagged(sequenceOut_);
 	    }
+	    abcProgress_.incrementTimesFlagged();
 	    double newTolerance = CoinMax(0.5 + 0.499 * randomNumberGenerator_.randomDouble(), abcFactorization_->pivotTolerance());
 	    abcFactorization_->pivotTolerance(newTolerance);
 	  } else {
@@ -812,6 +915,36 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
     }
     if (problemStatus_ != -4)
       problemStatus_ = -3;
+    if(abcProgress_.realInfeasibility_[0]<1.0e-1 &&
+       primalTolerance_==1.0e-7&&abcProgress_.iterationNumber_[0]>0&&
+       abcProgress_.iterationNumber_[CLP_PROGRESS-1]-abcProgress_.iterationNumber_[0]>25) {
+      // default - so user did not set
+      int iP;
+      double minAverage=COIN_DBL_MAX;
+      double maxAverage=0.0;
+      for (iP=0;iP<CLP_PROGRESS;iP++) {
+	int n=abcProgress_.numberInfeasibilities_[iP];
+	if (!n) {
+	  break;
+	} else {
+	  double average=abcProgress_.realInfeasibility_[iP];
+	  if (average>0.1)
+	    break;
+	  average /= static_cast<double>(n);
+	  minAverage=CoinMin(minAverage,average);
+	  maxAverage=CoinMax(maxAverage,average);
+	}
+      }
+      if (iP==CLP_PROGRESS&&minAverage<1.0e-5&&maxAverage<1.0e-3) {
+	// change tolerance
+#if CBC_USEFUL_PRINTING>0
+	printf("CCchanging tolerance\n");
+#endif
+	primalTolerance_=1.0e-6;
+	dblParam_[ClpPrimalTolerance]=1.0e-6;
+	moreSpecialOptions_ |= 4194304;
+      }
+    }
     // at this stage status is -3 or -5 if looks unbounded
     // get primal and dual solutions
     // put back original costs and then check
@@ -828,12 +961,12 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 #endif
     if (ifValuesPass&&numberIterations_==baseIteration_) {
       double * save = new double[numberRows_];
-      for (int iRow = 0; iRow < numberRows_; iRow++) {
-	int iPivot = abcPivotVariable_[iRow];
-	save[iRow] = abcSolution_[iPivot];
-      }
       int numberOut = 1;
       while (numberOut) {
+	for (int iRow = 0; iRow < numberRows_; iRow++) {
+	  int iPivot = abcPivotVariable_[iRow];
+	  save[iRow] = abcSolution_[iPivot];
+	}
 	gutsOfPrimalSolution(2);
 	double badInfeasibility = abcNonLinearCost_->largestInfeasibility();
 	numberOut = 0;
@@ -856,7 +989,8 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	    save[iRow] = difference;
 	  }
 	  abcNonLinearCost_->checkInfeasibilities(primalTolerance_);
-	  printf("Largest infeasibility %g\n",abcNonLinearCost_->largestInfeasibility());
+	  if (handler_->logLevel()>1)
+	    printf("Largest infeasibility %g\n",abcNonLinearCost_->largestInfeasibility());
 	  int numberBasic = 0;
 	  for (int iRow = 0; iRow < numberRows_; iRow++) {
 	    int iPivot = abcPivotVariable_[iRow];
@@ -902,7 +1036,10 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	  delete [] sort;
 	}
 	if (numberOut) {
+	  double savePivotTolerance = abcFactorization_->pivotTolerance();
+	  abcFactorization_->pivotTolerance(0.99);
 	  int factorStatus = internalFactorize(12);
+	  abcFactorization_->pivotTolerance(savePivotTolerance);
 	  assert (!factorStatus);
 	}
       }
@@ -958,6 +1095,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	  } else if (sequenceOut_ >= 0 && getInternalStatus(sequenceOut_) != basic) {
 	    setFlagged(sequenceOut_);
 	  }
+	  abcProgress_.incrementTimesFlagged();
 	}
 	type = 2; // so will restore weights
 	if (internalFactorize(2) != 0) {
@@ -991,6 +1129,17 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
     loop = abcProgress_.looping();
   else
     loop = -1;
+  if ((moreSpecialOptions_ & 2048) != 0 && !numberPrimalInfeasibilities_ && numberDualInfeasibilities_) {
+    double average = sumDualInfeasibilities_ / (static_cast<double> (numberDualInfeasibilities_));
+    if (abcProgress_.lastIterationNumber(2)==numberIterations_&&
+	((abcProgress_.timesFlagged()>2&&average < 1.0e-1)||
+	 abcProgress_.timesFlagged()>20)) {
+      numberDualInfeasibilities_ = 0;
+      sumDualInfeasibilities_ = 0.0;
+      problemStatus_=3;
+      loop=0;
+    }
+  }
   if (loop >= 0) {
     if (!problemStatus_) {
       // declaring victory
@@ -1071,85 +1220,6 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
     gutsOfPrimalSolution(2);
     abcNonLinearCost_->checkInfeasibilities(primalTolerance_);
   }
-  if (abcNonLinearCost_->numberInfeasibilities() > 0 && !abcProgress_.initialWeight_ && !ifValuesPass && infeasibilityCost_ == 1.0e10 
-#ifdef TRY_SPLIT_VALUES_PASS
-      && valuesStop<0
-#endif
-      ) {
-    // first time infeasible - start up weight computation
-    // compute with original costs
-    CoinAbcMemcpy(djSaved_,abcDj_,numberTotal_);
-    CoinAbcMemcpy(abcCost_,costSaved_,numberTotal_);
-    gutsOfPrimalSolution(1);
-    int numberSame = 0;
-    int numberDifferent = 0;
-    int numberZero = 0;
-    int numberFreeSame = 0;
-    int numberFreeDifferent = 0;
-    int numberFreeZero = 0;
-    int n = 0;
-    for (int iSequence = 0; iSequence < numberTotal_; iSequence++) {
-      if (getInternalStatus(iSequence) != basic && !flagged(iSequence)) {
-	// not basic
-	double distanceUp = abcUpper_[iSequence] - abcSolution_[iSequence];
-	double distanceDown = abcSolution_[iSequence] - abcLower_[iSequence];
-	double feasibleDj = abcDj_[iSequence];
-	double infeasibleDj = djSaved_[iSequence] - feasibleDj;
-	double value = feasibleDj * infeasibleDj;
-	if (distanceUp > primalTolerance_) {
-	  // Check if "free"
-	  if (distanceDown > primalTolerance_) {
-	    // free
-	    if (value > dualTolerance_) {
-	      numberFreeSame++;
-	    } else if(value < -dualTolerance_) {
-	      numberFreeDifferent++;
-	      abcDj_[n++] = feasibleDj / infeasibleDj;
-	    } else {
-	      numberFreeZero++;
-	    }
-	  } else {
-	    // should not be negative
-	    if (value > dualTolerance_) {
-	      numberSame++;
-	    } else if(value < -dualTolerance_) {
-	      numberDifferent++;
-	      abcDj_[n++] = feasibleDj / infeasibleDj;
-	    } else {
-	      numberZero++;
-	    }
-	  }
-	} else if (distanceDown > primalTolerance_) {
-	  // should not be positive
-	  if (value > dualTolerance_) {
-	    numberSame++;
-	  } else if(value < -dualTolerance_) {
-	    numberDifferent++;
-	    abcDj_[n++] = feasibleDj / infeasibleDj;
-	  } else {
-	    numberZero++;
-	  }
-	}
-      }
-      abcProgress_.initialWeight_ = -1.0;
-    }
-    //printf("XXXX %d same, %d different, %d zero, -- free %d %d %d\n",
-    //   numberSame,numberDifferent,numberZero,
-    //   numberFreeSame,numberFreeDifferent,numberFreeZero);
-    // we want most to be same
-    if (n) {
-      double most = 0.95;
-      std::sort(abcDj_, abcDj_ + n);
-      int which = static_cast<int> ((1.0 - most) * static_cast<double> (n));
-      double take = -abcDj_[which] * infeasibilityCost_;
-      //printf("XXXXZ inf cost %g take %g (range %g %g)\n",infeasibilityCost_,take,-abcDj_[0]*infeasibilityCost_,-abcDj_[n-1]*infeasibilityCost_);
-      take = -abcDj_[0] * infeasibilityCost_;
-      infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e8), 1.0000001e10);;
-      //printf("XXXX increasing weight to %g\n",infeasibilityCost_);
-    }
-    abcNonLinearCost_->checkInfeasibilities(0.0);
-    gutsOfPrimalSolution(3);
-  }
   double trueInfeasibility = abcNonLinearCost_->sumInfeasibilities();
   if (!abcNonLinearCost_->numberInfeasibilities() && infeasibilityCost_ == 1.0e10 && !ifValuesPass && true) {
     // say been feasible
@@ -1173,7 +1243,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
     double lastObj3 = abcProgress_.lastObjective(3);
     lastObj3 += infeasibilityCost_ * 2.0 * lastInf3;
     if (lastObj < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj)) - 1.0e-7
-	&& firstFree_ < 0) {
+	&& firstFree_ < 0 && thisInf >= lastInf) {
 #if ABC_NORMAL_DEBUG>0
       if (handler_->logLevel() == 63)
 	printf("lastobj %g this %g force %d\n", lastObj, thisObj, forceFactorization_);
@@ -1189,7 +1259,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 #endif
       }
     } else if (lastObj3 < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj3)) - 1.0e-7
-	       && firstFree_ < 0) {
+	       && firstFree_ < 0 && thisInf >= lastInf) {
 #if ABC_NORMAL_DEBUG>0
       if (handler_->logLevel() == 63)
 	printf("lastobj3 %g this3 %g force %d\n", lastObj3, thisObj, forceFactorization_);
@@ -1264,6 +1334,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	bool unflagged =
 #endif
 	  unflag();
+	abcProgress_.clearTimesFlagged();
 #if ABC_NORMAL_DEBUG>3
 	if (unflagged && handler_->logLevel() > 0)
 	  printf(" - but flagged variables\n");
@@ -1373,6 +1444,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
 	lastCleaned_ = -1; // carry on
       }
       bool unflagged = (unflag() != 0);
+      abcProgress_.clearTimesFlagged();
       if ( lastCleaned_ != numberIterations_ || unflagged) {
 	handler_->message(CLP_PRIMAL_OPTIMAL, messages_)
 	  << primalTolerance_
@@ -1470,6 +1542,7 @@ AbcSimplexPrimal::statusOfProblemInPrimal(int type)
       if(type == 3 && !ifValuesPass) {
 	//bool unflagged =
 	unflag();
+	abcProgress_.clearTimesFlagged();
 	if (sumDualInfeasibilities_ < 1.0e-3 ||
 	    (sumDualInfeasibilities_ / static_cast<double> (numberDualInfeasibilities_)) < 1.0e-5 ||
 	    abcProgress_.lastIterationNumber(0) == numberIterations_) {
@@ -1699,7 +1772,7 @@ AbcSimplexPrimal::primalRow(CoinIndexedVector * rowArray,
                             CoinIndexedVector * spareArray,
                             int valuesPass)
 {
-#if 0
+#if 1
   for (int iRow=0;iRow<numberRows_;iRow++) {
     int iPivot=abcPivotVariable_[iRow];
     assert (costBasic_[iRow]==abcCost_[iPivot]);
@@ -2991,9 +3064,24 @@ AbcSimplexPrimal::perturb(int /*type*/)
   }
   double tolerance = 100.0 * primalTolerance_;
   int numberChanged=0;
+  // Set bit if fixed
+  for (int i=0;i<numberRows_;i++) {
+    if (rowLower_[i]!=rowUpper_[i])
+      internalStatus_[i] &= ~128;
+    else
+      internalStatus_[i] |= 128;
+  }
+  for (int i=0;i<numberColumns_;i++) {
+    if (columnLower_[i]!=columnUpper_[i])
+      internalStatus_[i+numberRows_] &= ~128;
+    else
+      internalStatus_[i+numberRows_] |= 128;
+  }
   //double multiplier = perturbation*maximumFraction;
   for (iSequence = 0; iSequence < numberRows_ + numberColumns_; iSequence++) {
     if (getInternalStatus(iSequence) == basic) {
+      if ((internalStatus_[i] &128)!=0)
+	continue;
       double lowerValue = abcLower_[iSequence];
       double upperValue = abcUpper_[iSequence];
       if (upperValue > lowerValue + tolerance) {
@@ -3055,6 +3143,8 @@ AbcSimplexPrimal::perturb(int /*type*/)
     // do non basic columns?
     for (iSequence = 0; iSequence < maximumAbcNumberRows_ + numberColumns_; iSequence++) {
       if (getInternalStatus(iSequence) != basic) {
+	if ((internalStatus_[i] &128)!=0)
+	  continue;
 	double lowerValue = abcLower_[iSequence];
 	double upperValue = abcUpper_[iSequence];
 	if (upperValue > lowerValue + tolerance) {
@@ -3102,6 +3192,7 @@ AbcSimplexPrimal::perturb(int /*type*/)
   }
   // Clean up
   for (i = 0; i < numberColumns_ + numberRows_; i++) {
+    internalStatus_[i] &= ~128;
     switch(getInternalStatus(i)) {
       
     case basic:
@@ -3153,6 +3244,7 @@ AbcSimplexPrimal::unPerturb()
   //sanityCheck();
   // unflag
   unflag();
+  abcProgress_.clearTimesFlagged();
   // get a valid nonlinear cost function
   delete abcNonLinearCost_;
   abcNonLinearCost_ = new AbcNonLinearCost(this);
@@ -3290,6 +3382,7 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 	    << x << sequenceWithin(sequenceIn_)
 	    << CoinMessageEol;
 	  setFlagged(sequenceIn_);
+	  abcProgress_.incrementTimesFlagged();
 	  abcProgress_.clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  clearAll();
@@ -3347,6 +3440,7 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 	      << x << sequenceWithin(sequenceIn_)
 	      << CoinMessageEol;
 	    setFlagged(sequenceIn_);
+	    abcProgress_.incrementTimesFlagged();
 #if 1 //def FEB_TRY
 	    // Make safer?
 	    double tolerance=abcFactorization_->pivotTolerance();
@@ -3419,6 +3513,7 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 	    << x << sequenceWithin(sequenceIn_)
 	    << CoinMessageEol;
 	  setFlagged(sequenceIn_);
+	  abcProgress_.incrementTimesFlagged();
 	  abcProgress_.clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  clearAll();
@@ -3464,6 +3559,7 @@ AbcSimplexPrimal::pivotResult(int ifValuesPass)
 	      << x << sequenceWithin(sequenceIn_)
 	      << CoinMessageEol;
 	    setFlagged(sequenceIn_);
+	    abcProgress_.incrementTimesFlagged();
 	    abcProgress_.clearBadTimes();
 	    roundAgain = true;
 	    continue;
@@ -3732,6 +3828,7 @@ AbcSimplexPrimal::pivotResult4(int ifValuesPass)
 	    << x << sequenceWithin(sequenceIn_)
 	    << CoinMessageEol;
 	  setFlagged(sequenceIn_);
+	  abcProgress_.incrementTimesFlagged();
 	  abcProgress_.clearBadTimes();
 	  lastBadIteration_ = numberIterations_; // say be more cautious
 	  clearAll();
@@ -3746,7 +3843,8 @@ AbcSimplexPrimal::pivotResult4(int ifValuesPass)
 	// if stable replace in basis
 	// check update
 	CoinIndexedVector * tempVector[4];
-	memcpy(tempVector,vector+4*iBest,4*sizeof(CoinIndexedVector *));
+	for (int i=0;i<4;i++) 
+	  tempVector[i] = vector[4*iBest+i];
 	returnCode = cilk_spawn doFTUpdate(tempVector);
 	bestUpdate=tempVector[0];
 	// after this bestUpdate is not empty - used to update djs ??
@@ -3940,6 +4038,7 @@ AbcSimplexPrimal::doFTUpdate(CoinIndexedVector * vector[4])
 	<< x << sequenceWithin(sequenceIn_)
 	<< CoinMessageEol;
       setFlagged(sequenceIn_);
+      abcProgress_.incrementTimesFlagged();
       abcProgress_.clearBadTimes();
       lastBadIteration_ = numberIterations_; // say be more cautious
       pivotRow_ = -1;
@@ -4122,10 +4221,14 @@ AbcSimplexPrimal::updateMinorCandidate(const CoinIndexedVector & updateBy,
 void 
 AbcSimplexPrimal::updatePartialUpdate(CoinIndexedVector & partialUpdate)
 {
+#ifndef ABC_USE_COIN_FACTORIZATION
   CoinAbcFactorization * factorization=
     dynamic_cast<CoinAbcFactorization *>(abcFactorization_->factorization());
   if (factorization)
     factorization->updatePartialUpdate(partialUpdate);
+#else
+  abcFactorization_->factorization()->updatePartialUpdate(partialUpdate);
+#endif
 }
 // Create primal ray
 void

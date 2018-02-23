@@ -151,6 +151,8 @@ public:
      void feasibleBounds();
      /// Refresh - assuming regions OK
      void refresh();
+     /// Refresh one- assuming regions OK
+     void refresh(int iSequence);
      /** Sets bounds and cost for one variable
          Returns change in cost
       May need to be inline for speed */
@@ -281,6 +283,15 @@ public:
      inline double cost(int sequence) const {
           return cost_[whichRange_[sequence] + offset_[sequence]];
      }
+     /// Returns full status
+     inline int fullStatus(int sequence) const {
+       return status_[sequence];
+     }
+     /// Returns if changed from beginning of iteration
+     inline bool changed(int sequence) const {
+       return (status_[sequence]&64)==0;
+     }
+		    
      //@}
 
 
