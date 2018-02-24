@@ -11,6 +11,7 @@
 
 int main(int argc, const char *argv[])
 {
+#if COIN_BIG_INDEX<2
      /* Create a structured model by reading mps file and trying
         Dantzig-Wolfe or Benders decomposition
      */
@@ -104,5 +105,8 @@ int main(int argc, const char *argv[])
      time1 = CoinCpuTime() ;
      solver2.dual();
      std::cout << "second try took " << CoinCpuTime() - time1 << " seconds" << std::endl;
+#else
+     printf("this does not work with COIN_BIG_INDEX=2\n");
+#endif
      return 0;
 }

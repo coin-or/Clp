@@ -28,7 +28,7 @@ int main(int argc, const char *argv[])
      double rowLower[] = {20.0, -COIN_DBL_MAX, 8.0};
      double rowUpper[] = {COIN_DBL_MAX, 30.0, 8.0};
      // Matrix by row
-     int rowStart[] = {0, 5, 10, 13};
+     CoinBigIndex rowStart[] = {0, 5, 10, 13};
      int column[] = {0, 1, 2, 3, 4,
                      0, 1, 2, 3, 4,
                      0, 1, 2
@@ -38,7 +38,7 @@ int main(int argc, const char *argv[])
                               1.0, -1.0, -1.0
                              };
      // Matrix by column
-     int columnStart[] = {0, 3, 6, 9, 11, 13};
+     CoinBigIndex columnStart[] = {0, 3, 6, 9, 11, 13};
      int row[] = {0, 1, 2,
                   0, 1, 2,
                   0, 1, 2,
@@ -51,7 +51,7 @@ int main(int argc, const char *argv[])
                                  4.0, 5.0,
                                  -4.0, -5.0
                                 };
-     int numberElements;
+     CoinBigIndex numberElements;
      // Do column version first as it can be done two ways
      // a) As one step using matrix as stored
      modelByColumn.loadProblem(numberColumns, numberRows, columnStart, row, elementByColumn,

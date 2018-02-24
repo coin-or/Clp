@@ -15,6 +15,7 @@
 
 int main(int argc, const char *argv[])
 {
+#if COIN_BIG_INDEX<2
      try {
           // Empty model
           ClpSimplex  model;
@@ -278,5 +279,8 @@ int main(int argc, const char *argv[])
           if (e.lineNumber() >= 0)
                std::cout << "This was from a CoinAssert" << std::endl;
      }
+#else
+     printf("addRows not available with COIN_BIG_INDEX=2\n");
+#endif
      return 0;
 }

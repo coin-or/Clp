@@ -82,11 +82,11 @@ int main(int argc, const char *argv[])
      for (iColumn = 0; iColumn < numberColumns; iColumn++)
           columnBlock[iColumn] = -2;
      for (iColumn = 0; iColumn < numberColumns; iColumn++) {
-          int kstart = columnStart[iColumn];
-          int kend = columnStart[iColumn] + columnLength[iColumn];
+          CoinBigIndex kstart = columnStart[iColumn];
+          CoinBigIndex kend = columnStart[iColumn] + columnLength[iColumn];
           if (columnBlock[iColumn] == -2) {
                // column not allocated
-               int j;
+               CoinBigIndex j;
                int nstack = 0;
                for (j = kstart; j < kend; j++) {
                     int iRow = row[j];
@@ -102,15 +102,15 @@ int main(int argc, const char *argv[])
                     columnBlock[iColumn] = numberBlocks - 1;
                     while (nstack) {
                          int iRow = stack[--nstack];
-                         int k;
+                         CoinBigIndex k;
                          for (k = rowStart[iRow]; k < rowStart[iRow] + rowLength[iRow]; k++) {
                               int iColumn = column[k];
-                              int kkstart = columnStart[iColumn];
-                              int kkend = kkstart + columnLength[iColumn];
+                              CoinBigIndex kkstart = columnStart[iColumn];
+                              CoinBigIndex kkend = kkstart + columnLength[iColumn];
                               if (columnBlock[iColumn] == -2) {
                                    columnBlock[iColumn] = numberBlocks - 1; // mark
                                    // column not allocated
-                                   int jj;
+                                   CoinBigIndex jj;
                                    for (jj = kkstart; jj < kkend; jj++) {
                                         int jRow = row[jj];
                                         if (rowBlock[jRow] == -2) {
@@ -206,7 +206,7 @@ int main(int argc, const char *argv[])
 
      // Overkill in terms of space
      int numberMasterRows = master.numberRows();
-     int * columnAdd = new int[numberBlocks+1];
+     CoinBigIndex * columnAdd = new CoinBigIndex[numberBlocks+1];
      int * rowAdd = new int[numberBlocks*(numberMasterRows+1)];
      double * elementAdd = new double[numberBlocks*(numberMasterRows+1)];
      double * objective = new double[numberBlocks];
@@ -327,7 +327,7 @@ int main(int argc, const char *argv[])
                // get proposal
                if (sub[iBlock].numberIterations() || !iPass) {
                     double objValue = 0.0;
-                    int start = columnAdd[numberProposals];
+                    CoinBigIndex start = columnAdd[numberProposals];
                     // proposal
                     if (sub[iBlock].isProvenOptimal()) {
                          const double * solution = sub[iBlock].primalColumnSolution();
@@ -335,7 +335,7 @@ int main(int argc, const char *argv[])
                          for (i = 0; i < numberColumns2; i++)
                               objValue += solution[i] * saveObj[i];
                          // See if good dj and pack down
-                         int number = start;
+                         CoinBigIndex number = start;
                          double dj = objValue;
                          if (problemStatus)
                               dj = 0.0;
@@ -373,7 +373,7 @@ int main(int argc, const char *argv[])
                          for (i = 0; i < numberColumns2; i++)
                               objValue += solution[i] * saveObj[i];
                          // See if good dj and pack down
-                         int number = start;
+                         CoinBigIndex number = start;
                          double dj = objValue;
                          double smallest = 1.0e100;
                          double largest = 0.0;

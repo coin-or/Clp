@@ -12,6 +12,7 @@
 #include "CoinMpsIO.hpp"
 int main(int argc, const char *argv[])
 {
+#if COIN_BIG_INDEX<2
      ClpSimplex  model;
      int status;
      int maxIts = 0;
@@ -391,5 +392,8 @@ int main(int argc, const char *argv[])
      delete [] whichGub;
      delete [] lower;
      delete [] upper;
+#else
+     printf("testGub2 not available with COIN_BIG_INDEX=2\n");
+#endif
      return 0;
 }
