@@ -20985,6 +20985,12 @@ $as_echo "$coin_has_coinutils" >&6; }
 $as_echo "$coin_has_coinutils due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
+# Possibilities are `yes', 'no', or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_coinutils" != yes ; then
+    coin_has_coinutils=no
+  fi
+
 # Create an automake conditional COIN_HAS_PRIM.
 
    if test $coin_has_coinutils = yes; then
@@ -20996,10 +21002,10 @@ else
 fi
 
 
-# If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
+# augment the necessary variables for the client packages. We need the final
+# ':' (noop) below because it's possible that the list of client packages
+# is empty.
 
   if test $coin_has_coinutils = yes ; then
 
@@ -21254,6 +21260,12 @@ $as_echo "$coin_has_osi" >&6; }
 $as_echo "$coin_has_osi due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
+# Possibilities are `yes', 'no', or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_osi" != yes ; then
+    coin_has_osi=no
+  fi
+
 # Create an automake conditional COIN_HAS_PRIM.
 
    if test $coin_has_osi = yes; then
@@ -21265,10 +21277,10 @@ else
 fi
 
 
-# If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
+# augment the necessary variables for the client packages. We need the final
+# ':' (noop) below because it's possible that the list of client packages
+# is empty.
 
   if test $coin_has_osi = yes ; then
 
@@ -21516,6 +21528,12 @@ $as_echo "$coin_has_ositests" >&6; }
 $as_echo "$coin_has_ositests due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
+# Possibilities are `yes', 'no', or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_ositests" != yes ; then
+    coin_has_ositests=no
+  fi
+
 # Create an automake conditional COIN_HAS_PRIM.
 
    if test $coin_has_ositests = yes; then
@@ -21527,10 +21545,10 @@ else
 fi
 
 
-# If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
+# augment the necessary variables for the client packages. We need the final
+# ':' (noop) below because it's possible that the list of client packages
+# is empty.
 
   if test $coin_has_ositests = yes ; then
 
@@ -21755,6 +21773,12 @@ $as_echo "$coin_has_sample" >&6; }
 $as_echo "$coin_has_sample due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
+# Possibilities are `yes', 'no', or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_sample" != yes ; then
+    coin_has_sample=no
+  fi
+
 # Create an automake conditional COIN_HAS_PRIM.
 
    if test $coin_has_sample = yes; then
@@ -21766,10 +21790,10 @@ else
 fi
 
 
-# If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
+# augment the necessary variables for the client packages. We need the final
+# ':' (noop) below because it's possible that the list of client packages
+# is empty.
 
   if test $coin_has_sample = yes ; then
 
@@ -21991,6 +22015,12 @@ $as_echo "$coin_has_netlib" >&6; }
 $as_echo "$coin_has_netlib due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
+# Possibilities are `yes', 'no', or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_netlib" != yes ; then
+    coin_has_netlib=no
+  fi
+
 # Create an automake conditional COIN_HAS_PRIM.
 
    if test $coin_has_netlib = yes; then
@@ -22002,10 +22032,10 @@ else
 fi
 
 
-# If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
+# augment the necessary variables for the client packages. We need the final
+# ':' (noop) below because it's possible that the list of client packages
+# is empty.
 
   if test $coin_has_netlib = yes ; then
 
@@ -22135,7 +22165,7 @@ fi
 
   dflt_action=yes
 
-# Initialize variables for the primary package.
+# Initialize variables for the primary library.
 
   coin_has_amd=noInfo
   amd_libs=
@@ -22243,10 +22273,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_amd\" in COIN_FIND_PRIM
       ;;
   esac
 
-# The final value of coin_has_prim will be yes, no, or skipping. No means
-# we looked (with pkgconfig) and didn't find anything. Skipping means the
-# user said `don't use.' Yes means we have something, from the user or macro
-# parameters or invented. Note that we haven't run a useability test!
+# The final value of coin_has_prim will be yes or skipping.  Skipping means
+# the user said `don't use.' Yes means we have something, from the user or
+# macro parameters or invented. Note that we haven't run a useability test!
 
 # Change the test to enable / disable debugging output
 
@@ -22271,6 +22300,12 @@ $as_echo "$coin_has_amd" >&6; }
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_amd due to COIN_SKIP_PROJECTS" >&5
 $as_echo "$coin_has_amd due to COIN_SKIP_PROJECTS" >&6; }
+  fi
+
+# Possibilities are `yes' or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_amd" != yes ; then
+    coin_has_amd=no
   fi
 
 # Create an automake conditional COIN_HAS_PRIM.
@@ -22371,7 +22406,7 @@ fi
 
   dflt_action=yes
 
-# Initialize variables for the primary package.
+# Initialize variables for the primary library.
 
   coin_has_cholmod=noInfo
   cholmod_libs=
@@ -22479,10 +22514,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_cholmod\" in COIN_FIND_
       ;;
   esac
 
-# The final value of coin_has_prim will be yes, no, or skipping. No means
-# we looked (with pkgconfig) and didn't find anything. Skipping means the
-# user said `don't use.' Yes means we have something, from the user or macro
-# parameters or invented. Note that we haven't run a useability test!
+# The final value of coin_has_prim will be yes or skipping.  Skipping means
+# the user said `don't use.' Yes means we have something, from the user or
+# macro parameters or invented. Note that we haven't run a useability test!
 
 # Change the test to enable / disable debugging output
 
@@ -22507,6 +22541,12 @@ $as_echo "$coin_has_cholmod" >&6; }
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_cholmod due to COIN_SKIP_PROJECTS" >&5
 $as_echo "$coin_has_cholmod due to COIN_SKIP_PROJECTS" >&6; }
+  fi
+
+# Possibilities are `yes' or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_cholmod" != yes ; then
+    coin_has_cholmod=no
   fi
 
 # Create an automake conditional COIN_HAS_PRIM.
@@ -22773,6 +22813,12 @@ $as_echo "$coin_has_glpk" >&6; }
 $as_echo "$coin_has_glpk due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
+# Possibilities are `yes', 'no', or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_glpk" != yes ; then
+    coin_has_glpk=no
+  fi
+
 # Create an automake conditional COIN_HAS_PRIM.
 
    if test $coin_has_glpk = yes; then
@@ -22784,10 +22830,10 @@ else
 fi
 
 
-# If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
+# augment the necessary variables for the client packages. We need the final
+# ':' (noop) below because it's possible that the list of client packages
+# is empty.
 
   if test $coin_has_glpk = yes ; then
 
@@ -23055,6 +23101,12 @@ $as_echo "$coin_has_mumps" >&6; }
 $as_echo "$coin_has_mumps due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
+# Possibilities are `yes', 'no', or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_mumps" != yes ; then
+    coin_has_mumps=no
+  fi
+
 # Create an automake conditional COIN_HAS_PRIM.
 
    if test $coin_has_mumps = yes; then
@@ -23066,10 +23118,10 @@ else
 fi
 
 
-# If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
+# augment the necessary variables for the client packages. We need the final
+# ':' (noop) below because it's possible that the list of client packages
+# is empty.
 
   if test $coin_has_mumps = yes ; then
 
@@ -23093,7 +23145,8 @@ $as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
   fi
 
 
-# WSMP
+# WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
+
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package WSMP" >&5
 $as_echo_n "checking for package WSMP... " >&6; }
@@ -23153,7 +23206,7 @@ fi
 
   dflt_action=no
 
-# Initialize variables for the primary package.
+# Initialize variables for the primary library.
 
   coin_has_wsmp=noInfo
   wsmp_libs=
@@ -23267,10 +23320,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_wsmp\" in COIN_FIND_PRI
       ;;
   esac
 
-# The final value of coin_has_prim will be yes, no, or skipping. No means
-# we looked (with pkgconfig) and didn't find anything. Skipping means the
-# user said `don't use.' Yes means we have something, from the user or macro
-# parameters or invented. Note that we haven't run a useability test!
+# The final value of coin_has_prim will be yes or skipping.  Skipping means
+# the user said `don't use.' Yes means we have something, from the user or
+# macro parameters or invented. Note that we haven't run a useability test!
 
 # Change the test to enable / disable debugging output
 
@@ -23295,6 +23347,12 @@ $as_echo "$coin_has_wsmp" >&6; }
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_wsmp due to COIN_SKIP_PROJECTS" >&5
 $as_echo "$coin_has_wsmp due to COIN_SKIP_PROJECTS" >&6; }
+  fi
+
+# Possibilities are `yes' or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_wsmp" != yes ; then
+    coin_has_wsmp=no
   fi
 
 # Create an automake conditional COIN_HAS_PRIM.
@@ -23333,7 +23391,7 @@ $as_echo "#define COIN_HAS_WSMP 1" >>confdefs.h
   fi
 
 
-if test "$use_wsmp" != "no"; then
+if test "$use_wsmp" = yes ; then
   # AC_COIN_CHK_PKG_BLAS(ClpLib)
   use_wsmp=
 
@@ -23571,7 +23629,7 @@ else
   # AM_CONDITIONAL(COIN_HAS_BLAS, [test 0 = 1])
   :
 fi
- if test "$use_wsmp" != no; then
+ if test "$use_wsmp" = yes; then
   COIN_HAS_WSMP_TRUE=
   COIN_HAS_WSMP_FALSE='#'
 else
@@ -23811,6 +23869,12 @@ $as_echo "$coin_has_asl" >&6; }
 $as_echo "$coin_has_asl due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
+# Possibilities are `yes', 'no', or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_asl" != yes ; then
+    coin_has_asl=no
+  fi
+
 # Create an automake conditional COIN_HAS_PRIM.
 
    if test $coin_has_asl = yes; then
@@ -23822,10 +23886,10 @@ else
 fi
 
 
-# If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
+# augment the necessary variables for the client packages. We need the final
+# ':' (noop) below because it's possible that the list of client packages
+# is empty.
 
   if test $coin_has_asl = yes ; then
 

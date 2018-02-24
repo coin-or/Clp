@@ -116,10 +116,11 @@ fi
 # MUMPS
 AC_COIN_CHK_PKG(Mumps,[ClpLib],[coinmumps])
 
-# WSMP
+# WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
+
 AC_COIN_CHK_LIB(WSMP,[ClpLib],[],[],[],no)
 
-if test "$use_wsmp" != "no"; then
+if test "$use_wsmp" = yes ; then
   # AC_COIN_CHK_PKG_BLAS(ClpLib)
   use_wsmp=
   AC_COIN_CHK_PKG_FLINK([use_wsmp],wssmp,[$wsmp_libs])
@@ -136,7 +137,7 @@ else
   # AM_CONDITIONAL(COIN_HAS_BLAS, [test 0 = 1])
   :
 fi
-AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" != no])
+AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" = yes])
 
 #############################################################################
 #                             Other dependencies                            #
