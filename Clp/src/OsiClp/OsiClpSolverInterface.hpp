@@ -684,6 +684,8 @@ public:
   /// SOS set info
   inline const CoinSet * setInfo() const
   { return setInfo_;}
+  /// Replace setInfo (takes over ownership)
+  void replaceSetInfo(int numberSOS,CoinSet * setInfo);
   /** \brief Identify integer variables and SOS and create corresponding objects.
   
     Record integer variables and create an OsiSimpleInteger object for each

@@ -5403,7 +5403,7 @@ ClpSimplex::tightenPrimalBounds(double factor, int doTight, bool tightIntegers)
                }
           }
           for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
-               if (saveUpper[iColumn] > saveLower[iColumn] + useTolerance) {
+               if (saveUpper[iColumn] > saveLower[iColumn] + tolerance) {
                     // Make large bounds stay infinite
                     if (saveUpper[iColumn] > 1.0e30 && columnUpper_[iColumn] > 1.0e10) {
                          columnUpper_[iColumn] = COIN_DBL_MAX;

@@ -10481,6 +10481,14 @@ OsiClpSolverInterface::crossover(int options,int basis)
   // Save basis in Osi object
   setWarmStart(NULL);
 }
+// Replace setInfo (takes over ownership)
+void
+OsiClpSolverInterface::replaceSetInfo(int numberSOS,CoinSet * setInfo)
+{
+  delete [] setInfo_;
+  numberSOS_ = numberSOS;
+  setInfo_ = setInfo;
+}
   
 //#############################################################################
 // Constructors / Destructor / Assignment
