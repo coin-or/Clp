@@ -3837,7 +3837,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
 			}
 #ifndef ABC_INHERIT
 			// use method thought suitable
-			if (sumDual>1000.0*sumPrimal) {
+			int numberSuperBasic=0;
+			for (int i=0;i<numberColumns_;i++) {
+			  if (getColumnStatus(i)==superBasic)
+			    numberSuperBasic++;
+			}
+			if (sumDual>1000.0*sumPrimal || numberSuperBasic) {
 			  primal(1);
 			} else if (sumPrimal>1000.0*sumDual) {
 			  dual();
