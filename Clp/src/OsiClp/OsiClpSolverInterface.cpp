@@ -7485,7 +7485,6 @@ OsiClpSolverInterface::setHintParam(OsiHintParam key, bool yesNo,
     return false;
   }
 }
-
 // Crunch down model
 void 
 OsiClpSolverInterface::crunch()
@@ -7855,6 +7854,53 @@ OsiClpSolverInterface::crunch()
 	    }
 	    //printf("%d basic (%d non-unit) %d non-basic\n",n,nn,k);
 	    modelPtr_->ray_=ray;
+#ifdef CHECK_RAY
+	    {
+	      double * lower = modelPtr_->rowLower_;
+	      double * upper = modelPtr_->rowUpper_;
+	      double * solution = modelPtr_->rowActivity_;
+	      double * dj = modelPtr_->dual_;
+	      double largestBad=0.0;
+	      double largestBadDj=0.0;
+	      for (int iRow = 0; iRow < modelPtr_->numberRows_; iRow++) {
+		if (upper[iRow]==lower[iRow])
+		  continue;
+		if (solution[iRow]<lower[iRow]+modelPtr_->primalTolerance_) {
+		  largestBadDj=CoinMax(largestBadDj,-dj[iRow]);
+		  largestBad=CoinMax(largestBad,ray[iRow]);
+		} else if (solution[iRow]>upper[iRow]-modelPtr_->primalTolerance_) {
+		  largestBadDj=CoinMax(largestBadDj,dj[iRow]);
+		  largestBad=CoinMax(largestBad,-ray[iRow]);
+		}
+	      }
+	      double * result = new double[modelPtr_->numberColumns_];
+	      CoinFillN ( result, modelPtr_->numberColumns_, 0.0);
+	      modelPtr_->matrix()->transposeTimes(ray, result);
+	      lower = modelPtr_->columnLower_;
+	      upper = modelPtr_->columnUpper_;
+	      solution = modelPtr_->columnActivity_;
+	      dj = modelPtr_->reducedCost_;
+	      for (int iColumn = 0; iColumn < modelPtr_->numberColumns_; iColumn++) {
+		// should have been ..Times -1.0
+		result[iColumn]=-result[iColumn];
+		if (upper[iColumn]==lower[iColumn])
+		  continue;
+		if (solution[iColumn]<lower[iColumn]+modelPtr_->primalTolerance_) {
+		  largestBadDj=CoinMax(largestBadDj,-dj[iColumn]);
+		  largestBad=CoinMax(largestBad,result[iColumn]);
+		} else if (solution[iColumn]>upper[iColumn]-modelPtr_->primalTolerance_) {
+		  largestBadDj=CoinMax(largestBadDj,dj[iColumn]);
+		  largestBad=CoinMax(largestBad,-result[iColumn]);
+		}
+	      }
+	      if (largestBad>1.0e-5||largestBadDj>1.0e-5) {
+		if (modelPtr_->numberPrimalInfeasibilities_==1)
+		  printf("BAD ");
+		printf("bad ray %g bad dj %g\n",largestBad,largestBadDj);
+	      }
+	      delete [] result;
+	    }
+#endif
 	    modelPtr_->directionOut_=small->directionOut_;
 	    if (small->sequenceOut_<small->numberColumns_)
 	      modelPtr_->sequenceOut_ = whichColumn[small->sequenceOut_];

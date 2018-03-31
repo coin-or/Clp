@@ -717,7 +717,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
           }
      }
 #if CAN_HAVE_ZERO_OBJ>1
-     if ((specialOptions_&2097152)==0) {
+     if ((specialOptions_&16777216)==0) {
 #endif
      computeDuals(givenDuals);
      if ((moreSpecialOptions_ & 128) != 0 && !numberIterations_) {
@@ -3123,6 +3123,8 @@ ClpSimplex::checkBothSolutions()
           double distanceDown = value - lower_[iSequence];
           if (distanceUp < -primalTolerance) {
                double infeasibility = -distanceUp;
+               if (getStatus(iSequence) != basic)
+		 moreSpecialOptions_ &= ~8;  // Say superbasic variables exist
                sumPrimalInfeasibilities_ += infeasibility - primalTolerance_;
                if (infeasibility > relaxedToleranceP)
                     sumOfRelaxedPrimalInfeasibilities_ += infeasibility - relaxedToleranceP;
@@ -3134,6 +3136,8 @@ ClpSimplex::checkBothSolutions()
                numberPrimalInfeasibilities_ ++;
           } else if (distanceDown < -primalTolerance) {
                double infeasibility = -distanceDown;
+               if (getStatus(iSequence) != basic)
+		 moreSpecialOptions_ &= ~8;  // Say superbasic variables exist
                sumPrimalInfeasibilities_ += infeasibility - primalTolerance_;
                if (infeasibility > relaxedToleranceP)
                     sumOfRelaxedPrimalInfeasibilities_ += infeasibility - relaxedToleranceP;
@@ -5646,7 +5650,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
                && sumDualInfeasibilities_ < 1000.0 * dualTolerance_ && perturbation_ >= 100)
           problemStatus_ = 0; // ignore
      if (problemStatus_==1&&((specialOptions_&(1024 | 4096)) == 0 || (specialOptions_ & 32) != 0)
-	 &&numberFake_) {
+	 &&(static_cast<ClpSimplexDual *>(this))->checkFakeBounds()) {
        problemStatus_ = 10; // clean up in primal as fake bounds
      }
      if ((moreSpecialOptions_&524288)!=0&&
@@ -5696,7 +5700,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
           moreSpecialOptions_ &= ~256;
           baseIteration_ = 0;
 	  bool inCbcOrOther = (specialOptions_ & 0x03000000) != 0;
-	  if (inCbcOrOther) {
+	  if (inCbcOrOther && (specialOptions_&32)==0) {
 	    delete [] ray_;
 	    ray_ = NULL;
 	  }
@@ -5789,6 +5793,54 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      onStopped(); // set secondary status if stopped
      //if (problemStatus_==1&&lastAlgorithm==1)
      //returnCode=10; // so will do primal after postsolve
+#ifdef CHECK_RAY
+     if (problemStatus_==1&&ray_) {
+       double * lower = rowLower_;
+       double * upper = rowUpper_;
+       double * solution = rowActivity_;
+       double * dj = dual_;
+       assert(ray_);
+       double largestBad=0.0;
+       double largestBadDj=0.0;
+       for (int iRow = 0; iRow < numberRows_; iRow++) {
+	 if (upper[iRow]==lower[iRow])
+	   continue;
+	 if (solution[iRow]<lower[iRow]+primalTolerance_) {
+	   largestBadDj=CoinMax(largestBadDj,-dj[iRow]);
+	   largestBad=CoinMax(largestBad,ray_[iRow]);
+	 } else if (solution[iRow]>upper[iRow]-primalTolerance_) {
+	   largestBadDj=CoinMax(largestBadDj,dj[iRow]);
+	   largestBad=CoinMax(largestBad,-ray_[iRow]);
+	 }
+       }
+       double * result = new double[numberColumns_];
+       CoinFillN ( result, numberColumns_, 0.0);
+       this->matrix()->transposeTimes(ray_, result);
+       lower = columnLower_;
+       upper = columnUpper_;
+       solution = columnActivity_;
+       dj = reducedCost_;
+       for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
+	 // should have been ..Times -1.0
+	 result[iColumn]=-result[iColumn];
+	 if (upper[iColumn]==lower[iColumn])
+	   continue;
+	 if (solution[iColumn]<lower[iColumn]+primalTolerance_) {
+	   largestBadDj=CoinMax(largestBadDj,-dj[iColumn]);
+	   largestBad=CoinMax(largestBad,result[iColumn]);
+	 } else if (solution[iColumn]>upper[iColumn]-primalTolerance_) {
+	   largestBadDj=CoinMax(largestBadDj,dj[iColumn]);
+	   largestBad=CoinMax(largestBad,-result[iColumn]);
+	 }
+       }
+       if (largestBad>1.0e-5||largestBadDj>1.0e-5) {
+	 if (numberPrimalInfeasibilities_==1)
+	   printf("BAD ");
+	 printf("bad ray %g bad dj %g\n",largestBad,largestBadDj);
+       }
+       delete [] result;
+     }
+#endif
      return returnCode;
 }
 // primal
@@ -9047,7 +9099,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
                }
           } else {
                // using previous factorization - we assume fine
-               if ((moreSpecialOptions_ & 8) == 0) {
+               if ((moreSpecialOptions_ & 16777216) == 0) {
                     // but we need to say not optimal
                     numberPrimalInfeasibilities_ = 1;
                     numberDualInfeasibilities_ = 1;
@@ -10895,7 +10947,7 @@ ClpSimplex::fathom(void * stuff)
      ClpNodeStuff * info = reinterpret_cast<ClpNodeStuff *> (stuff);
      info->nNodes_ = 0;
      // say can declare optimal
-     moreSpecialOptions_ |= 8;
+     moreSpecialOptions_ |= 16777216;
      int saveMaxIterations = maximumIterations();
      setMaximumIterations((((moreSpecialOptions_&2048)==0) ? 200 : 2000)
 			  + 2 * (numberRows_ + numberColumns_));
@@ -11605,7 +11657,7 @@ ClpSimplex::fathomMany(void * stuff)
      ClpNode ** nodeInfo = info->nodeInfo_;
      assert (nodeInfo);
      // say can declare optimal
-     moreSpecialOptions_ |= 8;
+     moreSpecialOptions_ |= 16777216;
      double limit = 0.0;
      getDblParam(ClpDualObjectiveLimit, limit);
      for (int j = 0; j < putNode; j++) {

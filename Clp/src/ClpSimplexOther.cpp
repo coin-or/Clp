@@ -3911,7 +3911,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                     //rowArray_[0]->cleanAndPackSafe(1.0e-60);
                     //columnArray_[0]->cleanAndPackSafe(1.0e-60);
 #if CLP_CAN_HAVE_ZERO_OBJ
-		    if ((specialOptions_&2097152)==0) {
+		    if ((specialOptions_&16777216)==0) {
 #endif
 		      nswapped = reinterpret_cast<ClpSimplexDual *> ( this)->updateDualsInDual(rowArray_[0], columnArray_[0],
 											       rowArray_[2], theta_,
@@ -4094,7 +4094,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 		    }
                     // update primal solution
 #if CLP_CAN_HAVE_ZERO_OBJ
-		    if ((specialOptions_&2097152)!=0) 
+		    if ((specialOptions_&16777216)!=0) 
 		      theta_=0.0;
 #endif
                     if (theta_ < 0.0) {
@@ -4163,7 +4163,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                     }
 		    objectiveChange = 0.0;
 #if CLP_CAN_HAVE_ZERO_OBJ
-		    if ((specialOptions_&2097152)==0) {
+		    if ((specialOptions_&16777216)==0) {
 #endif
 		      for (int i=0;i<numberTotal;i++)
 			objectiveChange += solution_[i]*cost_[i];
@@ -4181,7 +4181,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                          dj_[sequenceOut_] = theta_;
 #if CLP_CAN_HAVE_ZERO_OBJ>1
 #ifdef COIN_REUSE_RANDOM
-			 if ((specialOptions_&2097152)!=0) {
+			 if ((specialOptions_&16777216)!=0) {
 			   dj_[sequenceOut_] = 1.0e-9*(1.0+CoinDrand48());;
 			 }
 #endif
@@ -4191,7 +4191,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                          dj_[sequenceOut_] = -theta_;
 #if CLP_CAN_HAVE_ZERO_OBJ>1
 #ifdef COIN_REUSE_RANDOM
-			 if ((specialOptions_&2097152)!=0) {
+			 if ((specialOptions_&16777216)!=0) {
 			   dj_[sequenceOut_] = -1.0e-9*(1.0+CoinDrand48());;
 			 }
 #endif

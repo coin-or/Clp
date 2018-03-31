@@ -1404,12 +1404,26 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     if (!goToDual) {
                          if (infeasibilityCost_ >= MAX_INFEASIBILITY_COST ||
                                    numberDualInfeasibilities_ == 0) {
-                              // we are infeasible - use as ray
-                              delete [] ray_;
-                              ray_ = new double [numberRows_];
-			      // swap sign
-			      for (int i=0;i<numberRows_;i++) 
-				ray_[i] = -dual_[i];
+			      // we are infeasible - use as ray
+			      delete [] ray_;
+			      //if ((specialOptions_&(32|0x01000000))!=0x01000000) {
+			      if ((specialOptions_&0x01000000)==0) {
+				ray_ = new double [numberRows_];
+				double * saveObjective = CoinCopyOfArray(objective(),
+									 numberColumns_);
+				memset(objective(),0,numberColumns_*sizeof(double));
+				infeasibilityCost_ = 1.0;
+				createRim(4);
+				nonLinearCost_->checkInfeasibilities(primalTolerance_);
+				gutsOfSolution(NULL, NULL, false);
+				memcpy(objective(),saveObjective,numberColumns_*sizeof(double));
+				delete [] saveObjective;
+				// swap sign
+				for (int i=0;i<numberRows_;i++) 
+				  ray_[i] = -dual_[i];
+			      } else {
+				ray_ = NULL;
+			      }
 #ifdef PRINT_RAY_METHOD
 			      printf("Primal creating infeasibility ray\n");
 #endif

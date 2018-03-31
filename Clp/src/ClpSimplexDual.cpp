@@ -509,9 +509,9 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
 	    //	printf("col %d cost %g sol %g bounds %g %g\n",
 	    //	       i,cost_[i],solution_[i],lower_[i],upper_[i]);
 	    //}
-	  }
-	  if ((specialOptions_&2097152)!=0&&problemStatus_==1&&!ray_&&
- 	      !numberRayTries && numberIterations_) {
+	  } else if ((specialOptions_&(32|2097152))!=0&&
+		     problemStatus_==1&&!ray_&&
+		     !numberRayTries && numberIterations_) {
 	    numberRayTries=1;
 	    problemStatus_=-1;
 	  }
@@ -609,6 +609,8 @@ ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
      bestObjectiveValue_ = -COIN_DBL_MAX;
      algorithm_ = -1;
      moreSpecialOptions_ &= ~16; // clear check replaceColumn accuracy
+     delete [] ray_;
+     ray_ = NULL;
      // save data
      ClpDataSave data = saveData();
      double * saveDuals = NULL;
@@ -1280,7 +1282,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
 		    if (sequenceIn_<0&&acceptablePivot>acceptablePivot_)
 		      acceptablePivot_ = - fabs(acceptablePivot_); // stop early exit
 #if CAN_HAVE_ZERO_OBJ>1
-		    if ((specialOptions_&2097152)!=0) 
+		    if ((specialOptions_&16777216)!=0) 
 		      theta_=0.0;
 #endif
                } else {
@@ -1460,7 +1462,7 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                     //columnArray_[0]->cleanAndPackSafe(1.0e-60);
                     if (candidate == -1) {
 #if CLP_CAN_HAVE_ZERO_OBJ>1
-		    if ((specialOptions_&2097152)==0) {
+		    if ((specialOptions_&16777216)==0) {
 #endif
                          // make sure incoming doesn't count
                          Status saveStatus = getStatus(sequenceIn_);
@@ -1831,12 +1833,13 @@ ClpSimplexDual::whileIterating(double * & givenDuals, int ifValuesPass)
                     if (handler_->logLevel() & 32)
                          printf("** no column pivot\n");
 #endif
+		    delete [] ray_;
+		    ray_ = NULL;
                     if ((factorization_->pivots() < 2 
 			 ||((specialOptions_&2097152)!=0&&factorization_->pivots()<50))
 			&& acceptablePivot_ <= 1.0e-8 && acceptablePivot_ > 0.0) {
                          //&&goodAccuracy()) {
                          // If not in branch and bound etc save ray
-                         delete [] ray_;
                          if ((specialOptions_&(1024 | 4096)) == 0 || (specialOptions_ & (32|2097152)) != 0) {
                               // create ray anyway
                               ray_ = new double [ numberRows_];
@@ -5391,7 +5394,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
         free variables then it is better to go to primal */
      if (!numberPrimalInfeasibilities_ && ((!numberDualInfeasibilitiesWithoutFree_ &&
 					    numberDualInfeasibilities_)||
-					   (moreSpecialOptions_&2097152)!=0))
+					   (moreSpecialOptions_&16777216)!=0))
           problemStatus_ = 10;
      // dual bound coming in
      double saveDualBound = dualBound_;
@@ -5510,7 +5513,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                          if (lastCleaned < numberIterations_ && numberTimesOptimal_ < 4 &&
                                    (numberChanged_ || (specialOptions_ & 4096) == 0)) {
 #if CLP_CAN_HAVE_ZERO_OBJ
-			   if ((specialOptions_&2097152)==0) {
+			   if ((specialOptions_&16777216)==0) {
 #endif
                               doOriginalTolerance = 2;
                               numberTimesOptimal_++;
@@ -5792,7 +5795,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                     if (givenDuals)
                          dualTolerance_ = 1.0e50;
 #if CLP_CAN_HAVE_ZERO_OBJ>1
-		    if ((specialOptions_&2097152)==0) {
+		    if ((specialOptions_&16777216)==0) {
 #endif
                     updateDualsInDual(rowArray_[0], columnArray_[0], rowArray_[1],
                                       0.0, objectiveChange, true);
@@ -5834,7 +5837,7 @@ ClpSimplexDual::statusOfProblemInDual(int & lastCleaned, int type,
                     if (givenDuals)
                          dualTolerance_ = 1.0e50;
 #if CLP_CAN_HAVE_ZERO_OBJ>1
-		    if ((specialOptions_&2097152)==0) {
+		    if ((specialOptions_&16777216)==0) {
 #endif
                     updateDualsInDual(rowArray_[0], columnArray_[0], rowArray_[1],
                                       0.0, objectiveChange, true);

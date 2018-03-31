@@ -1272,7 +1272,7 @@ public:
          1 bit - if presolve says infeasible in ClpSolve return
          2 bit - if presolved problem infeasible return
          4 bit - keep arrays like upper_ around
-         8 bit - if factorization kept can still declare optimal at once
+         8 bit - no free or superBasic variables
          16 bit - if checking replaceColumn accuracy before updating
          32 bit - say optimal if primal feasible!
          64 bit - give up easily in dual (and say infeasible)
@@ -1289,6 +1289,10 @@ public:
 	 131072 bit (*3) initial stateDualColumn
 	 524288 bit - stop when primal feasible
 	 1048576 bit - stop when primal feasible after n-1000000 iterations
+	 2097152 bit - no primal in fastDual2 if feasible
+	 4194304 bit - tolerances have been changed by code
+	 8388608 bit - tolerances are dynamic (at first)
+	 16777216 bit - if factorization kept can still declare optimal at once
      */
      inline int moreSpecialOptions() const {
           return moreSpecialOptions_;
@@ -1321,6 +1325,7 @@ public:
 	 2097152 bit - no primal in fastDual2 if feasible
 	 4194304 bit - tolerances have been changed by code
 	 8388608 bit - tolerances are dynamic (at first)
+	 16777216 bit - if factorization kept can still declare optimal at once
      */
      inline void setMoreSpecialOptions(int value) {
           moreSpecialOptions_ = value;
