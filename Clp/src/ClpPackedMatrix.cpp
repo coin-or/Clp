@@ -7546,7 +7546,7 @@ ClpPackedMatrix3::checkBlocks(const ClpSimplex * model)
     for (int i=0;i<block->firstAtLower_;i++) {
       int iSequence=column[i];
       assert (model->getColumnStatus(iSequence) == ClpSimplex::isFree ||
-	      model->getColumnStatus(iSequence) != ClpSimplex::superBasic);
+	      model->getColumnStatus(iSequence) == ClpSimplex::superBasic);
     }
     for (int i=block->firstAtLower_;i<block->firstAtUpper_;i++) {
       int iSequence=column[i];

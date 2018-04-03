@@ -3112,6 +3112,11 @@ ClpSimplex::checkBothSolutions()
      int seqInf[10];
 #endif
      for (iSequence = 0; iSequence < numberTotal; iSequence++) {
+       //#define LIKELY_SUPERBASIC
+#ifdef LIKELY_SUPERBASIC
+       if (getStatus(iSequence) == isFree || getStatus(iSequence) == superBasic)
+	 moreSpecialOptions_ &= ~8;  // Say superbasic variables exist
+#endif
           double value = solution_[iSequence];
 #ifdef COIN_DEBUG
           if (fabs(value) > 1.0e20)
@@ -3123,8 +3128,10 @@ ClpSimplex::checkBothSolutions()
           double distanceDown = value - lower_[iSequence];
           if (distanceUp < -primalTolerance) {
                double infeasibility = -distanceUp;
+#ifndef LIKELY_SUPERBASIC
                if (getStatus(iSequence) != basic)
 		 moreSpecialOptions_ &= ~8;  // Say superbasic variables exist
+#endif
                sumPrimalInfeasibilities_ += infeasibility - primalTolerance_;
                if (infeasibility > relaxedToleranceP)
                     sumOfRelaxedPrimalInfeasibilities_ += infeasibility - relaxedToleranceP;
@@ -3136,8 +3143,10 @@ ClpSimplex::checkBothSolutions()
                numberPrimalInfeasibilities_ ++;
           } else if (distanceDown < -primalTolerance) {
                double infeasibility = -distanceDown;
+#ifndef LIKELY_SUPERBASIC
                if (getStatus(iSequence) != basic)
 		 moreSpecialOptions_ &= ~8;  // Say superbasic variables exist
+#endif
                sumPrimalInfeasibilities_ += infeasibility - primalTolerance_;
                if (infeasibility > relaxedToleranceP)
                     sumOfRelaxedPrimalInfeasibilities_ += infeasibility - relaxedToleranceP;
@@ -5588,6 +5597,24 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      ClpSimplex saveModel = *this;
 #endif
      int returnCode = static_cast<ClpSimplexDual *> (this)->dual(ifValuesPass, startFinishOptions);
+#ifdef DUAL_STATS
+     static int nDuals=0;
+     static int nFeasDuals=0;
+     static int nTens=0;
+     static int nOdd=0;
+     bool needClean=false;
+     nDuals++;
+     if (problemStatus_==0) {
+       nFeasDuals++;
+     } else if (problemStatus_==1) {
+     } else if (problemStatus_==10) {
+       nTens++;
+       needClean=true;
+     } else {
+       printf("dual odd status %d\n",problemStatus_);
+       nOdd++;
+     }
+#endif
      eventHandler_->event(ClpEventHandler::looksEndInDual);
 #ifdef EXPENSIVE
      if (problemStatus_ == 1) {
@@ -5793,6 +5820,24 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      onStopped(); // set secondary status if stopped
      //if (problemStatus_==1&&lastAlgorithm==1)
      //returnCode=10; // so will do primal after postsolve
+#ifdef DUAL_STATS
+     static int nFeasClean=0;
+     if (needClean) {
+       if (problemStatus_==0) {
+	 nFeasClean++;
+       } else if (problemStatus_==1) {
+       } else if (problemStatus_==10) {
+	 abort();
+       } else {
+	 printf("dual odd status %d on cleanup\n",problemStatus_);
+	 abort();
+       }
+     }
+     if ((nDuals%1000)==0)
+       printf("%d duals - %d feasible, %d infeasible and %d need cleaning (%d were feasible, %d infeasible) ( %d odd)\n",
+	      nDuals,nFeasDuals,nDuals-nFeasDuals-nTens-nOdd,nTens,
+	      nFeasClean,nTens-nFeasClean,nOdd);
+#endif
 #ifdef CHECK_RAY
      if (problemStatus_==1&&ray_) {
        double * lower = rowLower_;

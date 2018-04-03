@@ -1407,7 +1407,7 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
 			      // we are infeasible - use as ray
 			      delete [] ray_;
 			      //if ((specialOptions_&(32|0x01000000))!=0x01000000) {
-			      if ((specialOptions_&0x01000000)==0) {
+			      if ((specialOptions_&0x03000000)==0) {
 				ray_ = new double [numberRows_];
 				double * saveObjective = CoinCopyOfArray(objective(),
 									 numberColumns_);

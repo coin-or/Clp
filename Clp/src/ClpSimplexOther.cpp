@@ -58,9 +58,7 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int * which,
      columnArray_[1]->clear();
 #endif
      // long enough for rows+columns
-     assert(rowArray_[3]->capacity() >= numberRows_ + numberColumns_);
-     rowArray_[3]->clear();
-     int * backPivot = rowArray_[3]->getIndices();
+     int * backPivot = new int [numberRows_+numberColumns_];
      int i;
      for ( i = 0; i < numberRows_ + numberColumns_; i++) {
           backPivot[i] = -1;
@@ -256,7 +254,7 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int * which,
      //rowArray_[1]->clear();
      //columnArray_[1]->clear();
      columnArray_[0]->clear();
-     //rowArray_[3]->clear();
+     delete [] backPivot;
      if (!optimizationDirection_)
           printf("*** ????? Ranging with zero optimization costs\n");
 }
