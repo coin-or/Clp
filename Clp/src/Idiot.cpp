@@ -369,7 +369,8 @@ Idiot::crash(int numberPass, CoinMessageHandler * handler,
           }
      }
      //printf("setting mu to %g and doing %d passes\n",mu_,majorIterations_);
-     solve2(handler, messages);
+     if (numberColumns)
+       solve2(handler, messages);
 #ifndef OSI_IDIOT
      if (doCrossover) {
           double averageInfeas = model_->sumPrimalInfeasibilities() / static_cast<double> (model_->numberRows());
