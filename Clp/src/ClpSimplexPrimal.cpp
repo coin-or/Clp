@@ -570,6 +570,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
      //printf("XXXXY final cost %g\n",infeasibilityCost_);
      progress_.initialWeight_ = 0.0;
      if (problemStatus_ == 1 && secondaryStatus_ != 6) {
+          double saveWeight = infeasibilityCost_;
 #ifndef WANT_INFEASIBLE_DUALS
           infeasibilityCost_ = 0.0;
           createRim(1 + 4);
@@ -585,6 +586,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
           numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
           // and get good feasible duals
           computeDuals(NULL);
+          infeasibilityCost_=saveWeight;
      }
      // Stop can skip some things in transposeTimes
      specialOptions_ &= ~131072;
