@@ -570,8 +570,14 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
      //printf("XXXXY final cost %g\n",infeasibilityCost_);
      progress_.initialWeight_ = 0.0;
      if (problemStatus_ == 1 && secondaryStatus_ != 6) {
+#ifndef WANT_INFEASIBLE_DUALS
           infeasibilityCost_ = 0.0;
           createRim(1 + 4);
+#else
+          infeasibilityCost_ = 1.0;
+          createRim(1);
+	  memset(cost_,0,(numberRows_+numberColumns_)*sizeof(double));
+#endif
           delete nonLinearCost_;
           nonLinearCost_ = new ClpNonLinearCost(this);
           nonLinearCost_->checkInfeasibilities(0.0);

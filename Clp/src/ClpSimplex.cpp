@@ -4187,66 +4187,34 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
      }
 
      if (what == 63) {
-          if (newArrays) {
-               // get some arrays
-               int iRow, iColumn;
-               // these are "indexed" arrays so we always know where nonzeros are
-               /**********************************************************
+          // Safer to get new arrays anyway so test on newArrays removed
+          // get some arrays
+          int iRow, iColumn;
+	  // these are "indexed" arrays so we always know where nonzeros are
+	  /**********************************************************
                rowArray_[3] is long enough for rows+columns (2 also maybe)
                rowArray_[1] is long enough for max(rows,columns)
-               *********************************************************/
-               for (iRow = 0; iRow < 4; iRow++) {
-                    int length = numberRows2 + factorization_->maximumPivots();
-                    if (iRow > SHORT_REGION || objective_->type() > 1)
-                         length += numberColumns_;
-                    else if (iRow == 1)
-                         length = CoinMax(length, numberColumns_);
-                    if ((specialOptions_ & 65536) == 0 || !rowArray_[iRow]) {
-                         delete rowArray_[iRow];
-                         rowArray_[iRow] = new CoinIndexedVector();
-                    }
-                    rowArray_[iRow]->reserve(length);
-               }
-
-               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
-                    if ((specialOptions_ & 65536) == 0 || !columnArray_[iColumn]) {
-                         delete columnArray_[iColumn];
-                         columnArray_[iColumn] = new CoinIndexedVector();
-                    }
-		    columnArray_[iColumn]->reserve(numberColumns_+numberRows2);
-               }
-          } else {
-               int iRow, iColumn;
-               for (iRow = 0; iRow < 4; iRow++) {
-                    int length = numberRows2 + factorization_->maximumPivots();
-                    if (iRow > SHORT_REGION || objective_->type() > 1)
-                         length += numberColumns_;
-                    if(rowArray_[iRow]->capacity() >= length) {
-                         rowArray_[iRow]->clear();
-                    } else {
-                         // model size or maxinv changed
-                         rowArray_[iRow]->reserve(length);
-                    }
-#ifndef NDEBUG
-                    rowArray_[iRow]->checkClear();
-#endif
-               }
-
-               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
-                    int length = numberColumns_;
-                    if (iColumn)
-                         length = CoinMax(numberRows2, numberColumns_);
-                    if(columnArray_[iColumn]->capacity() >= length) {
-                         columnArray_[iColumn]->clear();
-                    } else {
-                         // model size or maxinv changed
-                         columnArray_[iColumn]->reserve(length);
-                    }
-#ifndef NDEBUG
-                    columnArray_[iColumn]->checkClear();
-#endif
-               }
-          }
+	  *********************************************************/
+	  for (iRow = 0; iRow < 4; iRow++) {
+	    int length = numberRows2 + factorization_->maximumPivots();
+	    if (iRow > SHORT_REGION || objective_->type() > 1)
+	      length += numberColumns_;
+	    else if (iRow == 1)
+	      length = CoinMax(length, numberColumns_);
+	    if ((specialOptions_ & 65536) == 0 || !rowArray_[iRow]) {
+	      delete rowArray_[iRow];
+	      rowArray_[iRow] = new CoinIndexedVector();
+	    }
+	    rowArray_[iRow]->reserve(length);
+	  }
+	  
+	  for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
+	    if ((specialOptions_ & 65536) == 0 || !columnArray_[iColumn]) {
+	      delete columnArray_[iColumn];
+	      columnArray_[iColumn] = new CoinIndexedVector();
+	    }
+	    columnArray_[iColumn]->reserve(numberColumns_+numberRows2);
+	  }
      }
      if (problemStatus_ == 10) {
           problemStatus_ = -1;
@@ -5886,6 +5854,33 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
        delete [] result;
      }
 #endif
+     // massage infeasibilities
+     if (!problemStatus_) {
+       if (handler_->logLevel()==63) {
+	 if (numberPrimalInfeasibilities_||numberDualInfeasibilities_)
+	   printf("minor inaccuracy primal sum %g (%d) error %g, dual %g (%d) %g\n",
+		  sumPrimalInfeasibilities_,numberPrimalInfeasibilities_,
+		  largestPrimalError_,
+		  sumDualInfeasibilities_,numberDualInfeasibilities_,
+		  largestDualError_);
+       }
+       if (numberPrimalInfeasibilities_) {
+	 numberPrimalInfeasibilities_=0;
+	 sumPrimalInfeasibilities_=0.0;
+	 if (secondaryStatus_==0)
+	   secondaryStatus_=2;
+	 else if (secondaryStatus_==3)
+	   secondaryStatus_=4;
+       }
+       if (numberDualInfeasibilities_) {
+	 numberDualInfeasibilities_=0;
+	 sumDualInfeasibilities_=0.0;
+	 if (secondaryStatus_==0)
+	   secondaryStatus_=3;
+	 else if (secondaryStatus_==2)
+	   secondaryStatus_=4;
+       }
+     }
      return returnCode;
 }
 // primal
@@ -6142,6 +6137,33 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
      }
      //factorization_->pivotTolerance(savedPivotTolerance);
      onStopped(); // set secondary status if stopped
+     // massage infeasibilities
+     if (!problemStatus_) {
+       if (handler_->logLevel()==63) {
+	 if (numberPrimalInfeasibilities_||numberDualInfeasibilities_)
+	   printf("minor inaccuracy primal sum %g (%d) error %g, dual %g (%d) %g\n",
+		  sumPrimalInfeasibilities_,numberPrimalInfeasibilities_,
+		  largestPrimalError_,
+		  sumDualInfeasibilities_,numberDualInfeasibilities_,
+		  largestDualError_);
+       }
+       if (numberPrimalInfeasibilities_) {
+	 numberPrimalInfeasibilities_=0;
+	 sumPrimalInfeasibilities_=0.0;
+	 if (secondaryStatus_==0)
+	   secondaryStatus_=2;
+	 else if (secondaryStatus_==3)
+	   secondaryStatus_=4;
+       }
+       if (numberDualInfeasibilities_) {
+	 numberDualInfeasibilities_=0;
+	 sumDualInfeasibilities_=0.0;
+	 if (secondaryStatus_==0)
+	   secondaryStatus_=3;
+	 else if (secondaryStatus_==2)
+	   secondaryStatus_=4;
+       }
+     }
      //if (problemStatus_==1&&lastAlgorithm==1)
      //returnCode=10; // so will do primal after postsolve
      return returnCode;

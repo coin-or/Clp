@@ -499,7 +499,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
 	      sumPrimalInfeasibilities_>1.0e5*smallestPrimalInfeasibility &&
 	      (moreSpecialOptions_&256)==0 && 
 	      ((progress_.lastObjective(0)<-1.0e10 &&
--		progress_.lastObjective(1)>-1.0e5)||sumPrimalInfeasibilities_>1.0e10*smallestPrimalInfeasibility)) {
+-		progress_.lastObjective(1)>-1.0e5)||sumPrimalInfeasibilities_>1.0e10*smallestPrimalInfeasibility)&&problemStatus_<0) {
 	    // problems - try primal
 	    problemStatus_=10;
 	    // mark as large infeasibility cost wanted
@@ -525,7 +525,7 @@ ClpSimplexDual::gutsOfDual(int ifValuesPass, double * & saveDuals, int initialSt
                doEasyOnesInValuesPass(saveDuals);
           }
 
-          // Say good factorization
+          // Say good factorization 
           factorType = 1;
           if (data.sparseThreshold_) {
                // use default at present
@@ -2422,7 +2422,7 @@ ClpSimplexDual::updateDualsInDual(CoinIndexedVector * rowArray,
                int iStatus = (statusArray[iSequence] & 3) - 1;
                if (iStatus) {
                     double value = reducedCost[iSequence] - theta * alphaI;
-		    assert (iStatus>0);
+		    // NO - can have free assert (iStatus>0);
                     reducedCost[iSequence] = value;
                     double mult = multiplier[iStatus-1];
                     value *= mult;
@@ -3121,12 +3121,24 @@ ClpSimplexDual::changeBounds(int initialize,
                case superBasic:
                     break;
                case atUpperBound:
-                    if (fabs(value - upperValue) > primalTolerance_)
-                         numberInfeasibilities++;
+		    if (fabs(value - upperValue) > primalTolerance_) {
+		      if(fabs(dj_[iSequence])>1.0e-9) {
+		         numberInfeasibilities++;
+		      } else {
+			setStatus(iSequence,superBasic);
+			moreSpecialOptions_ &= ~8;
+		      }
+		    }
                     break;
                case atLowerBound:
-                    if (fabs(value - lowerValue) > primalTolerance_)
-                         numberInfeasibilities++;
+		    if (fabs(value - lowerValue) > primalTolerance_) {
+		      if(fabs(dj_[iSequence])>1.0e-9) {
+		         numberInfeasibilities++;
+		      } else {
+			setStatus(iSequence,superBasic);
+			moreSpecialOptions_ &= ~8;
+		      }
+		    }
                     break;
                }
           }
@@ -3152,14 +3164,17 @@ ClpSimplexDual::changeBounds(int initialize,
                               newUpperValue = CoinMin(upperValue, value + 0.666667 * newBound);
                               newLowerValue = CoinMax(lowerValue, newUpperValue - newBound);
                          }
-                         lower_[iSequence] = newLowerValue;
-                         upper_[iSequence] = newUpperValue;
                          if (newLowerValue > lowerValue) {
                               if (newUpperValue < upperValue) {
                                    setFakeBound(iSequence, ClpSimplexDual::bothFake);
-#ifdef CLP_INVESTIGATE
-                                   abort(); // No idea what should happen here - I have never got here
-#endif
+				   // redo
+				   if (status == atLowerBound) {
+				     newLowerValue = value;
+				     newUpperValue = CoinMin(upperValue, newLowerValue + newBound);
+				   } else {
+				     newUpperValue = value;
+				     newLowerValue = CoinMax(lowerValue, newUpperValue - newBound);
+				   }
                                    numberFake_++;
                               } else {
                                    setFakeBound(iSequence, ClpSimplexDual::lowerFake);
@@ -3171,6 +3186,8 @@ ClpSimplexDual::changeBounds(int initialize,
                                    numberFake_++;
                               }
                          }
+                         lower_[iSequence] = newLowerValue;
+                         upper_[iSequence] = newUpperValue;
                          if (status == atUpperBound)
                               solution_[iSequence] = newUpperValue;
                          else
@@ -3195,9 +3212,57 @@ ClpSimplexDual::changeBounds(int initialize,
      } else if (initialize == 1 || initialize == 3) {
           int iSequence;
           if (initialize == 3) {
-               for (iSequence = 0; iSequence < numberRows_ + numberColumns_; iSequence++) {
-                    setFakeBound(iSequence, ClpSimplexDual::noFake);
-               }
+	    if (columnScale_) {
+	      for (iSequence = 0; iSequence < numberColumns_; iSequence++) {
+		if (getFakeBound(iSequence) != ClpSimplexDual::noFake) {
+		  double multiplier = rhsScale_ * inverseColumnScale_[iSequence];
+		  // lower
+		  double value = columnLower_[iSequence];
+		  if (value > -1.0e30) {
+		    value *= multiplier;
+		  }
+		  lower_[iSequence] = value;
+		  // upper
+		  value = columnUpper_[iSequence];
+		  if (value < 1.0e30) {
+		    value *= multiplier;
+		  }
+		  upper_[iSequence] = value;
+		  setFakeBound(iSequence, ClpSimplexDual::noFake);
+		}
+	      }
+	      for (iSequence = 0; iSequence < numberRows_; iSequence++) {
+		// lower
+		double multiplier = rhsScale_ * rowScale_[iSequence];
+		double value = rowLower_[iSequence];
+		if (value > -1.0e30) {
+		  value *= multiplier;
+		}
+		lower_[iSequence+numberColumns_] = value;
+		// upper
+		value = rowUpper_[iSequence];
+		if (value < 1.0e30) {
+		  value *= multiplier;
+		}
+		upper_[iSequence+numberColumns_] = value;
+		setFakeBound(iSequence+numberColumns_, ClpSimplexDual::noFake);
+	      }
+	    } else {
+	      for (iSequence = 0; iSequence < numberColumns_; iSequence++) {
+		if (getFakeBound(iSequence) != ClpSimplexDual::noFake) {
+		  lower_[iSequence] = columnLower_[iSequence];
+		  upper_[iSequence] = columnUpper_[iSequence];
+		  setFakeBound(iSequence, ClpSimplexDual::noFake);
+		}
+	      }
+	      for (iSequence = 0; iSequence < numberRows_; iSequence++) {
+		if (getFakeBound(iSequence+numberColumns_) != ClpSimplexDual::noFake) {
+		  lower_[iSequence+numberColumns_] = rowLower_[iSequence];
+		  upper_[iSequence+numberColumns_] = rowUpper_[iSequence];
+		  setFakeBound(iSequence+numberColumns_, ClpSimplexDual::noFake);
+		}
+	      }
+	    }
           }
           double testBound = 0.999999 * dualBound_;
           for (iSequence = 0; iSequence < numberRows_ + numberColumns_; iSequence++) {
