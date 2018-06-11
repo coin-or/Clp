@@ -663,6 +663,9 @@ ClpSimplexOther::writeBasis(const char *filename,
 
      // NAME card
 
+     // Set locale so won't get , instead of .
+     char * saveLocale = strdup(setlocale(LC_ALL,NULL));
+     setlocale(LC_ALL,"C");
      if (strcmp(strParam_[ClpProbName].c_str(), "") == 0) {
           fprintf(fp, "NAME          BLANK      ");
      } else {
@@ -747,6 +750,8 @@ ClpSimplexOther::writeBasis(const char *filename,
      }
      fprintf(fp, "ENDATA\n");
      fclose(fp);
+     setlocale(LC_ALL,saveLocale);
+     free(saveLocale);
      return 0;
 }
 // Read a basis from the given filename
