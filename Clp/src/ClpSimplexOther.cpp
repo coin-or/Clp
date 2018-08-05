@@ -2643,11 +2643,11 @@ ClpSimplexOther::parametrics(const char * dataFile)
 	  columnNames[iColumn] =
 	    CoinStrdup(columnName(iColumn).c_str());
 	}
-	lowerColumnMove = reinterpret_cast<double *> (malloc(numberColumns_ * sizeof(double)));
+	lowerColumnMove = new double [numberColumns_];
 	memset(lowerColumnMove,0,numberColumns_*sizeof(double));
-	upperColumnMove = reinterpret_cast<double *> (malloc(numberColumns_ * sizeof(double)));
+	upperColumnMove = new double [numberColumns_];
 	memset(upperColumnMove,0,numberColumns_*sizeof(double));
-	objectiveMove = reinterpret_cast<double *> (malloc(numberColumns_ * sizeof(double)));
+	objectiveMove = new double [numberColumns_];
 	memset(objectiveMove,0,numberColumns_*sizeof(double));
 	int nLine = 0;
 	int nBadLine = 0;
