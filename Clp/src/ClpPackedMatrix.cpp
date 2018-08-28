@@ -3252,7 +3252,7 @@ static void doSqrts(double * array, int n)
 //static int scale_stats[5]={0,0,0,0,0};
 // Creates scales for column copy (rowCopy in model may be modified)
 int
-ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
+ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * simplex) const
 {
      //const ClpSimplex * baseModel=NULL;
      //return scale2(model);
@@ -3336,7 +3336,8 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
           int end = start + columnLength[iColumn];
 #ifndef LEAVE_FIXED
           if (columnUpper[iColumn] >
-                    columnLower[iColumn] + 1.0e-12) {
+	      columnLower[iColumn] + 1.0e-12||
+	      (simplex &&simplex->getColumnStatus(iColumn)==ClpSimplex::basic)) {
 #endif
                for (j = start; j < end; j++) {
                     iRow = row[j];
@@ -3708,8 +3709,8 @@ ClpPackedMatrix::scale(ClpModel * model, const ClpSimplex * /*baseModel*/) const
                               overallSmallest = value;
                          //overallSmallest = CoinMin(overallSmallest,smallest*columnScale[iColumn]);
                     } else {
-		      assert(columnScale[iColumn] == 1.0);
-                         //columnScale[iColumn]=1.0;
+		      //assert(columnScale[iColumn] == 1.0);
+		      columnScale[iColumn]=1.0;
                     }
                }
                for (iRow = 0; iRow < numberRows; iRow++) {

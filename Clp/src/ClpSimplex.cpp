@@ -3504,7 +3504,7 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
                                      numberColumns_, inverseColumnScale_);
                     }
                }
-               if (matrix_->scale(this))
+               if (matrix_->scale(this,this))
                     scalingFlag_ = -scalingFlag_; // not scaled after all
                if (rowScale_ && automaticScale_) {
 		    if (!savedRowScale_) {
