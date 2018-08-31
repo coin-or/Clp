@@ -5051,6 +5051,8 @@ OsiClpSolverInterface::operator=(const OsiClpSolverInterface& rhs)
     columnScale_ = rhs.columnScale_;
     basis_ = rhs.basis_;
     stuff_ = rhs.stuff_;
+    delete [] integerInformation_;
+    integerInformation_=NULL;
     if (rhs.integerInformation_) {
       int numberColumns = modelPtr_->numberColumns();
       integerInformation_ = new char[numberColumns];

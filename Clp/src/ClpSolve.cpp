@@ -3804,6 +3804,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
           if (finalStatus != 3 && rcode < 0 && (finalStatus || oldStatus == -1)) {
 	       double sumPrimal=sumPrimalInfeasibilities_;
 	       double sumDual=sumDualInfeasibilities_;
+	       if (sumDual>1.0e-6&&sumPrimal>1.0e-6)
+		 moreSpecialOptions_ &= ~2; // be safe and do final solve
 	       // ignore some parts of solution
 	       if (finalStatus == 1) {
 		 // infeasible
