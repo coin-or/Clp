@@ -102,7 +102,9 @@ Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
 #ifdef OSI_IDIOT
           const CoinPackedMatrix * matrix = model_->getMatrixByCol();
 #else
-          ClpMatrixBase * matrix = model_->clpMatrix();
+	  // safer for odd matrices
+          const CoinPackedMatrix * matrix = model_->matrix();
+          //ClpMatrixBase * matrix = model_->clpMatrix();
 #endif
           const int * row = matrix->getIndices();
           const CoinBigIndex * columnStart = matrix->getVectorStarts();
@@ -292,7 +294,9 @@ static int countCostedSlacks(OsiSolverInterface * model)
 #ifdef OSI_IDIOT
      const CoinPackedMatrix * matrix = model->getMatrixByCol();
 #else
-     ClpMatrixBase * matrix = model->clpMatrix();
+     // safer for odd matrices (note really ClpSimplex not OsiSolverInterface)
+     const CoinPackedMatrix * matrix = model->matrix();
+     //ClpMatrixBase * matrix = model_->clpMatrix();
 #endif
      const int * row = matrix->getIndices();
      const CoinBigIndex * columnStart = matrix->getVectorStarts();
@@ -444,7 +448,9 @@ Idiot::solve2(CoinMessageHandler * handler, const CoinMessages * messages)
 #ifdef OSI_IDIOT
      const CoinPackedMatrix * matrix = model_->getMatrixByCol();
 #else
-     ClpMatrixBase * matrix = model_->clpMatrix();
+     // safer for odd matrices
+     const CoinPackedMatrix * matrix = model_->matrix();
+     //ClpMatrixBase * matrix = model_->clpMatrix();
 #endif
      const int * row = matrix->getIndices();
      const CoinBigIndex * columnStart = matrix->getVectorStarts();
@@ -1326,7 +1332,6 @@ Idiot::crossOver(int mode)
      rowsol = model_->primalRowSolution();
      colsol = model_->primalColumnSolution();;
      double * cost = model_->objective();
-
      int slackEnd, ordStart, ordEnd;
      int slackStart = countCostedSlacks(model_);
 
@@ -1941,6 +1946,7 @@ Idiot::crossOver(int mode)
                               sum += rowlower[i] - rhs[i];
                          }
 		    }
+
 		    double averageInfeasibility=sum/nrows;
                     sprintf(line,"sum of infeasibilities %g - average %g, %d fixed columns", 
 			   sum,averageInfeasibility,nFixed);

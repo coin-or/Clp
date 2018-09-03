@@ -2058,7 +2058,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                               nPasses = CoinMax(nPasses, 100);
                               info.setStartingWeight(1.0e-1);
                               info.setReduceIterations(6);
-                              if (!largestGap)
+                              if (!largestGap && nPasses <= 50)
                                    nPasses *= 2;
                               //info.setFeasibilityTolerance(1.0e-7);
                          }
