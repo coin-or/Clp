@@ -21,7 +21,7 @@ noinst_PROGRAMS = osiUnitTest
 osiUnitTest_SOURCES = osiUnitTest.cpp OsiClpSolverInterfaceTest.cpp
 
 osiUnitTest_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
-	$(CLPLIB_LIBS) $(OSICLPLIB_LIBS) $(OSICLPUNITTEST_LIBS)
+	$(CLPLIB_LFLAGS) $(OSICLPLIB_LFLAGS) $(OSICLPUNITTEST_LFLAGS)
 
 AM_CPPFLAGS = \
 	-I`$(CYGPATH_W) $(srcdir)/../src` \

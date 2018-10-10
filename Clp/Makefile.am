@@ -11,20 +11,24 @@ AUTOMAKE_OPTIONS = foreign
 include BuildTools/Makemain.inc
 
 ########################################################################
-#                          Subdirectories                              #
+#            Subdirectories and installation of .pc files              #
 ########################################################################
 
 SUBDIRS = src
+
+pkgconfiglibdir = $(libdir)/pkgconfig
+pkgconfiglib_DATA = clp.pc
 
 # Build OsiClp only if Osi is available.
 
 if COIN_HAS_OSI
   SUBDIRS += src/OsiClp
+  pkgconfiglib_DATA += osi-clp.pc
 endif
 
-# We don't want to compile the test subdirectory unless the test target is
-# specified.  But we need to list it as subdirectory to make sure that it is
-# included in the tarball.
+# We don't want to compile the test subdirectory unless the test target
+# is specified.  But we need to list it as subdirectory to make sure that
+# it's included in the tarball.
 
 if ALWAYS_FALSE
   SUBDIRS += test

@@ -21,34 +21,34 @@
 /* Define to 1 if the AMD package is available */
 #undef COIN_HAS_AMD
 
-/* Define to 1 if the ASL package is available */
+/* Define to 1 if ASL is available. */
 #undef COIN_HAS_ASL
 
 /* Define to 1 if the CHOLMOD package is available */
 #undef COIN_HAS_CHOLMOD
 
-/* Define to 1 if the CoinUtils package is available */
+/* Define to 1 if CoinUtils is available. */
 #undef COIN_HAS_COINUTILS
 
-/* Define to 1 if the Glpk package is available */
+/* Define to 1 if Glpk is available. */
 #undef COIN_HAS_GLPK
 
-/* Define to 1 if the Mumps package is available */
+/* Define to 1 if Mumps is available. */
 #undef COIN_HAS_MUMPS
 
-/* Define to 1 if the Netlib package is available */
+/* Define to 1 if Netlib is available. */
 #undef COIN_HAS_NETLIB
 
-/* Define to 1 if the Osi package is available */
+/* Define to 1 if Osi is available. */
 #undef COIN_HAS_OSI
 
-/* Define to 1 if the OsiTests package is available */
+/* Define to 1 if OsiTests is available. */
 #undef COIN_HAS_OSITESTS
 
 /* Define to 1 if readline is available */
 #undef COIN_HAS_READLINE
 
-/* Define to 1 if the Sample package is available */
+/* Define to 1 if Sample is available. */
 #undef COIN_HAS_SAMPLE
 
 /* Define to 1 if the WSMP package is available */

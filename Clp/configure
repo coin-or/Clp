@@ -643,10 +643,14 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+OSICLPUNITTEST_CFLAGS_NOPC
+OSICLPUNITTEST_LFLAGS_NOPC
+OSICLPLIB_CFLAGS_NOPC
+OSICLPLIB_LFLAGS_NOPC
+CLPLIB_CFLAGS_NOPC
+CLPLIB_LFLAGS_NOPC
 COIN_CXX_IS_CL_FALSE
 COIN_CXX_IS_CL_TRUE
-DEPENDENCY_LINKING_FALSE
-DEPENDENCY_LINKING_TRUE
 coin_doxy_tagfiles
 COIN_HAS_LATEX_FALSE
 COIN_HAS_LATEX_TRUE
@@ -686,33 +690,26 @@ COIN_HAS_SAMPLE_FALSE
 COIN_HAS_SAMPLE_TRUE
 COIN_HAS_OSITESTS_FALSE
 COIN_HAS_OSITESTS_TRUE
-OSICLPUNITTEST_PCFILES_PUB
-OSICLPUNITTEST_CFLAGS_PUB
-OSICLPUNITTEST_LIBS_PUB
 OSICLPUNITTEST_PCFILES
 OSICLPUNITTEST_CFLAGS
-OSICLPUNITTEST_LIBS
+OSICLPUNITTEST_LFLAGS
 COIN_HAS_OSI_FALSE
 COIN_HAS_OSI_TRUE
-OSICLPLIB_PCFILES_PUB
-OSICLPLIB_CFLAGS_PUB
-OSICLPLIB_LIBS_PUB
 OSICLPLIB_PCFILES
 OSICLPLIB_CFLAGS
-OSICLPLIB_LIBS
+OSICLPLIB_LFLAGS
 COIN_HAS_COINUTILS_FALSE
 COIN_HAS_COINUTILS_TRUE
-CLPLIB_PCFILES_PUB
-CLPLIB_CFLAGS_PUB
-CLPLIB_LIBS_PUB
 CLPLIB_PCFILES
 CLPLIB_CFLAGS
-CLPLIB_LIBS
+CLPLIB_LFLAGS
 COIN_PKG_CONFIG_PATH
 COIN_HAS_PKGCONFIG_FALSE
 COIN_HAS_PKGCONFIG_TRUE
 ac_ct_PKG_CONFIG
 PKG_CONFIG
+DEPENDENCY_LINKING_FALSE
+DEPENDENCY_LINKING_TRUE
 LT_LDFLAGS
 CXXCPP
 CPP
@@ -860,14 +857,15 @@ with_aix_soname
 with_gnu_ld
 with_sysroot
 enable_libtool_lock
+enable_dependency_linking
 with_coinutils
-with_coinutils_libs
+with_coinutils_lflags
 with_coinutils_cflags
 with_osi
-with_osi_libs
+with_osi_lflags
 with_osi_cflags
 with_ositests
-with_ositests_libs
+with_ositests_lflags
 with_ositests_cflags
 with_sample
 with_sample_data
@@ -875,22 +873,22 @@ with_netlib
 with_netlib_data
 enable_aboca
 with_amd
-with_amd_libs
+with_amd_lflags
 with_amd_cflags
 with_cholmod
-with_cholmod_libs
+with_cholmod_lflags
 with_cholmod_cflags
 with_glpk
-with_glpk_libs
+with_glpk_lflags
 with_glpk_cflags
 with_mumps
-with_mumps_libs
+with_mumps_lflags
 with_mumps_cflags
 with_wsmp
-with_wsmp_libs
+with_wsmp_lflags
 with_wsmp_cflags
 with_asl
-with_asl_libs
+with_asl_lflags
 with_asl_cflags
 enable_readline
 with_dot
@@ -1541,11 +1539,14 @@ Optional Features:
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
-  --enable-shared[=PKGS]  build shared libraries [default=no]
-  --enable-static[=PKGS]  build static libraries [default=no]
+  --enable-shared[=PKGS]  build shared libraries [default=yes]
+  --enable-static[=PKGS]  build static libraries [default=yes]
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
+  --enable-dependency-linking
+                          Link all library dependencies into shared libraries
+                          at creation (default=yes)
   --enable-aboca          Enables build of the Aboca solver; 1 - build Abc
                           serial but no inherit code (default when built); 2 -
                           build Abc serial and inherit code; 3 - build Abc
@@ -1567,8 +1568,8 @@ Optional Packages:
   --with-coinutils        Use CoinUtils. If an argument is given, 'yes' is
                           equivalent to --with-coinutils, 'no' is
                           equivalent to --without-coinutils. Any other
-                          argument is applied as for --with-coinutils-libs
-  --with-coinutils-libs   Linker flags for CoinUtils appropriate for your
+                          argument is applied as for --with-coinutils-lflags
+  --with-coinutils-lflags Linker flags for CoinUtils appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-coinutils-cflags Compiler flags for CoinUtils appropriate for your
                           environment. (Most often, -I specs for header file
@@ -1576,8 +1577,8 @@ Optional Packages:
   --with-osi              Use Osi. If an argument is given, 'yes' is
                           equivalent to --with-osi, 'no' is
                           equivalent to --without-osi. Any other argument is
-                          applied as for --with-osi-libs
-  --with-osi-libs         Linker flags for Osi appropriate for your
+                          applied as for --with-osi-lflags
+  --with-osi-lflags       Linker flags for Osi appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-osi-cflags       Compiler flags for Osi appropriate for your
                           environment. (Most often, -I specs for header file
@@ -1585,8 +1586,8 @@ Optional Packages:
   --with-ositests         Use OsiTests. If an argument is given, 'yes' is
                           equivalent to --with-ositests, 'no' is
                           equivalent to --without-ositests. Any other argument
-                          is applied as for --with-ositests-libs
-  --with-ositests-libs    Linker flags for OsiTests appropriate for your
+                          is applied as for --with-ositests-lflags
+  --with-ositests-lflags  Linker flags for OsiTests appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-ositests-cflags  Compiler flags for OsiTests appropriate for your
                           environment. (Most often, -I specs for header file
@@ -1606,8 +1607,8 @@ Optional Packages:
   --with-amd              Use AMD. If an argument is given, 'yes' is
                           equivalent to --with-amd, 'no' is
                           equivalent to --without-amd. Any other argument is
-                          applied as for --with-amd-libs
-  --with-amd-libs         Linker flags for AMD appropriate for your
+                          applied as for --with-amd-lflags
+  --with-amd-lflags       Linker flags for AMD appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-amd-cflags       Compiler flags for AMD appropriate for your
                           environment. (Most often, -I specs for header file
@@ -1615,8 +1616,8 @@ Optional Packages:
   --with-cholmod          Use CHOLMOD. If an argument is given, 'yes' is
                           equivalent to --with-cholmod, 'no' is
                           equivalent to --without-cholmod. Any other argument
-                          is applied as for --with-cholmod-libs
-  --with-cholmod-libs     Linker flags for CHOLMOD appropriate for your
+                          is applied as for --with-cholmod-lflags
+  --with-cholmod-lflags   Linker flags for CHOLMOD appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-cholmod-cflags   Compiler flags for CHOLMOD appropriate for your
                           environment. (Most often, -I specs for header file
@@ -1624,8 +1625,8 @@ Optional Packages:
   --with-glpk             Use Glpk. If an argument is given, 'yes' is
                           equivalent to --with-glpk, 'no' is
                           equivalent to --without-glpk. Any other argument is
-                          applied as for --with-glpk-libs
-  --with-glpk-libs        Linker flags for Glpk appropriate for your
+                          applied as for --with-glpk-lflags
+  --with-glpk-lflags      Linker flags for Glpk appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-glpk-cflags      Compiler flags for Glpk appropriate for your
                           environment. (Most often, -I specs for header file
@@ -1633,8 +1634,8 @@ Optional Packages:
   --with-mumps            Use Mumps. If an argument is given, 'yes' is
                           equivalent to --with-mumps, 'no' is
                           equivalent to --without-mumps. Any other argument is
-                          applied as for --with-mumps-libs
-  --with-mumps-libs       Linker flags for Mumps appropriate for your
+                          applied as for --with-mumps-lflags
+  --with-mumps-lflags     Linker flags for Mumps appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-mumps-cflags     Compiler flags for Mumps appropriate for your
                           environment. (Most often, -I specs for header file
@@ -1642,8 +1643,8 @@ Optional Packages:
   --with-wsmp             Use WSMP. If an argument is given, 'yes' is
                           equivalent to --with-wsmp, 'no' is
                           equivalent to --without-wsmp. Any other argument is
-                          applied as for --with-wsmp-libs
-  --with-wsmp-libs        Linker flags for WSMP appropriate for your
+                          applied as for --with-wsmp-lflags
+  --with-wsmp-lflags      Linker flags for WSMP appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-wsmp-cflags      Compiler flags for WSMP appropriate for your
                           environment. (Most often, -I specs for header file
@@ -1651,8 +1652,8 @@ Optional Packages:
   --with-asl              Use ASL. If an argument is given, 'yes' is
                           equivalent to --with-asl, 'no' is
                           equivalent to --without-asl. Any other argument is
-                          applied as for --with-asl-libs
-  --with-asl-libs         Linker flags for ASL appropriate for your
+                          applied as for --with-asl-lflags
+  --with-asl-lflags       Linker flags for ASL appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-asl-cflags       Compiler flags for ASL appropriate for your
                           environment. (Most often, -I specs for header file
@@ -3685,7 +3686,6 @@ fi
 
 # Setting up libtool with LT_INIT will AC_REQUIRE AC_PROG_CC, but we want
 # to invoke it from this macro first so that we can supply a parameter.
-
 
 
 
@@ -9850,11 +9850,42 @@ func_stripname_cnf ()
 
 # On Windows, shared C++ libraries do not work with the current libtool (it
 # handles only exports for C functions, not C++). On all other systems, build
-# shared libraries.
+# only shared libraries.
 
-  case $host_os in
-    cygwin* | mingw* | msys* )
-      # Check whether --enable-shared was given.
+# (lh, 180302) Sadly, we can't use the obvious libtool macros
+# (AC_{ENABLE,DISABLE}_{SHARED,STATIC}, nor parameters to LT_INIT,
+# precisely because these macros record the default behaviour by defining
+# a macro, _LT_ENABLE_{SHARED,STATIC}_DEFAULT. No shell code involved, hence
+# any shell conditional has no effect. Either we trust libtool or we need
+# something more inventive. The relevant libtool macros are in ltoptions.m4,
+# _LT_ENABLE_SHARED and _LT_ENABLE_STATIC.
+
+# case $host_os in
+#   cygwin* | mingw* | msys* )
+#     AC_DISABLE_SHARED
+#     ;;
+#   *)
+#     AC_DISABLE_STATIC
+#     ;;
+# esac
+
+# Create libtool.
+
+
+
+
+
+# Set options
+
+
+
+        enable_dlopen=no
+
+
+  enable_win32_dll=no
+
+
+            # Check whether --enable-shared was given.
 if test "${enable_shared+set}" = set; then :
   enableval=$enable_shared; p=${PACKAGE-default}
     case $enableval in
@@ -9874,7 +9905,7 @@ if test "${enable_shared+set}" = set; then :
       ;;
     esac
 else
-  enable_shared=no
+  enable_shared=yes
 fi
 
 
@@ -9885,9 +9916,7 @@ fi
 
 
 
-      ;;
-    *)
-      # Check whether --enable-static was given.
+  # Check whether --enable-static was given.
 if test "${enable_static+set}" = set; then :
   enableval=$enable_static; p=${PACKAGE-default}
     case $enableval in
@@ -9907,34 +9936,13 @@ if test "${enable_static+set}" = set; then :
       ;;
     esac
 else
-  enable_static=no
+  enable_static=yes
 fi
 
 
 
 
 
-
-
-
-
-      ;;
-  esac
-
-# Create libtool
-
-
-
-
-
-# Set options
-
-
-
-        enable_dlopen=no
-
-
-  enable_win32_dll=no
 
 
 
@@ -20513,9 +20521,46 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
       ;;
   esac
 
-# -no-undefined is required for DLLs on Windows
+# Set up LT_LDFLAGS. Add the library version string to LT_LDFLAGS, if one
+# is supplied.
 
-  LT_LDFLAGS="-no-undefined"
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if the library version is set" >&5
+$as_echo_n "checking if the library version is set... " >&6; }
+  if test x"$coin_libversion" != x ; then
+    LT_LDFLAGS="$LT_LDFLAGS -version-info $coin_libversion"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_libversion" >&5
+$as_echo "$coin_libversion" >&6; }
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+
+# Check if dependency linking is enabled or disabled.
+
+
+  # Check whether --enable-dependency-linking was given.
+if test "${enable_dependency_linking+set}" = set; then :
+  enableval=$enable_dependency_linking; dependency_linking="$enableval"
+else
+  dependency_linking=yes
+fi
+
+
+# AC_SUBST([LT_LDFLAGS])
+# if test "$dependency_linking" = yes ; then
+#   LT_LDFLAGS="$LT_LDFLAGS -no-undefined"
+# fi
+
+   if test "$dependency_linking" = yes; then
+  DEPENDENCY_LINKING_TRUE=
+  DEPENDENCY_LINKING_FALSE='#'
+else
+  DEPENDENCY_LINKING_TRUE='#'
+  DEPENDENCY_LINKING_FALSE=
+fi
+
+
 
 
 
@@ -20685,8 +20730,9 @@ fi
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking $PKG_CONFIG is at least version $pkg_min_version" >&5
 $as_echo_n "checking $PKG_CONFIG is at least version $pkg_min_version... " >&6; }
     if $PKG_CONFIG --atleast-pkgconfig-version $pkg_min_version ; then
-      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: \`$PKG_CONFIG --version\`" >&5
-$as_echo "yes: \`$PKG_CONFIG --version\`" >&6; }
+      pkg_version=`$PKG_CONFIG --version`
+      { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: $pkg_version" >&5
+$as_echo "yes: $pkg_version" >&6; }
     else
      { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -20720,10 +20766,10 @@ fi
 # directory for .pc files for COIN packages.  Coin .pc files are installed in
 # ${libdir}/pkgconfig. But autoconf sets $libdir to '${exec_prefix}/lib', and
 # $exec_prefix to '${prefix}'.  COIN_INITIALIZE will set ac_default_prefix
-# correctly. Unless the user specifies --prefix, it is set to NONE
-# until the end of configuration, at which point it will be set to
-# $ac_default_prefix. Unless the user specifies --exec-prefix, it is
-# set to NONE until the end of configuration, at which point it's set to
+# correctly. Unless the user specifies --prefix, prefix is set to
+# NONE until the end of configuration, at which point it will be set to
+# $ac_default_prefix. Unless the user specifies --exec-prefix, exec-prefix
+# is set to NONE until the end of configuration, at which point it's set to
 # '${prefix}'. Sheesh.  So do the expansion, then back it out. Of course,
 # this whole house of cards balances on the shaky assumption that the user is
 # sane and has installed all packages in the same place and does not change
@@ -20758,19 +20804,13 @@ $as_echo "$as_me: $PKG_CONFIG path is \"$COIN_PKG_CONFIG_PATH\"" >&6;}
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package CoinUtils" >&5
 $as_echo_n "checking for package CoinUtils... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
 
 
 
 
 
-
-
-
-# Check to see if the user has overridden configure parameters from the
-# environment.
+# Check to see if the user has set an override to skip this primary.
 
   coin_has_coinutils=noInfo
   if test x"$COIN_SKIP_PROJECTS" != x ; then
@@ -20781,7 +20821,7 @@ $as_echo_n "checking for package CoinUtils... " >&6; }
     done
   fi
 
-# If we're not skipping this project, define and process the command line
+# If we're not skipping this primary, define and process the command line
 # options according to the cmdopts parameter. Then invoke FIND_PRIM_PKG to do
 # the heavy lifting.
 
@@ -20797,9 +20837,9 @@ fi
 
 
 
-# Check whether --with-coinutils-libs was given.
-if test "${with_coinutils_libs+set}" = set; then :
-  withval=$with_coinutils_libs;
+# Check whether --with-coinutils-lflags was given.
+if test "${with_coinutils_lflags+set}" = set; then :
+  withval=$with_coinutils_lflags;
 fi
 
 
@@ -20820,7 +20860,7 @@ fi
 # Initialize variables for the primary package.
 
   coin_has_coinutils=noInfo
-  coinutils_libs=
+  coinutils_lflags=
   coinutils_cflags=
   coinutils_data=
   coinutils_pcfiles=
@@ -20842,7 +20882,7 @@ fi
 	;;
       * )
 	coin_has_coinutils=yes
-	coinutils_libs=$withval
+	coinutils_lflags=$withval
 	;;
     esac
   fi
@@ -20852,7 +20892,7 @@ fi
 # options for libs and cflags.
 
   if test "$coin_has_coinutils" != skipping ; then
-       withval=$with_coinutils_lib
+       withval=$with_coinutils_lflags
        if test -n "$withval" ; then
 	 case "$withval" in
 	   build | no | yes )
@@ -20860,7 +20900,7 @@ fi
 	     ;;
 	   * )
 	     coin_has_coinutils=yes
-	     coinutils_libs=$withval
+	     coinutils_lflags=$withval
 	     ;;
 	 esac
        fi
@@ -20963,8 +21003,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_coinutils\" in COIN_FIN
 $as_echo "$as_me: FIND_PRIM_PKG result for coinutils: \"$coin_has_coinutils\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'coinutils'" >&5
 $as_echo "$as_me: Collected values for package 'coinutils'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: coinutils_libs is \"$coinutils_libs\"" >&5
-$as_echo "$as_me: coinutils_libs is \"$coinutils_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: coinutils_lflags is \"$coinutils_lflags\"" >&5
+$as_echo "$as_me: coinutils_lflags is \"$coinutils_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: coinutils_cflags is \"$coinutils_cflags\"" >&5
 $as_echo "$as_me: coinutils_cflags is \"$coinutils_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: coinutils_data is \"$coinutils_data\"" >&5
@@ -20999,25 +21039,15 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
-# augment the necessary variables for the client packages. We need the final
-# ':' (noop) below because it's possible that the list of client packages
-# is empty.
+# augment the necessary variables for the client packages.
 
   if test $coin_has_coinutils = yes ; then
 
 $as_echo "#define COIN_HAS_COINUTILS 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
-      CLPLIB_PCFILES="$coinutils_pcfiles $CLPLIB_PCFILES"
-         CLPLIB_LIBS="$coinutils_libs $CLPLIB_LIBS"
-         CLPLIB_CFLAGS="$coinutils_cflags $CLPLIB_CFLAGS"
-      :
-    else
-      CLPLIB_PCFILES_PUB="$coinutils_pcfiles $CLPLIB_PCFILES"_PUB
-         CLPLIB_LIBS_PUB="$coinutils_libs $CLPLIB_LIBS_PUB"
-         CLPLIB_CFLAGS_PUB="$coinutils_cflags $CLPLIB_CFLAGS_PUB"
-      :
-    fi
+    CLPLIB_PCFILES="$coinutils_pcfiles $CLPLIB_PCFILES"
+       CLPLIB_LFLAGS="$coinutils_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$coinutils_cflags $CLPLIB_CFLAGS"
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -21033,19 +21063,13 @@ fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package Osi" >&5
 $as_echo_n "checking for package Osi... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
 
 
 
 
 
-
-
-
-# Check to see if the user has overridden configure parameters from the
-# environment.
+# Check to see if the user has set an override to skip this primary.
 
   coin_has_osi=noInfo
   if test x"$COIN_SKIP_PROJECTS" != x ; then
@@ -21056,7 +21080,7 @@ $as_echo_n "checking for package Osi... " >&6; }
     done
   fi
 
-# If we're not skipping this project, define and process the command line
+# If we're not skipping this primary, define and process the command line
 # options according to the cmdopts parameter. Then invoke FIND_PRIM_PKG to do
 # the heavy lifting.
 
@@ -21072,9 +21096,9 @@ fi
 
 
 
-# Check whether --with-osi-libs was given.
-if test "${with_osi_libs+set}" = set; then :
-  withval=$with_osi_libs;
+# Check whether --with-osi-lflags was given.
+if test "${with_osi_lflags+set}" = set; then :
+  withval=$with_osi_lflags;
 fi
 
 
@@ -21095,7 +21119,7 @@ fi
 # Initialize variables for the primary package.
 
   coin_has_osi=noInfo
-  osi_libs=
+  osi_lflags=
   osi_cflags=
   osi_data=
   osi_pcfiles=
@@ -21117,7 +21141,7 @@ fi
 	;;
       * )
 	coin_has_osi=yes
-	osi_libs=$withval
+	osi_lflags=$withval
 	;;
     esac
   fi
@@ -21127,7 +21151,7 @@ fi
 # options for libs and cflags.
 
   if test "$coin_has_osi" != skipping ; then
-       withval=$with_osi_lib
+       withval=$with_osi_lflags
        if test -n "$withval" ; then
 	 case "$withval" in
 	   build | no | yes )
@@ -21135,7 +21159,7 @@ fi
 	     ;;
 	   * )
 	     coin_has_osi=yes
-	     osi_libs=$withval
+	     osi_lflags=$withval
 	     ;;
 	 esac
        fi
@@ -21238,8 +21262,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_osi\" in COIN_FIND_PRIM
 $as_echo "$as_me: FIND_PRIM_PKG result for osi: \"$coin_has_osi\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'osi'" >&5
 $as_echo "$as_me: Collected values for package 'osi'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: osi_libs is \"$osi_libs\"" >&5
-$as_echo "$as_me: osi_libs is \"$osi_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: osi_lflags is \"$osi_lflags\"" >&5
+$as_echo "$as_me: osi_lflags is \"$osi_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: osi_cflags is \"$osi_cflags\"" >&5
 $as_echo "$as_me: osi_cflags is \"$osi_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: osi_data is \"$osi_data\"" >&5
@@ -21274,25 +21298,15 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
-# augment the necessary variables for the client packages. We need the final
-# ':' (noop) below because it's possible that the list of client packages
-# is empty.
+# augment the necessary variables for the client packages.
 
   if test $coin_has_osi = yes ; then
 
 $as_echo "#define COIN_HAS_OSI 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
-      OSICLPLIB_PCFILES="$osi_pcfiles $OSICLPLIB_PCFILES"
-         OSICLPLIB_LIBS="$osi_libs $OSICLPLIB_LIBS"
-         OSICLPLIB_CFLAGS="$osi_cflags $OSICLPLIB_CFLAGS"
-      :
-    else
-      OSICLPLIB_PCFILES_PUB="$osi_pcfiles $OSICLPLIB_PCFILES"_PUB
-         OSICLPLIB_LIBS_PUB="$osi_libs $OSICLPLIB_LIBS_PUB"
-         OSICLPLIB_CFLAGS_PUB="$osi_cflags $OSICLPLIB_CFLAGS_PUB"
-      :
-    fi
+    OSICLPLIB_PCFILES="$osi_pcfiles $OSICLPLIB_PCFILES"
+       OSICLPLIB_LFLAGS="$osi_lflags $OSICLPLIB_LFLAGS"
+       OSICLPLIB_CFLAGS="$osi_cflags $OSICLPLIB_CFLAGS"
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -21305,19 +21319,13 @@ $as_echo "#define COIN_HAS_OSI 1" >>confdefs.h
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package OsiTests" >&5
 $as_echo_n "checking for package OsiTests... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
 
 
 
 
 
-
-
-
-# Check to see if the user has overridden configure parameters from the
-# environment.
+# Check to see if the user has set an override to skip this primary.
 
   coin_has_ositests=noInfo
   if test x"$COIN_SKIP_PROJECTS" != x ; then
@@ -21328,7 +21336,7 @@ $as_echo_n "checking for package OsiTests... " >&6; }
     done
   fi
 
-# If we're not skipping this project, define and process the command line
+# If we're not skipping this primary, define and process the command line
 # options according to the cmdopts parameter. Then invoke FIND_PRIM_PKG to do
 # the heavy lifting.
 
@@ -21344,9 +21352,9 @@ fi
 
 
 
-# Check whether --with-ositests-libs was given.
-if test "${with_ositests_libs+set}" = set; then :
-  withval=$with_ositests_libs;
+# Check whether --with-ositests-lflags was given.
+if test "${with_ositests_lflags+set}" = set; then :
+  withval=$with_ositests_lflags;
 fi
 
 
@@ -21367,7 +21375,7 @@ fi
 # Initialize variables for the primary package.
 
   coin_has_ositests=noInfo
-  ositests_libs=
+  ositests_lflags=
   ositests_cflags=
   ositests_data=
   ositests_pcfiles=
@@ -21389,7 +21397,7 @@ fi
 	;;
       * )
 	coin_has_ositests=yes
-	ositests_libs=$withval
+	ositests_lflags=$withval
 	;;
     esac
   fi
@@ -21399,7 +21407,7 @@ fi
 # options for libs and cflags.
 
   if test "$coin_has_ositests" != skipping ; then
-       withval=$with_ositests_lib
+       withval=$with_ositests_lflags
        if test -n "$withval" ; then
 	 case "$withval" in
 	   build | no | yes )
@@ -21407,7 +21415,7 @@ fi
 	     ;;
 	   * )
 	     coin_has_ositests=yes
-	     ositests_libs=$withval
+	     ositests_lflags=$withval
 	     ;;
 	 esac
        fi
@@ -21506,8 +21514,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_ositests\" in COIN_FIND
 $as_echo "$as_me: FIND_PRIM_PKG result for ositests: \"$coin_has_ositests\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'ositests'" >&5
 $as_echo "$as_me: Collected values for package 'ositests'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: ositests_libs is \"$ositests_libs\"" >&5
-$as_echo "$as_me: ositests_libs is \"$ositests_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: ositests_lflags is \"$ositests_lflags\"" >&5
+$as_echo "$as_me: ositests_lflags is \"$ositests_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: ositests_cflags is \"$ositests_cflags\"" >&5
 $as_echo "$as_me: ositests_cflags is \"$ositests_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: ositests_data is \"$ositests_data\"" >&5
@@ -21542,25 +21550,15 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
-# augment the necessary variables for the client packages. We need the final
-# ':' (noop) below because it's possible that the list of client packages
-# is empty.
+# augment the necessary variables for the client packages.
 
   if test $coin_has_ositests = yes ; then
 
 $as_echo "#define COIN_HAS_OSITESTS 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
-      OSICLPUNITTEST_PCFILES="$ositests_pcfiles $OSICLPUNITTEST_PCFILES"
-         OSICLPUNITTEST_LIBS="$ositests_libs $OSICLPUNITTEST_LIBS"
-         OSICLPUNITTEST_CFLAGS="$ositests_cflags $OSICLPUNITTEST_CFLAGS"
-      :
-    else
-      OSICLPUNITTEST_PCFILES_PUB="$ositests_pcfiles $OSICLPUNITTEST_PCFILES"_PUB
-         OSICLPUNITTEST_LIBS_PUB="$ositests_libs $OSICLPUNITTEST_LIBS_PUB"
-         OSICLPUNITTEST_CFLAGS_PUB="$ositests_cflags $OSICLPUNITTEST_CFLAGS_PUB"
-      :
-    fi
+    OSICLPUNITTEST_PCFILES="$ositests_pcfiles $OSICLPUNITTEST_PCFILES"
+       OSICLPUNITTEST_LFLAGS="$ositests_lflags $OSICLPUNITTEST_LFLAGS"
+       OSICLPUNITTEST_CFLAGS="$ositests_cflags $OSICLPUNITTEST_CFLAGS"
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -21573,14 +21571,11 @@ $as_echo "#define COIN_HAS_OSITESTS 1" >>confdefs.h
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package Sample" >&5
 $as_echo_n "checking for package Sample... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
 
 
 
-# Check to see if the user has overridden configure parameters from the
-# environment.
+# Check to see if the user has set an override to skip this primary.
 
   coin_has_sample=noInfo
   if test x"$COIN_SKIP_PROJECTS" != x ; then
@@ -21591,7 +21586,7 @@ $as_echo_n "checking for package Sample... " >&6; }
     done
   fi
 
-# If we're not skipping this project, define and process the command line
+# If we're not skipping this primary, define and process the command line
 # options according to the cmdopts parameter. Then invoke FIND_PRIM_PKG to do
 # the heavy lifting.
 
@@ -21625,7 +21620,7 @@ fi
 # Initialize variables for the primary package.
 
   coin_has_sample=noInfo
-  sample_libs=
+  sample_lflags=
   sample_cflags=
   sample_data=
   sample_pcfiles=
@@ -21751,8 +21746,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_sample\" in COIN_FIND_P
 $as_echo "$as_me: FIND_PRIM_PKG result for sample: \"$coin_has_sample\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'sample'" >&5
 $as_echo "$as_me: Collected values for package 'sample'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: sample_libs is \"$sample_libs\"" >&5
-$as_echo "$as_me: sample_libs is \"$sample_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: sample_lflags is \"$sample_lflags\"" >&5
+$as_echo "$as_me: sample_lflags is \"$sample_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: sample_cflags is \"$sample_cflags\"" >&5
 $as_echo "$as_me: sample_cflags is \"$sample_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: sample_data is \"$sample_data\"" >&5
@@ -21787,21 +21782,13 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
-# augment the necessary variables for the client packages. We need the final
-# ':' (noop) below because it's possible that the list of client packages
-# is empty.
+# augment the necessary variables for the client packages.
 
   if test $coin_has_sample = yes ; then
 
 $as_echo "#define COIN_HAS_SAMPLE 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
 
-      :
-    else
-
-      :
-    fi
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -21815,14 +21802,11 @@ $as_echo "#define COIN_HAS_SAMPLE 1" >>confdefs.h
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package Netlib" >&5
 $as_echo_n "checking for package Netlib... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
 
 
 
-# Check to see if the user has overridden configure parameters from the
-# environment.
+# Check to see if the user has set an override to skip this primary.
 
   coin_has_netlib=noInfo
   if test x"$COIN_SKIP_PROJECTS" != x ; then
@@ -21833,7 +21817,7 @@ $as_echo_n "checking for package Netlib... " >&6; }
     done
   fi
 
-# If we're not skipping this project, define and process the command line
+# If we're not skipping this primary, define and process the command line
 # options according to the cmdopts parameter. Then invoke FIND_PRIM_PKG to do
 # the heavy lifting.
 
@@ -21867,7 +21851,7 @@ fi
 # Initialize variables for the primary package.
 
   coin_has_netlib=noInfo
-  netlib_libs=
+  netlib_lflags=
   netlib_cflags=
   netlib_data=
   netlib_pcfiles=
@@ -21993,8 +21977,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_netlib\" in COIN_FIND_P
 $as_echo "$as_me: FIND_PRIM_PKG result for netlib: \"$coin_has_netlib\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'netlib'" >&5
 $as_echo "$as_me: Collected values for package 'netlib'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: netlib_libs is \"$netlib_libs\"" >&5
-$as_echo "$as_me: netlib_libs is \"$netlib_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: netlib_lflags is \"$netlib_lflags\"" >&5
+$as_echo "$as_me: netlib_lflags is \"$netlib_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: netlib_cflags is \"$netlib_cflags\"" >&5
 $as_echo "$as_me: netlib_cflags is \"$netlib_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: netlib_data is \"$netlib_data\"" >&5
@@ -22029,21 +22013,13 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
-# augment the necessary variables for the client packages. We need the final
-# ':' (noop) below because it's possible that the list of client packages
-# is empty.
+# augment the necessary variables for the client packages.
 
   if test $coin_has_netlib = yes ; then
 
 $as_echo "#define COIN_HAS_NETLIB 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
 
-      :
-    else
-
-      :
-    fi
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -22106,11 +22082,7 @@ fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package AMD" >&5
 $as_echo_n "checking for package AMD... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
-
-
 
 
 
@@ -22143,9 +22115,9 @@ fi
 
 
 
-# Check whether --with-amd-libs was given.
-if test "${with_amd_libs+set}" = set; then :
-  withval=$with_amd_libs;
+# Check whether --with-amd-lflags was given.
+if test "${with_amd_lflags+set}" = set; then :
+  withval=$with_amd_lflags;
 fi
 
 
@@ -22164,7 +22136,7 @@ fi
 # Initialize variables for the primary library.
 
   coin_has_amd=noInfo
-  amd_libs=
+  amd_lflags=
   amd_cflags=
   amd_data=
 
@@ -22190,12 +22162,12 @@ fi
     esac
   fi
 
-# --with-prim-libs and --with-prim-cflags are present unless the client
+# --with-prim-lflags and --with-prim-cflags are present unless the client
 # specified dataonly. Specifying --with-prim=no overrides the individual
-# options for libs and cflags.
+# options for lflags and cflags.
 
   if test "$coin_has_amd" != skipping ; then
-       withval=$with_amd_lib
+       withval=$with_amd_lflags
        if test -n "$withval" ; then
 	 case "$withval" in
 	   build | no | yes )
@@ -22256,7 +22228,7 @@ fi
 
   case $coin_has_amd in
     build | requested)
-      amd_libs=-lamd
+      amd_lflags=-lamd
          amd_cflags=-I/usr/include/suitesparse
 
       coin_has_amd=yes
@@ -22280,8 +22252,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_amd\" in COIN_FIND_PRIM
 $as_echo "$as_me: FIND_PRIM_LIB result for amd: \"$coin_has_amd\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'amd'" >&5
 $as_echo "$as_me: Collected values for package 'amd'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: amd_libs is \"$amd_libs\"" >&5
-$as_echo "$as_me: amd_libs is \"$amd_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: amd_lflags is \"$amd_lflags\"" >&5
+$as_echo "$as_me: amd_lflags is \"$amd_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: amd_cflags is \"$amd_cflags\"" >&5
 $as_echo "$as_me: amd_cflags is \"$amd_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: amd_data is \"$amd_data\"" >&5
@@ -22316,23 +22288,14 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# and augment the necessary variables for the client packages.
 
   if test $coin_has_amd = yes ; then
 
 $as_echo "#define COIN_HAS_AMD 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
-      CLPLIB_LIBS="$amd_libs $CLPLIB_LIBS"
-         CLPLIB_CFLAGS="$amd_cflags $CLPLIB_CFLAGS"
-      :
-    else
-      CLPLIB_LIBS_PUB="$amd_libs $CLPLIB_LIBS_PUB"
-         CLPLIB_CFLAGS_PUB="$amd_cflags $CLPLIB_CFLAGS_PUB"
-      :
-    fi
+    CLPLIB_LFLAGS="$amd_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$amd_cflags $CLPLIB_CFLAGS"
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -22347,11 +22310,7 @@ $as_echo "#define COIN_HAS_AMD 1" >>confdefs.h
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package CHOLMOD" >&5
 $as_echo_n "checking for package CHOLMOD... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
-
-
 
 
 
@@ -22384,9 +22343,9 @@ fi
 
 
 
-# Check whether --with-cholmod-libs was given.
-if test "${with_cholmod_libs+set}" = set; then :
-  withval=$with_cholmod_libs;
+# Check whether --with-cholmod-lflags was given.
+if test "${with_cholmod_lflags+set}" = set; then :
+  withval=$with_cholmod_lflags;
 fi
 
 
@@ -22405,7 +22364,7 @@ fi
 # Initialize variables for the primary library.
 
   coin_has_cholmod=noInfo
-  cholmod_libs=
+  cholmod_lflags=
   cholmod_cflags=
   cholmod_data=
 
@@ -22431,12 +22390,12 @@ fi
     esac
   fi
 
-# --with-prim-libs and --with-prim-cflags are present unless the client
+# --with-prim-lflags and --with-prim-cflags are present unless the client
 # specified dataonly. Specifying --with-prim=no overrides the individual
-# options for libs and cflags.
+# options for lflags and cflags.
 
   if test "$coin_has_cholmod" != skipping ; then
-       withval=$with_cholmod_lib
+       withval=$with_cholmod_lflags
        if test -n "$withval" ; then
 	 case "$withval" in
 	   build | no | yes )
@@ -22497,7 +22456,7 @@ fi
 
   case $coin_has_cholmod in
     build | requested)
-      cholmod_libs=-lcholmod
+      cholmod_lflags=-lcholmod
          cholmod_cflags=-I/usr/include/suitesparse
 
       coin_has_cholmod=yes
@@ -22521,8 +22480,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_cholmod\" in COIN_FIND_
 $as_echo "$as_me: FIND_PRIM_LIB result for cholmod: \"$coin_has_cholmod\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'cholmod'" >&5
 $as_echo "$as_me: Collected values for package 'cholmod'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: cholmod_libs is \"$cholmod_libs\"" >&5
-$as_echo "$as_me: cholmod_libs is \"$cholmod_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: cholmod_lflags is \"$cholmod_lflags\"" >&5
+$as_echo "$as_me: cholmod_lflags is \"$cholmod_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: cholmod_cflags is \"$cholmod_cflags\"" >&5
 $as_echo "$as_me: cholmod_cflags is \"$cholmod_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: cholmod_data is \"$cholmod_data\"" >&5
@@ -22557,23 +22516,14 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# and augment the necessary variables for the client packages.
 
   if test $coin_has_cholmod = yes ; then
 
 $as_echo "#define COIN_HAS_CHOLMOD 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
-      CLPLIB_LIBS="$cholmod_libs $CLPLIB_LIBS"
-         CLPLIB_CFLAGS="$cholmod_cflags $CLPLIB_CFLAGS"
-      :
-    else
-      CLPLIB_LIBS_PUB="$cholmod_libs $CLPLIB_LIBS_PUB"
-         CLPLIB_CFLAGS_PUB="$cholmod_cflags $CLPLIB_CFLAGS_PUB"
-      :
-    fi
+    CLPLIB_LFLAGS="$cholmod_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$cholmod_cflags $CLPLIB_CFLAGS"
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -22590,19 +22540,13 @@ if test $coin_has_cholmod = no -a $coin_has_amd = no ; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package Glpk" >&5
 $as_echo_n "checking for package Glpk... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
 
 
 
 
 
-
-
-
-# Check to see if the user has overridden configure parameters from the
-# environment.
+# Check to see if the user has set an override to skip this primary.
 
   coin_has_glpk=noInfo
   if test x"$COIN_SKIP_PROJECTS" != x ; then
@@ -22613,7 +22557,7 @@ $as_echo_n "checking for package Glpk... " >&6; }
     done
   fi
 
-# If we're not skipping this project, define and process the command line
+# If we're not skipping this primary, define and process the command line
 # options according to the cmdopts parameter. Then invoke FIND_PRIM_PKG to do
 # the heavy lifting.
 
@@ -22629,9 +22573,9 @@ fi
 
 
 
-# Check whether --with-glpk-libs was given.
-if test "${with_glpk_libs+set}" = set; then :
-  withval=$with_glpk_libs;
+# Check whether --with-glpk-lflags was given.
+if test "${with_glpk_lflags+set}" = set; then :
+  withval=$with_glpk_lflags;
 fi
 
 
@@ -22652,7 +22596,7 @@ fi
 # Initialize variables for the primary package.
 
   coin_has_glpk=noInfo
-  glpk_libs=
+  glpk_lflags=
   glpk_cflags=
   glpk_data=
   glpk_pcfiles=
@@ -22674,7 +22618,7 @@ fi
 	;;
       * )
 	coin_has_glpk=yes
-	glpk_libs=$withval
+	glpk_lflags=$withval
 	;;
     esac
   fi
@@ -22684,7 +22628,7 @@ fi
 # options for libs and cflags.
 
   if test "$coin_has_glpk" != skipping ; then
-       withval=$with_glpk_lib
+       withval=$with_glpk_lflags
        if test -n "$withval" ; then
 	 case "$withval" in
 	   build | no | yes )
@@ -22692,7 +22636,7 @@ fi
 	     ;;
 	   * )
 	     coin_has_glpk=yes
-	     glpk_libs=$withval
+	     glpk_lflags=$withval
 	     ;;
 	 esac
        fi
@@ -22791,8 +22735,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_glpk\" in COIN_FIND_PRI
 $as_echo "$as_me: FIND_PRIM_PKG result for glpk: \"$coin_has_glpk\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'glpk'" >&5
 $as_echo "$as_me: Collected values for package 'glpk'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: glpk_libs is \"$glpk_libs\"" >&5
-$as_echo "$as_me: glpk_libs is \"$glpk_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: glpk_lflags is \"$glpk_lflags\"" >&5
+$as_echo "$as_me: glpk_lflags is \"$glpk_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: glpk_cflags is \"$glpk_cflags\"" >&5
 $as_echo "$as_me: glpk_cflags is \"$glpk_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: glpk_data is \"$glpk_data\"" >&5
@@ -22827,25 +22771,15 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
-# augment the necessary variables for the client packages. We need the final
-# ':' (noop) below because it's possible that the list of client packages
-# is empty.
+# augment the necessary variables for the client packages.
 
   if test $coin_has_glpk = yes ; then
 
 $as_echo "#define COIN_HAS_GLPK 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
-      CLPLIB_PCFILES="$glpk_pcfiles $CLPLIB_PCFILES"
-         CLPLIB_LIBS="$glpk_libs $CLPLIB_LIBS"
-         CLPLIB_CFLAGS="$glpk_cflags $CLPLIB_CFLAGS"
-      :
-    else
-      CLPLIB_PCFILES_PUB="$glpk_pcfiles $CLPLIB_PCFILES"_PUB
-         CLPLIB_LIBS_PUB="$glpk_libs $CLPLIB_LIBS_PUB"
-         CLPLIB_CFLAGS_PUB="$glpk_cflags $CLPLIB_CFLAGS_PUB"
-      :
-    fi
+    CLPLIB_PCFILES="$glpk_pcfiles $CLPLIB_PCFILES"
+       CLPLIB_LFLAGS="$glpk_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$glpk_cflags $CLPLIB_CFLAGS"
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -22878,19 +22812,13 @@ fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package Mumps" >&5
 $as_echo_n "checking for package Mumps... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
 
 
 
 
 
-
-
-
-# Check to see if the user has overridden configure parameters from the
-# environment.
+# Check to see if the user has set an override to skip this primary.
 
   coin_has_mumps=noInfo
   if test x"$COIN_SKIP_PROJECTS" != x ; then
@@ -22901,7 +22829,7 @@ $as_echo_n "checking for package Mumps... " >&6; }
     done
   fi
 
-# If we're not skipping this project, define and process the command line
+# If we're not skipping this primary, define and process the command line
 # options according to the cmdopts parameter. Then invoke FIND_PRIM_PKG to do
 # the heavy lifting.
 
@@ -22917,9 +22845,9 @@ fi
 
 
 
-# Check whether --with-mumps-libs was given.
-if test "${with_mumps_libs+set}" = set; then :
-  withval=$with_mumps_libs;
+# Check whether --with-mumps-lflags was given.
+if test "${with_mumps_lflags+set}" = set; then :
+  withval=$with_mumps_lflags;
 fi
 
 
@@ -22940,7 +22868,7 @@ fi
 # Initialize variables for the primary package.
 
   coin_has_mumps=noInfo
-  mumps_libs=
+  mumps_lflags=
   mumps_cflags=
   mumps_data=
   mumps_pcfiles=
@@ -22962,7 +22890,7 @@ fi
 	;;
       * )
 	coin_has_mumps=yes
-	mumps_libs=$withval
+	mumps_lflags=$withval
 	;;
     esac
   fi
@@ -22972,7 +22900,7 @@ fi
 # options for libs and cflags.
 
   if test "$coin_has_mumps" != skipping ; then
-       withval=$with_mumps_lib
+       withval=$with_mumps_lflags
        if test -n "$withval" ; then
 	 case "$withval" in
 	   build | no | yes )
@@ -22980,7 +22908,7 @@ fi
 	     ;;
 	   * )
 	     coin_has_mumps=yes
-	     mumps_libs=$withval
+	     mumps_lflags=$withval
 	     ;;
 	 esac
        fi
@@ -23079,8 +23007,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_mumps\" in COIN_FIND_PR
 $as_echo "$as_me: FIND_PRIM_PKG result for mumps: \"$coin_has_mumps\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'mumps'" >&5
 $as_echo "$as_me: Collected values for package 'mumps'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: mumps_libs is \"$mumps_libs\"" >&5
-$as_echo "$as_me: mumps_libs is \"$mumps_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: mumps_lflags is \"$mumps_lflags\"" >&5
+$as_echo "$as_me: mumps_lflags is \"$mumps_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: mumps_cflags is \"$mumps_cflags\"" >&5
 $as_echo "$as_me: mumps_cflags is \"$mumps_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: mumps_data is \"$mumps_data\"" >&5
@@ -23115,25 +23043,15 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
-# augment the necessary variables for the client packages. We need the final
-# ':' (noop) below because it's possible that the list of client packages
-# is empty.
+# augment the necessary variables for the client packages.
 
   if test $coin_has_mumps = yes ; then
 
 $as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
-      CLPLIB_PCFILES="$mumps_pcfiles $CLPLIB_PCFILES"
-         CLPLIB_LIBS="$mumps_libs $CLPLIB_LIBS"
-         CLPLIB_CFLAGS="$mumps_cflags $CLPLIB_CFLAGS"
-      :
-    else
-      CLPLIB_PCFILES_PUB="$mumps_pcfiles $CLPLIB_PCFILES"_PUB
-         CLPLIB_LIBS_PUB="$mumps_libs $CLPLIB_LIBS_PUB"
-         CLPLIB_CFLAGS_PUB="$mumps_cflags $CLPLIB_CFLAGS_PUB"
-      :
-    fi
+    CLPLIB_PCFILES="$mumps_pcfiles $CLPLIB_PCFILES"
+       CLPLIB_LFLAGS="$mumps_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$mumps_cflags $CLPLIB_CFLAGS"
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -23147,11 +23065,7 @@ $as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package WSMP" >&5
 $as_echo_n "checking for package WSMP... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
-
-
 
 
 
@@ -23184,9 +23098,9 @@ fi
 
 
 
-# Check whether --with-wsmp-libs was given.
-if test "${with_wsmp_libs+set}" = set; then :
-  withval=$with_wsmp_libs;
+# Check whether --with-wsmp-lflags was given.
+if test "${with_wsmp_lflags+set}" = set; then :
+  withval=$with_wsmp_lflags;
 fi
 
 
@@ -23205,7 +23119,7 @@ fi
 # Initialize variables for the primary library.
 
   coin_has_wsmp=noInfo
-  wsmp_libs=
+  wsmp_lflags=
   wsmp_cflags=
   wsmp_data=
 
@@ -23231,12 +23145,12 @@ fi
     esac
   fi
 
-# --with-prim-libs and --with-prim-cflags are present unless the client
+# --with-prim-lflags and --with-prim-cflags are present unless the client
 # specified dataonly. Specifying --with-prim=no overrides the individual
-# options for libs and cflags.
+# options for lflags and cflags.
 
   if test "$coin_has_wsmp" != skipping ; then
-       withval=$with_wsmp_lib
+       withval=$with_wsmp_lflags
        if test -n "$withval" ; then
 	 case "$withval" in
 	   build | no | yes )
@@ -23298,9 +23212,9 @@ fi
   case $coin_has_wsmp in
     build | requested)
       if test "$coin_has_wsmp" = build ; then
-	      wsmp_libs="-L\$(libdir) -lcoinwsmp"
+	      wsmp_lflags="-L\$(libdir) -lcoinwsmp"
 	    else
-	      wsmp_libs="-lwsmp"
+	      wsmp_lflags="-lwsmp"
 	    fi
          if test "$coin_has_wsmp" = build ; then
 	      wsmp_cflags="-I\$(pkgincludedir)/ThirdParty"
@@ -23327,8 +23241,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_wsmp\" in COIN_FIND_PRI
 $as_echo "$as_me: FIND_PRIM_LIB result for wsmp: \"$coin_has_wsmp\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'wsmp'" >&5
 $as_echo "$as_me: Collected values for package 'wsmp'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: wsmp_libs is \"$wsmp_libs\"" >&5
-$as_echo "$as_me: wsmp_libs is \"$wsmp_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: wsmp_lflags is \"$wsmp_lflags\"" >&5
+$as_echo "$as_me: wsmp_lflags is \"$wsmp_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: wsmp_cflags is \"$wsmp_cflags\"" >&5
 $as_echo "$as_me: wsmp_cflags is \"$wsmp_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: wsmp_data is \"$wsmp_data\"" >&5
@@ -23363,23 +23277,14 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM
-# and augment the necessary variables for the client packages. We need the
-# final ':' (noop) below because it's possible that PRIM is data-only and the
-# list of client packages is empty.
+# and augment the necessary variables for the client packages.
 
   if test $coin_has_wsmp = yes ; then
 
 $as_echo "#define COIN_HAS_WSMP 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
-      CLPLIB_LIBS="$wsmp_libs $CLPLIB_LIBS"
-         CLPLIB_CFLAGS="$wsmp_cflags $CLPLIB_CFLAGS"
-      :
-    else
-      CLPLIB_LIBS_PUB="$wsmp_libs $CLPLIB_LIBS_PUB"
-         CLPLIB_CFLAGS_PUB="$wsmp_cflags $CLPLIB_CFLAGS_PUB"
-      :
-    fi
+    CLPLIB_LFLAGS="$wsmp_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$wsmp_cflags $CLPLIB_CFLAGS"
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -23646,19 +23551,13 @@ fi
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package ASL" >&5
 $as_echo_n "checking for package ASL... " >&6; }
 
-  pubpriv=private
-
 # Make sure the necessary variables exist for each client package.
 
 
 
 
 
-
-
-
-# Check to see if the user has overridden configure parameters from the
-# environment.
+# Check to see if the user has set an override to skip this primary.
 
   coin_has_asl=noInfo
   if test x"$COIN_SKIP_PROJECTS" != x ; then
@@ -23669,7 +23568,7 @@ $as_echo_n "checking for package ASL... " >&6; }
     done
   fi
 
-# If we're not skipping this project, define and process the command line
+# If we're not skipping this primary, define and process the command line
 # options according to the cmdopts parameter. Then invoke FIND_PRIM_PKG to do
 # the heavy lifting.
 
@@ -23685,9 +23584,9 @@ fi
 
 
 
-# Check whether --with-asl-libs was given.
-if test "${with_asl_libs+set}" = set; then :
-  withval=$with_asl_libs;
+# Check whether --with-asl-lflags was given.
+if test "${with_asl_lflags+set}" = set; then :
+  withval=$with_asl_lflags;
 fi
 
 
@@ -23708,7 +23607,7 @@ fi
 # Initialize variables for the primary package.
 
   coin_has_asl=noInfo
-  asl_libs=
+  asl_lflags=
   asl_cflags=
   asl_data=
   asl_pcfiles=
@@ -23730,7 +23629,7 @@ fi
 	;;
       * )
 	coin_has_asl=yes
-	asl_libs=$withval
+	asl_lflags=$withval
 	;;
     esac
   fi
@@ -23740,7 +23639,7 @@ fi
 # options for libs and cflags.
 
   if test "$coin_has_asl" != skipping ; then
-       withval=$with_asl_lib
+       withval=$with_asl_lflags
        if test -n "$withval" ; then
 	 case "$withval" in
 	   build | no | yes )
@@ -23748,7 +23647,7 @@ fi
 	     ;;
 	   * )
 	     coin_has_asl=yes
-	     asl_libs=$withval
+	     asl_lflags=$withval
 	     ;;
 	 esac
        fi
@@ -23847,8 +23746,8 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_asl\" in COIN_FIND_PRIM
 $as_echo "$as_me: FIND_PRIM_PKG result for asl: \"$coin_has_asl\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'asl'" >&5
 $as_echo "$as_me: Collected values for package 'asl'" >&6;}
-      { $as_echo "$as_me:${as_lineno-$LINENO}: asl_libs is \"$asl_libs\"" >&5
-$as_echo "$as_me: asl_libs is \"$asl_libs\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: asl_lflags is \"$asl_lflags\"" >&5
+$as_echo "$as_me: asl_lflags is \"$asl_lflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: asl_cflags is \"$asl_cflags\"" >&5
 $as_echo "$as_me: asl_cflags is \"$asl_cflags\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: asl_data is \"$asl_data\"" >&5
@@ -23883,25 +23782,15 @@ fi
 
 
 # If we've located the package, define preprocessor symbol COIN_HAS_PRIM and
-# augment the necessary variables for the client packages. We need the final
-# ':' (noop) below because it's possible that the list of client packages
-# is empty.
+# augment the necessary variables for the client packages.
 
   if test $coin_has_asl = yes ; then
 
 $as_echo "#define COIN_HAS_ASL 1" >>confdefs.h
 
-    if test $pubpriv = private ; then
-      CLPLIB_PCFILES="$asl_pcfiles $CLPLIB_PCFILES"
-         CLPLIB_LIBS="$asl_libs $CLPLIB_LIBS"
-         CLPLIB_CFLAGS="$asl_cflags $CLPLIB_CFLAGS"
-      :
-    else
-      CLPLIB_PCFILES_PUB="$asl_pcfiles $CLPLIB_PCFILES"_PUB
-         CLPLIB_LIBS_PUB="$asl_libs $CLPLIB_LIBS_PUB"
-         CLPLIB_CFLAGS_PUB="$asl_cflags $CLPLIB_CFLAGS_PUB"
-      :
-    fi
+    CLPLIB_PCFILES="$asl_pcfiles $CLPLIB_PCFILES"
+       CLPLIB_LFLAGS="$asl_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$asl_cflags $CLPLIB_CFLAGS"
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -24058,7 +23947,7 @@ fi
 
     fi
     if test $coin_has_readline = yes ; then
-      CLPLIB_LIBS="-lreadline $CLPLIB_LIBS"
+      CLPLIB_LFLAGS="-lreadline $CLPLIB_LFLAGS"
 
 $as_echo "#define COIN_HAS_READLINE 1" >>confdefs.h
 
@@ -24362,14 +24251,6 @@ done
 # Temporary hacks to shut down these two. This needs to be fixed.
 
  if test 0 = 1; then
-  DEPENDENCY_LINKING_TRUE=
-  DEPENDENCY_LINKING_FALSE='#'
-else
-  DEPENDENCY_LINKING_TRUE='#'
-  DEPENDENCY_LINKING_FALSE=
-fi
-
- if test 0 = 1; then
   COIN_CXX_IS_CL_TRUE=
   COIN_CXX_IS_CL_FALSE='#'
 else
@@ -24380,55 +24261,119 @@ fi
 
 # Finalize libs and cflags.
 
-  if test -n "${CLPLIB_PCFILES}" ; then
-       temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${CLPLIB_PCFILES}`
-       temp_LIBS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${CLPLIB_PCFILES}`
-       CLPLIB_CFLAGS="$temp_CFLAGS ${CLPLIB_CFLAGS}"
-       CLPLIB_LIBS="$temp_LIBS ${CLPLIB_LIBS}"
-     fi
+   if test 1 = 1 ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for ClpLib:" >&5
+$as_echo "$as_me: FINALIZE_FLAGS for ClpLib:" >&6;}
+      fi
+      CLPLIB_LFLAGS_NOPC=$CLPLIB_LFLAGS
+
+      CLPLIB_CFLAGS_NOPC=$CLPLIB_CFLAGS
+
+      if test -n "${CLPLIB_PCFILES}" ; then
+        temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${CLPLIB_PCFILES}`
+        temp_LFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${CLPLIB_PCFILES}`
+        CLPLIB_CFLAGS="$temp_CFLAGS ${CLPLIB_CFLAGS}"
+        CLPLIB_LFLAGS="$temp_LFLAGS ${CLPLIB_LFLAGS}"
+      fi
 
 # Change the test to enable / disable debugging output
 
-     if test 1 = 1 ; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for ClpLib: adding \"${CLPLIB_PCFILES}\"" >&5
-$as_echo "$as_me: FINALIZE_FLAGS for ClpLib: adding \"${CLPLIB_PCFILES}\"" >&6;}
-       { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_LIBS is \"${CLPLIB_LIBS}\"" >&5
-$as_echo "$as_me: CLPLIB_LIBS is \"${CLPLIB_LIBS}\"" >&6;}
-       { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_CFLAGS is \"${CLPLIB_CFLAGS}\"" >&5
-$as_echo "$as_me: CLPLIB_CFLAGS is \"${CLPLIB_CFLAGS}\"" >&6;}
-     fi ; if test -n "${OSICLPLIB_PCFILES}" ; then
-       temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${OSICLPLIB_PCFILES}`
-       temp_LIBS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${OSICLPLIB_PCFILES}`
-       OSICLPLIB_CFLAGS="$temp_CFLAGS ${OSICLPLIB_CFLAGS}"
-       OSICLPLIB_LIBS="$temp_LIBS ${OSICLPLIB_LIBS}"
-     fi
+      if test 1 = 1 ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_LFLAGS_NOPC: \"${CLPLIB_LFLAGS_NOPC}\"" >&5
+$as_echo "$as_me: CLPLIB_LFLAGS_NOPC: \"${CLPLIB_LFLAGS_NOPC}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_CFLAGS_NOPC: \"${CLPLIB_CFLAGS_NOPC}\"" >&5
+$as_echo "$as_me: CLPLIB_CFLAGS_NOPC: \"${CLPLIB_CFLAGS_NOPC}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: adding \"${CLPLIB_PCFILES}\"" >&5
+$as_echo "$as_me: adding \"${CLPLIB_PCFILES}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_LFLAGS: \"${CLPLIB_LFLAGS}\"" >&5
+$as_echo "$as_me: CLPLIB_LFLAGS: \"${CLPLIB_LFLAGS}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_CFLAGS: \"${CLPLIB_CFLAGS}\"" >&5
+$as_echo "$as_me: CLPLIB_CFLAGS: \"${CLPLIB_CFLAGS}\"" >&6;}
+      fi ;  if test 1 = 1 ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiClpLib:" >&5
+$as_echo "$as_me: FINALIZE_FLAGS for OsiClpLib:" >&6;}
+      fi
+      OSICLPLIB_LFLAGS_NOPC=$OSICLPLIB_LFLAGS
+
+      OSICLPLIB_CFLAGS_NOPC=$OSICLPLIB_CFLAGS
+
+      if test -n "${OSICLPLIB_PCFILES}" ; then
+        temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${OSICLPLIB_PCFILES}`
+        temp_LFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${OSICLPLIB_PCFILES}`
+        OSICLPLIB_CFLAGS="$temp_CFLAGS ${OSICLPLIB_CFLAGS}"
+        OSICLPLIB_LFLAGS="$temp_LFLAGS ${OSICLPLIB_LFLAGS}"
+      fi
 
 # Change the test to enable / disable debugging output
 
-     if test 1 = 1 ; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiClpLib: adding \"${OSICLPLIB_PCFILES}\"" >&5
-$as_echo "$as_me: FINALIZE_FLAGS for OsiClpLib: adding \"${OSICLPLIB_PCFILES}\"" >&6;}
-       { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_LIBS is \"${OSICLPLIB_LIBS}\"" >&5
-$as_echo "$as_me: OSICLPLIB_LIBS is \"${OSICLPLIB_LIBS}\"" >&6;}
-       { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_CFLAGS is \"${OSICLPLIB_CFLAGS}\"" >&5
-$as_echo "$as_me: OSICLPLIB_CFLAGS is \"${OSICLPLIB_CFLAGS}\"" >&6;}
-     fi ; if test -n "${OSICLPUNITTEST_PCFILES}" ; then
-       temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${OSICLPUNITTEST_PCFILES}`
-       temp_LIBS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${OSICLPUNITTEST_PCFILES}`
-       OSICLPUNITTEST_CFLAGS="$temp_CFLAGS ${OSICLPUNITTEST_CFLAGS}"
-       OSICLPUNITTEST_LIBS="$temp_LIBS ${OSICLPUNITTEST_LIBS}"
-     fi
+      if test 1 = 1 ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_LFLAGS_NOPC: \"${OSICLPLIB_LFLAGS_NOPC}\"" >&5
+$as_echo "$as_me: OSICLPLIB_LFLAGS_NOPC: \"${OSICLPLIB_LFLAGS_NOPC}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_CFLAGS_NOPC: \"${OSICLPLIB_CFLAGS_NOPC}\"" >&5
+$as_echo "$as_me: OSICLPLIB_CFLAGS_NOPC: \"${OSICLPLIB_CFLAGS_NOPC}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: adding \"${OSICLPLIB_PCFILES}\"" >&5
+$as_echo "$as_me: adding \"${OSICLPLIB_PCFILES}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_LFLAGS: \"${OSICLPLIB_LFLAGS}\"" >&5
+$as_echo "$as_me: OSICLPLIB_LFLAGS: \"${OSICLPLIB_LFLAGS}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&5
+$as_echo "$as_me: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&6;}
+      fi ;  if test 1 = 1 ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiClpUnitTest:" >&5
+$as_echo "$as_me: FINALIZE_FLAGS for OsiClpUnitTest:" >&6;}
+      fi
+      OSICLPUNITTEST_LFLAGS_NOPC=$OSICLPUNITTEST_LFLAGS
+
+      OSICLPUNITTEST_CFLAGS_NOPC=$OSICLPUNITTEST_CFLAGS
+
+      if test -n "${OSICLPUNITTEST_PCFILES}" ; then
+        temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${OSICLPUNITTEST_PCFILES}`
+        temp_LFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${OSICLPUNITTEST_PCFILES}`
+        OSICLPUNITTEST_CFLAGS="$temp_CFLAGS ${OSICLPUNITTEST_CFLAGS}"
+        OSICLPUNITTEST_LFLAGS="$temp_LFLAGS ${OSICLPUNITTEST_LFLAGS}"
+      fi
 
 # Change the test to enable / disable debugging output
 
-     if test 1 = 1 ; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiClpUnitTest: adding \"${OSICLPUNITTEST_PCFILES}\"" >&5
-$as_echo "$as_me: FINALIZE_FLAGS for OsiClpUnitTest: adding \"${OSICLPUNITTEST_PCFILES}\"" >&6;}
-       { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPUNITTEST_LIBS is \"${OSICLPUNITTEST_LIBS}\"" >&5
-$as_echo "$as_me: OSICLPUNITTEST_LIBS is \"${OSICLPUNITTEST_LIBS}\"" >&6;}
-       { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPUNITTEST_CFLAGS is \"${OSICLPUNITTEST_CFLAGS}\"" >&5
-$as_echo "$as_me: OSICLPUNITTEST_CFLAGS is \"${OSICLPUNITTEST_CFLAGS}\"" >&6;}
-     fi ;
+      if test 1 = 1 ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPUNITTEST_LFLAGS_NOPC: \"${OSICLPUNITTEST_LFLAGS_NOPC}\"" >&5
+$as_echo "$as_me: OSICLPUNITTEST_LFLAGS_NOPC: \"${OSICLPUNITTEST_LFLAGS_NOPC}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPUNITTEST_CFLAGS_NOPC: \"${OSICLPUNITTEST_CFLAGS_NOPC}\"" >&5
+$as_echo "$as_me: OSICLPUNITTEST_CFLAGS_NOPC: \"${OSICLPUNITTEST_CFLAGS_NOPC}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: adding \"${OSICLPUNITTEST_PCFILES}\"" >&5
+$as_echo "$as_me: adding \"${OSICLPUNITTEST_PCFILES}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPUNITTEST_LFLAGS: \"${OSICLPUNITTEST_LFLAGS}\"" >&5
+$as_echo "$as_me: OSICLPUNITTEST_LFLAGS: \"${OSICLPUNITTEST_LFLAGS}\"" >&6;}
+        { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPUNITTEST_CFLAGS: \"${OSICLPUNITTEST_CFLAGS}\"" >&5
+$as_echo "$as_me: OSICLPUNITTEST_CFLAGS: \"${OSICLPUNITTEST_CFLAGS}\"" >&6;}
+      fi ;
+
+
+
+# Make sure the necessary variables exist for each client package.
+
+
+
+
+
+# Add the .pc file and augment LFLAGS and CFLAGS.
+
+    OSICLPLIB_PCFILES="$OSICLPLIB_PCFILES clp"
+       OSICLPLIB_LFLAGS="$OSICLPLIB_LFLAGS $CLPLIB_LFLAGS"
+       OSICLPLIB_CFLAGS="$OSICLPLIB_CFLAGS $CLPLIB_CFLAGS"
+
+# Change the test to enable / disable debugging output
+
+       if test 1 = 1 ; then
+	 { $as_echo "$as_me:${as_lineno-$LINENO}: CHK_HERE adding ClpLib to OsiClpLib:" >&5
+$as_echo "$as_me: CHK_HERE adding ClpLib to OsiClpLib:" >&6;}
+	 { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_PCFILES: \"${OSICLPLIB_PCFILES}\"" >&5
+$as_echo "$as_me: OSICLPLIB_PCFILES: \"${OSICLPLIB_PCFILES}\"" >&6;}
+	 { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_LFLAGS: \"${OSICLPLIB_LFLAGS}\"" >&5
+$as_echo "$as_me: OSICLPLIB_LFLAGS: \"${OSICLPLIB_LFLAGS}\"" >&6;}
+	 { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&5
+$as_echo "$as_me: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&6;}
+       fi ;
+
 
 
 # Here list all the files that configure should create (except for the
@@ -24437,25 +24382,6 @@ ac_config_files="$ac_config_files Makefile examples/Makefile src/Makefile src/Os
 
 
 if test $coin_has_osi = yes ; then
-
-  if test -n "${OSICLPLIB_PCFILES}" ; then
-       temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${OSICLPLIB_PCFILES}`
-       temp_LIBS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${OSICLPLIB_PCFILES}`
-       OSICLPLIB_CFLAGS="$temp_CFLAGS ${OSICLPLIB_CFLAGS}"
-       OSICLPLIB_LIBS="$temp_LIBS ${OSICLPLIB_LIBS}"
-     fi
-
-# Change the test to enable / disable debugging output
-
-     if test 1 = 1 ; then
-       { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiClpLib: adding \"${OSICLPLIB_PCFILES}\"" >&5
-$as_echo "$as_me: FINALIZE_FLAGS for OsiClpLib: adding \"${OSICLPLIB_PCFILES}\"" >&6;}
-       { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_LIBS is \"${OSICLPLIB_LIBS}\"" >&5
-$as_echo "$as_me: OSICLPLIB_LIBS is \"${OSICLPLIB_LIBS}\"" >&6;}
-       { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_CFLAGS is \"${OSICLPLIB_CFLAGS}\"" >&5
-$as_echo "$as_me: OSICLPLIB_CFLAGS is \"${OSICLPLIB_CFLAGS}\"" >&6;}
-     fi ;
-
   ac_config_files="$ac_config_files osi-clp.pc:src/OsiClp/osi-clp.pc.in"
 
 fi
@@ -24614,6 +24540,10 @@ if test -z "${am__fastdepCXX_TRUE}" && test -z "${am__fastdepCXX_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCXX\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
+if test -z "${DEPENDENCY_LINKING_TRUE}" && test -z "${DEPENDENCY_LINKING_FALSE}"; then
+  as_fn_error $? "conditional \"DEPENDENCY_LINKING\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
 if test -z "${COIN_HAS_PKGCONFIG_TRUE}" && test -z "${COIN_HAS_PKGCONFIG_FALSE}"; then
   as_fn_error $? "conditional \"COIN_HAS_PKGCONFIG\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
@@ -24692,10 +24622,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COIN_HAS_LATEX_TRUE}" && test -z "${COIN_HAS_LATEX_FALSE}"; then
   as_fn_error $? "conditional \"COIN_HAS_LATEX\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${DEPENDENCY_LINKING_TRUE}" && test -z "${DEPENDENCY_LINKING_FALSE}"; then
-  as_fn_error $? "conditional \"DEPENDENCY_LINKING\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COIN_CXX_IS_CL_TRUE}" && test -z "${COIN_CXX_IS_CL_FALSE}"; then
@@ -25295,10 +25221,10 @@ AMDEP_TRUE="$AMDEP_TRUE" ac_aux_dir="$ac_aux_dir"
 sed_quote_subst='$sed_quote_subst'
 double_quote_subst='$double_quote_subst'
 delay_variable_subst='$delay_variable_subst'
-enable_shared='`$ECHO "$enable_shared" | $SED "$delay_single_quote_subst"`'
-enable_static='`$ECHO "$enable_static" | $SED "$delay_single_quote_subst"`'
 macro_version='`$ECHO "$macro_version" | $SED "$delay_single_quote_subst"`'
 macro_revision='`$ECHO "$macro_revision" | $SED "$delay_single_quote_subst"`'
+enable_shared='`$ECHO "$enable_shared" | $SED "$delay_single_quote_subst"`'
+enable_static='`$ECHO "$enable_static" | $SED "$delay_single_quote_subst"`'
 pic_mode='`$ECHO "$pic_mode" | $SED "$delay_single_quote_subst"`'
 enable_fast_install='`$ECHO "$enable_fast_install" | $SED "$delay_single_quote_subst"`'
 shared_archive_member_spec='`$ECHO "$shared_archive_member_spec" | $SED "$delay_single_quote_subst"`'
@@ -26515,15 +26441,15 @@ available_tags='CXX F77 '
 
 # ### BEGIN LIBTOOL CONFIG
 
+# Which release of libtool.m4 was used?
+macro_version=$macro_version
+macro_revision=$macro_revision
+
 # Whether or not to build shared libraries.
 build_libtool_libs=$enable_shared
 
 # Whether or not to build static libraries.
 build_old_libs=$enable_static
-
-# Which release of libtool.m4 was used?
-macro_version=$macro_version
-macro_revision=$macro_revision
 
 # What type of objects to build.
 pic_mode=$pic_mode

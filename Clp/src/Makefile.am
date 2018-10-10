@@ -156,8 +156,8 @@ endif
 
 # List all additionally required libraries
 if DEPENDENCY_LINKING
-libClp_la_LIBADD = $(CLPLIB_LIBS)
-libClpSolver_la_LIBADD = $(CLPLIB_LIBS) libClp.la
+libClp_la_LIBADD = $(CLPLIB_LFLAGS)
+libClpSolver_la_LIBADD = libClp.la
 endif
 
 # This is for libtool
@@ -176,7 +176,7 @@ bin_PROGRAMS = clp
 clp_SOURCES = ClpMain.cpp 
 
 # List all additionally required libraries
-clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
+clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 
 ########################################################################
 #                            Additional flags                          #

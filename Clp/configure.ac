@@ -77,8 +77,8 @@ if test $coin_has_coinutils != yes ; then
 fi
 AC_COIN_CHK_PKG(Osi,[OsiClpLib])
 AC_COIN_CHK_PKG(OsiTests,[OsiClpUnitTest],[osi-unittests])
-AC_COIN_CHK_PKG(Sample,,[coindatasample],[],[],dataonly)
-AC_COIN_CHK_PKG(Netlib,,[coindatanetlib],[],[],dataonly)
+AC_COIN_CHK_PKG(Sample,,[coindatasample],[],dataonly)
+AC_COIN_CHK_PKG(Netlib,,[coindatanetlib],[],dataonly)
 
 #############################################################################
 #                                    Aboca                                  #
@@ -147,7 +147,7 @@ AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" = yes])
 
 AC_COIN_CHK_PKG(ASL,[ClpLib],[coinasl])
 
-AC_COIN_CHECK_GNU_READLINE([ClpLib])
+AC_COIN_CHK_GNU_READLINE([ClpLib])
 
 ##############################################################################
 #                   VPATH links for example input files                      #
@@ -171,11 +171,11 @@ AC_COIN_DOXYGEN([CoinUtils Osi])
 
 # Temporary hacks to shut down these two. This needs to be fixed.
 
-AM_CONDITIONAL(DEPENDENCY_LINKING,[test 0 = 1])
 AM_CONDITIONAL(COIN_CXX_IS_CL,[test 0 = 1])
 
 # Finalize libs and cflags.
 AC_COIN_FINALIZE_FLAGS([ClpLib OsiClpLib OsiClpUnitTest])
+AC_COIN_CHK_HERE([ClpLib],[OsiClpLib],[clp])
 
 # Here list all the files that configure should create (except for the
 # configuration header file)
@@ -187,7 +187,6 @@ AC_CONFIG_FILES([Makefile
                  clp.pc])
 
 if test $coin_has_osi = yes ; then
-  AC_COIN_FINALIZE_FLAGS(OsiClpLib)
   AC_CONFIG_FILES([osi-clp.pc:src/OsiClp/osi-clp.pc.in])
 fi
 
