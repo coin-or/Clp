@@ -71,6 +71,10 @@ AC_COIN_CHECK_MATH_HDRS
 #                              COIN-OR components                           #
 #############################################################################
 
+# Initialise variables for ClpLib
+
+AC_COIN_INIT_LIBVARS([ClpLib],[-L\${libdir} -lClp],[-I\${includedir}])
+
 AC_COIN_CHK_PKG(CoinUtils,[ClpLib])
 if test $coin_has_coinutils != yes ; then
   AC_MSG_ERROR([Required package CoinUtils not available.])

@@ -708,6 +708,10 @@ COIN_HAS_PKGCONFIG_FALSE
 COIN_HAS_PKGCONFIG_TRUE
 ac_ct_PKG_CONFIG
 PKG_CONFIG
+CLPLIB_DATA_PUB
+CLPLIB_PCFILES_PUB
+CLPLIB_CFLAGS_PUB
+CLPLIB_LFLAGS_PUB
 DEPENDENCY_LINKING_FALSE
 DEPENDENCY_LINKING_TRUE
 LT_LDFLAGS
@@ -20617,6 +20621,19 @@ done
 #                              COIN-OR components                           #
 #############################################################################
 
+# Initialise variables for ClpLib
+
+
+  CLPLIB_LFLAGS_PUB="-L\${libdir} -lClp"
+
+  CLPLIB_CFLAGS_PUB="-I\${includedir}"
+
+  CLPLIB_PCFILES_PUB=""
+
+  CLPLIB_DATA_PUB=\${datarootdir}/$PACKAGE_TARNAME
+
+
+
 
 
 
@@ -24204,7 +24221,7 @@ fi
 
 fi
 
-# Generate a tag file name and a log file name
+# Generate a tag file name and a log file name.
 
 lc_pkg=`echo ${PACKAGE_NAME} | tr [A-Z] [a-z]`
 coin_doxy_tagname=${lc_pkg}_doxy.tag
@@ -24228,9 +24245,10 @@ else
 fi
 
 
-# Process the list of project names and massage each one into the name of a
-# tag file. Further substitution for @doxydocdir@ will happen during make
-# install.
+# Process the list of project names and massage each one into the name of
+# a tag file. The value of coin_doxy_tagfiles is substituted for TAGFILES
+# in doxygen.conf.in. Further substitution for @baredocdir_nosub@ will happen
+# as an edit during make install. See comments in Makemain.inc.
 
 coin_doxy_tagfiles=
 tmp="CoinUtils Osi"
