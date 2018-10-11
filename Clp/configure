@@ -708,6 +708,10 @@ COIN_HAS_PKGCONFIG_FALSE
 COIN_HAS_PKGCONFIG_TRUE
 ac_ct_PKG_CONFIG
 PKG_CONFIG
+OSICLPLIB_DATA_PUB
+OSICLPLIB_PCFILES_PUB
+OSICLPLIB_CFLAGS_PUB
+OSICLPLIB_LFLAGS_PUB
 CLPLIB_DATA_PUB
 CLPLIB_PCFILES_PUB
 CLPLIB_CFLAGS_PUB
@@ -20621,7 +20625,7 @@ done
 #                              COIN-OR components                           #
 #############################################################################
 
-# Initialise variables for ClpLib
+# Initialise variables for ClpLib and OsiClpLib
 
 
   CLPLIB_LFLAGS_PUB="-L\${libdir} -lClp"
@@ -20631,6 +20635,16 @@ done
   CLPLIB_PCFILES_PUB=""
 
   CLPLIB_DATA_PUB=\${datarootdir}/$PACKAGE_TARNAME
+
+
+
+  OSICLPLIB_LFLAGS_PUB="-L\${libdir} -lOsiClp"
+
+  OSICLPLIB_CFLAGS_PUB="-I\${includedir}"
+
+  OSICLPLIB_PCFILES_PUB=""
+
+  OSICLPLIB_DATA_PUB=\${datarootdir}/$PACKAGE_TARNAME
 
 
 
