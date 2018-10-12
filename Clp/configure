@@ -20841,6 +20841,7 @@ $as_echo_n "checking for package CoinUtils... " >&6; }
 
 
 
+
 # Check to see if the user has set an override to skip this primary.
 
   coin_has_coinutils=noInfo
@@ -21080,6 +21081,7 @@ $as_echo "#define COIN_HAS_COINUTILS 1" >>confdefs.h
        CLPLIB_LFLAGS="$coinutils_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$coinutils_cflags $CLPLIB_CFLAGS"
 
+
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
 
@@ -21095,6 +21097,7 @@ fi
 $as_echo_n "checking for package Osi... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
+
 
 
 
@@ -21339,6 +21342,7 @@ $as_echo "#define COIN_HAS_OSI 1" >>confdefs.h
        OSICLPLIB_LFLAGS="$osi_lflags $OSICLPLIB_LFLAGS"
        OSICLPLIB_CFLAGS="$osi_cflags $OSICLPLIB_CFLAGS"
 
+
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
 
@@ -21351,6 +21355,7 @@ $as_echo "#define COIN_HAS_OSI 1" >>confdefs.h
 $as_echo_n "checking for package OsiTests... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
+
 
 
 
@@ -21590,6 +21595,7 @@ $as_echo "#define COIN_HAS_OSITESTS 1" >>confdefs.h
     OSICLPUNITTEST_PCFILES="$ositests_pcfiles $OSICLPUNITTEST_PCFILES"
        OSICLPUNITTEST_LFLAGS="$ositests_lflags $OSICLPUNITTEST_LFLAGS"
        OSICLPUNITTEST_CFLAGS="$ositests_cflags $OSICLPUNITTEST_CFLAGS"
+
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -22118,6 +22124,7 @@ $as_echo_n "checking for package AMD... " >&6; }
 
 
 
+
 # Check to see if the user has overridden configure parameters from the
 # environment.
 
@@ -22328,6 +22335,7 @@ $as_echo "#define COIN_HAS_AMD 1" >>confdefs.h
     CLPLIB_LFLAGS="$amd_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$amd_cflags $CLPLIB_CFLAGS"
 
+
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
 
@@ -22342,6 +22350,7 @@ $as_echo "#define COIN_HAS_AMD 1" >>confdefs.h
 $as_echo_n "checking for package CHOLMOD... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
+
 
 
 
@@ -22556,6 +22565,7 @@ $as_echo "#define COIN_HAS_CHOLMOD 1" >>confdefs.h
     CLPLIB_LFLAGS="$cholmod_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$cholmod_cflags $CLPLIB_CFLAGS"
 
+
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
 
@@ -22572,6 +22582,7 @@ if test $coin_has_cholmod = no -a $coin_has_amd = no ; then
 $as_echo_n "checking for package Glpk... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
+
 
 
 
@@ -22812,6 +22823,7 @@ $as_echo "#define COIN_HAS_GLPK 1" >>confdefs.h
        CLPLIB_LFLAGS="$glpk_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$glpk_cflags $CLPLIB_CFLAGS"
 
+
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
 
@@ -22844,6 +22856,7 @@ fi
 $as_echo_n "checking for package Mumps... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
+
 
 
 
@@ -23084,6 +23097,7 @@ $as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
        CLPLIB_LFLAGS="$mumps_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$mumps_cflags $CLPLIB_CFLAGS"
 
+
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
 
@@ -23097,6 +23111,7 @@ $as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
 $as_echo_n "checking for package WSMP... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
+
 
 
 
@@ -23316,6 +23331,7 @@ $as_echo "#define COIN_HAS_WSMP 1" >>confdefs.h
 
     CLPLIB_LFLAGS="$wsmp_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$wsmp_cflags $CLPLIB_CFLAGS"
+
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
@@ -23588,6 +23604,7 @@ $as_echo_n "checking for package ASL... " >&6; }
 
 
 
+
 # Check to see if the user has set an override to skip this primary.
 
   coin_has_asl=noInfo
@@ -23823,6 +23840,7 @@ $as_echo "#define COIN_HAS_ASL 1" >>confdefs.h
        CLPLIB_LFLAGS="$asl_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$asl_cflags $CLPLIB_CFLAGS"
 
+
 # Finally, set up PRIM_DATA, unless the user specified nodata.
 
 
@@ -23979,6 +23997,7 @@ fi
     fi
     if test $coin_has_readline = yes ; then
       CLPLIB_LFLAGS="-lreadline $CLPLIB_LFLAGS"
+
 
 $as_echo "#define COIN_HAS_READLINE 1" >>confdefs.h
 
@@ -24321,7 +24340,8 @@ $as_echo "$as_me: adding \"${CLPLIB_PCFILES}\"" >&6;}
 $as_echo "$as_me: CLPLIB_LFLAGS: \"${CLPLIB_LFLAGS}\"" >&6;}
         { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_CFLAGS: \"${CLPLIB_CFLAGS}\"" >&5
 $as_echo "$as_me: CLPLIB_CFLAGS: \"${CLPLIB_CFLAGS}\"" >&6;}
-      fi ;  if test 1 = 1 ; then
+      fi
+     if test 1 = 1 ; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiClpLib:" >&5
 $as_echo "$as_me: FINALIZE_FLAGS for OsiClpLib:" >&6;}
       fi
@@ -24349,7 +24369,8 @@ $as_echo "$as_me: adding \"${OSICLPLIB_PCFILES}\"" >&6;}
 $as_echo "$as_me: OSICLPLIB_LFLAGS: \"${OSICLPLIB_LFLAGS}\"" >&6;}
         { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&5
 $as_echo "$as_me: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&6;}
-      fi ;  if test 1 = 1 ; then
+      fi
+     if test 1 = 1 ; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiClpUnitTest:" >&5
 $as_echo "$as_me: FINALIZE_FLAGS for OsiClpUnitTest:" >&6;}
       fi
@@ -24377,11 +24398,13 @@ $as_echo "$as_me: adding \"${OSICLPUNITTEST_PCFILES}\"" >&6;}
 $as_echo "$as_me: OSICLPUNITTEST_LFLAGS: \"${OSICLPUNITTEST_LFLAGS}\"" >&6;}
         { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPUNITTEST_CFLAGS: \"${OSICLPUNITTEST_CFLAGS}\"" >&5
 $as_echo "$as_me: OSICLPUNITTEST_CFLAGS: \"${OSICLPUNITTEST_CFLAGS}\"" >&6;}
-      fi ;
+      fi
+
 
 
 
 # Make sure the necessary variables exist for each client package.
+
 
 
 
@@ -24404,7 +24427,8 @@ $as_echo "$as_me: OSICLPLIB_PCFILES: \"${OSICLPLIB_PCFILES}\"" >&6;}
 $as_echo "$as_me: OSICLPLIB_LFLAGS: \"${OSICLPLIB_LFLAGS}\"" >&6;}
 	 { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&5
 $as_echo "$as_me: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&6;}
-       fi ;
+       fi
+
 
 
 
