@@ -2725,7 +2725,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 # List one file in the package so that the configure script can test
-# whether the package is actually there
+# whether the package is actually there.
 
 
 
