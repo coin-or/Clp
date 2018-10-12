@@ -2058,7 +2058,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
                               nPasses = CoinMax(nPasses, 100);
                               info.setStartingWeight(1.0e-1);
                               info.setReduceIterations(6);
-                              if (!largestGap)
+                              if (!largestGap && nPasses <= 50)
                                    nPasses *= 2;
                               //info.setFeasibilityTolerance(1.0e-7);
                          }
@@ -3804,6 +3804,8 @@ ClpSimplex::initialSolve(ClpSolve & options)
           if (finalStatus != 3 && rcode < 0 && (finalStatus || oldStatus == -1)) {
 	       double sumPrimal=sumPrimalInfeasibilities_;
 	       double sumDual=sumDualInfeasibilities_;
+	       if (sumDual>1.0e-6&&sumPrimal>1.0e-6)
+		 moreSpecialOptions_ &= ~2; // be safe and do final solve
 	       // ignore some parts of solution
 	       if (finalStatus == 1) {
 		 // infeasible
@@ -3837,7 +3839,12 @@ ClpSimplex::initialSolve(ClpSolve & options)
 			}
 #ifndef ABC_INHERIT
 			// use method thought suitable
-			if (sumDual>1000.0*sumPrimal) {
+			int numberSuperBasic=0;
+			for (int i=0;i<numberColumns_;i++) {
+			  if (getColumnStatus(i)==superBasic)
+			    numberSuperBasic++;
+			}
+			if (sumDual>1000.0*sumPrimal || numberSuperBasic) {
 			  primal(1);
 			} else if (sumPrimal>1000.0*sumDual) {
 			  dual();

@@ -46,6 +46,7 @@ Clp/examples/decomp3.cpp -text
 Clp/examples/driver3.cpp -text
 Clp/examples/g.tiny -text
 Clp/examples/gparm.tiny -text
+Clp/examples/iis.cpp -text
 Clp/examples/modify.cpp -text
 Clp/examples/myPdco.cpp -text
 Clp/examples/myPdco.hpp -text

@@ -717,7 +717,7 @@ ClpSimplex::gutsOfSolution ( double * givenDuals,
           }
      }
 #if CAN_HAVE_ZERO_OBJ>1
-     if ((specialOptions_&2097152)==0) {
+     if ((specialOptions_&16777216)==0) {
 #endif
      computeDuals(givenDuals);
      if ((moreSpecialOptions_ & 128) != 0 && !numberIterations_) {
@@ -3112,6 +3112,11 @@ ClpSimplex::checkBothSolutions()
      int seqInf[10];
 #endif
      for (iSequence = 0; iSequence < numberTotal; iSequence++) {
+       //#define LIKELY_SUPERBASIC
+#ifdef LIKELY_SUPERBASIC
+       if (getStatus(iSequence) == isFree || getStatus(iSequence) == superBasic)
+	 moreSpecialOptions_ &= ~8;  // Say superbasic variables exist
+#endif
           double value = solution_[iSequence];
 #ifdef COIN_DEBUG
           if (fabs(value) > 1.0e20)
@@ -3123,6 +3128,10 @@ ClpSimplex::checkBothSolutions()
           double distanceDown = value - lower_[iSequence];
           if (distanceUp < -primalTolerance) {
                double infeasibility = -distanceUp;
+#ifndef LIKELY_SUPERBASIC
+               if (getStatus(iSequence) != basic)
+		 moreSpecialOptions_ &= ~8;  // Say superbasic variables exist
+#endif
                sumPrimalInfeasibilities_ += infeasibility - primalTolerance_;
                if (infeasibility > relaxedToleranceP)
                     sumOfRelaxedPrimalInfeasibilities_ += infeasibility - relaxedToleranceP;
@@ -3134,6 +3143,10 @@ ClpSimplex::checkBothSolutions()
                numberPrimalInfeasibilities_ ++;
           } else if (distanceDown < -primalTolerance) {
                double infeasibility = -distanceDown;
+#ifndef LIKELY_SUPERBASIC
+               if (getStatus(iSequence) != basic)
+		 moreSpecialOptions_ &= ~8;  // Say superbasic variables exist
+#endif
                sumPrimalInfeasibilities_ += infeasibility - primalTolerance_;
                if (infeasibility > relaxedToleranceP)
                     sumOfRelaxedPrimalInfeasibilities_ += infeasibility - relaxedToleranceP;
@@ -4174,66 +4187,34 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
      }
 
      if (what == 63) {
-          if (newArrays) {
-               // get some arrays
-               int iRow, iColumn;
-               // these are "indexed" arrays so we always know where nonzeros are
-               /**********************************************************
+          // Safer to get new arrays anyway so test on newArrays removed
+          // get some arrays
+          int iRow, iColumn;
+	  // these are "indexed" arrays so we always know where nonzeros are
+	  /**********************************************************
                rowArray_[3] is long enough for rows+columns (2 also maybe)
                rowArray_[1] is long enough for max(rows,columns)
-               *********************************************************/
-               for (iRow = 0; iRow < 4; iRow++) {
-                    int length = numberRows2 + factorization_->maximumPivots();
-                    if (iRow > SHORT_REGION || objective_->type() > 1)
-                         length += numberColumns_;
-                    else if (iRow == 1)
-                         length = CoinMax(length, numberColumns_);
-                    if ((specialOptions_ & 65536) == 0 || !rowArray_[iRow]) {
-                         delete rowArray_[iRow];
-                         rowArray_[iRow] = new CoinIndexedVector();
-                    }
-                    rowArray_[iRow]->reserve(length);
-               }
-
-               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
-                    if ((specialOptions_ & 65536) == 0 || !columnArray_[iColumn]) {
-                         delete columnArray_[iColumn];
-                         columnArray_[iColumn] = new CoinIndexedVector();
-                    }
-		    columnArray_[iColumn]->reserve(numberColumns_+numberRows2);
-               }
-          } else {
-               int iRow, iColumn;
-               for (iRow = 0; iRow < 4; iRow++) {
-                    int length = numberRows2 + factorization_->maximumPivots();
-                    if (iRow > SHORT_REGION || objective_->type() > 1)
-                         length += numberColumns_;
-                    if(rowArray_[iRow]->capacity() >= length) {
-                         rowArray_[iRow]->clear();
-                    } else {
-                         // model size or maxinv changed
-                         rowArray_[iRow]->reserve(length);
-                    }
-#ifndef NDEBUG
-                    rowArray_[iRow]->checkClear();
-#endif
-               }
-
-               for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
-                    int length = numberColumns_;
-                    if (iColumn)
-                         length = CoinMax(numberRows2, numberColumns_);
-                    if(columnArray_[iColumn]->capacity() >= length) {
-                         columnArray_[iColumn]->clear();
-                    } else {
-                         // model size or maxinv changed
-                         columnArray_[iColumn]->reserve(length);
-                    }
-#ifndef NDEBUG
-                    columnArray_[iColumn]->checkClear();
-#endif
-               }
-          }
+	  *********************************************************/
+	  for (iRow = 0; iRow < 4; iRow++) {
+	    int length = numberRows2 + factorization_->maximumPivots();
+	    if (iRow > SHORT_REGION || objective_->type() > 1)
+	      length += numberColumns_;
+	    else if (iRow == 1)
+	      length = CoinMax(length, numberColumns_);
+	    if ((specialOptions_ & 65536) == 0 || !rowArray_[iRow]) {
+	      delete rowArray_[iRow];
+	      rowArray_[iRow] = new CoinIndexedVector();
+	    }
+	    rowArray_[iRow]->reserve(length);
+	  }
+	  
+	  for (iColumn = 0; iColumn < SHORT_REGION; iColumn++) {
+	    if ((specialOptions_ & 65536) == 0 || !columnArray_[iColumn]) {
+	      delete columnArray_[iColumn];
+	      columnArray_[iColumn] = new CoinIndexedVector();
+	    }
+	    columnArray_[iColumn]->reserve(numberColumns_+numberRows2);
+	  }
      }
      if (problemStatus_ == 10) {
           problemStatus_ = -1;
@@ -5403,7 +5384,7 @@ ClpSimplex::tightenPrimalBounds(double factor, int doTight, bool tightIntegers)
                }
           }
           for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
-               if (saveUpper[iColumn] > saveLower[iColumn] + useTolerance) {
+               if (saveUpper[iColumn] > saveLower[iColumn] + tolerance) {
                     // Make large bounds stay infinite
                     if (saveUpper[iColumn] > 1.0e30 && columnUpper_[iColumn] > 1.0e10) {
                          columnUpper_[iColumn] = COIN_DBL_MAX;
@@ -5584,6 +5565,24 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      ClpSimplex saveModel = *this;
 #endif
      int returnCode = static_cast<ClpSimplexDual *> (this)->dual(ifValuesPass, startFinishOptions);
+#ifdef DUAL_STATS
+     static int nDuals=0;
+     static int nFeasDuals=0;
+     static int nTens=0;
+     static int nOdd=0;
+     bool needClean=false;
+     nDuals++;
+     if (problemStatus_==0) {
+       nFeasDuals++;
+     } else if (problemStatus_==1) {
+     } else if (problemStatus_==10) {
+       nTens++;
+       needClean=true;
+     } else {
+       printf("dual odd status %d\n",problemStatus_);
+       nOdd++;
+     }
+#endif
      eventHandler_->event(ClpEventHandler::looksEndInDual);
 #ifdef EXPENSIVE
      if (problemStatus_ == 1) {
@@ -5646,7 +5645,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
                && sumDualInfeasibilities_ < 1000.0 * dualTolerance_ && perturbation_ >= 100)
           problemStatus_ = 0; // ignore
      if (problemStatus_==1&&((specialOptions_&(1024 | 4096)) == 0 || (specialOptions_ & 32) != 0)
-	 &&numberFake_) {
+	 &&(static_cast<ClpSimplexDual *>(this))->checkFakeBounds()) {
        problemStatus_ = 10; // clean up in primal as fake bounds
      }
      if ((moreSpecialOptions_&524288)!=0&&
@@ -5696,7 +5695,7 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
           moreSpecialOptions_ &= ~256;
           baseIteration_ = 0;
 	  bool inCbcOrOther = (specialOptions_ & 0x03000000) != 0;
-	  if (inCbcOrOther) {
+	  if (inCbcOrOther && (specialOptions_&32)==0) {
 	    delete [] ray_;
 	    ray_ = NULL;
 	  }
@@ -5789,6 +5788,99 @@ int ClpSimplex::dualDebug (int ifValuesPass , int startFinishOptions)
      onStopped(); // set secondary status if stopped
      //if (problemStatus_==1&&lastAlgorithm==1)
      //returnCode=10; // so will do primal after postsolve
+#ifdef DUAL_STATS
+     static int nFeasClean=0;
+     if (needClean) {
+       if (problemStatus_==0) {
+	 nFeasClean++;
+       } else if (problemStatus_==1) {
+       } else if (problemStatus_==10) {
+	 abort();
+       } else {
+	 printf("dual odd status %d on cleanup\n",problemStatus_);
+	 abort();
+       }
+     }
+     if ((nDuals%1000)==0)
+       printf("%d duals - %d feasible, %d infeasible and %d need cleaning (%d were feasible, %d infeasible) ( %d odd)\n",
+	      nDuals,nFeasDuals,nDuals-nFeasDuals-nTens-nOdd,nTens,
+	      nFeasClean,nTens-nFeasClean,nOdd);
+#endif
+#ifdef CHECK_RAY
+     if (problemStatus_==1&&ray_) {
+       double * lower = rowLower_;
+       double * upper = rowUpper_;
+       double * solution = rowActivity_;
+       double * dj = dual_;
+       assert(ray_);
+       double largestBad=0.0;
+       double largestBadDj=0.0;
+       for (int iRow = 0; iRow < numberRows_; iRow++) {
+	 if (upper[iRow]==lower[iRow])
+	   continue;
+	 if (solution[iRow]<lower[iRow]+primalTolerance_) {
+	   largestBadDj=CoinMax(largestBadDj,-dj[iRow]);
+	   largestBad=CoinMax(largestBad,ray_[iRow]);
+	 } else if (solution[iRow]>upper[iRow]-primalTolerance_) {
+	   largestBadDj=CoinMax(largestBadDj,dj[iRow]);
+	   largestBad=CoinMax(largestBad,-ray_[iRow]);
+	 }
+       }
+       double * result = new double[numberColumns_];
+       CoinFillN ( result, numberColumns_, 0.0);
+       this->matrix()->transposeTimes(ray_, result);
+       lower = columnLower_;
+       upper = columnUpper_;
+       solution = columnActivity_;
+       dj = reducedCost_;
+       for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
+	 // should have been ..Times -1.0
+	 result[iColumn]=-result[iColumn];
+	 if (upper[iColumn]==lower[iColumn])
+	   continue;
+	 if (solution[iColumn]<lower[iColumn]+primalTolerance_) {
+	   largestBadDj=CoinMax(largestBadDj,-dj[iColumn]);
+	   largestBad=CoinMax(largestBad,result[iColumn]);
+	 } else if (solution[iColumn]>upper[iColumn]-primalTolerance_) {
+	   largestBadDj=CoinMax(largestBadDj,dj[iColumn]);
+	   largestBad=CoinMax(largestBad,-result[iColumn]);
+	 }
+       }
+       if (largestBad>1.0e-5||largestBadDj>1.0e-5) {
+	 if (numberPrimalInfeasibilities_==1)
+	   printf("BAD ");
+	 printf("bad ray %g bad dj %g\n",largestBad,largestBadDj);
+       }
+       delete [] result;
+     }
+#endif
+     // massage infeasibilities
+     if (!problemStatus_) {
+       if (handler_->logLevel()==63) {
+	 if (numberPrimalInfeasibilities_||numberDualInfeasibilities_)
+	   printf("minor inaccuracy primal sum %g (%d) error %g, dual %g (%d) %g\n",
+		  sumPrimalInfeasibilities_,numberPrimalInfeasibilities_,
+		  largestPrimalError_,
+		  sumDualInfeasibilities_,numberDualInfeasibilities_,
+		  largestDualError_);
+       }
+       if (numberPrimalInfeasibilities_) {
+	 numberPrimalInfeasibilities_=0;
+	 sumPrimalInfeasibilities_=0.0;
+	 if (secondaryStatus_==0)
+	   secondaryStatus_=2;
+	 else if (secondaryStatus_==3)
+	   secondaryStatus_=4;
+       }
+       if (numberDualInfeasibilities_) {
+	 numberDualInfeasibilities_=0;
+	 sumDualInfeasibilities_=0.0;
+	 if (secondaryStatus_==0)
+	   secondaryStatus_=3;
+	 else if (secondaryStatus_==2)
+	   secondaryStatus_=4;
+       }
+     }
      return returnCode;
 }
 // primal
@@ -6045,6 +6137,33 @@ int ClpSimplex::primal (int ifValuesPass , int startFinishOptions)
      }
      //factorization_->pivotTolerance(savedPivotTolerance);
      onStopped(); // set secondary status if stopped
+     // massage infeasibilities
+     if (!problemStatus_) {
+       if (handler_->logLevel()==63) {
+	 if (numberPrimalInfeasibilities_||numberDualInfeasibilities_)
+	   printf("minor inaccuracy primal sum %g (%d) error %g, dual %g (%d) %g\n",
+		  sumPrimalInfeasibilities_,numberPrimalInfeasibilities_,
+		  largestPrimalError_,
+		  sumDualInfeasibilities_,numberDualInfeasibilities_,
+		  largestDualError_);
+       }
+       if (numberPrimalInfeasibilities_) {
+	 numberPrimalInfeasibilities_=0;
+	 sumPrimalInfeasibilities_=0.0;
+	 if (secondaryStatus_==0)
+	   secondaryStatus_=2;
+	 else if (secondaryStatus_==3)
+	   secondaryStatus_=4;
+       }
+       if (numberDualInfeasibilities_) {
+	 numberDualInfeasibilities_=0;
+	 sumDualInfeasibilities_=0.0;
+	 if (secondaryStatus_==0)
+	   secondaryStatus_=3;
+	 else if (secondaryStatus_==2)
+	   secondaryStatus_=4;
+       }
+     }
      //if (problemStatus_==1&&lastAlgorithm==1)
      //returnCode=10; // so will do primal after postsolve
      return returnCode;
@@ -9047,7 +9166,7 @@ ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
                }
           } else {
                // using previous factorization - we assume fine
-               if ((moreSpecialOptions_ & 8) == 0) {
+               if ((moreSpecialOptions_ & 16777216) == 0) {
                     // but we need to say not optimal
                     numberPrimalInfeasibilities_ = 1;
                     numberDualInfeasibilities_ = 1;
@@ -10895,7 +11014,7 @@ ClpSimplex::fathom(void * stuff)
      ClpNodeStuff * info = reinterpret_cast<ClpNodeStuff *> (stuff);
      info->nNodes_ = 0;
      // say can declare optimal
-     moreSpecialOptions_ |= 8;
+     moreSpecialOptions_ |= 16777216;
      int saveMaxIterations = maximumIterations();
      setMaximumIterations((((moreSpecialOptions_&2048)==0) ? 200 : 2000)
 			  + 2 * (numberRows_ + numberColumns_));
@@ -11605,7 +11724,7 @@ ClpSimplex::fathomMany(void * stuff)
      ClpNode ** nodeInfo = info->nodeInfo_;
      assert (nodeInfo);
      // say can declare optimal
-     moreSpecialOptions_ |= 8;
+     moreSpecialOptions_ |= 16777216;
      double limit = 0.0;
      getDblParam(ClpDualObjectiveLimit, limit);
      for (int j = 0; j < putNode; j++) {

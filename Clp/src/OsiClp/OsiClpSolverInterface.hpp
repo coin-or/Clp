@@ -486,7 +486,7 @@ public:
   { return integerInformation_ ? integerInformation_[colIndex] : 0;} 
   /// Set integer type (0,1,2=optional,3=sc,4=scint)
   inline void setIntegerType(int colIndex,int value) 
-  { integerInformation_[colIndex] = value;} 
+  { integerInformation_[colIndex] = static_cast<char>(value);} 
   /// Get pointer to row-wise copy of matrix
   virtual const CoinPackedMatrix * getMatrixByRow() const;
   
@@ -684,6 +684,8 @@ public:
   /// SOS set info
   inline const CoinSet * setInfo() const
   { return setInfo_;}
+  /// Replace setInfo (takes over ownership)
+  void replaceSetInfo(int numberSOS,CoinSet * setInfo);
   /** \brief Identify integer variables and SOS and create corresponding objects.
   
     Record integer variables and create an OsiSimpleInteger object for each
@@ -1265,6 +1267,12 @@ public:
   { largestAway_ = value;}
   /// Sort of lexicographic resolve
   void lexSolve();
+  /// Get continuous model
+  inline ClpSimplex * getContinuousModel() const
+  { return continuousModel_;}
+  /// Set continuous model
+  inline void setContinuousModel(ClpSimplex * model)
+  { continuousModel_ = model;}
   //@}
   
 protected:

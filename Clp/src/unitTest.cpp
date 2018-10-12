@@ -350,7 +350,7 @@ int mainTest (int argc, const char *argv[], int algorithm,
           dirNetlib = parms["-dirNetlib"];
      else
           dirNetlib = dirsep == '/' ? "../../Data/Netlib/" : "..\\..\\Data\\Netlib\\";
-#if 0 //FACTORIZATION_STATISTICS==0
+#if FACTORIZATION_STATISTICS==0
      if (!empty.numberRows()) {
           testingMessage( "Testing ClpSimplex\n" );
           ClpSimplexUnitTest(dirSample);
@@ -1549,6 +1549,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
                // make sure values pass has something to do
                for (int i = 0; i < numberRows; i++)
                     solution.setRowStatus(i, ClpSimplex::basic);
+	       solution.objective()[1]=-2.0;
                solution.primal(1);
                assert (solution.secondaryStatus() == 102); // Came out at end of pass
           } else {
@@ -2075,7 +2076,7 @@ ClpSimplexUnitTest(const std::string & dirSample)
                          solution.scaling();
                     // test infeasible and ray
                     solution.columnUpper()[0] = 0.0;
-#ifdef DUAL
+#if 1 //def DUAL
                     solution.setDualBound(100.0);
                     solution.dual();
 #else

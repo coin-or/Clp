@@ -570,8 +570,15 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
      //printf("XXXXY final cost %g\n",infeasibilityCost_);
      progress_.initialWeight_ = 0.0;
      if (problemStatus_ == 1 && secondaryStatus_ != 6) {
+          double saveWeight = infeasibilityCost_;
+#ifndef WANT_INFEASIBLE_DUALS
           infeasibilityCost_ = 0.0;
           createRim(1 + 4);
+#else
+          infeasibilityCost_ = 1.0;
+          createRim(1);
+	  memset(cost_,0,(numberRows_+numberColumns_)*sizeof(double));
+#endif
           delete nonLinearCost_;
           nonLinearCost_ = new ClpNonLinearCost(this);
           nonLinearCost_->checkInfeasibilities(0.0);
@@ -579,6 +586,7 @@ int ClpSimplexPrimal::primal (int ifValuesPass , int startFinishOptions)
           numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
           // and get good feasible duals
           computeDuals(NULL);
+          infeasibilityCost_=saveWeight;
      }
      // Stop can skip some things in transposeTimes
      specialOptions_ &= ~131072;
@@ -1404,12 +1412,26 @@ ClpSimplexPrimal::statusOfProblemInPrimal(int & lastCleaned, int type,
                     if (!goToDual) {
                          if (infeasibilityCost_ >= MAX_INFEASIBILITY_COST ||
                                    numberDualInfeasibilities_ == 0) {
-                              // we are infeasible - use as ray
-                              delete [] ray_;
-                              ray_ = new double [numberRows_];
-			      // swap sign
-			      for (int i=0;i<numberRows_;i++) 
-				ray_[i] = -dual_[i];
+			      // we are infeasible - use as ray
+			      delete [] ray_;
+			      //if ((specialOptions_&(32|0x01000000))!=0x01000000) {
+			      if ((specialOptions_&0x03000000)==0) {
+				ray_ = new double [numberRows_];
+				double * saveObjective = CoinCopyOfArray(objective(),
+									 numberColumns_);
+				memset(objective(),0,numberColumns_*sizeof(double));
+				infeasibilityCost_ = 1.0;
+				createRim(4);
+				nonLinearCost_->checkInfeasibilities(primalTolerance_);
+				gutsOfSolution(NULL, NULL, false);
+				memcpy(objective(),saveObjective,numberColumns_*sizeof(double));
+				delete [] saveObjective;
+				// swap sign
+				for (int i=0;i<numberRows_;i++) 
+				  ray_[i] = -dual_[i];
+			      } else {
+				ray_ = NULL;
+			      }
 #ifdef PRINT_RAY_METHOD
 			      printf("Primal creating infeasibility ray\n");
 #endif

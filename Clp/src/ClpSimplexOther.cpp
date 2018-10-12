@@ -58,9 +58,7 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int * which,
      columnArray_[1]->clear();
 #endif
      // long enough for rows+columns
-     assert(rowArray_[3]->capacity() >= numberRows_ + numberColumns_);
-     rowArray_[3]->clear();
-     int * backPivot = rowArray_[3]->getIndices();
+     int * backPivot = new int [numberRows_+numberColumns_];
      int i;
      for ( i = 0; i < numberRows_ + numberColumns_; i++) {
           backPivot[i] = -1;
@@ -256,7 +254,7 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int * which,
      //rowArray_[1]->clear();
      //columnArray_[1]->clear();
      columnArray_[0]->clear();
-     //rowArray_[3]->clear();
+     delete [] backPivot;
      if (!optimizationDirection_)
           printf("*** ????? Ranging with zero optimization costs\n");
 }
@@ -665,6 +663,9 @@ ClpSimplexOther::writeBasis(const char *filename,
 
      // NAME card
 
+     // Set locale so won't get , instead of .
+     char * saveLocale = strdup(setlocale(LC_ALL,NULL));
+     setlocale(LC_ALL,"C");
      if (strcmp(strParam_[ClpProbName].c_str(), "") == 0) {
           fprintf(fp, "NAME          BLANK      ");
      } else {
@@ -749,6 +750,8 @@ ClpSimplexOther::writeBasis(const char *filename,
      }
      fprintf(fp, "ENDATA\n");
      fclose(fp);
+     setlocale(LC_ALL,saveLocale);
+     free(saveLocale);
      return 0;
 }
 // Read a basis from the given filename
@@ -2640,11 +2643,11 @@ ClpSimplexOther::parametrics(const char * dataFile)
 	  columnNames[iColumn] =
 	    CoinStrdup(columnName(iColumn).c_str());
 	}
-	lowerColumnMove = reinterpret_cast<double *> (malloc(numberColumns_ * sizeof(double)));
+	lowerColumnMove = new double [numberColumns_];
 	memset(lowerColumnMove,0,numberColumns_*sizeof(double));
-	upperColumnMove = reinterpret_cast<double *> (malloc(numberColumns_ * sizeof(double)));
+	upperColumnMove = new double [numberColumns_];
 	memset(upperColumnMove,0,numberColumns_*sizeof(double));
-	objectiveMove = reinterpret_cast<double *> (malloc(numberColumns_ * sizeof(double)));
+	objectiveMove = new double [numberColumns_];
 	memset(objectiveMove,0,numberColumns_*sizeof(double));
 	int nLine = 0;
 	int nBadLine = 0;
@@ -3911,7 +3914,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                     //rowArray_[0]->cleanAndPackSafe(1.0e-60);
                     //columnArray_[0]->cleanAndPackSafe(1.0e-60);
 #if CLP_CAN_HAVE_ZERO_OBJ
-		    if ((specialOptions_&2097152)==0) {
+		    if ((specialOptions_&16777216)==0) {
 #endif
 		      nswapped = reinterpret_cast<ClpSimplexDual *> ( this)->updateDualsInDual(rowArray_[0], columnArray_[0],
 											       rowArray_[2], theta_,
@@ -4094,7 +4097,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
 		    }
                     // update primal solution
 #if CLP_CAN_HAVE_ZERO_OBJ
-		    if ((specialOptions_&2097152)!=0) 
+		    if ((specialOptions_&16777216)!=0) 
 		      theta_=0.0;
 #endif
                     if (theta_ < 0.0) {
@@ -4163,7 +4166,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                     }
 		    objectiveChange = 0.0;
 #if CLP_CAN_HAVE_ZERO_OBJ
-		    if ((specialOptions_&2097152)==0) {
+		    if ((specialOptions_&16777216)==0) {
 #endif
 		      for (int i=0;i<numberTotal;i++)
 			objectiveChange += solution_[i]*cost_[i];
@@ -4181,7 +4184,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                          dj_[sequenceOut_] = theta_;
 #if CLP_CAN_HAVE_ZERO_OBJ>1
 #ifdef COIN_REUSE_RANDOM
-			 if ((specialOptions_&2097152)!=0) {
+			 if ((specialOptions_&16777216)!=0) {
 			   dj_[sequenceOut_] = 1.0e-9*(1.0+CoinDrand48());;
 			 }
 #endif
@@ -4191,7 +4194,7 @@ ClpSimplexOther::whileIterating(parametricsData & paramData, double /*reportIncr
                          dj_[sequenceOut_] = -theta_;
 #if CLP_CAN_HAVE_ZERO_OBJ>1
 #ifdef COIN_REUSE_RANDOM
-			 if ((specialOptions_&2097152)!=0) {
+			 if ((specialOptions_&16777216)!=0) {
 			   dj_[sequenceOut_] = -1.0e-9*(1.0+CoinDrand48());;
 			 }
 #endif

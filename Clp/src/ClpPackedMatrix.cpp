@@ -4228,7 +4228,8 @@ ClpPackedMatrix::scale(ClpModel * model, ClpSimplex * simplex) const
           CoinBigIndex end = start + columnLength[iColumn];
 #ifndef LEAVE_FIXED
           if (columnUpper[iColumn] >
-                    columnLower[iColumn] + 1.0e-12) {
+	      columnLower[iColumn] + 1.0e-12||
+	      (simplex &&simplex->getColumnStatus(iColumn)==ClpSimplex::basic)) {
 #endif
                for (j = start; j < end; j++) {
                     iRow = row[j];
@@ -4605,8 +4606,8 @@ ClpPackedMatrix::scale(ClpModel * model, ClpSimplex * simplex) const
                               overallSmallest = value;
                          //overallSmallest = CoinMin(overallSmallest,smallest*columnScale[iColumn]);
                     } else {
-		      assert(columnScale[iColumn] == 1.0);
-                         //columnScale[iColumn]=1.0;
+		      //assert(columnScale[iColumn] == 1.0);
+		      columnScale[iColumn]=1.0;
                     }
                }
                for (iRow = 0; iRow < numberRows; iRow++) {
@@ -7546,7 +7547,7 @@ ClpPackedMatrix3::checkBlocks(const ClpSimplex * model)
     for (int i=0;i<block->firstAtLower_;i++) {
       int iSequence=column[i];
       assert (model->getColumnStatus(iSequence) == ClpSimplex::isFree ||
-	      model->getColumnStatus(iSequence) != ClpSimplex::superBasic);
+	      model->getColumnStatus(iSequence) == ClpSimplex::superBasic);
     }
     for (int i=block->firstAtLower_;i<block->firstAtUpper_;i++) {
       int iSequence=column[i];
