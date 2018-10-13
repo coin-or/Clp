@@ -24,6 +24,9 @@
 /* Define to 1 if ASL is available. */
 #undef COIN_HAS_ASL
 
+/* Define to 1 if BLAS is available. */
+#undef COIN_HAS_BLAS
+
 /* Define to 1 if the CHOLMOD package is available */
 #undef COIN_HAS_CHOLMOD
 

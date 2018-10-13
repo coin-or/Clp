@@ -95,15 +95,20 @@ AC_CLP_ABOCA(1)
 #                        Third party linear solvers                         #
 #############################################################################
 
-# AMD from UFL
-# [amd.h] [amd_defaults]
+# AMD and CHOLMOD from UFL. Glpk is an alternative source for amd. CHOLMOD
+# doc'n claims it requires METIS, but apparently that's not necessary for the
+# version distributed with Fedora.
 
-AC_COIN_CHK_LIB(AMD,[ClpLib],[-lamd],[-I/usr/include/suitesparse])
+# amd.h
+AC_COIN_CHK_LIB(AMD,[ClpLib],[-lamd],[-I/usr/include/suitesparse],[],
+                [amd_defaults])
 
-# CHOLMOD from UFL (requires AMD).
-# [cholmod.h] [cholmod_start]
+# CHOLMOD from UFL
+# Requires AMD, but apparently not for a link check with dynamic libraries.
+# cholmod.h
 
-AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse])
+AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],
+		[cholmod_start])
 
 # Glpk also brings AMD
 
@@ -126,7 +131,7 @@ AC_COIN_CHK_PKG(Mumps,[ClpLib],[coinmumps])
 AC_COIN_CHK_LIB(WSMP,[ClpLib],[],[],[],no)
 
 if test "$use_wsmp" = yes ; then
-  # AC_COIN_CHK_PKG_BLAS(ClpLib)
+  AC_COIN_CHK_BLAS(ClpLib)
   use_wsmp=
   AC_COIN_CHK_PKG_FLINK([use_wsmp],wssmp,[$wsmp_libs])
   if test -n "$use_wsmp" ; then
@@ -139,7 +144,7 @@ if test "$use_wsmp" = yes ; then
   fi
 else
   # to please configure
-  # AM_CONDITIONAL(COIN_HAS_BLAS, [test 0 = 1])
+  AM_CONDITIONAL(COIN_HAS_BLAS, [test 0 = 1])
   :
 fi
 AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" = yes])

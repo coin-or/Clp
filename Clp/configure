@@ -670,6 +670,8 @@ COIN_HAS_READLINE_FALSE
 COIN_HAS_READLINE_TRUE
 COIN_HAS_ASL_FALSE
 COIN_HAS_ASL_TRUE
+COIN_HAS_BLAS_FALSE
+COIN_HAS_BLAS_TRUE
 COIN_HAS_WSMP_FALSE
 COIN_HAS_WSMP_TRUE
 COIN_HAS_MUMPS_FALSE
@@ -895,6 +897,9 @@ with_mumps_cflags
 with_wsmp
 with_wsmp_lflags
 with_wsmp_cflags
+with_blas
+with_blas_lflags
+with_blas_cflags
 with_asl
 with_asl_lflags
 with_asl_cflags
@@ -1655,6 +1660,15 @@ Optional Packages:
   --with-wsmp-lflags      Linker flags for WSMP appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-wsmp-cflags      Compiler flags for WSMP appropriate for your
+                          environment. (Most often, -I specs for header file
+                          directories.)
+  --with-blas             Use blas. If an argument is given, 'yes' is
+                          equivalent to --with-blas, 'no' is
+                          equivalent to --without-blas. Any other argument is
+                          applied as for --with-blas-lflags
+  --with-blas-lflags      Linker flags for blas appropriate for your
+                          environment. (Most often, -l specs for libraries.)
+  --with-blas-cflags      Compiler flags for blas appropriate for your
                           environment. (Most often, -I specs for header file
                           directories.)
   --with-asl              Use ASL. If an argument is given, 'yes' is
@@ -22112,9 +22126,11 @@ fi
 #                        Third party linear solvers                         #
 #############################################################################
 
-# AMD from UFL
-# [amd.h] [amd_defaults]
+# AMD and CHOLMOD from UFL. Glpk is an alternative source for amd. CHOLMOD
+# doc'n claims it requires METIS, but apparently that's not necessary for the
+# version distributed with Fedora.
 
+# amd.h
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package AMD" >&5
 $as_echo_n "checking for package AMD... " >&6; }
@@ -22195,7 +22211,7 @@ fi
 	;;
       * )
 	coin_has_amd=yes
-	amd_libs=$withval
+	amd_lflags=$withval
 	;;
     esac
   fi
@@ -22213,7 +22229,7 @@ fi
 	     ;;
 	   * )
 	     coin_has_amd=yes
-	     amd_libs=$withval
+	     amd_lflags=$withval
 	     ;;
 	 esac
        fi
@@ -22279,9 +22295,49 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_amd\" in COIN_FIND_PRIM
       ;;
   esac
 
-# The final value of coin_has_prim will be yes or skipping.  Skipping means
-# the user said `don't use.' Yes means we have something, from the user or
-# macro parameters or invented. Note that we haven't run a useability test!
+# At this point, coin_has_prim is yes or skipping.  Time to run a link check,
+# if we have a function (amd_defaults). Use whatever we've collected for lflags, plus
+# other libraries () as the other libraries parameter to AC_SEARCH_LIBS,
+# leaving the library parameter blank.
+
+  if test $coin_has_amd != skipping ; then
+    ac_save_LIBS=$LIBS
+       LIBS="$amd_lflags "
+       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifdef __cplusplus
+	     extern "C"
+	   #endif
+	   void amd_defaults();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+amd_defaults()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+
+else
+  coin_has_amd=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+       LIBS=$ac_save_LIBS
+  fi
+
+# The final value of coin_has_prim will be yes, no, or skipping. No means that
+# the link check failed. Yes means that we passed the link check, or no link
+# check was performed. Skipping means the user said `don't use.'
 
 # Change the test to enable / disable debugging output
 
@@ -22308,7 +22364,7 @@ $as_echo "$coin_has_amd" >&6; }
 $as_echo "$coin_has_amd due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
-# Possibilities are `yes' or `skipping'. Normalise to `yes' or `no'.
+# Possibilities are `yes', `no', or `skipping'. Normalise to `yes' or `no'.
 
   if test "$coin_has_amd" != yes ; then
     coin_has_amd=no
@@ -22342,8 +22398,9 @@ $as_echo "#define COIN_HAS_AMD 1" >>confdefs.h
   fi
 
 
-# CHOLMOD from UFL (requires AMD).
-# [cholmod.h] [cholmod_start]
+# CHOLMOD from UFL
+# Requires AMD, but apparently not for a link check with dynamic libraries.
+# cholmod.h
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package CHOLMOD" >&5
@@ -22425,7 +22482,7 @@ fi
 	;;
       * )
 	coin_has_cholmod=yes
-	cholmod_libs=$withval
+	cholmod_lflags=$withval
 	;;
     esac
   fi
@@ -22443,7 +22500,7 @@ fi
 	     ;;
 	   * )
 	     coin_has_cholmod=yes
-	     cholmod_libs=$withval
+	     cholmod_lflags=$withval
 	     ;;
 	 esac
        fi
@@ -22509,9 +22566,49 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_cholmod\" in COIN_FIND_
       ;;
   esac
 
-# The final value of coin_has_prim will be yes or skipping.  Skipping means
-# the user said `don't use.' Yes means we have something, from the user or
-# macro parameters or invented. Note that we haven't run a useability test!
+# At this point, coin_has_prim is yes or skipping.  Time to run a link check,
+# if we have a function (cholmod_start). Use whatever we've collected for lflags, plus
+# other libraries () as the other libraries parameter to AC_SEARCH_LIBS,
+# leaving the library parameter blank.
+
+  if test $coin_has_cholmod != skipping ; then
+    ac_save_LIBS=$LIBS
+       LIBS="$cholmod_lflags "
+       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifdef __cplusplus
+	     extern "C"
+	   #endif
+	   void cholmod_start();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+cholmod_start()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+
+else
+  coin_has_cholmod=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+       LIBS=$ac_save_LIBS
+  fi
+
+# The final value of coin_has_prim will be yes, no, or skipping. No means that
+# the link check failed. Yes means that we passed the link check, or no link
+# check was performed. Skipping means the user said `don't use.'
 
 # Change the test to enable / disable debugging output
 
@@ -22538,7 +22635,7 @@ $as_echo "$coin_has_cholmod" >&6; }
 $as_echo "$coin_has_cholmod due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
-# Possibilities are `yes' or `skipping'. Normalise to `yes' or `no'.
+# Possibilities are `yes', `no', or `skipping'. Normalise to `yes' or `no'.
 
   if test "$coin_has_cholmod" != yes ; then
     coin_has_cholmod=no
@@ -23160,7 +23257,7 @@ fi
 
 
 
-  dflt_action=no
+  dflt_action=yes
 
 # Initialize variables for the primary library.
 
@@ -23186,7 +23283,7 @@ fi
 	;;
       * )
 	coin_has_wsmp=yes
-	wsmp_libs=$withval
+	wsmp_lflags=$withval
 	;;
     esac
   fi
@@ -23204,7 +23301,7 @@ fi
 	     ;;
 	   * )
 	     coin_has_wsmp=yes
-	     wsmp_libs=$withval
+	     wsmp_lflags=$withval
 	     ;;
 	 esac
        fi
@@ -23276,9 +23373,49 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_wsmp\" in COIN_FIND_PRI
       ;;
   esac
 
-# The final value of coin_has_prim will be yes or skipping.  Skipping means
-# the user said `don't use.' Yes means we have something, from the user or
-# macro parameters or invented. Note that we haven't run a useability test!
+# At this point, coin_has_prim is yes or skipping.  Time to run a link check,
+# if we have a function (no). Use whatever we've collected for lflags, plus
+# other libraries () as the other libraries parameter to AC_SEARCH_LIBS,
+# leaving the library parameter blank.
+
+  if test $coin_has_wsmp != skipping ; then
+    ac_save_LIBS=$LIBS
+       LIBS="$wsmp_lflags "
+       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifdef __cplusplus
+	     extern "C"
+	   #endif
+	   void no();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+no()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+
+else
+  coin_has_wsmp=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+       LIBS=$ac_save_LIBS
+  fi
+
+# The final value of coin_has_prim will be yes, no, or skipping. No means that
+# the link check failed. Yes means that we passed the link check, or no link
+# check was performed. Skipping means the user said `don't use.'
 
 # Change the test to enable / disable debugging output
 
@@ -23305,7 +23442,7 @@ $as_echo "$coin_has_wsmp" >&6; }
 $as_echo "$coin_has_wsmp due to COIN_SKIP_PROJECTS" >&6; }
   fi
 
-# Possibilities are `yes' or `skipping'. Normalise to `yes' or `no'.
+# Possibilities are `yes', `no', or `skipping'. Normalise to `yes' or `no'.
 
   if test "$coin_has_wsmp" != yes ; then
     coin_has_wsmp=no
@@ -23340,7 +23477,1835 @@ $as_echo "#define COIN_HAS_WSMP 1" >>confdefs.h
 
 
 if test "$use_wsmp" = yes ; then
-  # AC_COIN_CHK_PKG_BLAS(ClpLib)
+
+
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package BLAS" >&5
+$as_echo_n "checking for package BLAS... " >&6; }
+
+# Make sure the necessary variables exist for each client package.
+
+
+
+
+
+
+# Set up command line arguments with DEF_PRIM_ARGS and give FIND_PRIM_PKG
+# a chance, just in case blas.pc exists. The result (coin_has_blas) will
+# be one of yes (either the user specified something or pkgconfig found
+# something), no (user specified nothing and pkgconfig found nothing) or
+# skipping (user said do not use). We'll also have variables blas_lflags,
+# blas_cflags, blas_data, and blas_pcfiles.
+
+
+
+
+
+# Check whether --with-blas was given.
+if test "${with_blas+set}" = set; then :
+  withval=$with_blas;
+fi
+
+
+
+# Check whether --with-blas-lflags was given.
+if test "${with_blas_lflags+set}" = set; then :
+  withval=$with_blas_lflags;
+fi
+
+
+
+# Check whether --with-blas-cflags was given.
+if test "${with_blas_cflags+set}" = set; then :
+  withval=$with_blas_cflags;
+fi
+
+
+
+
+
+
+
+  dflt_action=yes
+
+# Initialize variables for the primary package.
+
+  coin_has_blas=noInfo
+  blas_lflags=
+  blas_cflags=
+  blas_data=
+  blas_pcfiles=
+
+# --with-prim is always present. If the client specified dataonly, its value
+# is assigned to prim_data.
+
+  withval=$with_blas
+  if test -n "$withval" ; then
+    case "$withval" in
+      no )
+	coin_has_blas=skipping
+	;;
+      yes )
+	coin_has_blas=requested
+	;;
+      build )
+	coin_has_blas=build
+	;;
+      * )
+	coin_has_blas=yes
+	blas_lflags=$withval
+	;;
+    esac
+  fi
+
+# --with-prim-libs and --with-prim-cflags are present unless the client
+# specified dataonly. Specifying --with-prim=no overrides the individual
+# options for libs and cflags.
+
+  if test "$coin_has_blas" != skipping ; then
+       withval=$with_blas_lflags
+       if test -n "$withval" ; then
+	 case "$withval" in
+	   build | no | yes )
+	     as_fn_error $? "\"$withval\" is not valid here; please specify linker flags appropriate for your environment." "$LINENO" 5
+	     ;;
+	   * )
+	     coin_has_blas=yes
+	     blas_lflags=$withval
+	     ;;
+	 esac
+       fi
+
+       withval=$with_blas_cflags
+       if test -n "$withval" ; then
+	 case "$withval" in
+	   build | no | yes )
+	     as_fn_error $? "\"$withval\" is not valid here; please specify compiler flags appropriate for your environment." "$LINENO" 5
+	     ;;
+	   * )
+	     coin_has_blas=yes
+	     blas_cflags="$withval"
+	     ;;
+	 esac
+       fi
+     fi
+
+# --with-prim-data will be present unless the client specified nodata.
+# Specifying --with-prim=no overrides the individual option for data.
+
+
+
+# At this point, coin_has_prim can be one of noInfo (no user options
+# specified), skipping (user said no), requested or build (user said yes
+# or build and gave no further guidance), or yes (user specified one or
+# more --with-prim options). If we're already at yes or skipping, we're
+# done looking.
+
+# If there are no user options (noInfo) and the default is no, we're skipping.
+# Otherwise, the default must be yes or build; consider the package requested.
+# A default action we don't recognise defaults to yes.
+
+  if test "$coin_has_blas" = noInfo ; then
+    case $dflt_action in
+      no )
+	coin_has_blas=skipping
+	;;
+      build )
+	coin_has_blas=build
+	;;
+      * )
+        coin_has_blas=requested
+	;;
+    esac
+  fi
+
+# Now coin_has_prim can be one of skipping, yes, requested, or build. For
+# requested or build, try pkgconf, if it's available. If it's not available,
+# well, hope that the user knows their system and prim can be used with no
+# additional flags.
+
+  case $coin_has_blas in
+    requested | build )
+      if test -n "$PKG_CONFIG" ; then
+	if test $coin_has_blas = build ; then
+	     pcfile=coinblas
+	   else
+	     pcfile=blas
+	   fi
+
+
+
+  if test -n "$PKG_CONFIG" ; then
+    if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
+      BLAS_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
+      coin_has_blas=yes
+	   blas_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+	   blas_pcfiles="$pcfile"
+    else
+      BLAS_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
+      coin_has_blas=no
+    fi
+  else
+    as_fn_error $? "\"Cannot check for existence of module blas without pkgconf\"" "$LINENO" 5
+  fi
+
+      else
+	coin_has_blas=yes
+	# AC_MSG_WARN([skipped check via pkgconf as no pkgconf available])
+      fi
+      ;;
+    skipping | yes )
+      ;;
+    * )
+      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Unexpected status \"$coin_has_blas\" in COIN_FIND_PRIM_PKG" >&5
+$as_echo "$as_me: WARNING: Unexpected status \"$coin_has_blas\" in COIN_FIND_PRIM_PKG" >&2;}
+      ;;
+  esac
+
+# The final value of coin_has_prim will be yes, no, or skipping. No means
+# we looked (with pkgconfig) and didn't find anything. Skipping means the
+# user said `don't use.' Yes means we have something, from the user or
+# from pkgconfig. Note that we haven't run a useability test!
+
+# Change the test to enable / disable debugging output
+
+    if test 1 = 1 ; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for blas: \"$coin_has_blas\"" >&5
+$as_echo "$as_me: FIND_PRIM_PKG result for blas: \"$coin_has_blas\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'blas'" >&5
+$as_echo "$as_me: Collected values for package 'blas'" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: blas_lflags is \"$blas_lflags\"" >&5
+$as_echo "$as_me: blas_lflags is \"$blas_lflags\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: blas_cflags is \"$blas_cflags\"" >&5
+$as_echo "$as_me: blas_cflags is \"$blas_cflags\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: blas_data is \"$blas_data\"" >&5
+$as_echo "$as_me: blas_data is \"$blas_data\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: blas_pcfiles is \"$blas_pcfiles\"" >&5
+$as_echo "$as_me: blas_pcfiles is \"$blas_pcfiles\"" >&6;}
+    fi
+
+
+
+# If FIND_PRIM_PKG found something and the user wants a link check, do it. For
+# a successful link check, update blas_libs just in case FLIBS was added.
+
+  if test "$coin_has_blas" = yes ; then
+    use_blas=
+
+  coin_save_LIBS="$LIBS"
+  LIBS="$blas_lflags $LIBS"
+   # AC_MSG_NOTICE([In COIN_TRY_FLINK])
+  case $ac_ext in
+    f)
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+      call daxpy
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  flink_try=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    c)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      # AC_MSG_NOTICE([COIN_TRY_FLINK: daxpy -> $cfuncdaxpy])
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    cc|cpp)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+  esac
+  if test $flink_try = yes ; then
+    if test $coin_need_flibs = no ; then
+       use_blas="$blas_lflags"
+     else
+       use_blas="$blas_lflags $FLIBS"
+     fi
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: $use_blas" >&5
+$as_echo "yes: $use_blas" >&6; }
+  else
+    use_blas=
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+  # AC_MSG_NOTICE([Done COIN_TRY_FLINK])
+
+  LIBS="$coin_save_LIBS"
+
+       if test -n "$use_blas" ; then
+         blas_lflags=$use_blas
+       else
+         { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: BLAS failed to link with \"$blas_lflags\"" >&5
+$as_echo "$as_me: WARNING: BLAS failed to link with \"$blas_lflags\"" >&2;}
+       fi
+
+# If FIND_PRIM_PKG didn't find anything, try a few guesses.  Try some
+# specialised checks based on the host system type first.  If none of them
+# are applicable, or the applicable one fails, try the generic -lblas.
+
+  elif test "$coin_has_blas" = no ; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: nothing yet" >&5
+$as_echo "nothing yet" >&6; }
+    case $build in
+      *-sgi-*)
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for BLAS in -lcomplib.sgimath" >&5
+$as_echo_n "checking for BLAS in -lcomplib.sgimath... " >&6; }
+
+  coin_save_LIBS="$LIBS"
+  LIBS="-lcomplib.sgimath $LIBS"
+   # AC_MSG_NOTICE([In COIN_TRY_FLINK])
+  case $ac_ext in
+    f)
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+      call daxpy
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  flink_try=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    c)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      # AC_MSG_NOTICE([COIN_TRY_FLINK: daxpy -> $cfuncdaxpy])
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    cc|cpp)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+  esac
+  if test $flink_try = yes ; then
+    if test $coin_need_flibs = no ; then
+       blas_lflags="-lcomplib.sgimath"
+     else
+       blas_lflags="-lcomplib.sgimath $FLIBS"
+     fi
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: $blas_lflags" >&5
+$as_echo "yes: $blas_lflags" >&6; }
+  else
+    blas_lflags=
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+  # AC_MSG_NOTICE([Done COIN_TRY_FLINK])
+
+  LIBS="$coin_save_LIBS"
+
+	;;
+
+      *-*-solaris*)
+	# Ideally, we'd use -library=sunperf, but it's an imperfect world.
+	# Studio cc doesn't recognise -library, it wants -xlic_lib. Studio 12
+	# CC doesn't recognise -xlic_lib. Libtool doesn't like -xlic_lib
+	# anyway. Sun claims that CC and cc will understand -library in Studio
+	# 13. The main extra function of -xlic_lib and -library is to arrange
+	# for the Fortran run-time libraries to be linked for C++ and C. We
+	# can arrange that explicitly.
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for BLAS in -lsunperf" >&5
+$as_echo_n "checking for BLAS in -lsunperf... " >&6; }
+
+  coin_save_LIBS="$LIBS"
+  LIBS="-lsunperf $LIBS"
+   # AC_MSG_NOTICE([In COIN_TRY_FLINK])
+  case $ac_ext in
+    f)
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+      call daxpy
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  flink_try=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    c)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      # AC_MSG_NOTICE([COIN_TRY_FLINK: daxpy -> $cfuncdaxpy])
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    cc|cpp)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+  esac
+  if test $flink_try = yes ; then
+    if test $coin_need_flibs = no ; then
+       blas_lflags="-lsunperf"
+     else
+       blas_lflags="-lsunperf $FLIBS"
+     fi
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: $blas_lflags" >&5
+$as_echo "yes: $blas_lflags" >&6; }
+  else
+    blas_lflags=
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+  # AC_MSG_NOTICE([Done COIN_TRY_FLINK])
+
+  LIBS="$coin_save_LIBS"
+
+	;;
+
+      *-cygwin* | *-mingw*)
+	case "$CC" in
+	  clang* ) ;;
+	  cl* | */cl* | CL* | */CL* | icl* | */icl* | ICL* | */ICL*)
+	    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for BLAS in MKL (32bit)" >&5
+$as_echo_n "checking for BLAS in MKL (32bit)... " >&6; }
+
+  coin_save_LIBS="$LIBS"
+  LIBS="mkl_intel_c.lib mkl_sequential.lib mkl_core.lib $LIBS"
+   # AC_MSG_NOTICE([In COIN_TRY_FLINK])
+  case $ac_ext in
+    f)
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+      call daxpy
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  flink_try=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    c)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      # AC_MSG_NOTICE([COIN_TRY_FLINK: daxpy -> $cfuncdaxpy])
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    cc|cpp)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+  esac
+  if test $flink_try = yes ; then
+    if test $coin_need_flibs = no ; then
+       blas_lflags="mkl_intel_c.lib mkl_sequential.lib mkl_core.lib"
+     else
+       blas_lflags="mkl_intel_c.lib mkl_sequential.lib mkl_core.lib $FLIBS"
+     fi
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: $blas_lflags" >&5
+$as_echo "yes: $blas_lflags" >&6; }
+  else
+    blas_lflags=
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+  # AC_MSG_NOTICE([Done COIN_TRY_FLINK])
+
+  LIBS="$coin_save_LIBS"
+
+	    if test -z "$blas_lflags" ; then
+	      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for BLAS in MKL (64bit)" >&5
+$as_echo_n "checking for BLAS in MKL (64bit)... " >&6; }
+
+  coin_save_LIBS="$LIBS"
+  LIBS="mkl_intel_lp64.lib mkl_sequential.lib mkl_core.lib $LIBS"
+   # AC_MSG_NOTICE([In COIN_TRY_FLINK])
+  case $ac_ext in
+    f)
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+      call daxpy
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  flink_try=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    c)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      # AC_MSG_NOTICE([COIN_TRY_FLINK: daxpy -> $cfuncdaxpy])
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    cc|cpp)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+  esac
+  if test $flink_try = yes ; then
+    if test $coin_need_flibs = no ; then
+       blas_lflags="mkl_intel_lp64.lib mkl_sequential.lib mkl_core.lib"
+     else
+       blas_lflags="mkl_intel_lp64.lib mkl_sequential.lib mkl_core.lib $FLIBS"
+     fi
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: $blas_lflags" >&5
+$as_echo "yes: $blas_lflags" >&6; }
+  else
+    blas_lflags=
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+  # AC_MSG_NOTICE([Done COIN_TRY_FLINK])
+
+  LIBS="$coin_save_LIBS"
+
+	    fi
+	    ;;
+	esac
+	;;
+
+       *-darwin*)
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for BLAS in Veclib" >&5
+$as_echo_n "checking for BLAS in Veclib... " >&6; }
+
+  coin_save_LIBS="$LIBS"
+  LIBS="-framework Accelerate $LIBS"
+   # AC_MSG_NOTICE([In COIN_TRY_FLINK])
+  case $ac_ext in
+    f)
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+      call daxpy
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  flink_try=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    c)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      # AC_MSG_NOTICE([COIN_TRY_FLINK: daxpy -> $cfuncdaxpy])
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    cc|cpp)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+  esac
+  if test $flink_try = yes ; then
+    if test $coin_need_flibs = no ; then
+       blas_lflags="-framework Accelerate"
+     else
+       blas_lflags="-framework Accelerate $FLIBS"
+     fi
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: $blas_lflags" >&5
+$as_echo "yes: $blas_lflags" >&6; }
+  else
+    blas_lflags=
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+  # AC_MSG_NOTICE([Done COIN_TRY_FLINK])
+
+  LIBS="$coin_save_LIBS"
+
+	;;
+    esac
+    if test -z "$blas_lflags" ; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for BLAS in -lblas" >&5
+$as_echo_n "checking for BLAS in -lblas... " >&6; }
+
+  coin_save_LIBS="$LIBS"
+  LIBS="-lblas $LIBS"
+   # AC_MSG_NOTICE([In COIN_TRY_FLINK])
+  case $ac_ext in
+    f)
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+      call daxpy
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  flink_try=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    c)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      # AC_MSG_NOTICE([COIN_TRY_FLINK: daxpy -> $cfuncdaxpy])
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void $cfuncdaxpy();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+    cc|cpp)
+      coin_need_flibs=no
+      flink_try=no
+       ac_ext=f
+ac_compile='$F77 -c $FFLAGS conftest.$ac_ext >&5'
+ac_link='$F77 -o conftest$ac_exeext $FFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_f77_compiler_gnu
+
+  case $ac_cv_f77_mangling in
+  upper*) ac_val="DAXPY" ;;
+  lower*) ac_val="daxpy" ;;
+  *)      ac_val="unknown" ;;
+esac
+case $ac_cv_f77_mangling in *," underscore"*) ac_val="$ac_val"_ ;; esac
+
+cfuncdaxpy="$ac_val"
+
+  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  flink_try=yes
+else
+  if test x"$FLIBS" != x ; then
+	   flink_save_libs="$LIBS"
+	   LIBS="$LIBS $FLIBS"
+	   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+extern "C" {void $cfuncdaxpy();}
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+$cfuncdaxpy()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  coin_need_flibs=yes
+	      flink_try=yes
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	   LIBS="$flink_save_libs"
+	 fi
+
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+      ;;
+  esac
+  if test $flink_try = yes ; then
+    if test $coin_need_flibs = no ; then
+       blas_lflags="-lblas"
+     else
+       blas_lflags="-lblas $FLIBS"
+     fi
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: $blas_lflags" >&5
+$as_echo "yes: $blas_lflags" >&6; }
+  else
+    blas_lflags=
+     { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+  fi
+  # AC_MSG_NOTICE([Done COIN_TRY_FLINK])
+
+  LIBS="$coin_save_LIBS"
+
+    fi
+    if test -n "$blas_lflags" ; then
+      coin_has_blas=yes
+    fi
+  fi
+
+# Done. Time to set some variables. Create an automake conditional
+# COIN_HAS_BLAS.
+
+   if test $coin_has_blas = yes; then
+  COIN_HAS_BLAS_TRUE=
+  COIN_HAS_BLAS_FALSE='#'
+else
+  COIN_HAS_BLAS_TRUE='#'
+  COIN_HAS_BLAS_FALSE=
+fi
+
+
+# If we've located the package, define preprocessor symbol COIN_HAS_BLAS
+# and augment the necessary variables for the client packages.
+
+  if test $coin_has_blas = yes ; then
+
+$as_echo "#define COIN_HAS_BLAS 1" >>confdefs.h
+
+    CLPLIB_PCFILES="$blas_pcfiles $CLPLIB_PCFILES"
+       CLPLIB_LFLAGS="$blas_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$blas_cflags $CLPLIB_CFLAGS"
+
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_blas" >&5
+$as_echo "$coin_has_blas" >&6; }
+  fi
+
+
   use_wsmp=
 
   coin_save_LIBS="$LIBS"
@@ -23574,7 +25539,14 @@ $as_echo "$as_me: WARNING: WSMP failed to link with $wsmp_libs" >&2;}
   fi
 else
   # to please configure
-  # AM_CONDITIONAL(COIN_HAS_BLAS, [test 0 = 1])
+   if test 0 = 1; then
+  COIN_HAS_BLAS_TRUE=
+  COIN_HAS_BLAS_FALSE='#'
+else
+  COIN_HAS_BLAS_TRUE='#'
+  COIN_HAS_BLAS_FALSE=
+fi
+
   :
 fi
  if test "$use_wsmp" = yes; then
@@ -24650,6 +26622,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COIN_HAS_WSMP_TRUE}" && test -z "${COIN_HAS_WSMP_FALSE}"; then
   as_fn_error $? "conditional \"COIN_HAS_WSMP\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${COIN_HAS_BLAS_TRUE}" && test -z "${COIN_HAS_BLAS_FALSE}"; then
+  as_fn_error $? "conditional \"COIN_HAS_BLAS\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${COIN_HAS_BLAS_TRUE}" && test -z "${COIN_HAS_BLAS_FALSE}"; then
+  as_fn_error $? "conditional \"COIN_HAS_BLAS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COIN_HAS_WSMP_TRUE}" && test -z "${COIN_HAS_WSMP_FALSE}"; then
