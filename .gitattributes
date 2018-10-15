@@ -53,6 +53,7 @@ Clp/examples/myPdco.hpp -text
 Clp/examples/pdco.cpp -text
 Clp/install-sh -text
 Clp/ltmain.sh -text
+Clp/m4/ac_clp_aboca.m4 -text
 Clp/missing -text
 Clp/src/AbcCommon.hpp -text
 Clp/src/AbcDualRowDantzig.cpp -text
