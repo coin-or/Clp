@@ -3243,7 +3243,7 @@ ClpSimplex::initialSolve(ClpSolve & options)
           }
           break;
 #endif
-#ifdef COIN_HAS_MUMPS
+#ifdef CLP_HAS_MUMPS
           case 6: {
                if (!doKKT) {
 		    int logLevel = 0;

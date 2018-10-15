@@ -6399,7 +6399,7 @@ ClpSimplex::barrier(bool crossover)
      assert (!doKKT);
      ClpCholeskyTaucs * cholesky = new ClpCholeskyTaucs();
      barrier.setCholesky(cholesky);
-#elifdef COIN_HAS_MUMPS
+#elifdef CLP_HAS_MUMPS
      if (!doKKT) {
           ClpCholeskyMumps * cholesky = new ClpCholeskyMumps();
           barrier.setCholesky(cholesky);

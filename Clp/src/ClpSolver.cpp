@@ -89,7 +89,7 @@ static std::string mpsFile="";
 extern double debugDouble[10];
 extern int debugInt[24];
 #endif
-#if defined(COIN_HAS_WSMP) || defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(COIN_HAS_MUMPS)
+#if defined(COIN_HAS_WSMP) || defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(CLP_HAS_MUMPS)
 #define FOREIGN_BARRIER
 #endif
 
