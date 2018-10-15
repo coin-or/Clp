@@ -125,6 +125,9 @@ fi
 
 # MUMPS
 AC_COIN_CHK_PKG(Mumps,[ClpLib],[coinmumps])
+if test $coin_has_mumps = yes ; then
+  AC_DEFINE(CLP_HAS_MUMPS, [1], [Define to 1 if MUMPS package is available])
+fi
 
 # WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
 
