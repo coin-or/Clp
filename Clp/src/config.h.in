@@ -3,6 +3,9 @@
 /* Define to 1, 2, 3, or 4 if Aboca should be built. */
 #undef CLP_HAS_ABC
 
+/* Define to 1 if MUMPS package is available */
+#undef CLP_HAS_MUMPS
+
 /* SVN revision number of project */
 #undef CLP_SVN_REV
 

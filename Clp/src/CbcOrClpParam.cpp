@@ -1705,7 +1705,7 @@ have more rounds of cuts - see passC!uts and passT!ree."
 #else
      parameters[numberParameters-1].append("Taucs_dummy");
 #endif
-#ifdef COIN_HAS_MUMPS
+#ifdef CLP_HAS_MUMPS
      parameters[numberParameters-1].append("Mumps");
 #else
      parameters[numberParameters-1].append("Mumps_dummy");
