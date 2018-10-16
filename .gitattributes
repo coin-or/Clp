@@ -34,6 +34,7 @@ Clp/MSVisualStudio/v9alt/libClp.vcproj -text
 Clp/MSVisualStudio/v9alt/libOsiClp.vcproj -text
 Clp/MSVisualStudio/v9alt/osiclp.vsprops -text
 Clp/clp.pc.in -text
+Clp/compile -text
 Clp/config.guess -text
 Clp/config.sub -text
 Clp/configure -text
