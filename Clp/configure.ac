@@ -110,7 +110,7 @@ AC_COIN_CHK_LIB(AMD,[ClpLib],[-lamd],[-I/usr/include/suitesparse],[],
 AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],
 		[cholmod_start])
 
-# Glpk also brings AMD
+# Glpk also brings AMD  (FIXME: Glpk installs amd.h only if build via ThirdParty/Glpk)
 
 if test $coin_has_cholmod = no -a $coin_has_amd = no ; then
   AC_COIN_CHK_PKG(Glpk,[ClpLib],[coinglpk])
