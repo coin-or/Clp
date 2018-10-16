@@ -1,0 +1,29 @@
+language: cpp
+
+matrix:
+  include:
+    - os: linux
+      addons:
+        apt:
+          packages:
+          - gfortran
+    - os: osx
+      osx_image: xcode10
+      env: OSX=10.13
+      compiler: clang
+    - os: osx
+      osx_image: xcode9.2
+      env: OSX=10.12
+      compiler: clang
+    - os: osx
+      osx_image: xcode8
+      env: OSX=10.11
+      compiler: clang
+  allow_failures:
+    - os: osx
+
+before_script:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install bash gcc; brew link --overwrite gcc; gfortran --version; fi
+  - bash Clp/get.dependencies.sh fetch > /dev/null
+
+script: bash Clp/get.dependencies.sh build --verbosity=2 --test 
