@@ -161,16 +161,14 @@ host_triplet = @host@
 @COIN_HAS_MUMPS_TRUE@am__append_5 = ClpCholeskyMumps.cpp ClpCholeskyMumps.hpp
 @COIN_HAS_WSMP_TRUE@am__append_6 = ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp
 bin_PROGRAMS = clp$(EXEEXT)
-@COIN_HAS_CHOLMOD_TRUE@am__append_7 = -I`$(CYGPATH_W) $(CHOLMODINCDIR)`
-@COIN_HAS_AMD_TRUE@am__append_8 = -I`$(CYGPATH_W) $(AMDINCDIR)`
-@COIN_HAS_ABC_TRUE@am__append_9 = AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
+@COIN_HAS_ABC_TRUE@am__append_7 = AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
 
 # if AMD, CHOLMOD, or GLPK is available, then install ClpCholeskyUfl.hpp (for advanced users)
-@COIN_HAS_AMD_TRUE@am__append_10 = ClpCholeskyUfl.hpp
-@COIN_HAS_AMD_FALSE@@COIN_HAS_CHOLMOD_TRUE@am__append_11 = ClpCholeskyUfl.hpp
-@COIN_HAS_AMD_FALSE@@COIN_HAS_CHOLMOD_FALSE@@COIN_HAS_GLPK_TRUE@am__append_12 = ClpCholeskyUfl.hpp
-@COIN_HAS_MUMPS_TRUE@am__append_13 = ClpCholeskyMumps.hpp
-@COIN_HAS_WSMP_TRUE@am__append_14 = ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp
+@COIN_HAS_AMD_TRUE@am__append_8 = ClpCholeskyUfl.hpp
+@COIN_HAS_AMD_FALSE@@COIN_HAS_CHOLMOD_TRUE@am__append_9 = ClpCholeskyUfl.hpp
+@COIN_HAS_AMD_FALSE@@COIN_HAS_CHOLMOD_FALSE@@COIN_HAS_GLPK_TRUE@am__append_10 = ClpCholeskyUfl.hpp
+@COIN_HAS_MUMPS_TRUE@am__append_11 = ClpCholeskyMumps.hpp
+@COIN_HAS_WSMP_TRUE@am__append_12 = ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ac_clp_aboca.m4 \
@@ -596,8 +594,7 @@ DOXYTAG_EDIT = sed -e 's|@baredocdir_nosub@|$(datarootdir)/doc|g'
 
 # CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
 # is built within Clp
-AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCLP_BUILD -DCOIN_HAS_CLP \
-	$(am__append_7) $(am__append_8)
+AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCLP_BUILD -DCOIN_HAS_CLP
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
@@ -700,8 +697,8 @@ includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpCholeskyPardiso.hpp ClpPESimplex.hpp \
 	ClpPEPrimalColumnDantzig.hpp ClpPEPrimalColumnSteepest.hpp \
 	ClpPEDualRowDantzig.hpp ClpPEDualRowSteepest.hpp \
-	$(am__append_9) $(am__append_10) $(am__append_11) \
-	$(am__append_12) $(am__append_13) $(am__append_14) \
+	$(am__append_7) $(am__append_8) $(am__append_9) \
+	$(am__append_10) $(am__append_11) $(am__append_12) \
 	CbcOrClpParam.cpp
 all: config.h config_clp.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am

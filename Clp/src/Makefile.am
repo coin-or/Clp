@@ -184,14 +184,6 @@ clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 # is built within Clp
 AM_CPPFLAGS += -DCOIN_HAS_CLP
 
-if COIN_HAS_CHOLMOD
-AM_CPPFLAGS += -I`$(CYGPATH_W) $(CHOLMODINCDIR)`
-endif
-
-if COIN_HAS_AMD
-AM_CPPFLAGS += -I`$(CYGPATH_W) $(AMDINCDIR)`
-endif
-
 # This line is necessary to allow VPATH compilation
 # DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)`
 
