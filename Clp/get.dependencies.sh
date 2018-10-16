@@ -242,9 +242,9 @@ function fetch {
 
     # Build list of sources for dependencies
     if [ -e Dependencies ]; then
-        deps=`cat Dependencies | tr '\t' ' ' | tr -s ' '| cut -d ' ' -f 2-`
+        deps=`cat Dependencies | sed -e '/^#/d' | tr '\t' ' ' | tr -s ' '| cut -d ' ' -f 2-`
     elif [ -e $main_proj/Dependencies ]; then 
-        deps=`cat $main_proj/Dependencies | tr '\t' ' ' | tr -s ' '| cut -d ' ' -f 2-`
+        deps=`cat $main_proj/Dependencies | sed -e '/^#/d' | tr '\t' ' ' | tr -s ' '| cut -d ' ' -f 2-`
     else
         echo "Can't find dependencies file...exiting"
         exit 3

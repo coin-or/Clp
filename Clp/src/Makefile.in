@@ -213,8 +213,7 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 	"$(DESTDIR)$(includecoindir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-@DEPENDENCY_LINKING_TRUE@libClp_la_DEPENDENCIES =  \
-@DEPENDENCY_LINKING_TRUE@	$(am__DEPENDENCIES_1)
+libClp_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
 @COIN_HAS_ABC_TRUE@am__objects_1 = AbcDualRowDantzig.lo \
 @COIN_HAS_ABC_TRUE@	AbcDualRowPivot.lo AbcDualRowSteepest.lo \
 @COIN_HAS_ABC_TRUE@	AbcMatrix.lo AbcNonLinearCost.lo \
@@ -283,7 +282,7 @@ am__v_lt_1 =
 libClp_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(libClp_la_LDFLAGS) $(LDFLAGS) -o $@
-@DEPENDENCY_LINKING_TRUE@libClpSolver_la_DEPENDENCIES = libClp.la
+libClpSolver_la_DEPENDENCIES = libClp.la
 am_libClpSolver_la_OBJECTS = ClpSolver.lo CbcOrClpParam.lo Clp_ampl.lo \
 	MyEventHandler.lo MyMessageHandler.lo unitTest.lo
 libClpSolver_la_OBJECTS = $(am_libClpSolver_la_OBJECTS)
@@ -657,8 +656,8 @@ libClpSolver_la_SOURCES = \
 
 
 # List all additionally required libraries
-@DEPENDENCY_LINKING_TRUE@libClp_la_LIBADD = $(CLPLIB_LFLAGS)
-@DEPENDENCY_LINKING_TRUE@libClpSolver_la_LIBADD = libClp.la
+libClp_la_LIBADD = $(CLPLIB_LFLAGS)
+libClpSolver_la_LIBADD = libClp.la
 
 # This is for libtool
 libClp_la_LDFLAGS = $(LT_LDFLAGS)

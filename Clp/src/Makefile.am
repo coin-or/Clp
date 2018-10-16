@@ -155,10 +155,8 @@ libClp_la_SOURCES += ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp ClpCholeskyWssmpK
 endif
 
 # List all additionally required libraries
-if DEPENDENCY_LINKING
 libClp_la_LIBADD = $(CLPLIB_LFLAGS)
 libClpSolver_la_LIBADD = libClp.la
-endif
 
 # This is for libtool
 libClp_la_LDFLAGS = $(LT_LDFLAGS)
