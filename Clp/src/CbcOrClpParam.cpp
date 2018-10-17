@@ -3000,6 +3000,15 @@ This is a first try and will hopefully become more sophisticated."
 On just adds orbital, strong tries extra fixing in strong branching");
 #endif
      parameters[numberParameters++] =
+          CbcOrClpParam("PrepN!ames", "If column names will be kept in pre-processed model",
+                        "off", CBC_PARAM_STR_PREPROCNAMES);
+     parameters[numberParameters-1].append("on");
+     parameters[numberParameters-1].setLonghelp
+     (
+           "Normally the preprocessed model has column names replaced by new names C0000...\
+Setting this option to on keeps original names in variables which still exist in the preprocessed problem");
+
+     parameters[numberParameters++] =
           CbcOrClpParam("outDup!licates", "takes duplicate rows etc out of integer model",
                         CLP_PARAM_ACTION_OUTDUPROWS, 7, 0);
 #endif
