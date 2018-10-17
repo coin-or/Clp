@@ -155,3 +155,4 @@ Clp/src/config_clp_default.h -text
 Clp/src/config_default.h -text
 Clp/test/OsiClpSolverInterfaceTest.cpp -text
 Clp/test/osiUnitTest.cpp -text
+/appveyor.yml -text
