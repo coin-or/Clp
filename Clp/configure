@@ -25261,6 +25261,7 @@ fi
 
 # Try if FFLAGS works
 if test "$F77" != "unavailable" ; then
+  orig_FFLAGS="FFLAGS"
   cat >conftest.$ac_ext <<_ACEOF
       program main
       integer i
@@ -25298,8 +25299,8 @@ fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
   if test -z "$FFLAGS"; then
-    { echo "$as_me:$LINENO: WARNING: The flags FFLAGS=\"$FFLAGS\" do not work.  I will now just try '-O', but you might want to set FFLAGS manually." >&5
-echo "$as_me: WARNING: The flags FFLAGS=\"$FFLAGS\" do not work.  I will now just try '-O', but you might want to set FFLAGS manually." >&2;}
+    { echo "$as_me:$LINENO: WARNING: The flags FFLAGS=\"$orig_FFLAGS\" do not work.  I will now just try '-O', but you might want to set FFLAGS manually." >&5
+echo "$as_me: WARNING: The flags FFLAGS=\"$orig_FFLAGS\" do not work.  I will now just try '-O', but you might want to set FFLAGS manually." >&2;}
     FFLAGS='-O'
     cat >conftest.$ac_ext <<_ACEOF
       program main
@@ -25338,8 +25339,8 @@ fi
 rm -f conftest.err conftest.$ac_objext \
       conftest$ac_exeext conftest.$ac_ext
     if test -z "$FFLAGS"; then
-      { echo "$as_me:$LINENO: WARNING: This value for FFLAGS does not work.  I will continue with empty FFLAGS, but you might want to set FFLAGS manually." >&5
-echo "$as_me: WARNING: This value for FFLAGS does not work.  I will continue with empty FFLAGS, but you might want to set FFLAGS manually." >&2;}
+      { echo "$as_me:$LINENO: WARNING: The flags FFLAGS=-O do not work. I will continue with empty FFLAGS, but you might want to set FFLAGS manually." >&5
+echo "$as_me: WARNING: The flags FFLAGS=-O do not work. I will continue with empty FFLAGS, but you might want to set FFLAGS manually." >&2;}
     fi
   fi
 fi
@@ -25425,7 +25426,7 @@ _ACEOF
 # flags.
 ac_save_FFLAGS=$FFLAGS
 FFLAGS="$FFLAGS $ac_verb"
-(eval echo $as_me:25428: \"$ac_link\") >&5
+(eval echo $as_me:25429: \"$ac_link\") >&5
 ac_f77_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f77_v_output" >&5
 FFLAGS=$ac_save_FFLAGS
@@ -25503,7 +25504,7 @@ _ACEOF
 # flags.
 ac_save_FFLAGS=$FFLAGS
 FFLAGS="$FFLAGS $ac_cv_prog_f77_v"
-(eval echo $as_me:25506: \"$ac_link\") >&5
+(eval echo $as_me:25507: \"$ac_link\") >&5
 ac_f77_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$ac_f77_v_output" >&5
 FFLAGS=$ac_save_FFLAGS
