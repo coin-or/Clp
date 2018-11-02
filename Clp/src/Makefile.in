@@ -667,9 +667,6 @@ clp_SOURCES = ClpMain.cpp
 # List all additionally required libraries
 clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 
-# This line is necessary to allow VPATH compilation
-# DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)`
-
 ########################################################################
 #                Headers that need to be installed                     #
 ########################################################################

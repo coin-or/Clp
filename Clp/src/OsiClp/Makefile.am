@@ -29,9 +29,6 @@ libOsiClp_la_LDFLAGS = $(LT_LDFLAGS)
 # Here list all include flags, relative to this "srcdir" directory.
 AM_CPPFLAGS = -I$(srcdir)/.. $(OSICLPLIB_CFLAGS)
 
-# This line is necessary to allow VPATH compilation
-# DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)` -I..
-
 ########################################################################
 #                Headers that need to be installed                     #
 ########################################################################

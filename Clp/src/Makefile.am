@@ -184,9 +184,6 @@ clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 # is built within Clp
 AM_CPPFLAGS += -DCOIN_HAS_CLP
 
-# This line is necessary to allow VPATH compilation
-# DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)`
-
 ########################################################################
 #                Headers that need to be installed                     #
 ########################################################################
