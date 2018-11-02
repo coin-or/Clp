@@ -1,6 +1,6 @@
 /* src/config_clp.h.in.  */
 
-/* Define to 1, 2, 3, or 4 if Aboca should be build. */
+/* Define to 1, 2, 3, or 4 if Aboca should be built. */
 #undef CLP_HAS_ABC
 
 /* Define to 1 if MUMPS package is available */

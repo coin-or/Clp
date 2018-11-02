@@ -731,8 +731,6 @@ MANIFEST_TOOL
 RANLIB
 ac_ct_AR
 AR
-DLLTOOL
-OBJDUMP
 LN_S
 NM
 ac_ct_DUMPBIN
@@ -743,6 +741,9 @@ EGREP
 GREP
 SED
 LIBTOOL
+OBJDUMP
+DLLTOOL
+AS
 FLIBS
 ac_ct_F77
 FFLAGS
@@ -857,9 +858,9 @@ enable_msvc
 enable_silent_rules
 enable_maintainer_mode
 enable_dependency_tracking
-enable_shared
 enable_static
 with_pic
+enable_shared
 enable_fast_install
 with_aix_soname
 with_gnu_ld
@@ -1549,8 +1550,8 @@ Optional Features:
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
+  --enable-static[=PKGS]  build static libraries [default=no]
   --enable-shared[=PKGS]  build shared libraries [default=yes]
-  --enable-static[=PKGS]  build static libraries [default=yes]
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
@@ -1638,13 +1639,13 @@ Optional Packages:
   --with-glpk-cflags      Compiler flags for Glpk appropriate for your
                           environment. (Most often, -I specs for header file
                           directories.)
-  --with-mumps            Use Mumps. If an argument is given, 'yes' is
+  --with-mumps            Use MUMPS. If an argument is given, 'yes' is
                           equivalent to --with-mumps, 'no' is
                           equivalent to --without-mumps. Any other argument is
                           applied as for --with-mumps-lflags
-  --with-mumps-lflags     Linker flags for Mumps appropriate for your
+  --with-mumps-lflags     Linker flags for MUMPS appropriate for your
                           environment. (Most often, -l specs for libraries.)
-  --with-mumps-cflags     Compiler flags for Mumps appropriate for your
+  --with-mumps-cflags     Compiler flags for MUMPS appropriate for your
                           environment. (Most often, -I specs for header file
                           directories.)
   --with-wsmp             Use WSMP. If an argument is given, 'yes' is
@@ -3437,11 +3438,16 @@ fi
 
 
 
-# libtool has some magic for host_os=mingw, but doesn't know about msys
+# libtool has some magic for host_os and build_os being mingw, but doesn't know about msys
 
   if test $host_os = msys ; then
     host_os=mingw
     host=`echo $host | sed -e 's/msys/mingw/'`
+  fi
+
+  if test $build_os = msys ; then
+    build_os=mingw
+    build=`echo $build | sed -e 's/msys/mingw/'`
   fi
 
 # Make silent build rules the default (https://www.gnu.org/software/automake/
@@ -7237,9 +7243,6 @@ test -z "$OBJDUMP" && OBJDUMP=objdump
 
 
 
-
-
-
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking how to recognize dependent libraries" >&5
 $as_echo_n "checking how to recognize dependent libraries... " >&6; }
 if ${lt_cv_deplibs_check_method+:} false; then :
@@ -7575,9 +7578,6 @@ else
 fi
 
 test -z "$DLLTOOL" && DLLTOOL=dlltool
-
-
-
 
 
 
@@ -9864,10 +9864,6 @@ func_stripname_cnf ()
 } # func_stripname_cnf
 
 
-# On Windows, shared C++ libraries do not work with the current libtool (it
-# handles only exports for C functions, not C++). On all other systems, build
-# only shared libraries.
-
 # (lh, 180302) Sadly, we can't use the obvious libtool macros
 # (AC_{ENABLE,DISABLE}_{SHARED,STATIC}, nor parameters to LT_INIT,
 # precisely because these macros record the default behaviour by defining
@@ -9875,14 +9871,10 @@ func_stripname_cnf ()
 # any shell conditional has no effect. Either we trust libtool or we need
 # something more inventive. The relevant libtool macros are in ltoptions.m4,
 # _LT_ENABLE_SHARED and _LT_ENABLE_STATIC.
-
+# That is, something like the following will not work:
 # case $host_os in
-#   cygwin* | mingw* | msys* )
-#     AC_DISABLE_SHARED
-#     ;;
-#   *)
-#     AC_DISABLE_STATIC
-#     ;;
+#   cygwin* | mingw* | msys* ) AC_DISABLE_SHARED  ;;
+#   *) AC_DISABLE_STATIC ;;
 # esac
 
 # Create libtool.
@@ -9892,47 +9884,7 @@ func_stripname_cnf ()
 
 
 # Set options
-
-
-
-        enable_dlopen=no
-
-
-  enable_win32_dll=no
-
-
-            # Check whether --enable-shared was given.
-if test "${enable_shared+set}" = set; then :
-  enableval=$enable_shared; p=${PACKAGE-default}
-    case $enableval in
-    yes) enable_shared=yes ;;
-    no) enable_shared=no ;;
-    *)
-      enable_shared=no
-      # Look at the argument we got.  We use all the common list separators.
-      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
-      for pkg in $enableval; do
-	IFS=$lt_save_ifs
-	if test "X$pkg" = "X$p"; then
-	  enable_shared=yes
-	fi
-      done
-      IFS=$lt_save_ifs
-      ;;
-    esac
-else
-  enable_shared=yes
-fi
-
-
-
-
-
-
-
-
-
-  # Check whether --enable-static was given.
+# Check whether --enable-static was given.
 if test "${enable_static+set}" = set; then :
   enableval=$enable_static; p=${PACKAGE-default}
     case $enableval in
@@ -9952,10 +9904,8 @@ if test "${enable_static+set}" = set; then :
       ;;
     esac
 else
-  enable_static=yes
+  enable_static=no
 fi
-
-
 
 
 
@@ -9983,8 +9933,346 @@ if test "${with_pic+set}" = set; then :
       ;;
     esac
 else
-  pic_mode=default
+  pic_mode=yes
 fi
+
+
+
+
+
+
+enable_win32_dll=yes
+
+case $host in
+*-*-cygwin* | *-*-mingw* | *-*-pw32* | *-*-cegcc*)
+  if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}as", so it can be a program name with args.
+set dummy ${ac_tool_prefix}as; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_AS+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$AS"; then
+  ac_cv_prog_AS="$AS" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_AS="${ac_tool_prefix}as"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+AS=$ac_cv_prog_AS
+if test -n "$AS"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $AS" >&5
+$as_echo "$AS" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_prog_AS"; then
+  ac_ct_AS=$AS
+  # Extract the first word of "as", so it can be a program name with args.
+set dummy as; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_ac_ct_AS+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_AS"; then
+  ac_cv_prog_ac_ct_AS="$ac_ct_AS" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_AS="as"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_AS=$ac_cv_prog_ac_ct_AS
+if test -n "$ac_ct_AS"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_AS" >&5
+$as_echo "$ac_ct_AS" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_ct_AS" = x; then
+    AS="false"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    AS=$ac_ct_AS
+  fi
+else
+  AS="$ac_cv_prog_AS"
+fi
+
+  if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}dlltool", so it can be a program name with args.
+set dummy ${ac_tool_prefix}dlltool; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_DLLTOOL+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$DLLTOOL"; then
+  ac_cv_prog_DLLTOOL="$DLLTOOL" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_DLLTOOL="${ac_tool_prefix}dlltool"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+DLLTOOL=$ac_cv_prog_DLLTOOL
+if test -n "$DLLTOOL"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $DLLTOOL" >&5
+$as_echo "$DLLTOOL" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_prog_DLLTOOL"; then
+  ac_ct_DLLTOOL=$DLLTOOL
+  # Extract the first word of "dlltool", so it can be a program name with args.
+set dummy dlltool; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_ac_ct_DLLTOOL+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_DLLTOOL"; then
+  ac_cv_prog_ac_ct_DLLTOOL="$ac_ct_DLLTOOL" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_DLLTOOL="dlltool"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_DLLTOOL=$ac_cv_prog_ac_ct_DLLTOOL
+if test -n "$ac_ct_DLLTOOL"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_DLLTOOL" >&5
+$as_echo "$ac_ct_DLLTOOL" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_ct_DLLTOOL" = x; then
+    DLLTOOL="false"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    DLLTOOL=$ac_ct_DLLTOOL
+  fi
+else
+  DLLTOOL="$ac_cv_prog_DLLTOOL"
+fi
+
+  if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}objdump", so it can be a program name with args.
+set dummy ${ac_tool_prefix}objdump; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_OBJDUMP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$OBJDUMP"; then
+  ac_cv_prog_OBJDUMP="$OBJDUMP" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_OBJDUMP="${ac_tool_prefix}objdump"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+OBJDUMP=$ac_cv_prog_OBJDUMP
+if test -n "$OBJDUMP"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $OBJDUMP" >&5
+$as_echo "$OBJDUMP" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_prog_OBJDUMP"; then
+  ac_ct_OBJDUMP=$OBJDUMP
+  # Extract the first word of "objdump", so it can be a program name with args.
+set dummy objdump; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_ac_ct_OBJDUMP+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_OBJDUMP"; then
+  ac_cv_prog_ac_ct_OBJDUMP="$ac_ct_OBJDUMP" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_ac_ct_OBJDUMP="objdump"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_OBJDUMP=$ac_cv_prog_ac_ct_OBJDUMP
+if test -n "$ac_ct_OBJDUMP"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_OBJDUMP" >&5
+$as_echo "$ac_ct_OBJDUMP" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_ct_OBJDUMP" = x; then
+    OBJDUMP="false"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    OBJDUMP=$ac_ct_OBJDUMP
+  fi
+else
+  OBJDUMP="$ac_cv_prog_OBJDUMP"
+fi
+
+  ;;
+esac
+
+test -z "$AS" && AS=as
+
+
+
+
+
+test -z "$DLLTOOL" && DLLTOOL=dlltool
+
+
+
+
+
+test -z "$OBJDUMP" && OBJDUMP=objdump
+
+
+
+
+
+
+
+        enable_dlopen=no
+
+
+
+            # Check whether --enable-shared was given.
+if test "${enable_shared+set}" = set; then :
+  enableval=$enable_shared; p=${PACKAGE-default}
+    case $enableval in
+    yes) enable_shared=yes ;;
+    no) enable_shared=no ;;
+    *)
+      enable_shared=no
+      # Look at the argument we got.  We use all the common list separators.
+      lt_save_ifs=$IFS; IFS=$IFS$PATH_SEPARATOR,
+      for pkg in $enableval; do
+	IFS=$lt_save_ifs
+	if test "X$pkg" = "X$p"; then
+	  enable_shared=yes
+	fi
+      done
+      IFS=$lt_save_ifs
+      ;;
+    esac
+else
+  enable_shared=yes
+fi
+
+
+
 
 
 
@@ -13180,6 +13468,9 @@ fi
   # before this can be enabled.
   hardcode_into_libs=yes
 
+  # Add ABI-specific directories to the system library path.
+  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
+
   # Ideally, we could use ldconfig to report *all* directores which are
   # searched for libraries, however this is still not possible.  Aside from not
   # being certain /sbin/ldconfig is available, command
@@ -13188,7 +13479,7 @@ fi
   # appending ld.so.conf contents (and includes) to the search path.
   if test -f /etc/ld.so.conf; then
     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
-    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
+    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
   fi
 
   # We used to test for /lib/ld.so.1 and disable shared libraries on
@@ -17206,6 +17497,9 @@ fi
   # before this can be enabled.
   hardcode_into_libs=yes
 
+  # Add ABI-specific directories to the system library path.
+  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
+
   # Ideally, we could use ldconfig to report *all* directores which are
   # searched for libraries, however this is still not possible.  Aside from not
   # being certain /sbin/ldconfig is available, command
@@ -17214,7 +17508,7 @@ fi
   # appending ld.so.conf contents (and includes) to the search path.
   if test -f /etc/ld.so.conf; then
     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
-    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
+    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
   fi
 
   # We used to test for /lib/ld.so.1 and disable shared libraries on
@@ -20156,6 +20450,9 @@ fi
   # before this can be enabled.
   hardcode_into_libs=yes
 
+  # Add ABI-specific directories to the system library path.
+  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
+
   # Ideally, we could use ldconfig to report *all* directores which are
   # searched for libraries, however this is still not possible.  Aside from not
   # being certain /sbin/ldconfig is available, command
@@ -20164,7 +20461,7 @@ fi
   # appending ld.so.conf contents (and includes) to the search path.
   if test -f /etc/ld.so.conf; then
     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
-    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
+    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
   fi
 
   # We used to test for /lib/ld.so.1 and disable shared libraries on
@@ -20543,8 +20840,9 @@ $as_echo "$coin_libversion" >&6; }
 $as_echo "no" >&6; }
   fi
 
-  #TODO we should be able to add this flag
-  #LT_LDFLAGS="$LT_LDFLAGS -no-undefined"
+  # shared libraries should have no undefined symbols
+  # for Windows DLLs, it is mandatory to add this
+  LT_LDFLAGS="$LT_LDFLAGS -no-undefined"
 
 
 #############################################################################
@@ -20975,7 +21273,7 @@ fi
     if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
       COINUTILS_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
       coin_has_coinutils=yes
-           coinutils_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+           coinutils_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
            coinutils_pcfiles="$pcfile"
     else
       COINUTILS_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
@@ -21003,9 +21301,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_coinutils\" in COIN_FIN
 # user said `don't use.' Yes means we have something, from the user or
 # from pkgconfig. Note that we haven't run a useability test!
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for coinutils: \"$coin_has_coinutils\"" >&5
 $as_echo "$as_me: FIND_PRIM_PKG result for coinutils: \"$coin_has_coinutils\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'coinutils'" >&5
@@ -21236,7 +21534,7 @@ fi
     if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
       OSI_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
       coin_has_osi=yes
-           osi_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+           osi_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
            osi_pcfiles="$pcfile"
     else
       OSI_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
@@ -21264,9 +21562,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_osi\" in COIN_FIND_PRIM
 # user said `don't use.' Yes means we have something, from the user or
 # from pkgconfig. Note that we haven't run a useability test!
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for osi: \"$coin_has_osi\"" >&5
 $as_echo "$as_me: FIND_PRIM_PKG result for osi: \"$coin_has_osi\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'osi'" >&5
@@ -21482,7 +21780,7 @@ fi
   case $coin_has_ositests in
     requested | build )
       if test -n "$PKG_CONFIG" ; then
-        pcfile=osi-unittests
+        pcfile="osi-unittests"
 
 
 
@@ -21490,7 +21788,7 @@ fi
     if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
       OSITESTS_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
       coin_has_ositests=yes
-           ositests_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+           ositests_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
            ositests_pcfiles="$pcfile"
     else
       OSITESTS_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
@@ -21518,9 +21816,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_ositests\" in COIN_FIND
 # user said `don't use.' Yes means we have something, from the user or
 # from pkgconfig. Note that we haven't run a useability test!
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for ositests: \"$coin_has_ositests\"" >&5
 $as_echo "$as_me: FIND_PRIM_PKG result for ositests: \"$coin_has_ositests\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'ositests'" >&5
@@ -21715,7 +22013,7 @@ fi
   case $coin_has_sample in
     requested | build )
       if test -n "$PKG_CONFIG" ; then
-        pcfile=coindatasample
+        pcfile="coindatasample"
 
 
 
@@ -21723,7 +22021,7 @@ fi
     if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
       SAMPLE_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
       coin_has_sample=yes
-           sample_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+           sample_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
            sample_pcfiles="$pcfile"
     else
       SAMPLE_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
@@ -21751,9 +22049,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_sample\" in COIN_FIND_P
 # user said `don't use.' Yes means we have something, from the user or
 # from pkgconfig. Note that we haven't run a useability test!
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for sample: \"$coin_has_sample\"" >&5
 $as_echo "$as_me: FIND_PRIM_PKG result for sample: \"$coin_has_sample\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'sample'" >&5
@@ -21946,7 +22244,7 @@ fi
   case $coin_has_netlib in
     requested | build )
       if test -n "$PKG_CONFIG" ; then
-        pcfile=coindatanetlib
+        pcfile="coindatanetlib"
 
 
 
@@ -21954,7 +22252,7 @@ fi
     if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
       NETLIB_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
       coin_has_netlib=yes
-           netlib_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+           netlib_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
            netlib_pcfiles="$pcfile"
     else
       NETLIB_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
@@ -21982,9 +22280,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_netlib\" in COIN_FIND_P
 # user said `don't use.' Yes means we have something, from the user or
 # from pkgconfig. Note that we haven't run a useability test!
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for netlib: \"$coin_has_netlib\"" >&5
 $as_echo "$as_me: FIND_PRIM_PKG result for netlib: \"$coin_has_netlib\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'netlib'" >&5
@@ -22300,9 +22598,9 @@ rm -f core conftest.err conftest.$ac_objext \
 # the link check failed. Yes means that we passed the link check, or no link
 # check was performed. Skipping means the user said `don't use.'
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_LIB result for amd: \"$coin_has_amd\"" >&5
 $as_echo "$as_me: FIND_PRIM_LIB result for amd: \"$coin_has_amd\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'amd'" >&5
@@ -22571,9 +22869,9 @@ rm -f core conftest.err conftest.$ac_objext \
 # the link check failed. Yes means that we passed the link check, or no link
 # check was performed. Skipping means the user said `don't use.'
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_LIB result for cholmod: \"$coin_has_cholmod\"" >&5
 $as_echo "$as_me: FIND_PRIM_LIB result for cholmod: \"$coin_has_cholmod\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'cholmod'" >&5
@@ -22630,7 +22928,8 @@ $as_echo "#define COIN_HAS_CHOLMOD 1" >>confdefs.h
   fi
 
 
-# Glpk also brings AMD  (FIXME: Glpk installs amd.h only if build via ThirdParty/Glpk)
+# ThirdParty/Glpk also brings AMD and will install amd.h. Note that a standard
+# package for glpk does not install amd.h.
 
 if test $coin_has_cholmod = no -a $coin_has_amd = no ; then
 
@@ -22792,7 +23091,7 @@ fi
   case $coin_has_glpk in
     requested | build )
       if test -n "$PKG_CONFIG" ; then
-        pcfile=coinglpk
+        pcfile="coinglpk"
 
 
 
@@ -22800,7 +23099,7 @@ fi
     if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
       GLPK_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
       coin_has_glpk=yes
-           glpk_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+           glpk_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
            glpk_pcfiles="$pcfile"
     else
       GLPK_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
@@ -22828,9 +23127,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_glpk\" in COIN_FIND_PRI
 # user said `don't use.' Yes means we have something, from the user or
 # from pkgconfig. Note that we haven't run a useability test!
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for glpk: \"$coin_has_glpk\"" >&5
 $as_echo "$as_me: FIND_PRIM_PKG result for glpk: \"$coin_has_glpk\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'glpk'" >&5
@@ -22888,8 +23187,8 @@ $as_echo "#define COIN_HAS_GLPK 1" >>confdefs.h
   fi
 
   if test $coin_has_glpk = yes ; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: using AMD from GLPK package" >&5
-$as_echo "$as_me: using AMD from GLPK package" >&6;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: using AMD from ThirdParty/GLPK package" >&5
+$as_echo "$as_me: using AMD from ThirdParty/GLPK package" >&6;}
 
 $as_echo "#define COIN_HAS_AMD 1" >>confdefs.h
 
@@ -22906,12 +23205,16 @@ fi
 
 fi
 
-# MUMPS
+# MUMPS. Check first for ThirdParty/MUMPS, on the assumption that if the user
+# bothered to build it, we should use it. If it's not present, try for a
+# system installation. If we find it, define CLP_HAS_MUMPS for export to code
+# using clp.
 
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package Mumps" >&5
-$as_echo_n "checking for package Mumps... " >&6; }
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package MUMPS" >&5
+$as_echo_n "checking for package MUMPS... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
 
@@ -23066,7 +23369,7 @@ fi
   case $coin_has_mumps in
     requested | build )
       if test -n "$PKG_CONFIG" ; then
-        pcfile=coinmumps
+        pcfile="coinmumps"
 
 
 
@@ -23074,7 +23377,7 @@ fi
     if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
       MUMPS_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
       coin_has_mumps=yes
-           mumps_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+           mumps_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
            mumps_pcfiles="$pcfile"
     else
       MUMPS_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
@@ -23102,9 +23405,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_mumps\" in COIN_FIND_PR
 # user said `don't use.' Yes means we have something, from the user or
 # from pkgconfig. Note that we haven't run a useability test!
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for mumps: \"$coin_has_mumps\"" >&5
 $as_echo "$as_me: FIND_PRIM_PKG result for mumps: \"$coin_has_mumps\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'mumps'" >&5
@@ -23161,6 +23464,274 @@ $as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
 
   fi
 
+if test $coin_has_mumps = no ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package MUMPS" >&5
+$as_echo_n "checking for package MUMPS... " >&6; }
+
+# Make sure the necessary variables exist for each client package.
+
+
+
+
+
+# Check to see if the user has overridden configure parameters from the
+# environment.
+
+  coin_has_mumps=noInfo
+  if test x"$COIN_SKIP_PROJECTS" != x ; then
+    for pkg in $COIN_SKIP_PROJECTS ; do
+      if test "$pkg" = "$mumps" ; then
+        coin_has_mumps=skipping
+      fi
+    done
+  fi
+
+# If we're not skipping this project, define and process the command line
+# options according to the cmdopts parameter. Then invoke FIND_PRIM_PKG to do
+# the heavy lifting.
+
+  if test "$coin_has_mumps" != skipping ; then
+
+
+
+
+# Check whether --with-mumps was given.
+if test "${with_mumps+set}" = set; then :
+  withval=$with_mumps;
+fi
+
+
+
+# Check whether --with-mumps-lflags was given.
+if test "${with_mumps_lflags+set}" = set; then :
+  withval=$with_mumps_lflags;
+fi
+
+
+
+# Check whether --with-mumps-cflags was given.
+if test "${with_mumps_cflags+set}" = set; then :
+  withval=$with_mumps_cflags;
+fi
+
+
+
+
+
+  dflt_action=yes
+
+# Initialize variables for the primary library.
+
+  coin_has_mumps=noInfo
+  mumps_lflags=
+  mumps_cflags=
+  mumps_data=
+
+# --with-prim is always present. If the client specified dataonly, its value
+# is assigned to prim_data.
+
+  withval=$with_mumps
+  if test -n "$withval" ; then
+    case "$withval" in
+      no )
+        coin_has_mumps=skipping
+        ;;
+      yes )
+        coin_has_mumps=requested
+        ;;
+      build )
+        coin_has_mumps=build
+        ;;
+      * )
+        coin_has_mumps=yes
+        mumps_lflags=$withval
+        ;;
+    esac
+  fi
+
+# --with-prim-lflags and --with-prim-cflags are present unless the client
+# specified dataonly. Specifying --with-prim=no overrides the individual
+# options for lflags and cflags.
+
+  if test "$coin_has_mumps" != skipping ; then
+       withval=$with_mumps_lflags
+       if test -n "$withval" ; then
+         case "$withval" in
+           build | no | yes )
+             as_fn_error $? "\"$withval\" is not valid here; please specify linker flags appropriate for your environment." "$LINENO" 5
+             ;;
+           * )
+             coin_has_mumps=yes
+             mumps_lflags=$withval
+             ;;
+         esac
+       fi
+
+       withval=$with_mumps_cflags
+       if test -n "$withval" ; then
+         case "$withval" in
+           build | no | yes )
+             as_fn_error $? "\"$withval\" is not valid here; please specify compiler flags appropriate for your environment." "$LINENO" 5
+             ;;
+           * )
+             coin_has_mumps=yes
+             mumps_cflags="$withval"
+             ;;
+         esac
+       fi
+     fi
+
+# --with-prim-data will be present unless the client specified nodata.
+# Specifying --with-prim=no overrides the individual option for data.
+
+
+
+# At this point, coin_has_prim can be one of noInfo (no user options
+# specified), skipping (user said no), requested or build (user said yes
+# or build and gave no further guidance), or yes (user specified one or
+# more --with-prim options). If we're already at yes or skipping, we're
+# done looking.
+
+# If there are no user options (noInfo) and the default is no, we're skipping.
+# Otherwise, the default must be yes or build; consider the package requested.
+# A default action we don't recognise defaults to yes.
+
+  if test "$coin_has_mumps" = noInfo ; then
+    case $dflt_action in
+      no )
+        coin_has_mumps=skipping
+        ;;
+      build )
+        coin_has_mumps=build
+        ;;
+      * )
+        coin_has_mumps=requested
+        ;;
+    esac
+  fi
+
+# Now coin_has_prim can be one of skipping, yes, build, or requested. For
+# build or requested, use the parameter values or invent some.
+
+  case $coin_has_mumps in
+    build | requested)
+      mumps_lflags=-ldmumps
+         mumps_cflags=-I/usr/include/MUMPS
+
+      coin_has_mumps=yes
+      ;;
+    skipping | yes )
+      ;;
+    * )
+      { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Unexpected status \"$coin_has_mumps\" in COIN_FIND_PRIM_LIB" >&5
+$as_echo "$as_me: WARNING: Unexpected status \"$coin_has_mumps\" in COIN_FIND_PRIM_LIB" >&2;}
+      ;;
+  esac
+
+# At this point, coin_has_prim is yes or skipping.  Time to run a link check,
+# if we have a function (dmumps_c). Use whatever we've collected for lflags, plus
+# other libraries () as the other libraries parameter to AC_SEARCH_LIBS,
+# leaving the library parameter blank.
+
+  if test $coin_has_mumps != skipping ; then
+    ac_save_LIBS=$LIBS
+       LIBS="$mumps_lflags "
+       cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#ifdef __cplusplus
+             extern "C"
+           #endif
+           void dmumps_c();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+dmumps_c()
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+
+else
+  coin_has_mumps=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+       LIBS=$ac_save_LIBS
+  fi
+
+# The final value of coin_has_prim will be yes, no, or skipping. No means that
+# the link check failed. Yes means that we passed the link check, or no link
+# check was performed. Skipping means the user said `don't use.'
+
+# Define BUILDTOOLS_DEBUG to enable debugging output
+
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
+      { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_LIB result for mumps: \"$coin_has_mumps\"" >&5
+$as_echo "$as_me: FIND_PRIM_LIB result for mumps: \"$coin_has_mumps\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'mumps'" >&5
+$as_echo "$as_me: Collected values for package 'mumps'" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: mumps_lflags is \"$mumps_lflags\"" >&5
+$as_echo "$as_me: mumps_lflags is \"$mumps_lflags\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: mumps_cflags is \"$mumps_cflags\"" >&5
+$as_echo "$as_me: mumps_cflags is \"$mumps_cflags\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: mumps_data is \"$mumps_data\"" >&5
+$as_echo "$as_me: mumps_data is \"$mumps_data\"" >&6;}
+      { $as_echo "$as_me:${as_lineno-$LINENO}: mumps_pcfiles is \"$mumps_pcfiles\"" >&5
+$as_echo "$as_me: mumps_pcfiles is \"$mumps_pcfiles\"" >&6;}
+    fi
+
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_mumps" >&5
+$as_echo "$coin_has_mumps" >&6; }
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_mumps due to COIN_SKIP_PROJECTS" >&5
+$as_echo "$coin_has_mumps due to COIN_SKIP_PROJECTS" >&6; }
+  fi
+
+# Possibilities are `yes', `no', or `skipping'. Normalise to `yes' or `no'.
+
+  if test "$coin_has_mumps" != yes ; then
+    coin_has_mumps=no
+  fi
+
+# Create an automake conditional COIN_HAS_PRIM.
+
+   if test $coin_has_mumps = yes; then
+  COIN_HAS_MUMPS_TRUE=
+  COIN_HAS_MUMPS_FALSE='#'
+else
+  COIN_HAS_MUMPS_TRUE='#'
+  COIN_HAS_MUMPS_FALSE=
+fi
+
+
+# If we've located the package, define preprocessor symbol COIN_HAS_PRIM
+# and augment the necessary variables for the client packages.
+
+  if test $coin_has_mumps = yes ; then
+
+$as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
+
+    CLPLIB_LFLAGS="$mumps_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$mumps_cflags $CLPLIB_CFLAGS"
+
+
+# Finally, set up PRIM_DATA, unless the user specified nodata.
+
+
+  fi
+
+fi
 if test $coin_has_mumps = yes ; then
 
 $as_echo "#define CLP_HAS_MUMPS 1" >>confdefs.h
@@ -23383,9 +23954,9 @@ rm -f core conftest.err conftest.$ac_objext \
 # the link check failed. Yes means that we passed the link check, or no link
 # check was performed. Skipping means the user said `don't use.'
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_LIB result for wsmp: \"$coin_has_wsmp\"" >&5
 $as_echo "$as_me: FIND_PRIM_LIB result for wsmp: \"$coin_has_wsmp\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'wsmp'" >&5
@@ -23605,7 +24176,7 @@ fi
     if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
       BLAS_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
       coin_has_blas=yes
-           blas_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+           blas_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
            blas_pcfiles="$pcfile"
     else
       BLAS_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
@@ -23633,9 +24204,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_blas\" in COIN_FIND_PRI
 # user said `don't use.' Yes means we have something, from the user or
 # from pkgconfig. Note that we haven't run a useability test!
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for blas: \"$coin_has_blas\"" >&5
 $as_echo "$as_me: FIND_PRIM_PKG result for blas: \"$coin_has_blas\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'blas'" >&5
@@ -25689,7 +26260,7 @@ fi
   case $coin_has_asl in
     requested | build )
       if test -n "$PKG_CONFIG" ; then
-        pcfile=coinasl
+        pcfile="coinasl"
 
 
 
@@ -25697,7 +26268,7 @@ fi
     if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
       ASL_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
       coin_has_asl=yes
-           asl_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir $pcfile 2>/dev/null`
+           asl_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
            asl_pcfiles="$pcfile"
     else
       ASL_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
@@ -25725,9 +26296,9 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_asl\" in COIN_FIND_PRIM
 # user said `don't use.' Yes means we have something, from the user or
 # from pkgconfig. Note that we haven't run a useability test!
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-    if test 1 = 1 ; then
+    if test "$BUILDTOOLS_DEBUG" = 1 ; then
       { $as_echo "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for asl: \"$coin_has_asl\"" >&5
 $as_echo "$as_me: FIND_PRIM_PKG result for asl: \"$coin_has_asl\"" >&6;}
       { $as_echo "$as_me:${as_lineno-$LINENO}: Collected values for package 'asl'" >&5
@@ -26250,7 +26821,7 @@ fi
 
 # Finalize libs and cflags.
 
-   if test 1 = 1 ; then
+   if test "$BUILDTOOLS_DEBUG" = 1 ; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for ClpLib:" >&5
 $as_echo "$as_me: FINALIZE_FLAGS for ClpLib:" >&6;}
       fi
@@ -26265,9 +26836,24 @@ $as_echo "$as_me: FINALIZE_FLAGS for ClpLib:" >&6;}
         CLPLIB_LFLAGS="$temp_LFLAGS ${CLPLIB_LFLAGS}"
       fi
 
-# Change the test to enable / disable debugging output
+      # setup XYZ_EXPORT symbol for library users
+      libexport_attribute=
+      if test "$enable_shared" = yes ; then
+        # TODO better check for this? we essentially want to know whether we're building DLLs
+        # or do we also need this for GCC on Windows?
+        case $CC in */compile\ cl | cl | */cl | */compile\ icl | icl | */icl )
+          libexport_attribute="__declspec(dllimport)"
+        esac
+      fi
 
-      if test 1 = 1 ; then
+cat >>confdefs.h <<_ACEOF
+#define CLPLIB_EXPORT $libexport_attribute
+_ACEOF
+
+
+# Define BUILDTOOLS_DEBUG to enable debugging output
+
+      if test "$BUILDTOOLS_DEBUG" = 1 ; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_LFLAGS_NOPC: \"${CLPLIB_LFLAGS_NOPC}\"" >&5
 $as_echo "$as_me: CLPLIB_LFLAGS_NOPC: \"${CLPLIB_LFLAGS_NOPC}\"" >&6;}
         { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_CFLAGS_NOPC: \"${CLPLIB_CFLAGS_NOPC}\"" >&5
@@ -26279,7 +26865,7 @@ $as_echo "$as_me: CLPLIB_LFLAGS: \"${CLPLIB_LFLAGS}\"" >&6;}
         { $as_echo "$as_me:${as_lineno-$LINENO}: CLPLIB_CFLAGS: \"${CLPLIB_CFLAGS}\"" >&5
 $as_echo "$as_me: CLPLIB_CFLAGS: \"${CLPLIB_CFLAGS}\"" >&6;}
       fi
-     if test 1 = 1 ; then
+     if test "$BUILDTOOLS_DEBUG" = 1 ; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiClpLib:" >&5
 $as_echo "$as_me: FINALIZE_FLAGS for OsiClpLib:" >&6;}
       fi
@@ -26294,9 +26880,24 @@ $as_echo "$as_me: FINALIZE_FLAGS for OsiClpLib:" >&6;}
         OSICLPLIB_LFLAGS="$temp_LFLAGS ${OSICLPLIB_LFLAGS}"
       fi
 
-# Change the test to enable / disable debugging output
+      # setup XYZ_EXPORT symbol for library users
+      libexport_attribute=
+      if test "$enable_shared" = yes ; then
+        # TODO better check for this? we essentially want to know whether we're building DLLs
+        # or do we also need this for GCC on Windows?
+        case $CC in */compile\ cl | cl | */cl | */compile\ icl | icl | */icl )
+          libexport_attribute="__declspec(dllimport)"
+        esac
+      fi
 
-      if test 1 = 1 ; then
+cat >>confdefs.h <<_ACEOF
+#define OSICLPLIB_EXPORT $libexport_attribute
+_ACEOF
+
+
+# Define BUILDTOOLS_DEBUG to enable debugging output
+
+      if test "$BUILDTOOLS_DEBUG" = 1 ; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_LFLAGS_NOPC: \"${OSICLPLIB_LFLAGS_NOPC}\"" >&5
 $as_echo "$as_me: OSICLPLIB_LFLAGS_NOPC: \"${OSICLPLIB_LFLAGS_NOPC}\"" >&6;}
         { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_CFLAGS_NOPC: \"${OSICLPLIB_CFLAGS_NOPC}\"" >&5
@@ -26308,7 +26909,7 @@ $as_echo "$as_me: OSICLPLIB_LFLAGS: \"${OSICLPLIB_LFLAGS}\"" >&6;}
         { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&5
 $as_echo "$as_me: OSICLPLIB_CFLAGS: \"${OSICLPLIB_CFLAGS}\"" >&6;}
       fi
-     if test 1 = 1 ; then
+     if test "$BUILDTOOLS_DEBUG" = 1 ; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: FINALIZE_FLAGS for OsiClpUnitTest:" >&5
 $as_echo "$as_me: FINALIZE_FLAGS for OsiClpUnitTest:" >&6;}
       fi
@@ -26323,9 +26924,24 @@ $as_echo "$as_me: FINALIZE_FLAGS for OsiClpUnitTest:" >&6;}
         OSICLPUNITTEST_LFLAGS="$temp_LFLAGS ${OSICLPUNITTEST_LFLAGS}"
       fi
 
-# Change the test to enable / disable debugging output
+      # setup XYZ_EXPORT symbol for library users
+      libexport_attribute=
+      if test "$enable_shared" = yes ; then
+        # TODO better check for this? we essentially want to know whether we're building DLLs
+        # or do we also need this for GCC on Windows?
+        case $CC in */compile\ cl | cl | */cl | */compile\ icl | icl | */icl )
+          libexport_attribute="__declspec(dllimport)"
+        esac
+      fi
 
-      if test 1 = 1 ; then
+cat >>confdefs.h <<_ACEOF
+#define OSICLPUNITTEST_EXPORT $libexport_attribute
+_ACEOF
+
+
+# Define BUILDTOOLS_DEBUG to enable debugging output
+
+      if test "$BUILDTOOLS_DEBUG" = 1 ; then
         { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPUNITTEST_LFLAGS_NOPC: \"${OSICLPUNITTEST_LFLAGS_NOPC}\"" >&5
 $as_echo "$as_me: OSICLPUNITTEST_LFLAGS_NOPC: \"${OSICLPUNITTEST_LFLAGS_NOPC}\"" >&6;}
         { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPUNITTEST_CFLAGS_NOPC: \"${OSICLPUNITTEST_CFLAGS_NOPC}\"" >&5
@@ -26354,9 +26970,9 @@ $as_echo "$as_me: OSICLPUNITTEST_CFLAGS: \"${OSICLPUNITTEST_CFLAGS}\"" >&6;}
        OSICLPLIB_LFLAGS="$OSICLPLIB_LFLAGS $CLPLIB_LFLAGS"
        OSICLPLIB_CFLAGS="$OSICLPLIB_CFLAGS $CLPLIB_CFLAGS"
 
-# Change the test to enable / disable debugging output
+# Define BUILDTOOLS_DEBUG to enable debugging output
 
-       if test 1 = 1 ; then
+       if test "$BUILDTOOLS_DEBUG" = 1 ; then
          { $as_echo "$as_me:${as_lineno-$LINENO}: CHK_HERE adding ClpLib to OsiClpLib:" >&5
 $as_echo "$as_me: CHK_HERE adding ClpLib to OsiClpLib:" >&6;}
          { $as_echo "$as_me:${as_lineno-$LINENO}: OSICLPLIB_PCFILES: \"${OSICLPLIB_PCFILES}\"" >&5
@@ -26576,6 +27192,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COIN_HAS_GLPK_TRUE}" && test -z "${COIN_HAS_GLPK_FALSE}"; then
   as_fn_error $? "conditional \"COIN_HAS_GLPK\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${COIN_HAS_MUMPS_TRUE}" && test -z "${COIN_HAS_MUMPS_FALSE}"; then
+  as_fn_error $? "conditional \"COIN_HAS_MUMPS\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COIN_HAS_MUMPS_TRUE}" && test -z "${COIN_HAS_MUMPS_FALSE}"; then
@@ -27221,9 +27841,12 @@ double_quote_subst='$double_quote_subst'
 delay_variable_subst='$delay_variable_subst'
 macro_version='`$ECHO "$macro_version" | $SED "$delay_single_quote_subst"`'
 macro_revision='`$ECHO "$macro_revision" | $SED "$delay_single_quote_subst"`'
-enable_shared='`$ECHO "$enable_shared" | $SED "$delay_single_quote_subst"`'
 enable_static='`$ECHO "$enable_static" | $SED "$delay_single_quote_subst"`'
 pic_mode='`$ECHO "$pic_mode" | $SED "$delay_single_quote_subst"`'
+AS='`$ECHO "$AS" | $SED "$delay_single_quote_subst"`'
+DLLTOOL='`$ECHO "$DLLTOOL" | $SED "$delay_single_quote_subst"`'
+OBJDUMP='`$ECHO "$OBJDUMP" | $SED "$delay_single_quote_subst"`'
+enable_shared='`$ECHO "$enable_shared" | $SED "$delay_single_quote_subst"`'
 enable_fast_install='`$ECHO "$enable_fast_install" | $SED "$delay_single_quote_subst"`'
 shared_archive_member_spec='`$ECHO "$shared_archive_member_spec" | $SED "$delay_single_quote_subst"`'
 SHELL='`$ECHO "$SHELL" | $SED "$delay_single_quote_subst"`'
@@ -27253,12 +27876,10 @@ lt_cv_to_host_file_cmd='`$ECHO "$lt_cv_to_host_file_cmd" | $SED "$delay_single_q
 lt_cv_to_tool_file_cmd='`$ECHO "$lt_cv_to_tool_file_cmd" | $SED "$delay_single_quote_subst"`'
 reload_flag='`$ECHO "$reload_flag" | $SED "$delay_single_quote_subst"`'
 reload_cmds='`$ECHO "$reload_cmds" | $SED "$delay_single_quote_subst"`'
-OBJDUMP='`$ECHO "$OBJDUMP" | $SED "$delay_single_quote_subst"`'
 deplibs_check_method='`$ECHO "$deplibs_check_method" | $SED "$delay_single_quote_subst"`'
 file_magic_cmd='`$ECHO "$file_magic_cmd" | $SED "$delay_single_quote_subst"`'
 file_magic_glob='`$ECHO "$file_magic_glob" | $SED "$delay_single_quote_subst"`'
 want_nocaseglob='`$ECHO "$want_nocaseglob" | $SED "$delay_single_quote_subst"`'
-DLLTOOL='`$ECHO "$DLLTOOL" | $SED "$delay_single_quote_subst"`'
 sharedlib_from_linklib_cmd='`$ECHO "$sharedlib_from_linklib_cmd" | $SED "$delay_single_quote_subst"`'
 AR='`$ECHO "$AR" | $SED "$delay_single_quote_subst"`'
 AR_FLAGS='`$ECHO "$AR_FLAGS" | $SED "$delay_single_quote_subst"`'
@@ -27470,7 +28091,10 @@ _LTECHO_EOF'
 }
 
 # Quote evaled strings.
-for var in SHELL \
+for var in AS \
+DLLTOOL \
+OBJDUMP \
+SHELL \
 ECHO \
 PATH_SEPARATOR \
 SED \
@@ -27483,12 +28107,10 @@ LN_S \
 lt_SP2NL \
 lt_NL2SP \
 reload_flag \
-OBJDUMP \
 deplibs_check_method \
 file_magic_cmd \
 file_magic_glob \
 want_nocaseglob \
-DLLTOOL \
 sharedlib_from_linklib_cmd \
 AR \
 AR_FLAGS \
@@ -28443,14 +29065,23 @@ available_tags='CXX F77 '
 macro_version=$macro_version
 macro_revision=$macro_revision
 
-# Whether or not to build shared libraries.
-build_libtool_libs=$enable_shared
-
 # Whether or not to build static libraries.
 build_old_libs=$enable_static
 
 # What type of objects to build.
 pic_mode=$pic_mode
+
+# Assembler program.
+AS=$lt_AS
+
+# DLL creation program.
+DLLTOOL=$lt_DLLTOOL
+
+# Object dumper program.
+OBJDUMP=$lt_OBJDUMP
+
+# Whether or not to build shared libraries.
+build_libtool_libs=$enable_shared
 
 # Whether or not to optimize for fast installation.
 fast_install=$enable_fast_install
@@ -28522,9 +29153,6 @@ to_host_file_cmd=$lt_cv_to_host_file_cmd
 # convert \$build files to toolchain format.
 to_tool_file_cmd=$lt_cv_to_tool_file_cmd
 
-# An object symbol dumper.
-OBJDUMP=$lt_OBJDUMP
-
 # Method to check whether dependent libraries are shared objects.
 deplibs_check_method=$lt_deplibs_check_method
 
@@ -28536,9 +29164,6 @@ file_magic_glob=$lt_file_magic_glob
 
 # Find potential files using nocaseglob when deplibs_check_method = "file_magic".
 want_nocaseglob=$lt_want_nocaseglob
-
-# DLL creation program.
-DLLTOOL=$lt_DLLTOOL
 
 # Command to associate shared and link libraries.
 sharedlib_from_linklib_cmd=$lt_sharedlib_from_linklib_cmd

@@ -1,9 +1,12 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Library Visibility Attribute */
+#undef CLPLIB_EXPORT
+
 /* Define to 1, 2, 3, or 4 if Aboca should be built. */
 #undef CLP_HAS_ABC
 
-/* Define to 1 if MUMPS package is available */
+/* Define to 1 if the MUMPS package is available. */
 #undef CLP_HAS_MUMPS
 
 /* SVN revision number of project */
@@ -39,7 +42,7 @@
 /* Define to 1 if Glpk is available. */
 #undef COIN_HAS_GLPK
 
-/* Define to 1 if Mumps is available. */
+/* Define to 1 if the MUMPS package is available */
 #undef COIN_HAS_MUMPS
 
 /* Define to 1 if Netlib is available. */
@@ -133,6 +136,12 @@
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
+
+/* Library Visibility Attribute */
+#undef OSICLPLIB_EXPORT
+
+/* Library Visibility Attribute */
+#undef OSICLPUNITTEST_EXPORT
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT

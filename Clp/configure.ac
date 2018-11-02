@@ -110,12 +110,13 @@ AC_COIN_CHK_LIB(AMD,[ClpLib],[-lamd],[-I/usr/include/suitesparse],[],
 AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],
 		[cholmod_start])
 
-# Glpk also brings AMD  (FIXME: Glpk installs amd.h only if build via ThirdParty/Glpk)
+# ThirdParty/Glpk also brings AMD and will install amd.h. Note that a standard
+# package for glpk does not install amd.h.
 
 if test $coin_has_cholmod = no -a $coin_has_amd = no ; then
   AC_COIN_CHK_PKG(Glpk,[ClpLib],[coinglpk])
   if test $coin_has_glpk = yes ; then
-    AC_MSG_NOTICE([using AMD from GLPK package])
+    AC_MSG_NOTICE([using AMD from ThirdParty/GLPK package])
     AC_DEFINE(COIN_HAS_AMD,[1],[Define to 1 if the AMD package is available])
   fi
 else
@@ -123,10 +124,19 @@ else
   AM_CONDITIONAL(COIN_HAS_GLPK, [test 0 = 1])
 fi
 
-# MUMPS
-AC_COIN_CHK_PKG(Mumps,[ClpLib],[coinmumps])
+# MUMPS. Check first for ThirdParty/MUMPS, on the assumption that if the user
+# bothered to build it, we should use it. If it's not present, try for a
+# system installation. If we find it, define CLP_HAS_MUMPS for export to code
+# using clp.
+
+AC_COIN_CHK_PKG(MUMPS,[ClpLib],[coinmumps])
+if test $coin_has_mumps = no ; then
+  AC_COIN_CHK_LIB(MUMPS,[ClpLib],[-ldmumps],[-I/usr/include/MUMPS],[],
+  		  [dmumps_c])
+fi
 if test $coin_has_mumps = yes ; then
-  AC_DEFINE(CLP_HAS_MUMPS, [1], [Define to 1 if MUMPS package is available])
+  AC_DEFINE(CLP_HAS_MUMPS,[1],
+  	    [Define to 1 if the MUMPS package is available.])
 fi
 
 # WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
