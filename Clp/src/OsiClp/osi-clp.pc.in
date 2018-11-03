@@ -7,8 +7,8 @@ Name: OsiClp
 Description: COIN-OR Open Solver Interface for CLP
 URL: https://projects.coin-or.org/Osi
 Version: @PACKAGE_VERSION@
-Libs: @OSICLPLIB_LFLAGS_PUB@
+Libs: -L${libdir} -lOsiClp
 Libs.private: @OSICLPLIB_LFLAGS_NOPC@
-Cflags: @OSICLPLIB_CFLAGS_PUB@
+Cflags: -I${includedir}
 Requires:
 Requires.private: @OSICLPLIB_PCFILES@
