@@ -3735,6 +3735,8 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum, bool printMes
           }
      }
      objectiveValue_ = 0.0;
+     int badColumn=-1;
+     double badValue=0.0;
      if (numberColumns_) {
           const double * cost = objective();
           for (int i = 0; i < numberColumns_; i++) {
@@ -3759,6 +3761,8 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum, bool printMes
                                    status_[i] = 2;
                                    numberDualInfeasibilities++;;
                                    sumDualInfeasibilities += fabs(objValue);
+				   badColumn=i;
+				   badValue=-1.0;
                                    returnCode |= 2;
                               }
                               objectiveValue_ += columnActivity_[i] * objValue;
@@ -3771,6 +3775,8 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum, bool printMes
                                    status_[i] = 3;
                                    numberDualInfeasibilities++;;
                                    sumDualInfeasibilities += fabs(objValue);
+				   badColumn=i;
+				   badValue=1.0;
                                    returnCode |= 2;
                               }
                               objectiveValue_ += columnActivity_[i] * objValue;
@@ -3807,6 +3813,13 @@ int ClpModel::emptyProblem(int * infeasNumber, double * infeasSum, bool printMes
      }
      if (returnCode == 3)
           returnCode = 4;
+     if (returnCode == 2) {
+       // create ray
+       delete [] ray_;
+       ray_ = new double [numberColumns_];
+       CoinZeroN(ray_, numberColumns_);
+       ray_[badColumn]=badValue;
+     }
      return returnCode;
 }
 #ifndef SLIM_NOIO
