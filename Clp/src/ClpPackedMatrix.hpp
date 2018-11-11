@@ -228,7 +228,7 @@ public:
                                 const double * rowScale,
                                 const double * columnScale,
                                 double * spare = NULL) const;
-     /** Return <code>x * scalar * A + y</code> in <code>z</code>.
+     /** Return <code>x * scalar * A in <code>z</code>.
      Can use y as temporary array (will be empty at end)
      Note - If x packed mode - then z packed mode
      Squashes small elements and knows about ClpSimplex */
@@ -236,7 +236,7 @@ public:
                                  const CoinIndexedVector * x,
                                  CoinIndexedVector * y,
                                  CoinIndexedVector * z) const;
-     /** Return <code>x * scalar * A + y</code> in <code>z</code>.
+     /** Return <code>x * scalar * A in <code>z</code>.
      Note - If x packed mode - then z packed mode
      This does by column and knows no gaps
      Squashes small elements and knows about ClpSimplex */
@@ -244,7 +244,7 @@ public:
                                  const CoinIndexedVector * x,
                                  CoinIndexedVector * y,
                                  CoinIndexedVector * z) const;
-     /** Return <code>x * scalar * A + y</code> in <code>z</code>.
+     /** Return <code>x * scalar * A in <code>z</code>.
      Can use y as temporary array (will be empty at end)
      Note - If x packed mode - then z packed mode
      Squashes small elements and knows about ClpSimplex.

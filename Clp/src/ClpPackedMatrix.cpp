@@ -699,7 +699,7 @@ ClpPackedMatrix::transposeTimesSubset( int number,
           }
      }
 }
-/* Return <code>x * A + y</code> in <code>z</code>.
+/* Return <code>x * A in <code>z</code>.
 	Squashes small elements and knows about ClpSimplex */
 void
 ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
@@ -954,7 +954,7 @@ ClpPackedMatrix::transposeTimes(const ClpSimplex * model, double scalar,
 //static int xD=0;
 //static double yA=0.0;
 //static double yC=0.0;
-/* Return <code>x * scalar * A + y</code> in <code>z</code>.
+/* Return <code>x * scalar * A in <code>z</code>.
    Note - If x packed mode - then z packed mode
    This does by column and knows no gaps
    Squashes small elements and knows about ClpSimplex */
@@ -1310,7 +1310,7 @@ ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex * model, double scalar,
      if (packed)
           columnArray->setPackedMode(true);
 }
-/* Return <code>x * A + y</code> in <code>z</code>.
+/* Return <code>x * A in <code>z</code>.
 	Squashes small elements and knows about ClpSimplex */
 void
 ClpPackedMatrix::transposeTimesByRow(const ClpSimplex * model, double scalar,
