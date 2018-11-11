@@ -1182,6 +1182,7 @@ Clp_printModel(Clp_Simplex * model, const char * prefix)
      int numcols    = clp_simplex->numberColumns();
      CoinBigIndex numelem    = clp_simplex->getNumElements();
      const CoinBigIndex *start = clp_simplex->matrix()->getVectorStarts();
+     const int *length = clp_simplex->matrix()->getVectorLengths();
      const int *index     = clp_simplex->matrix()->getIndices();
      const double *value  = clp_simplex->matrix()->getElements();
      const double *collb  = model->model_->columnLower();
@@ -1198,9 +1199,12 @@ Clp_printModel(Clp_Simplex * model, const char * prefix)
           int i;
           for (i = 0; i <= numcols; i++)
                printf("%s start[%i] = %i\n", prefix, i, start[i]);
-          for (i = 0; i < numelem; i++)
+	  // may be gaps
+          for (i = 0; i < numcols; i++) {
+	    for (CoinBigIndex j=start[i];j<start[i]+length[i];j++)
                printf("%s index[%i] = %i, value[%i] = %g\n",
-                      prefix, i, index[i], i, value[i]);
+                      prefix, j, index[j], j, value[j]);
+	  }
      }
 
      printf("%s collb = %p, colub = %p, obj = %p, rowlb = %p, rowub = %p\n",
