@@ -4118,8 +4118,8 @@ ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
      // maybe we need to move scales to SimplexModel for factorization?
      if ((what == 63 && !pivotVariable_) || (newArrays && !keepPivots)) {
           delete [] pivotVariable_;
-          pivotVariable_ = new int[numberRows2];
-          for (int i = 0; i < numberRows2; i++)
+          pivotVariable_ = new int[numberRows2+1];
+          for (int i = 0; i < numberRows2+1; i++)
                pivotVariable_[i] = -1;
      } else if (what == 63 && !keepPivots) {
           // just reset

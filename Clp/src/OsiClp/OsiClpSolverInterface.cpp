@@ -2111,6 +2111,8 @@ void OsiClpSolverInterface::markHotStart()
 #else
       assert (factorization!=NULL || small->problemStatus_ );
       factorization_ = factorization;
+      if (factorization_ == NULL)
+	factorization_ = static_cast<ClpSimplexDual *>(small)->setupForStrongBranching(spareArrays_,numberRows,numberColumns,false);
 #endif
     } else {
       assert (factorization_==NULL);
@@ -7474,7 +7476,7 @@ OsiClpSolverInterface::setHintParam(OsiHintParam key, bool yesNo,
       specialOptions_ &= (2047|7*8192|15*65536|2097152|4194304);
       if (otherInformation!=NULL) {
         int * array = static_cast<int *> (otherInformation);
-        if (array[0]>=0||array[0]<=2)
+        if (array[0]>=0&&array[0]<=2)
           specialOptions_ |= array[0]<<10;
       }
     }
