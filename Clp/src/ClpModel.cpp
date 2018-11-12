@@ -1366,8 +1366,8 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
           if (numberRowNames < newNumberRows) {
                rowNames_.resize(newNumberRows);
                lengthNames_ = CoinMax(lengthNames_, 8);
-               char name[9];
-               for (int iRow = numberRowNames; iRow < newNumberRows; iRow++) {
+               char name[10];
+               for (unsigned int iRow = numberRowNames; iRow < newNumberRows; iRow++) {
                     sprintf(name, "R%7.7d", iRow);
                     rowNames_[iRow] = name;
                }
@@ -1377,8 +1377,8 @@ ClpModel::resize (int newNumberRows, int newNumberColumns)
           if (numberColumnNames < newNumberColumns) {
                columnNames_.resize(newNumberColumns);
                lengthNames_ = CoinMax(lengthNames_, 8);
-               char name[9];
-               for (int iColumn = numberColumnNames; 
+               char name[10];
+               for (unsigned int iColumn = numberColumnNames; 
 		    iColumn < newNumberColumns; iColumn++) {
                     sprintf(name, "C%7.7d", iColumn);
                     columnNames_[iColumn] = name;
@@ -3505,7 +3505,7 @@ ClpModel::getRowName(int iRow) const
      if (size > iRow) {
           return rowNames_[iRow];
      } else {
-          char name[9];
+          char name[10];
           sprintf(name, "R%7.7d", iRow);
           std::string rowName(name);
           return rowName;
@@ -3542,7 +3542,7 @@ ClpModel::getColumnName(int iColumn) const
      if (size > iColumn) {
           return columnNames_[iColumn];
      } else {
-          char name[9];
+          char name[10];
           sprintf(name, "C%7.7d", iColumn);
           std::string columnName(name);
           return columnName;
@@ -3621,14 +3621,14 @@ ClpModel::copyRowNames(const char * const * rowNames, int first, int last)
      int size = static_cast<int>(rowNames_.size());
      if (size != numberRows_)
           rowNames_.resize(numberRows_);
-     int iRow;
+     unsigned int iRow;
      for (iRow = first; iRow < last; iRow++) {
           if (rowNames && rowNames[iRow-first] && strlen(rowNames[iRow-first])) {
                rowNames_[iRow] = rowNames[iRow-first];
                maxLength = CoinMax(maxLength, static_cast<unsigned int> (strlen(rowNames[iRow-first])));
           } else {
                maxLength = CoinMax(maxLength, static_cast<unsigned int> (8));
-               char name[9];
+               char name[10];
                sprintf(name, "R%7.7d", iRow);
                rowNames_[iRow] = name;
           }
@@ -3649,14 +3649,14 @@ ClpModel::copyColumnNames(const char * const * columnNames, int first, int last)
      int size = static_cast<int>(columnNames_.size());
      if (size != numberColumns_)
           columnNames_.resize(numberColumns_);
-     int iColumn;
+     unsigned int iColumn;
      for (iColumn = first; iColumn < last; iColumn++) {
           if (columnNames && columnNames[iColumn-first] && strlen(columnNames[iColumn-first])) {
                columnNames_[iColumn] = columnNames[iColumn-first];
                maxLength = CoinMax(maxLength, static_cast<unsigned int> (strlen(columnNames[iColumn-first])));
           } else {
                maxLength = CoinMax(maxLength, static_cast<unsigned int> (8));
-               char name[9];
+               char name[10];
                sprintf(name, "C%7.7d", iColumn);
                columnNames_[iColumn] = name;
           }
@@ -3898,13 +3898,13 @@ ClpModel::rowNamesAsChar() const
           rowNames = new char * [numberRows_+1];
           int numberNames = static_cast<int>(rowNames_.size());
           numberNames = CoinMin(numberRows_, numberNames);
-          int iRow;
+          unsigned int iRow;
           for (iRow = 0; iRow < numberNames; iRow++) {
                if (rowName(iRow) != "") {
                     rowNames[iRow] =
                          CoinStrdup(rowName(iRow).c_str());
                } else {
-                    char name[9];
+                    char name[10];
                     sprintf(name, "R%7.7d", iRow);
                     rowNames[iRow] = CoinStrdup(name);
                }
@@ -3920,7 +3920,7 @@ ClpModel::rowNamesAsChar() const
                xx[n] = '\0';
 #endif
           }
-          char name[9];
+          char name[10];
           for ( ; iRow < numberRows_; iRow++) {
                sprintf(name, "R%7.7d", iRow);
                rowNames[iRow] = CoinStrdup(name);
@@ -3938,13 +3938,13 @@ ClpModel::columnNamesAsChar() const
           columnNames = new char * [numberColumns_];
           int numberNames = static_cast<int>(columnNames_.size());
           numberNames = CoinMin(numberColumns_, numberNames);
-          int iColumn;
+          unsigned int iColumn;
           for (iColumn = 0; iColumn < numberNames; iColumn++) {
                if (columnName(iColumn) != "") {
                     columnNames[iColumn] =
                          CoinStrdup(columnName(iColumn).c_str());
                } else {
-                    char name[9];
+                    char name[10];
                     sprintf(name, "C%7.7d", iColumn);
                     columnNames[iColumn] = CoinStrdup(name);
                }
@@ -3960,7 +3960,7 @@ ClpModel::columnNamesAsChar() const
                xx[n] = '\0';
 #endif
           }
-          char name[9];
+          char name[10];
           for ( ; iColumn < numberColumns_; iColumn++) {
                sprintf(name, "C%7.7d", iColumn);
                columnNames[iColumn] = CoinStrdup(name);
