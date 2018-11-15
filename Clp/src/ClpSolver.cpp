@@ -514,7 +514,7 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
 #endif
                          if (verbose)
                               maxAcross = 1;
-                         int limits[] = {1, 101, 201, 301, 401};
+                         int limits[] = {1, 101, 201, 401, 601};
                          std::vector<std::string> types;
                          types.push_back("Double parameters:");
                          types.push_back("Int parameters:");
@@ -573,7 +573,7 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                     } else if (type == CBC_PARAM_FULLGENERALQUERY) {
                          std::cout << "Full list of commands is:" << std::endl;
                          int maxAcross = 5;
-                         int limits[] = {1, 101, 201, 301, 401};
+                         int limits[] = {1, 101, 201, 401, 601};
                          std::vector<std::string> types;
                          types.push_back("Double parameters:");
                          types.push_back("Int parameters:");
@@ -646,7 +646,7 @@ int ClpMain1(int argc, const char *argv[],AbcSimplex * models)
                               std::cout << parameters[iParam].name() << " has value " <<
                                         parameters[iParam].intValue() << std::endl;
                          }
-                    } else if (type < 301) {
+                    } else if (type < 401) {
                          // one of several strings
                          std::string value = CoinReadGetString(argc, argv);
                          int action = parameters[iParam].parameterOption(value);

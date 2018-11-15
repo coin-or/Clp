@@ -3723,7 +3723,7 @@ sequential Lps to get a good approximate solution."
 this does branch and cut."
      );
      parameters[numberParameters++] =
-          CbcOrClpParam("sos!Options", "Whether to use SOS from AMPL",
+          CbcOrClpParam("sosO!ptions", "Whether to use SOS from AMPL",
                         "off", CBC_PARAM_STR_SOS);
      parameters[numberParameters-1].append("on");
      parameters[numberParameters-1].setCurrentOption("on");
@@ -3731,6 +3731,20 @@ this does branch and cut."
      (
           "Normally if AMPL says there are SOS variables they should be used, but sometime sthey should\
  be turned off - this does so."
+     );
+     // Due to James Howey
+     parameters[numberParameters++] =
+          CbcOrClpParam("sosP!rioritize", "How to deal with SOS priorities",
+                        "off", CBC_PARAM_STR_SOSPRIORITIZE);
+     parameters[numberParameters-1].append("high");
+     parameters[numberParameters-1].append("low");
+     parameters[numberParameters-1].append("orderhigh");
+     parameters[numberParameters-1].append("orderlow");
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This sets priorities for SOS.  The first two just set priority \
+relative to integers.  Orderhigh gives first set highest priority and integers \
+a low priority.  Orderlow gives integers high priority then SOS in order."
      );
      parameters[numberParameters++] =
           CbcOrClpParam("slog!Level", "Level of detail in (LP) Solver output",
