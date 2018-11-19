@@ -3211,6 +3211,8 @@ ClpPrimalColumnSteepest::saveWeights(ClpSimplex * model, int mode)
      const int * pivotVariable = model_->pivotVariable();
      bool doInfeasibilities = true;
      if (mode == 1) {
+       if (!model_->numberIterations())
+	 pivotSequence_=-1;
 #if ABOCA_LITE
        int numberThreads=abcState();
        if (numberThreads&&mode_>1)
