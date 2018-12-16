@@ -978,6 +978,7 @@ ClpSimplexOther::dualOfModel(double fractionRowRanges, double fractionColumnRang
           rowCopy = newCopy;
      }
      ClpSimplex * modelDual = new ClpSimplex();
+     modelDual->passInEventHandler(eventHandler_);
      modelDual->loadProblem(rowCopy, fromRowsLower, fromRowsUpper, newObjective,
                             fromColumnsLower, fromColumnsUpper);
      modelDual->setObjectiveOffset(objOffset);
