@@ -134,6 +134,8 @@ static void generateCode(const char * fileName, int type);
 // Returns next valid field
 int CbcOrClpRead_mode = 1;
 FILE * CbcOrClpReadCommand = stdin;
+// Alternative to environment
+extern char * alternativeEnvironment;
 extern int CbcOrClpEnvironmentIndex;
 #ifdef CLP_USER_DRIVEN1
 /* Returns true if variable sequenceOut can leave basis when
@@ -2937,6 +2939,21 @@ clp watson.mps -\nscaling off\nprimalsimplex"
                               break;
                          case CLP_PARAM_ACTION_ENVIRONMENT:
                               CbcOrClpEnvironmentIndex = 0;
+                              break;
+                         case CLP_PARAM_ACTION_GUESS:
+                              if (goodModels[iModel]) {
+				delete [] alternativeEnvironment;
+				ClpSimplexOther * model2 = 
+				  static_cast<ClpSimplexOther *> (models+iModel);
+				alternativeEnvironment = 
+				  model2->guess(0);
+				if (alternativeEnvironment)
+				  CbcOrClpEnvironmentIndex = 0;
+				else
+                                   std::cout << "** Guess unable to generate commands" << std::endl;
+			      } else {
+                                   std::cout << "** Guess needs a valid model" << std::endl;
+			      }
                               break;
                          default:
                               abort();

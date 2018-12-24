@@ -1240,13 +1240,19 @@ static char line[1000];
 static char * where = NULL;
 extern int CbcOrClpRead_mode;
 int CbcOrClpEnvironmentIndex = -1;
+// Alternative to environment
+char * alternativeEnvironment = NULL;
 static size_t fillEnv()
 {
 #if defined(_MSC_VER) || defined(__MSVCRT__)
      return 0;
 #else
      // Don't think it will work on Windows
-     char * environ = getenv("CBC_CLP_ENVIRONMENT");
+     char * environ;
+     if (!alternativeEnvironment)
+       environ = getenv("CBC_CLP_ENVIRONMENT");
+     else
+       environ = alternativeEnvironment;
      size_t length = 0;
      if (environ) {
           length = strlen(environ);
@@ -1274,8 +1280,13 @@ static size_t fillEnv()
                length = 0;
           }
      }
-     if (!length)
+     if (!length) {
           CbcOrClpEnvironmentIndex = -1;
+	  if (alternativeEnvironment) {
+	    delete [] alternativeEnvironment;
+	    alternativeEnvironment = NULL;
+	  }
+     }
      return length;
 #endif
 }
@@ -2477,6 +2488,14 @@ See Rounding for meaning of on,both,before"
  directory given by 'directory'.  A name of '$' will use the previous value for the name.  This\
  is initialized to 'stdout' (this defaults to ordinary solution if stdout). \
 If problem created from gmpl model - will do any reports."
+     );
+     parameters[numberParameters++] =
+          CbcOrClpParam("guess", "Guesses at good parameters",
+                        CLP_PARAM_ACTION_GUESS, 7);
+     parameters[numberParameters-1].setLonghelp
+     (
+          "This looks at model statistics and does an initial solve \
+setting some parameters which may help you to think of possibilities."
      );
 #ifdef COIN_HAS_CBC
      parameters[numberParameters++] =
