@@ -7748,8 +7748,9 @@ ClpSimplex::readLp(const char *filename, const double epsilon )
           return(1);
      }
      CoinLpIO m;
-     m.readLp(fp, epsilon);
+     m.setEpsilon(epsilon);
      fclose(fp);
+     m.readLp(filename);
 
      // set problem name
      setStrParam(ClpProbName, m.getProblemName());
