@@ -154,6 +154,7 @@ Clp/src/config.h.in -text
 Clp/src/config_clp.h.in -text
 Clp/src/config_clp_default.h -text
 Clp/src/config_default.h -text
+Clp/src/format-source.sh -text
 Clp/test/OsiClpSolverInterfaceTest.cpp -text
 Clp/test/osiUnitTest.cpp -text
 /Dependencies -text

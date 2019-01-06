@@ -22,62 +22,63 @@
 */
 class ClpSimplex;
 
-
-typedef std::vector<double> StdVectorDouble;
+typedef std::vector< double > StdVectorDouble;
 
 class MyMessageHandler : public CoinMessageHandler {
 
 public:
-     /**@name Overrides */
-     //@{
-     virtual int print();
-     //@}
-     /**@name set and get */
-     //@{
-     /// Model
-     const ClpSimplex * model() const;
-     void setModel(ClpSimplex * model);
-     /// Get queue of feasible extreme points
-     const std::deque<StdVectorDouble> & getFeasibleExtremePoints() const;
-     /// Empty queue of feasible extreme points
-     void clearFeasibleExtremePoints();
-     //@}
+  /**@name Overrides */
+  //@{
+  virtual int print();
+  //@}
+  /**@name set and get */
+  //@{
+  /// Model
+  const ClpSimplex *model() const;
+  void setModel(ClpSimplex *model);
+  /// Get queue of feasible extreme points
+  const std::deque< StdVectorDouble > &getFeasibleExtremePoints() const;
+  /// Empty queue of feasible extreme points
+  void clearFeasibleExtremePoints();
+  //@}
 
-     /**@name Constructors, destructor */
-     //@{
-     /** Default constructor. */
-     MyMessageHandler();
-     /// Constructor with pointer to model
-     MyMessageHandler(ClpSimplex * model,
-                      FILE * userPointer = NULL);
-     /** Destructor */
-     virtual ~MyMessageHandler();
-     //@}
+  /**@name Constructors, destructor */
+  //@{
+  /** Default constructor. */
+  MyMessageHandler();
+  /// Constructor with pointer to model
+  MyMessageHandler(ClpSimplex *model,
+    FILE *userPointer = NULL);
+  /** Destructor */
+  virtual ~MyMessageHandler();
+  //@}
 
-     /**@name Copy method */
-     //@{
-     /** The copy constructor. */
-     MyMessageHandler(const MyMessageHandler&);
-     /** The copy constructor from an CoinSimplexMessageHandler. */
-     MyMessageHandler(const CoinMessageHandler&);
+  /**@name Copy method */
+  //@{
+  /** The copy constructor. */
+  MyMessageHandler(const MyMessageHandler &);
+  /** The copy constructor from an CoinSimplexMessageHandler. */
+  MyMessageHandler(const CoinMessageHandler &);
 
-     MyMessageHandler& operator=(const MyMessageHandler&);
-     /// Clone
-     virtual CoinMessageHandler * clone() const ;
-     //@}
-
+  MyMessageHandler &operator=(const MyMessageHandler &);
+  /// Clone
+  virtual CoinMessageHandler *clone() const;
+  //@}
 
 protected:
-     /**@name Data members
+  /**@name Data members
         The data members are protected to allow access for derived classes. */
-     //@{
-     /// Pointer back to model
-     ClpSimplex * model_;
-     /// Saved extreme points
-     std::deque<StdVectorDouble> feasibleExtremePoints_;
-     /// Iteration number so won't do same one twice
-     int iterationNumber_;
-     //@}
+  //@{
+  /// Pointer back to model
+  ClpSimplex *model_;
+  /// Saved extreme points
+  std::deque< StdVectorDouble > feasibleExtremePoints_;
+  /// Iteration number so won't do same one twice
+  int iterationNumber_;
+  //@}
 };
 
 #endif
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

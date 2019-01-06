@@ -9,7 +9,6 @@
 #include "AbcDualRowPivot.hpp"
 class CoinIndexedVector;
 
-
 //#############################################################################
 
 /** Dual Row Pivot Steepest Edge Algorithm Class
@@ -19,32 +18,31 @@ class CoinIndexedVector;
 */
 
 class AbcDualRowSteepest : public AbcDualRowPivot {
-  
+
 public:
-  
   ///@name Algorithmic methods
   //@{
-  
+
   /// Returns pivot row, -1 if none
   virtual int pivotRow();
-  
+
   /** Updates weights and returns pivot alpha.
       Also does FT update */
-  virtual double updateWeights(CoinIndexedVector & input,CoinIndexedVector & updatedColumn);
-  virtual double updateWeights1(CoinIndexedVector & input,CoinIndexedVector & updateColumn);
-  virtual void updateWeightsOnly(CoinIndexedVector & input);
+  virtual double updateWeights(CoinIndexedVector &input, CoinIndexedVector &updatedColumn);
+  virtual double updateWeights1(CoinIndexedVector &input, CoinIndexedVector &updateColumn);
+  virtual void updateWeightsOnly(CoinIndexedVector &input);
   /// Actually updates weights
-  virtual void updateWeights2(CoinIndexedVector & input,CoinIndexedVector & updateColumn);
-  
+  virtual void updateWeights2(CoinIndexedVector &input, CoinIndexedVector &updateColumn);
+
   /** Updates primal solution (and maybe list of candidates)
       Uses input vector which it deletes
   */
-  virtual void updatePrimalSolution(CoinIndexedVector & input,
-				    double theta);
-  
-  virtual void updatePrimalSolutionAndWeights(CoinIndexedVector & weightsVector,
-					      CoinIndexedVector & updateColumn,
-					      double theta);
+  virtual void updatePrimalSolution(CoinIndexedVector &input,
+    double theta);
+
+  virtual void updatePrimalSolutionAndWeights(CoinIndexedVector &weightsVector,
+    CoinIndexedVector &updateColumn,
+    double theta);
   /** Saves any weights round factorization as pivot rows may change
       Save model
       May also recompute infeasibility stuff
@@ -55,7 +53,7 @@ public:
       4) as 2 but restore weights from previous snapshot
       5) for strong branching - initialize (uninitialized) , infeasibilities
   */
-  virtual void saveWeights(AbcSimplex * model, int mode);
+  virtual void saveWeights(AbcSimplex *model, int mode);
   /// Recompute infeasibilities
   virtual void recomputeInfeasibilities();
   /// Gets rid of all arrays
@@ -63,14 +61,14 @@ public:
   /// Returns true if would not find any row
   virtual bool looksOptimal() const;
   //@}
-  
+
   /** enums for persistence
    */
   enum Persistence {
     normal = 0x00, // create (if necessary) and destroy
     keep = 0x01 // create (if necessary) and leave
   };
-  
+
   ///@name Constructors and destructors
   //@{
   /** Default Constructor
@@ -81,49 +79,58 @@ public:
       This can be faster on very easy problems.
   */
   AbcDualRowSteepest(int mode = 3);
-  
+
   /// Copy constructor
   AbcDualRowSteepest(const AbcDualRowSteepest &);
-  
+
   /// Assignment operator
-  AbcDualRowSteepest & operator=(const AbcDualRowSteepest& rhs);
-  
+  AbcDualRowSteepest &operator=(const AbcDualRowSteepest &rhs);
+
   /// Fill most values
-  void fill(const AbcDualRowSteepest& rhs);
-  
+  void fill(const AbcDualRowSteepest &rhs);
+
   /// Destructor
-  virtual ~AbcDualRowSteepest ();
-  
+  virtual ~AbcDualRowSteepest();
+
   /// Clone
-  virtual AbcDualRowPivot * clone(bool copyData = true) const;
-  
+  virtual AbcDualRowPivot *clone(bool copyData = true) const;
+
   //@}
   /**@name gets and sets */
   //@{
   /// Mode
-  inline int mode() const {
+  inline int mode() const
+  {
     return mode_;
   }
   /// Set/ get persistence
-  inline void setPersistence(Persistence life) {
+  inline void setPersistence(Persistence life)
+  {
     persistence_ = life;
   }
-  inline Persistence persistence() const {
-    return persistence_ ;
+  inline Persistence persistence() const
+  {
+    return persistence_;
   }
   /// Infeasible vector
-  inline CoinIndexedVector * infeasible() const
-  { return infeasible_;}
+  inline CoinIndexedVector *infeasible() const
+  {
+    return infeasible_;
+  }
   /// Weights vector
-  inline CoinIndexedVector * weights() const
-  { return weights_;}
+  inline CoinIndexedVector *weights() const
+  {
+    return weights_;
+  }
   /// Model
-  inline AbcSimplex * model() const
-  { return model_;}
+  inline AbcSimplex *model() const
+  {
+    return model_;
+  }
   //@}
-  
+
   //---------------------------------------------------------------------------
-  
+
 private:
   ///@name Private member data
   /// norm saved before going into update
@@ -142,11 +149,11 @@ private:
   /// Life of weights
   Persistence persistence_;
   /// weight array
-  CoinIndexedVector * weights_;
+  CoinIndexedVector *weights_;
   /// square of infeasibility array (just for infeasible rows)
-  CoinIndexedVector * infeasible_;
+  CoinIndexedVector *infeasible_;
   /// save weight array (so we can use checkpoint)
-  CoinIndexedVector * savedWeights_;
+  CoinIndexedVector *savedWeights_;
   //@}
 };
 
@@ -155,3 +162,6 @@ private:
 #define DEVEX_TRY_NORM 1.0e-8
 #define DEVEX_ADD_ONE 1.0
 #endif
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

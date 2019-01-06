@@ -17,20 +17,20 @@
 #define ABC_SMALL -1
 #include "CoinAbcBaseFactorization.hpp"
 #undef CoinAbcTypeFactorization
-#undef ABC_SMALL 
+#undef ABC_SMALL
 #undef COIN_BIG_DOUBLE
 #define COIN_BIG_DOUBLE 1
 #define CoinAbcTypeFactorization CoinAbcLongFactorization
 #define ABC_SMALL -1
 #include "CoinAbcBaseFactorization.hpp"
 #undef CoinAbcTypeFactorization
-#undef ABC_SMALL 
+#undef ABC_SMALL
 #undef COIN_BIG_DOUBLE
 #define CoinAbcTypeFactorization CoinAbcSmallFactorization
 #define ABC_SMALL 4
 #include "CoinAbcBaseFactorization.hpp"
 #undef CoinAbcTypeFactorization
-#undef ABC_SMALL 
+#undef ABC_SMALL
 #define CoinAbcTypeFactorization CoinAbcOrderedFactorization
 #define ABC_SMALL -1
 #include "CoinAbcBaseFactorization.hpp"
@@ -40,5 +40,8 @@
 #define CoinAbcTypeFactorization CoinAbcBaseFactorization
 #define ABC_SMALL -1
 #include "CoinAbcBaseFactorization.hpp"
-#endif 
 #endif
+#endif
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

@@ -14,36 +14,33 @@
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
-AbcDualRowPivot::AbcDualRowPivot () :
-  model_(NULL),
-  type_(-1)
+AbcDualRowPivot::AbcDualRowPivot()
+  : model_(NULL)
+  , type_(-1)
 {
-  
 }
 
 //-------------------------------------------------------------------
 // Copy constructor
 //-------------------------------------------------------------------
-AbcDualRowPivot::AbcDualRowPivot (const AbcDualRowPivot & source) :
-  model_(source.model_),
-  type_(source.type_)
+AbcDualRowPivot::AbcDualRowPivot(const AbcDualRowPivot &source)
+  : model_(source.model_)
+  , type_(source.type_)
 {
-  
 }
 
 //-------------------------------------------------------------------
 // Destructor
 //-------------------------------------------------------------------
-AbcDualRowPivot::~AbcDualRowPivot ()
+AbcDualRowPivot::~AbcDualRowPivot()
 {
-  
 }
 
 //----------------------------------------------------------------
 // Assignment operator
 //-------------------------------------------------------------------
 AbcDualRowPivot &
-AbcDualRowPivot::operator=(const AbcDualRowPivot& rhs)
+AbcDualRowPivot::operator=(const AbcDualRowPivot &rhs)
 {
   if (this != &rhs) {
     type_ = rhs.type_;
@@ -51,32 +48,30 @@ AbcDualRowPivot::operator=(const AbcDualRowPivot& rhs)
   }
   return *this;
 }
-void
-AbcDualRowPivot::saveWeights(AbcSimplex * model, int /*mode*/)
+void AbcDualRowPivot::saveWeights(AbcSimplex *model, int /*mode*/)
 {
   model_ = model;
 }
 // Recompute infeasibilities
-void 
-AbcDualRowPivot::recomputeInfeasibilities()
+void AbcDualRowPivot::recomputeInfeasibilities()
 {
 }
-void 
-AbcDualRowPivot::updatePrimalSolutionAndWeights(CoinIndexedVector & weightsVector,
-				      CoinIndexedVector & updateColumn,
-						double theta)
+void AbcDualRowPivot::updatePrimalSolutionAndWeights(CoinIndexedVector &weightsVector,
+  CoinIndexedVector &updateColumn,
+  double theta)
 {
   // finish doing weights
-  updateWeights2(weightsVector,updateColumn);
-  updatePrimalSolution(updateColumn,theta);
+  updateWeights2(weightsVector, updateColumn);
+  updatePrimalSolution(updateColumn, theta);
 }
 // checks accuracy and may re-initialize (may be empty)
-void
-AbcDualRowPivot::checkAccuracy()
+void AbcDualRowPivot::checkAccuracy()
 {
 }
 // Gets rid of all arrays
-void
-AbcDualRowPivot::clearArrays()
+void AbcDualRowPivot::clearArrays()
 {
 }
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

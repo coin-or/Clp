@@ -9,14 +9,12 @@
 
  */
 
-
 #ifndef ClpPEDualRowSteepest_H
 #define ClpPEDualRowSteepest_H
 
 #include "ClpDualRowSteepest.hpp"
 #include "ClpPESimplex.hpp"
 class CoinIndexedVector;
-
 
 //#############################################################################
 
@@ -29,70 +27,74 @@ See Forrest-Goldfarb paper for algorithm
 class ClpPEDualRowSteepest : public ClpDualRowSteepest {
 
 public:
-	/** Default Constructor
+  /** Default Constructor
          mode: 0 is uninitialized, 1 full, 2 is partial uninitialized,
          3 starts as 2 but may switch to 1.
          By partial is meant that the weights are updated as normal
          but only part of the infeasible basic variables are scanned.
          This can be faster on very easy problems.
      */
-	ClpPEDualRowSteepest(double psi = 0.5, int mode = 3);
+  ClpPEDualRowSteepest(double psi = 0.5, int mode = 3);
 
-	/// Copy constructor
-	ClpPEDualRowSteepest(const ClpPEDualRowSteepest &);
+  /// Copy constructor
+  ClpPEDualRowSteepest(const ClpPEDualRowSteepest &);
 
-	/// Assignment operator
-	ClpPEDualRowSteepest & operator=(const ClpPEDualRowSteepest& rhs);
+  /// Assignment operator
+  ClpPEDualRowSteepest &operator=(const ClpPEDualRowSteepest &rhs);
 
-	/// Destructor
-	virtual ~ClpPEDualRowSteepest();
+  /// Destructor
+  virtual ~ClpPEDualRowSteepest();
 
-	/// Clone
-	virtual ClpDualRowPivot * clone(bool copyData = true) const;
+  /// Clone
+  virtual ClpDualRowPivot *clone(bool copyData = true) const;
 
- public:
-	 ///@name Algorithmic methods
-     //@{
+public:
+  ///@name Algorithmic methods
+  //@{
 
-     /// Returns pivot row, -1 if none
-     virtual int pivotRow();
+  /// Returns pivot row, -1 if none
+  virtual int pivotRow();
 
-     /** Save weights - this may initialize weights as well
+  /** Save weights - this may initialize weights as well
 	 This is as parent but may initialize ClpPESimplex
      */
-     virtual void saveWeights(ClpSimplex * model, int mode);
-     /** Updates primal solution (and maybe list of candidates)
+  virtual void saveWeights(ClpSimplex *model, int mode);
+  /** Updates primal solution (and maybe list of candidates)
          Uses input vector which it deletes
          Computes change in objective function
 	 As ordinary steepest but checks for zero moves
      */
-     virtual void updatePrimalSolution(CoinIndexedVector * input,
-                                       double theta,
-                                       double & changeInObjective);
-     //@}
+  virtual void updatePrimalSolution(CoinIndexedVector *input,
+    double theta,
+    double &changeInObjective);
+  //@}
 
-     // Psi
-     inline double psi() const
-     { return psi_;}
+  // Psi
+  inline double psi() const
+  {
+    return psi_;
+  }
 
-     //---------------------------------------------------------------------------
+  //---------------------------------------------------------------------------
 
 private:
-    /* this PESimplex object is used to identify the compatible variables */
-    ClpPESimplex *modelPE_;
+  /* this PESimplex object is used to identify the compatible variables */
+  ClpPESimplex *modelPE_;
 
-    /* psi is the factor used in the bi-dimensional pricing, it is < 1 and
+  /* psi is the factor used in the bi-dimensional pricing, it is < 1 and
        1/psi grows with the priority given to compatible variables */
-    double psi_;
+  double psi_;
 
-    /* useful counters for the update of the set of compatible variables */
-    int iCurrent_;
-    int iInterval_;
+  /* useful counters for the update of the set of compatible variables */
+  int iCurrent_;
+  int iInterval_;
 
-    /* record if previous iterations concluded that compatibles should not be checked */
-    bool updateCompatibles_;
-    int coDegenCompatibles_, coConsecutiveCompatibles_;
-
+  /* record if previous iterations concluded that compatibles should not be checked */
+  bool updateCompatibles_;
+  int coDegenCompatibles_, coConsecutiveCompatibles_;
 };
 
 #endif
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/
