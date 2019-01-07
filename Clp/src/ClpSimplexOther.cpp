@@ -10521,7 +10521,7 @@ int ClpSimplex::outDuplicateRows(int numberLook, int *whichRows, bool noOverlaps
         sprintf(environment, "-idiot 60 -primals");
     } else {
       if (median <= 0.75)
-        sprintf(environment, "-dualpivot pesteep -psi -1.0 -pertv 52 -duals");
+        sprintf(environment, "-dualpivot pesteep -psi 1.0 -pertv 52 -duals");
       else
         sprintf(environment, "-idiot 80 -primals");
     }
