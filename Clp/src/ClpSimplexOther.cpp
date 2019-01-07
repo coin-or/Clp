@@ -10508,17 +10508,17 @@ int ClpSimplex::outDuplicateRows(int numberLook, int *whichRows, bool noOverlaps
     double average = 0.0;
     double median = obj[numberColumns_ / 2];
     for (int i = 0; i < numberColumns_; i++) {
-      if (!isInteger(i))
+      if (!isInteger(i) && columnUpper_[i] > columnLower_[i])
         allInt = false;
       average += obj[i];
     }
     delete[] obj;
     average /= numberColumns_;
     if (allInt) {
-      if (average <= 0.009)
-        sprintf(environment, "-idiot 60 -primals");
-      else
+      if (average <= 0.0086207)
         sprintf(environment, "-idiot 30 -pertvalue -1483 -primals");
+      else
+        sprintf(environment, "-idiot 60 -primals");
     } else {
       if (median <= 0.75)
         sprintf(environment, "-dualpivot pesteep -psi -1.0 -pertv 52 -duals");
@@ -10531,6 +10531,3 @@ int ClpSimplex::outDuplicateRows(int numberLook, int *whichRows, bool noOverlaps
       << line << CoinMessageEol;
     return environment;
   }
-
-  /* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/
