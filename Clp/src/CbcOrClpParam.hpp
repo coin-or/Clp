@@ -541,10 +541,10 @@ void setCbcOrClpPrinting(bool yesNo);
   Subroutine to establish the cbc parameter array. See the description of
   class CbcOrClpParam for details. Pulled from C..Main() for clarity.
 */
-void establishParams(int &numberParameters, CbcOrClpParam *const parameters);
+void establishParams(std::vector< CbcOrClpParam > &params);
 // Given a parameter type - returns its number in list
-int whichParam(CbcOrClpParameterType name,
-  int numberParameters, CbcOrClpParam *const parameters);
+int whichParam(const CbcOrClpParameterType &name,
+  const std::vector< CbcOrClpParam > &parameters);
 // Dump/restore a solution to file
 void saveSolution(const ClpSimplex *lpSolver, std::string fileName);
 void restoreSolution(ClpSimplex *lpSolver, std::string fileName, int mode);
