@@ -331,7 +331,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           if (equals && atoi(equals + 1) > 0) {
             noPrinting_ = false;
             info.logLevel = atoi(equals + 1);
-            int log = whichParam(CLP_PARAM_INT_LOGLEVEL, numberParameters, parameters);
+            int log = whichParam(CLP_PARAM_INT_LOGLEVEL, parameters);
             parameters[log].setIntValue(info.logLevel);
             // mark so won't be overWritten
             info.numberRows = -1234567;
