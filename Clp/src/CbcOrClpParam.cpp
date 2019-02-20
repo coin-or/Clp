@@ -2815,6 +2815,7 @@ You can also use the parameters 'direction minimize'.");
   {
     CbcOrClpParam p("mipO!ptions", "Dubious options for mip",
       0, COIN_INT_MAX, CBC_PARAM_INT_MIPOPTIONS, 0);
+    p.setIntValue(1057);
     parameters.push_back(p);
   }
   {
@@ -3130,6 +3131,7 @@ missing ones have value 0.0.");
     CbcOrClpParam p("passC!uts", "Number of cut passes at root node",
       -9999999, 9999999, CBC_PARAM_INT_CUTPASS);
 
+    p.setIntValue(20);
     p.setLonghelp(
       "The default is 100 passes if less than 500 columns, 100 passes (but \
 stop if drop small if less than 5000 columns, 20 otherwise");
@@ -3159,6 +3161,7 @@ stop if drop small if less than 5000 columns, 20 otherwise");
   {
     CbcOrClpParam p("passT!reeCuts", "Number of cut passes in tree",
       -9999999, 9999999, CBC_PARAM_INT_CUTPASSINTREE);
+    p.setIntValue(1);
     p.setLonghelp("The default is one pass");
     parameters.push_back(p);
   }
@@ -3478,6 +3481,7 @@ when solution found in feasibility pump");
   {
     CbcOrClpParam p("pumpT!une", "Dubious ideas for feasibility pump",
       0, 100000000, CBC_PARAM_INT_FPUMPTUNE);
+    p.setIntValue(1003);
     p.setLonghelp(
       "This fine tunes Feasibility Pump \n\
 \t>=10000000 use as objective weight switch\n\
@@ -3918,6 +3922,7 @@ will be in resulting problem");
   {
     CbcOrClpParam p("strong!Branching", "Number of variables to look at in strong branching",
       0, COIN_INT_MAX, CBC_PARAM_INT_STRONGBRANCHING);
+    p.setIntValue(20);
     p.setLonghelp(
       "In order to decide which variable to branch on, the code will choose up to this number \
 of unsatisfied variables to do mini up and down branches on.  Then the most effective one is chosen. \
@@ -3948,6 +3953,7 @@ see number before trust.");
   {
     CbcOrClpParam p("thread!s", "Number of threads to try and use",
       -100, 100000, CBC_PARAM_INT_THREADS, 1);
+    p.setIntValue(0);
     p.setLonghelp(
       "To use multiple threads, set threads to number wanted.  It may be better \
 to use one or two more than number of cpus available.  If 100+n then n threads and \
@@ -3990,6 +3996,7 @@ activity at continuous solution",
     p.setLonghelp(
       "Using strong branching computes pseudo-costs.  After this many times for a variable we just \
 trust the pseudo costs and do not do any more strong branching.");
+    p.setIntValue(10);
     parameters.push_back(p);
   }
 #endif
