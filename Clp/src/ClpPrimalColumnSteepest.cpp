@@ -4274,13 +4274,12 @@ int ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
   // This biases towards picking row variables
   // This probably should be fixed
   int startR[4];
-  const int *which = infeasible_->getIndices();
-  int nSlacks = infeasible_->getNumElements();
-  startR[1] = nSlacks;
-  startR[2] = 0;
+  int numberRows = model_->numberRows();
+  startR[1] = numberColumns+numberRows;
+  startR[2] = numberColumns;
   double randomR = model_->randomNumberGenerator()->randomDouble();
-  double dstart = static_cast< double >(nSlacks) * randomR;
-  startR[0] = static_cast< int >(dstart);
+  double dstart = static_cast<double> (numberRows) * randomR;
+  startR[0] = numberColumns + static_cast<int> (dstart);
   startR[3] = startR[0];
   double startC[4];
   startC[1] = 1.0;
@@ -4291,7 +4290,7 @@ int ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
   reducedCost = model_->djRegion(1);
   int sequenceOut = model_->sequenceOut();
   double *duals2 = duals - numberColumns;
-  int chunk = CoinMin(1024, (numberColumns + nSlacks) / 32);
+  int chunk = CoinMin(1024, (numberColumns + numberRows) / 32);
 #ifdef COIN_DETAIL
   if (model_->numberIterations() % 1000 == 0 && model_->logLevel() > 1) {
     printf("%d wanted, nSlacks %d, chunk %d\n", numberWanted, nSlacks, chunk);
@@ -4313,9 +4312,8 @@ int ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
       int saveSequence = bestSequence;
       int start = startR[iPassR];
       int end = CoinMin(startR[iPassR + 1], start + chunk / 2);
-      int jSequence;
-      for (jSequence = start; jSequence < end; jSequence++) {
-        int iSequence = which[jSequence];
+      int iSequence;
+      for (iSequence = start; iSequence < end; iSequence++) {
         if (iSequence != sequenceOut) {
           double value;
           ClpSimplex::Status status = model_->getStatus(iSequence);
@@ -4396,8 +4394,8 @@ int ClpPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
         break;
       doingR = false;
       // update start
-      startR[iPassR] = jSequence;
-      if (jSequence >= startR[iPassR + 1]) {
+      startR[iPassR] = iSequence;
+      if (iSequence >= startR[iPassR + 1]) {
         if (iPassR)
           finishedR = true;
         else
