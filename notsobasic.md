@@ -1,6 +1,6 @@
 # Not-Quite-So-Basic Model Classes
 
-# Pivot Choices
+## Pivot Choices
 
 In the dual algorithm, any infeasible basic variable may be chosen to
 leave the basis. Similarly in the primal algorithm, any non-basic
@@ -20,10 +20,9 @@ all-slack basis is being used then these are the correct weights. To use
 a version which calculates the weights, create an instance and pass it
 to ClpSimplex model as in the following code fragment:
 
-``` 
-  ClpDualRowSteepest steep(1); // 0 uninitialized, 1 compute weights
-  model.setDualRowPivotAlgorithm(steep);
-  
+```
+ClpDualRowSteepest steep(1); // 0 uninitialized, 1 compute weights
+model.setDualRowPivotAlgorithm(steep);
 ```
 
 Similarly for the primal method the base class is
@@ -36,17 +35,15 @@ initial weight for each non-basic variable is 1.0. Unlike for the dual,
 this is never the same as normal steepest edge. To use a version which
 does steepest edge create an instance and pass it to ClpSimplex model as
 in the following code fragment:
-
-``` 
+```
   ClpPrimalColumnSteepest steep(1); // 0 devex, 1 steepest
   model.setPrimalColumnPivotAlgorithm(steep);
-  
 ```
 
 The partial pricing scheme (for long, thin problems) currently does not
 exist. This could be implemented by anyone who is interested.
 
-# Matrix Classes
+## Matrix Classes
 
 The next abstract class of interest is `ClpMatrixBase`. CLP encapsulates
 its knowledge of how a matrix is stored in this class. The default
@@ -76,28 +73,26 @@ simply read-in an MPS file. The key is to use `loadProblem` to pass in a
 matrix. So if `matrix` was a `CoinPackedMatrix` one could do the
 following:
 
-``` 
-  ClpPlusMinusOneMatrix plusMinus(matrix);
-  assert (plusMinus.getIndices()); // would be zero if not +- one
-  model.loadProblem(plusMinus,
-    lowerColumn,upperColumn,objective,
-    lower,upper);
-  
+```
+ClpPlusMinusOneMatrix plusMinus(matrix);
+assert (plusMinus.getIndices()); // would be zero if not +- one
+model.loadProblem(plusMinus,
+  lowerColumn,upperColumn,objective,
+  lower,upper);
 ```
 
 `ClpNetworkMatrix` is similar, but represents a network, thus may only
 have one element per column. Fortunately, using is is very easy. Given
 `head` and `tail`, one could do the following:
 
-``` 
-  ClpNetworkMatrix network(numberColumns,head,tail);
-  model.loadProblem(network,
-    lowerColumn,upperColumn,objective,
-    lower,upper);
-  
+```
+ClpNetworkMatrix network(numberColumns,head,tail);
+model.loadProblem(network,
+  lowerColumn,upperColumn,objective,
+  lower,upper);
 ```
 
-Actual code is in `COIN/Clp/Test/unitTest.cpp`. A quick glance at the
+Actual code is in `test/unitTest.cpp`. A quick glance at the
 output of this program shows that use of `ClpNetworkMatrix` gives much
 faster run times. This is not because of storage issues, but because CLP
 recognizes the network and uses a network basis factorization which is
@@ -111,51 +106,48 @@ which change over time. Minor modifications may be needed but it should
 work quite smoothly (there is already a dummy "refresh" method which
 would be used).
 
-# Message Handling
+## Message Handling
 
-Strictly speaking, message handling is a general COIN topic, but it
+Strictly speaking, message handling is a general COIN-OR topic, but it
 won't hurt to repeat a few important things here.
 
 A simple user you may wish to turn off some output. This is done with
 `model.setLogLevel(int value)` where 0 gives nothing and each increase
 in value switches on more messages. See `ClpMessage.cpp`,
-`CoinMessage.cpp` and [???](#messages) to see which messages are at
+`CoinMessage.cpp` and [Messages](./messages) to see which messages are at
 which level. A more sophisticated user may wish to handle messages in a
 different way. This is done using `passInMessageHandler` with a pointer
 to a handler of the user's own design. The simplest case would be to use
 the default handler but use a constructor which writes to file. The code
 would be:
 
-``` 
-  FILE * fp; // assumed open
-  CoinMessageHandler handler(fp);
-  model.passInMessageHandler(&handler);
-  
+```
+FILE * fp; // assumed open
+CoinMessageHandler handler(fp);
+model.passInMessageHandler(&handler);
 ```
 
 A still more sophisticated use would be to write a class derived from
 `CoinMessageHandler` and then override the `print` method. Below follows
-an example which would print only a message for optimality (or
-infeasibility):
+an example which would print only a message for optimality (or infeasibility):
 
-``` 
-  class DerivedHandler :
-   public CoinMessageHandler {
-   public:
-     virtual int print() ;
-   };
+```
+class DerivedHandler {
+  public CoinMessageHandler {
+  public:
+    virtual int print() ;
+  };
 
-
-   int DerivedHandler::print()
-   {
-     if (currentSource()=="Clp") {
-       if (currentMessage().externalNumber()>=0
-       && currentMessage().externalNumber()<4) { 
-         // finished
-         return CoinMessageHandler::print(); // print
-       }
-     }
-     return 0;
-   }
-  
+  int DerivedHandler::print()
+  {
+    if (currentSource()=="Clp") {
+      if (currentMessage().externalNumber()>=0
+        && currentMessage().externalNumber()<4) {
+          // finished
+          return CoinMessageHandler::print(); // print
+        }
+      }
+      return 0;
+  }
+}
 ```
