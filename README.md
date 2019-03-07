@@ -66,8 +66,7 @@ If `Doxygen` is not available, you can use also use [this link](http://www.coin-
 
 ## Project Links
 
-Support:
- * [COIN-OR Initiative](http://www.coin-or.org/)
+Help:
  * [mailing list](http://list.coin-or.org/mailman/listinfo/clp)
  * [Report a bug](https://github.com/coin-or/Clp/issues/new)
  
