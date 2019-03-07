@@ -59,7 +59,7 @@
     </projectCategories>
   </projectBasics>
   <leftMenuLinks>
-    <documentation>http://www.coin-or.org/Clp/userguide/index.html</documentation>
+    <documentation>https://coin-or.github.io/Clp</documentation>
     <sourceCodeDownload>http://www.coin-or.org/download/source/Clp</sourceCodeDownload>
     <binaryDownload></binaryDownload>
     <mailingList>http://list.coin-or.org/mailman/listinfo/clp</mailingList>

@@ -72,9 +72,9 @@ Support:
  * [Report a bug](https://github.com/coin-or/Clp/issues/new)
  
 Documentation:
- * [User's Guide](http://www.coin-or.org/Clp/userguide/index.html) ([single page format](http://www.coin-or.org/Clp/userguide/clpuserguide.html))
  * [Doxygen-generated html documentation](http://www.coin-or.org/Doxygen/Clp)
  * Source code [examples](Clp/examples)
+ * [User's Guide](https://coin-or.github.io/Clp) (from 2004)
 
 Interfaces:
  * [Matlab Interface + Windows x86 & x64 Interface Binaries (OPTI Toolbox)](https://www.inverseproblem.co.nz/OPTI/)
