@@ -1,5 +1,4 @@
-Revision History
-================
+# Revision History
 
 0.4
 
