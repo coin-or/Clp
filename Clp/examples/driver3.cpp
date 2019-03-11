@@ -90,8 +90,8 @@ int main (int argc, const char *argv[])
   for (int iColumn=0;iColumn<numberColumns;iColumn++) {
     double value=solution[iColumn];
     if (fabs(value)>1.0e-7) 
-      std::cout<<std::setw(6)<<iColumn<<" "<<std::setw(8)<<setiosflags(std::ios::left)<<model.getColumnName(iColumn)
-	       <<resetiosflags(std::ios::adjustfield)<<std::setw(14)<<" "<<value<<std::endl;
+      std::cout<<std::setw(6)<<iColumn<<" "<<std::setw(8)<<std::setiosflags(std::ios::left)<<model.getColumnName(iColumn)
+	       <<std::resetiosflags(std::ios::adjustfield)<<std::setw(14)<<" "<<value<<std::endl;
   }
   std::cout<<"--------------------------------------"<<std::endl;
   
