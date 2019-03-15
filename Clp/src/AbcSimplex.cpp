@@ -363,19 +363,19 @@ void AbcSimplex::gutsOfInitialize(int numberRows, int numberColumns, bool doMore
     // say Steepest pricing
     abcDualRowPivot_ = new AbcDualRowSteepest();
     abcPrimalColumnPivot_ = new AbcPrimalColumnSteepest();
-    internalStatus_ = newArray(reinterpret_cast< unsigned char * >(NULL),
+    internalStatus_ = newArray((unsigned char *)NULL,
       sizeArray + maximumNumberTotal_);
-    abcLower_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-    abcUpper_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-    abcCost_ = newArray(reinterpret_cast< double * >(NULL), sizeArray + maximumNumberTotal_);
-    abcDj_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-    abcSolution_ = newArray(reinterpret_cast< double * >(NULL), sizeArray + maximumNumberTotal_);
-    //fromExternal_ = newArray(reinterpret_cast<int *>(NULL),sizeArray);
-    //toExternal_ = newArray(reinterpret_cast<int *>(NULL),sizeArray);
-    scaleFromExternal_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-    offset_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-    abcPerturbation_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-    abcPivotVariable_ = newArray(reinterpret_cast< int * >(NULL), maximumAbcNumberRows_);
+    abcLower_ = newArray((double *)NULL, sizeArray);
+    abcUpper_ = newArray((double *)NULL, sizeArray);
+    abcCost_ = newArray((double *)NULL, sizeArray + maximumNumberTotal_);
+    abcDj_ = newArray((double *)NULL, sizeArray);
+    abcSolution_ = newArray((double *)NULL, sizeArray + maximumNumberTotal_);
+    //fromExternal_ = newArray((int *)NULL,sizeArray);
+    //toExternal_ = newArray((int *)NULL,sizeArray);
+    scaleFromExternal_ = newArray((double *)NULL, sizeArray);
+    offset_ = newArray((double *)NULL, sizeArray);
+    abcPerturbation_ = newArray((double *)NULL, sizeArray);
+    abcPivotVariable_ = newArray((int *)NULL, maximumAbcNumberRows_);
     // Fill perturbation array
     setupPointers(maximumAbcNumberRows_, maximumAbcNumberColumns_);
     fillPerturbation(0, maximumNumberTotal_);
@@ -547,19 +547,19 @@ AbcSimplex::createSubProblem(int numberColumns, const int *whichColumn)
   subProblem->maximumNumberTotal_ = maximumAbcNumberRows_ + numberColumns;
   subProblem->numberTotalWithoutFixed_ = subProblem->numberTotal_;
   int sizeArray = 2 * subProblem->maximumNumberTotal_ + maximumAbcNumberRows_;
-  subProblem->internalStatus_ = newArray(reinterpret_cast< unsigned char * >(NULL),
+  subProblem->internalStatus_ = newArray((unsigned char *)NULL,
     sizeArray + subProblem->maximumNumberTotal_);
-  subProblem->abcLower_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-  subProblem->abcUpper_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-  subProblem->abcCost_ = newArray(reinterpret_cast< double * >(NULL), sizeArray + subProblem->maximumNumberTotal_);
-  subProblem->abcDj_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-  subProblem->abcSolution_ = newArray(reinterpret_cast< double * >(NULL), sizeArray + subProblem->maximumNumberTotal_);
-  //fromExternal_ = newArray(reinterpret_cast<int *>(NULL),sizeArray);
-  //toExternal_ = newArray(reinterpret_cast<int *>(NULL),sizeArray);
-  subProblem->scaleFromExternal_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-  subProblem->offset_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-  subProblem->abcPerturbation_ = newArray(reinterpret_cast< double * >(NULL), sizeArray);
-  subProblem->abcPivotVariable_ = newArray(reinterpret_cast< int * >(NULL), maximumAbcNumberRows_);
+  subProblem->abcLower_ = newArray((double *)NULL, sizeArray);
+  subProblem->abcUpper_ = newArray((double *)NULL, sizeArray);
+  subProblem->abcCost_ = newArray((double *)NULL, sizeArray + subProblem->maximumNumberTotal_);
+  subProblem->abcDj_ = newArray((double *)NULL, sizeArray);
+  subProblem->abcSolution_ = newArray((double *)NULL, sizeArray + subProblem->maximumNumberTotal_);
+  //fromExternal_ = newArray((int *)NULL,sizeArray);
+  //toExternal_ = newArray((int *)NULL,sizeArray);
+  subProblem->scaleFromExternal_ = newArray((double *)NULL, sizeArray);
+  subProblem->offset_ = newArray((double *)NULL, sizeArray);
+  subProblem->abcPerturbation_ = newArray((double *)NULL, sizeArray);
+  subProblem->abcPivotVariable_ = newArray((int *)NULL, maximumAbcNumberRows_);
   subProblem->setupPointers(maximumAbcNumberRows_, numberColumns);
   // could use arrays - but for now be safe
   int *backward = new int[numberFullColumns + numberRows_];

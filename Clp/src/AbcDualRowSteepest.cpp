@@ -177,7 +177,7 @@ static void choose(int &chosenRow, double &largest, int n,
   const double *weights, double tolerance)
 {
   cilk::reducer_max_index< int, double > maximumIndex(chosenRow, largest);
-#pragma cilk_grainsize = 128
+#pragma cilk grainsize = 128
   cilk_for(int i = 0; i < n; i++)
   {
     int iRow = index[i];

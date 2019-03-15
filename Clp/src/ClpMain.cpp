@@ -362,7 +362,7 @@ void cilkTest()
 
   //cv.start();
 #if 1
-  //#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
+  //#pragma cilk grainsize = CILK_FOR_GRAINSIZE
   cilk_for(unsigned int i = 0; i < n; ++i)
   {
     a[i] = dowork(a[i]);
