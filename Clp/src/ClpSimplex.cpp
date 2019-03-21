@@ -7393,6 +7393,8 @@ bool ClpSimplex::sanityCheck()
       << rowcol[isColumn(firstBad)] << sequenceWithin(firstBad)
       << CoinMessageEol;
     problemStatus_ = 1;
+    // but set secondary status to avoid errors
+    secondaryStatus_ = 6; // good enough
     return false;
   }
   if (modifiedBounds)
