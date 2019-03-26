@@ -116,6 +116,7 @@ void OsiClpSolverInterface::initialSolve()
     solver = new ClpSimplex(true);
     deleteSolver = true;
     solver->borrowModel(*modelPtr_);
+    solver->eventHandler()->setSimplex(solver);
     // See if user set factorization frequency
     // borrowModel does not move
     solver->factorization()->maximumPivots(userFactorizationFrequency);

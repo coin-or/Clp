@@ -3116,6 +3116,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 #else
     ClpInterior barrier(*model2);
 #endif
+    barrier.eventHandler()->setSimplex(NULL);
     if (interrupt)
       currentModel2 = &barrier;
     if (barrier.numberRows() + barrier.numberColumns() > 10000)
