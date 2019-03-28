@@ -152,6 +152,7 @@ ClpSimplex::ClpSimplex(bool emptyMessages)
   // say Steepest pricing
   primalColumnPivot_ = new ClpPrimalColumnSteepest();
   solveType_ = 1; // say simplex based life form
+  eventHandler_->setSimplex(this);
 }
 
 // Subproblem constructor
@@ -265,6 +266,7 @@ ClpSimplex::ClpSimplex(const ClpModel *rhs,
   // say Steepest pricing
   primalColumnPivot_ = new ClpPrimalColumnSteepest();
   solveType_ = 1; // say simplex based life form
+  eventHandler_->setSimplex(this);
   if (fixOthers) {
     int numberOtherColumns = rhs->numberColumns();
     int numberOtherRows = rhs->numberRows();
@@ -411,6 +413,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex *rhs,
     spareDoubleArray_[i] = 0.0;
   }
   saveStatus_ = NULL;
+  eventHandler_->setSimplex(this);
   factorization_ = new ClpFactorization(*rhs->factorization_, -numberRows_);
   //factorization_ = new ClpFactorization(*rhs->factorization_,
   //				rhs->factorization_->goDenseThreshold());
@@ -6268,6 +6271,7 @@ int ClpSimplex::barrier(bool crossover)
   int savePerturbation = perturbation_;
   ClpInterior barrier;
   barrier.borrowModel(*model2);
+  barrier.eventHandler()->setSimplex(NULL);
   // See if quadratic objective
   ClpQuadraticObjective *quadraticObj = NULL;
   if (objective_->type() == 2)
@@ -7393,6 +7397,8 @@ bool ClpSimplex::sanityCheck()
       << rowcol[isColumn(firstBad)] << sequenceWithin(firstBad)
       << CoinMessageEol;
     problemStatus_ = 1;
+    // but set secondary status to avoid errors
+    secondaryStatus_ = 6; // good enough
     return false;
   }
   if (modifiedBounds)
