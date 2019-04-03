@@ -1,19 +1,4 @@
-# Ignore VS files
-*.suo
-*.db
-*.bak
-*.user
-**/.vs/
-**/MSVisualStudio/**/Release/
-**/MSVisualStudio/**/ReleaseParallel/
-**/MSVisualStudio/**/Debug/
-
-# Ignore files created during unit tests
-**/MSVisualStudio/**/*.mps
-**/MSVisualStudio/**/*.lp
-**/MSVisualStudio/**/*.out
-
-# Ignore autotools cache files
-aclocal.m4*
-acinclude.m4
-autom4te*
+*.swp
+.vs/
+build/
+cache/
