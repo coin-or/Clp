@@ -2406,27 +2406,27 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 break;
               }
               // Write solution header (suggested by Luigi Poderico)
-              double objValue = models[iModel].getObjValue() * models[iModel].getObjSense();
+              double objValue = models[iModel].getObjValue();
               int iStat = models[iModel].status();
               if (iStat == 0) {
-                fprintf(fp, "optimal\n");
+                fprintf(fp, "Optimal");
               } else if (iStat == 1) {
                 // infeasible
-                fprintf(fp, "infeasible\n");
+                fprintf(fp, "Infeasible");
               } else if (iStat == 2) {
                 // unbounded
-                fprintf(fp, "unbounded\n");
+                fprintf(fp, "Unbounded");
               } else if (iStat == 3) {
-                fprintf(fp, "stopped on iterations or time\n");
+                fprintf(fp, "Stopped on iterations or time");
               } else if (iStat == 4) {
-                fprintf(fp, "stopped on difficulties\n");
+                fprintf(fp, "Stopped on difficulties");
               } else if (iStat == 5) {
-                fprintf(fp, "stopped on ctrl-c\n");
+                fprintf(fp, "Stopped on ctrl-c");
               } else {
-                fprintf(fp, "status unknown\n");
+                fprintf(fp, "Status unknown");
               }
               char printFormat[50];
-              sprintf(printFormat, "Objective value %s\n",
+              sprintf(printFormat, " - objective value %s\n",
                 CLP_QUOTE(CLP_OUTPUT_FORMAT));
               fprintf(fp, printFormat, objValue);
               if (printMode == 9) {

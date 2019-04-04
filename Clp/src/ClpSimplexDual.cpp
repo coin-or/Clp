@@ -1942,7 +1942,8 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
                     (specialOptions_ & 16384) != 0 ? 1 : 0);
 #endif
                   // Get rid of objective
-                  if ((specialOptions_ & 16384) == 0)
+                  if ((specialOptions_ & 16384) == 0 &&
+		      (moreSpecialOptions_ & 256) == 0)
                     objective_ = new ClpLinearObjective(NULL, numberColumns_);
                 }
               }
@@ -1961,7 +1962,8 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
                   printf("returning at %d\n", __LINE__);
 #endif
                   // Get rid of objective
-                  if ((specialOptions_ & 16384) == 0)
+                  if ((specialOptions_ & 16384) == 0 &&
+		      (moreSpecialOptions_ & 256) == 0)
                     objective_ = new ClpLinearObjective(NULL, numberColumns_);
                 }
               }

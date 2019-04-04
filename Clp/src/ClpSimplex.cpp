@@ -7640,9 +7640,34 @@ int ClpSimplex::readLp(const char *filename, const double epsilon)
 
   // set problem name
   setStrParam(ClpProbName, m.getProblemName());
+  // set objective function offest
+  setDblParam(ClpObjOffset, m.objectiveOffset());
   // no errors
+#ifndef SWITCH_BACK_TO_MAXIMIZATION
+#define SWITCH_BACK_TO_MAXIMIZATION 1
+#endif
+#if SWITCH_BACK_TO_MAXIMIZATION
+  double * originalObj = NULL;
+  if (m.wasMaximization()) {
+    // switch back
+    setDblParam(ClpObjOffset, -m.objectiveOffset());
+    int numberColumns = m.getNumCols();
+    originalObj = CoinCopyOfArray(m.getObjCoefficients(),numberColumns);
+    for (int i=0;i < numberColumns;i++)
+      originalObj[i] = - originalObj[i];
+    setOptimizationDirection(-1.0);
+    handler_->message(CLP_GENERAL, messages_)
+      << "Switching back to maximization to get correct duals etc"
+      << CoinMessageEol;
+  }
+  loadProblem(*m.getMatrixByRow(), m.getColLower(), m.getColUpper(),
+	      !originalObj ? m.getObjCoefficients() : originalObj,
+	      m.getRowLower(), m.getRowUpper());
+  delete [] originalObj;
+#else
   loadProblem(*m.getMatrixByRow(), m.getColLower(), m.getColUpper(),
     m.getObjCoefficients(), m.getRowLower(), m.getRowUpper());
+#endif
 
   if (m.integerColumns()) {
     integerType_ = new char[numberColumns_];
