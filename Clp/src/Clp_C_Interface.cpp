@@ -263,6 +263,7 @@ Clp_loadProblem(Clp_Simplex *model, const int numcols, const int numrows,
   model->model_->loadProblem(numcols, numrows, start, index, value,
     collb, colub, obj, rowlb, rowub);
 }
+
 /* read quadratic part of the objective (the matrix part) */
 COINLIBAPI void COINLINKAGE
 Clp_loadQuadraticObjective(Clp_Simplex *model,
@@ -282,6 +283,15 @@ Clp_readMps(Clp_Simplex *model, const char *filename,
   int ignoreErrors)
 {
   return model->model_->readMps(filename, keepNames != 0, ignoreErrors != 0);
+}
+/* Write an MPS file to the given filename */
+COINLIBAPI int COINLINKAGE
+Clp_writeMps(Clp_Simplex *model, const char *filename,
+  int formatType,
+  int numberAcross,
+  double objSense)
+{
+  return model->model_->writeMps(filename, formatType, numberAcross, objSense);
 }
 /* Copy in integer informations */
 COINLIBAPI void COINLINKAGE
@@ -771,6 +781,19 @@ Clp_columnName(Clp_Simplex *model, int iColumn, char *name)
 {
   std::string columnName = model->model_->columnName(iColumn);
   strcpy(name, columnName.c_str());
+}
+
+/** Set row name - Nice if they are short - 8 chars or less I think */
+COINLIBAPI void COINLINKAGE Clp_setRowName(Clp_Simplex *model, int iRow, char *name)
+{
+  std::string sName = name; // Copies the memory AFAIK
+  model->model_->setRowName(iRow, sName);
+}
+/** Set column name - Nice if they are short - 8 chars or less I think */
+COINLIBAPI void COINLINKAGE Clp_setColumnName(Clp_Simplex *model, int iColumn, char *name)
+{
+  std::string sName = name; // Copies the memory AFAIK
+  model->model_->setColumnName(iColumn, sName);
 }
 
 /* General solve algorithm which can do presolve.

@@ -103,6 +103,14 @@ Clp_loadQuadraticObjective(Clp_Simplex *model,
 COINLIBAPI int COINLINKAGE Clp_readMps(Clp_Simplex *model, const char *filename,
   int keepNames,
   int ignoreErrors);
+/** Write an mps file to the given filename */
+/** Format type is 0 = normal, 1 = extra or 2 = hex.
+    Number across is 1 or 2.
+    Use objSense = -1D to flip the objective function around. */
+COINLIBAPI int COINLINKAGE Clp_writeMps(Clp_Simplex *model, const char *filename,
+  int formatType,
+  int numberAcross,
+  double objSense);
 /** Copy in integer informations */
 COINLIBAPI void COINLINKAGE Clp_copyInIntegerInformation(Clp_Simplex *model, const char *information);
 /** Drop integer informations */
@@ -293,6 +301,10 @@ COINLIBAPI int COINLINKAGE Clp_lengthNames(Clp_Simplex *model);
 COINLIBAPI void COINLINKAGE Clp_rowName(Clp_Simplex *model, int iRow, char *name);
 /** Fill in array (at least lengthNames+1 long) with a column name */
 COINLIBAPI void COINLINKAGE Clp_columnName(Clp_Simplex *model, int iColumn, char *name);
+/** Set row name - Nice if they are short - 8 chars or less I think */
+COINLIBAPI void COINLINKAGE Clp_setRowName(Clp_Simplex *model, int iRow, char *name);
+/** Set column name - Nice if they are short - 8 chars or less I think */
+COINLIBAPI void COINLINKAGE Clp_setColumnName(Clp_Simplex *model, int iColumn, char *name);
 
 /*@}*/
 
