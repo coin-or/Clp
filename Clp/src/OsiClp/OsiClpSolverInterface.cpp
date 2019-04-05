@@ -5808,9 +5808,31 @@ int OsiClpSolverInterface::readLp(const char *filename, const double epsilon)
   // set objective name
   setObjName(m.getObjName());
 
-  // no errors
+#ifndef SWITCH_BACK_TO_MAXIMIZATION
+#define SWITCH_BACK_TO_MAXIMIZATION 1
+#endif
+#if SWITCH_BACK_TO_MAXIMIZATION
+  double * originalObj = NULL;
+  if (m.wasMaximization()) {
+    // switch back
+    setDblParam(OsiObjOffset, -m.objectiveOffset());
+    int numberColumns = m.getNumCols();
+    originalObj = CoinCopyOfArray(m.getObjCoefficients(),numberColumns);
+    for (int i=0;i < numberColumns;i++)
+      originalObj[i] = - originalObj[i];
+    modelPtr_->setOptimizationDirection(-1.0);
+    handler_->message(COIN_GENERAL_INFO, messages_)
+      << "Switching back to maximization to get correct duals etc"
+      << CoinMessageEol;
+  }
+  loadProblem(*m.getMatrixByRow(), m.getColLower(), m.getColUpper(),
+	      !originalObj ? m.getObjCoefficients() : originalObj,
+	      m.getRowLower(), m.getRowUpper());
+  delete [] originalObj;
+#else
   loadProblem(*m.getMatrixByRow(), m.getColLower(), m.getColUpper(),
     m.getObjCoefficients(), m.getRowLower(), m.getRowUpper());
+#endif
 
   char *integer = const_cast< char * >(m.integerColumns());
   int nCols = m.getNumCols();
