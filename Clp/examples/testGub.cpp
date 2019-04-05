@@ -442,6 +442,9 @@ int main(int argc, const char *argv[])
           }
           printf("obj offset is %g\n", model2.objectiveOffset());
           printf("Primal took %g seconds\n", CoinCpuTime() - time1);
+     } else {
+       printf("No gub rows - this is just example code so exiting\n");
+       exit(77);
      }
      delete [] mark;
      delete [] gubStart;
