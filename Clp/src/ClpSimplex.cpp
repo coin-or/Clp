@@ -1922,9 +1922,9 @@ int ClpSimplex::internalFactorize(int solveType)
   //         solution_[iRow],iRow,status_[iRow]);
   //}
   //}
-#if 0 //ndef _MSC_VER                                                              \
-  // The local static var k is a problem when trying to build a DLL. Since this is \
-  // just for debugging (likely done on *nix), just hide it from Windows           \
+#if 0 //ndef _MSC_VER                                                           
+  // The local static var k is a problem when trying to build a DLL. Since this is 
+  // just for debugging (likely done on *nix), just hide it from Windows        
   // -- lh, 101016 --
      if (0)  {
           static int k = 0;

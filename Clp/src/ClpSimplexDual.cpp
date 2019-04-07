@@ -1411,8 +1411,8 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
               printf("flag a %g %g\n", btranAlpha, alpha_);
 #endif
               //#define FEB_TRY
-#if 1 //def FEB_TRY \
-  // Make safer?
+#if 1
+	      // Make safer?
               factorization_->saferTolerances(-0.99, -1.03);
 #endif
               setFlagged(sequenceOut_);
@@ -4651,9 +4651,9 @@ ClpSimplexDual::dualColumn(CoinIndexedVector *rowArray,
       const int *which;
       const double *reducedCost;
       double tentativeTheta = 1.0e15;
-      double upperTheta = 1.0e31;
+      //double upperTheta = 1.0e31;
       bestPossible = 0.0;
-      double multiplier[] = { -1.0, 1.0 };
+      //double multiplier[] = { -1.0, 1.0 };
       double dualT = -dualTolerance_;
       int nSections = 2;
       int addSequence;

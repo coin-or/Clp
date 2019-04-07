@@ -3211,7 +3211,7 @@ int ClpSimplexPrimal::pivotResult(int ifValuesPass)
               << x << sequenceWithin(sequenceIn_)
               << CoinMessageEol;
             setFlagged(sequenceIn_);
-#if 1 //def FEB_TRY \
+#if 1 //def FEB_TRY
   // could do conditional reset of weights to get larger djs
             primalColumnPivot_->saveWeights(this, 6);
             // Make safer?
