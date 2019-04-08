@@ -2098,8 +2098,10 @@ int ClpSimplexNonlinear::pivotColumn(CoinIndexedVector *longArray,
       //returnCode=2;
       //objTheta=-1.0; // so we fall through
     }
-    if (theta_ >= 1.0e30) // odd
-      ordinaryDj=true;
+    if (theta_ >= 1.0e30) { // odd
+      returnCode=2;
+      break;
+    }
     // See if we need to pivot
     if (theta_ == basicTheta || ordinaryDj) {
       if (!ordinaryDj) {
@@ -2307,6 +2309,7 @@ int ClpSimplexNonlinear::pivotColumn(CoinIndexedVector *longArray,
       columnArray->clear();
       longArray->clear();
       if (ordinaryDj) {
+	assert (sequenceIn_>=0);
         valueIn_ = solution_[sequenceIn_];
         dualIn_ = dj_[sequenceIn_];
         lowerIn_ = lower_[sequenceIn_];

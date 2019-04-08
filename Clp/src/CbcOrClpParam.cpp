@@ -3387,6 +3387,8 @@ Omer, J., Towhidi, M., Soumis, F., The positive edge pricing rule for the dual s
     p.append("stats");
     p.append("boundsint");
     p.append("boundsall");
+    p.append("fixint");
+    p.append("fixall");
     p.setLonghelp(
       "This changes the amount and format of printing a solution:\nnormal - nonzero column variables \n\
 integer - nonzero integer column variables\n\

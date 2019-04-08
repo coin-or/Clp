@@ -3501,7 +3501,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
           // User did not touch preset
           model2->defaultFactorizationFrequency();
         }
-#if 1 //ndef ABC_INHERIT //#if 1 \
+#if 1 //ndef ABC_INHERIT
   // throw some into basis
         if (!forceFixing) {
           int numberRows = model2->numberRows();
