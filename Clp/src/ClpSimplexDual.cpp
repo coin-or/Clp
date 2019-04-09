@@ -2383,7 +2383,7 @@ int ClpSimplexDual::updateDualsInDual(CoinIndexedVector *rowArray,
     work = rowArray->denseVector();
     number = rowArray->getNumElements();
     which = rowArray->getIndices();
-    double multiplier[] = { -1.0, 1.0 };
+    double multiplier[] = {0.0, 0.0, -1.0, 1.0 };
     for (i = 0; i < number; i++) {
       int iSequence = which[i];
       double alphaI = work[i];
@@ -2393,10 +2393,10 @@ int ClpSimplexDual::updateDualsInDual(CoinIndexedVector *rowArray,
         double value = reducedCost[iSequence] - theta * alphaI;
         // NO - can have free assert (iStatus>0);
         reducedCost[iSequence] = value;
-        double mult = multiplier[iStatus - 1];
+        double mult = multiplier[iStatus + 1];
         value *= mult;
         // skip if free
-        if (value < -tolerance && iStatus > 0) {
+        if (value < -tolerance) {
           // flipping bounds
           double movement = mult * (lower[iSequence] - upper[iSequence]);
           which[numberInfeasibilities++] = iSequence;
@@ -2415,6 +2415,8 @@ int ClpSimplexDual::updateDualsInDual(CoinIndexedVector *rowArray,
       }
     }
     // Do columns
+    multiplier[0] = -1.0;
+    multiplier[1] = 1.0;
     reducedCost = djRegion(1);
     lower = lowerRegion(1);
     upper = upperRegion(1);
