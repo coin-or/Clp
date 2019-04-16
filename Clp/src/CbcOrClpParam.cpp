@@ -481,7 +481,7 @@ void CoinReadPrintit(const char *input)
 // Print Long help
 void CbcOrClpParam::printLongHelp() const
 {
-  if (type_ >= 1 && type_ < 400) {
+  if (type_ >= 1 && type_ < 600) {
     CoinReadPrintit(longHelp_.c_str());
     if (type_ < CLP_PARAM_INT_SOLVERLOGLEVEL) {
       printf("<Range of values is %g to %g;\n\tcurrent %g>\n", lowerDoubleValue_, upperDoubleValue_, doubleValue_);
@@ -2897,6 +2897,11 @@ external module to quickly produce an initial feasible solution - some \
 alternatives are the implementation of simple greedy heuristics or the \
 solution (by CBC for example) of a simpler model created just to find \
 a feasible solution. \
+\n\n\
+Silly options added.  If filename ends .low then integers not mentioned \
+are set low - also .high, .lowcheap, .highcheap, .lowexpensive, .highexpensive \
+where .lowexpensive sets costed ones to make expensive others low. Also if \
+filename starts empty. then no file is read at all - just actions done. \
 \n\n\
 Question and suggestions regarding MIPStart can be directed to\n\
 haroldo.santos@gmail.com. ");
