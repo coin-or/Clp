@@ -622,6 +622,7 @@ int ClpSimplex::gutsOfSolution(double *givenDuals,
         //printf("going to all slack\n");
         allSlackBasis(true);
         CoinIotaN(pivotVariable_, numberRows_, numberColumns_);
+	delete [] save;
         return 1;
       }
       //printf("Original largest infeas %g, now %g, primalError %g\n",
@@ -684,9 +685,11 @@ int ClpSimplex::gutsOfSolution(double *givenDuals,
       delete[] sort;
     }
     delete[] save;
+    save = NULL;
     if (numberOut)
       return numberOut;
   }
+  delete [] save;
   if ((moreSpecialOptions_ & 128) != 0 && !numberIterations_) {
     //printf("trying feas pump\n");
     const char *integerType = integerInformation();
@@ -9282,6 +9285,7 @@ void ClpSimplex::returnModel(ClpSimplex &otherModel)
   if (perturbationArray_ != otherModel.perturbationArray_)
     delete[] perturbationArray_;
   perturbationArray_ = NULL;
+  assert (otherModel.eventHandler()->simplex()==&otherModel);
 }
 /* Constructs a non linear cost from list of non-linearities (columns only)
    First lower of each column is taken as real lower
