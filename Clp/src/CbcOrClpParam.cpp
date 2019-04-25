@@ -626,6 +626,9 @@ CbcOrClpParam::doubleParameter(ClpSimplex *model) const
   case CLP_PARAM_DBL_RHSSCALE:
     value = model->rhsScale();
     break;
+  case CLP_PARAM_DBL_PRESOLVETOLERANCE:
+    value = model->presolveTolerance();
+    break;
   default:
     value = doubleValue_;
     break;
