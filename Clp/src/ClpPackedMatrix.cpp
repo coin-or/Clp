@@ -6749,6 +6749,8 @@ ClpPackedMatrix3::ClpPackedMatrix3()
 }
 #ifdef _MSC_VER
 #include <intrin.h>
+#elif defined(__arm__)
+#include <arm_neon.h>
 #else
 #include <immintrin.h>
 //#include <fmaintrin.h>
