@@ -763,19 +763,15 @@ int CbcOrClpParam::checkDoubleParameter(double value) const
 }
 #ifdef COIN_HAS_CBC
 double
-CbcOrClpParam::doubleParameter(OsiSolverInterface *
-#ifndef NDEBUG
-    model
-#endif
-  ) const
+CbcOrClpParam::doubleParameter(OsiSolverInterface *model) const
 {
   double value = 0.0;
   switch (type_) {
   case CLP_PARAM_DBL_DUALTOLERANCE:
-    assert(model->getDblParam(OsiDualTolerance, value));
+    model->getDblParam(OsiDualTolerance, value);
     break;
   case CLP_PARAM_DBL_PRIMALTOLERANCE:
-    assert(model->getDblParam(OsiPrimalTolerance, value));
+    model->getDblParam(OsiPrimalTolerance, value);
     break;
   default:
     return doubleValue_;
