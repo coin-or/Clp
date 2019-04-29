@@ -3757,7 +3757,7 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
 #else
   {
     CbcOrClpParam p("sec!onds", "maximum seconds",
-      -1.0, 1.0e12, CBC_PARAM_DBL_TIMELIMIT_BAB);
+      -1.0, 1.0e100, CBC_PARAM_DBL_TIMELIMIT_BAB);
     p.setLonghelp(
       "After this many seconds coin solver will act as if maximum nodes had been reached.");
     parameters.push_back(p);
