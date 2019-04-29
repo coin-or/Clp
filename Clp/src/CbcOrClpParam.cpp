@@ -1877,7 +1877,7 @@ at root and 100 in tree.");
   }
   {
     CbcOrClpParam p("cuto!ff", "All solutions must be better than this",
-      -1.0e60, 1.0e60, CBC_PARAM_DBL_CUTOFF);
+      -1.0e100, 1.0e100, CBC_PARAM_DBL_CUTOFF);
     p.setDoubleValue(1.0e50);
     p.setLonghelp(
       "All solutions must be better than this value (in a minimization sense).  \
