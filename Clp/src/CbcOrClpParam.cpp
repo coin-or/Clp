@@ -1562,7 +1562,7 @@ basis anyway.");
       0.0, COIN_DBL_MAX, CBC_PARAM_DBL_ARTIFICIALCOST, 1);
     p.setDoubleValue(0.0);
     p.setLonghelp(
-      "0.0 off - otherwise variables with costs >= this are treated as artificials and fixed to lower bound in feasibility pump");
+      "A value of 0.0 means off. Otherwise, variables with costs >= this are treated as artificial variables and fixed to lower bound in feasibility pump.");
     parameters.push_back(p);
   }
 #endif
@@ -1741,7 +1741,7 @@ It is obviously only tried after two or more solutions have been found. "
     p.append("before");
     p.setLonghelp(
       "This heuristic does branch and cut on the problem given by \
-fixing variables which have same value in two or more solutions. \
+fixing variables which have the same value in two or more solutions. \
 It obviously only tries after two or more solutions. "
       HEURISTICS_LONGHELP);
     parameters.push_back(p);
@@ -1932,7 +1932,7 @@ Dantzig Wolfe if primal, Benders if dual \
   }
 #if CLP_MULTIPLE_FACTORIZATIONS > 0
   {
-    CbcOrClpParam p("dense!Threshold", "Whether to use dense factorization",
+    CbcOrClpParam p("dense!Threshold", "Threshold for using dense factorization",
       -1, 10000, CBC_PARAM_INT_DENSE, 1);
     p.setLonghelp(
       "If processed problem <= this use dense factorization");
@@ -1943,7 +1943,7 @@ Dantzig Wolfe if primal, Benders if dual \
 #endif
 #ifdef COIN_HAS_CBC
   {
-    CbcOrClpParam p("depth!MiniBab", "Depth at which to try mini BAB",
+    CbcOrClpParam p("depth!MiniBab", "Depth at which to try mini branch-and-bound",
       -COIN_INT_MAX, COIN_INT_MAX, CBC_PARAM_INT_DEPTHMINIBAB);
 
     p.setIntValue(-1);
@@ -2061,11 +2061,11 @@ You can also use the parameters 'maximize' or 'minimize'.");
       -1, 200000, CBC_PARAM_INT_DIVEOPTSOLVES, 1);
 
     p.setLonghelp(
-      "If >0 then do up to this many solves.  Last digit is ignored \
-and used for extra options - \
-	 \n\t1-3 allow fixing of satisfied integers (but not at bound) \
-	 \n\t1 switch off above for that dive if goes infeasible \
-	 \n\t2 switch off above permanently if goes infeasible");
+      "If >0 then do up to this many solves. However, the last digit is ignored \
+and used for extra options: \
+      1-3 enables fixing of satisfied integer variables (but not at bound), \
+      where 1 switches this off for that dive if the dive goes infeasible, \
+      and 2 switches it off permanently if the dive goes infeasible.");
     p.setIntValue(100);
     parameters.push_back(p);
   }
@@ -2283,16 +2283,16 @@ e.g. no ENDATA.  This has to be set before import i.e. -errorsAllowed on -import
       0, COIN_INT_MAX, CBC_PARAM_INT_STRONG_STRATEGY, 0);
 
     p.setLonghelp(
-      "Strategy for extra strong branching \n\
-\n\t0 - normal\n\
-\n\twhen to do all fractional\n\
-\n\t1 - root node\n\
-\n\t2 - depth less than modifier\n\
-\n\t4 - if objective == best possible\n\
-\n\t6 - as 2+4\n\
-\n\twhen to do all including satisfied\n\
-\n\t10 - root node etc.\n\
-\n\tIf >=100 then do when depth <= strategy/100 (otherwise 5)");
+      "Strategy for extra strong branching. \
+0 is normal strong branching. \
+1, 2, 4, and 6 does strong branching on all fractional variables if \
+at the root node (1), \
+at depth less than modifier (2), \
+objective equals best possible (4), or \
+at depth less than modifier and objective equals best possible (6). \
+11, 12, 14, and 16 are like 1, 2, 4, and 6, respecitively, but do strong branching on all integer (incl. non-fractional) variables. \
+Values >= 100 are used to specify a depth limit (value/100), otherwise 5 is used. \
+If the values >= 100, then above rules are applied to value%100.");
     p.setIntValue(0);
     parameters.push_back(p);
   }
@@ -2362,10 +2362,10 @@ of dual information to use.  After that it goes back to powers of 2 so -\n\
     p.setLonghelp(
 #ifndef ABC_INHERIT
       "The default is to use the normal CoinFactorization, but \
-other choices are a dense one, osl's or one designed for small problems."
+other choices are a dense one, OSL's, or one designed for small problems."
 #else
       "Normally the default is to use the normal CoinFactorization, but \
-other choices are a dense one, osl's or one designed for small problems. \
+other choices are a dense one, OSL's, or one designed for small problems. \
 However if at Aboca then the default is CoinAbcFactorization and other choices are \
 a dense one, one designed for small problems or if enabled a long factorization."
 #endif
@@ -2429,10 +2429,9 @@ If >1 then also does that many nodes on fixed problem.");
       1.0e-5, 1.1, CBC_PARAM_DBL_SMALLBAB, 1);
     p.setDoubleValue(0.5);
     p.setLonghelp(
-      "After a pass in feasibility pump, variables which have not moved \
-about are fixed and if the preprocessed model is small enough a few nodes \
-of branch and bound are done on reduced problem.  Small problem has to be \
-less than this fraction of original.");
+      "After a pass in the feasibility pump, variables which have not moved \
+about are fixed and if the preprocessed model is smaller than this fraction of the original problem, \
+a few nodes of branch and bound are done on the reduced problem.");
     parameters.push_back(p);
   }
 #endif
@@ -2547,11 +2546,11 @@ you should be past that stage:-)");
       -COIN_INT_MAX, COIN_INT_MAX, CBC_PARAM_INT_HOPTIONS, 1);
     p.setIntValue(0);
     p.setLonghelp(
-      "1 says stop heuristic immediately allowable gap reached. \
-Others are for feasibility pump - \
+      "Value 1 stops heuristics immediately if the allowable gap has been reached. \
+Other values are for the feasibility pump - \
 2 says do exact number of passes given, \
-4 only applies if initial cutoff given and says relax after 50 passes, \
-while 8 will adapt cutoff rhs after first solution if it looks as if code is stalling.");
+4 only applies if an initial cutoff has been given and says relax after 50 passes, \
+while 8 will adapt the cutoff rhs after the first solution if it looks as if the code is stalling.");
     parameters.push_back(p);
   }
   {
@@ -2635,7 +2634,7 @@ This needs to be set before the import of model - so -keepnames off -import xxxx
     parameters.push_back(p);
   }
   {
-    CbcOrClpParam p("KKT", "Whether to use KKT factorization",
+    CbcOrClpParam p("KKT", "Whether to use KKT factorization in barrier",
       "off", CLP_PARAM_STR_KKT, 7, 1);
     p.append("on");
     parameters.push_back(p);
@@ -2680,8 +2679,8 @@ by Matteo Fischetti & Domenico Salvagnin.  This simplification \
 just uses original constraints while modifying objective using other cuts. \
 So you don't use messy constraints generated by Gomory etc. \
 A variant is to allow non messy cuts e.g. clique cuts. \
-So 'only' does this while clean also allows integral valued cuts.  \
-'End' is recommended which waits until other cuts have finished and then \
+So 'only' does this while 'clean' also allows integral valued cuts.  \
+'End' is recommended and waits until other cuts have finished before it \
 does a few passes. \
 The length options for gomory cuts are used.");
     parameters.push_back(p);
@@ -2703,7 +2702,7 @@ The length options for gomory cuts are used.");
     p.append("cleaninstead");
     p.append("bothinstead");
     p.setLonghelp(
-      "This is a lagrangean relaxation for TwoMir cuts.  See \
+      "This is a Lagrangean relaxation for TwoMir cuts.  See \
   lagomoryCuts for description of options.");
     parameters.push_back(p);
   }
@@ -3070,7 +3069,7 @@ This is a first try and will hopefully become more sophisticated.");
     p.append("simple");
     p.setLonghelp(
       "This switches on Orbital branching. \
-On just adds orbital, strong tries extra fixing in strong branching");
+Value 'on' just adds orbital, 'strong' tries extra fixing in strong branching.");
     parameters.push_back(p);
   }
 #endif
@@ -3341,30 +3340,27 @@ costs this much to be infeasible",
       "The primal algorithm in Clp is a single phase algorithm as opposed to a two phase\
  algorithm where you first get feasible then optimal.  So Clp is minimizing this weight times\
  the sum of primal infeasibilities plus the true objective function (in minimization sense).\
-  Too high a value may mean more iterations, while too low a bound means\
- the code may go all the way and then have to increase the weight in order to get feasible.\
-  OSL had a heuristic to\
- adjust bounds, maybe we need that here.");
+  Too high a value may mean more iterations, while too low a value means\
+ the algorithm may iterate into the wrong directory for long and then has to increase the weight in order to get feasible."); // OSL had a heuristic to adjust bounds, maybe we need that here.
     parameters.push_back(p);
   }
   {
-    CbcOrClpParam p("psi", "Two-dimension pricing factor for Positive edge",
+    CbcOrClpParam p("psi", "Two-dimension pricing factor for Positive Edge criterion",
       -1.1, 1.1, CLP_PARAM_DBL_PSI);
 
     p.setDoubleValue(-0.5);
     p.setLonghelp(
       "The Positive Edge criterion has been added to \
 select incoming variables to try and avoid degenerate moves. \
-Variables not in promising set have their infeasibility weight multiplied by psi \
+Variables not in the promising set have their infeasibility weight multiplied by psi, \
 so 0.01 would mean that if there were any promising variables, then they would always be chosen, \
-while 1.0 effectively switches algorithm off. \
-There are two ways of switching on this feature.  One way is to set psi positive and then \
-the Positive Edge criterion will be used for Primal and Dual.  The other way is to select pesteep \
-in dualpivot choice (for example), then the absolute value of psi is used - default 0.5. \
-Until this settles down it is only implemented in clp. \
+while 1.0 effectively switches the algorithm off. \
+There are two ways of switching this feature on.  One way is to set psi to a positive value and then \
+the Positive Edge criterion will be used for both primal and dual simplex.  The other way is to select PEsteepest \
+in dualpivot choice (for example), then the absolute value of psi is used. \
 Code donated by Jeremy Omer.  See \
-Towhidi, M., Desrosiers, J., Soumis, F., The positive edge criterion within COIN-OR’s CLP. and \
-Omer, J., Towhidi, M., Soumis, F., The positive edge pricing rule for the dual simplex.");
+Towhidi, M., Desrosiers, J., Soumis, F., The positive edge criterion within COIN-OR's CLP; \
+Omer, J., Towhidi, M., Soumis, F., The positive edge pricing rule for the dual simplex.");  // Until this settles down it is only implemented in CLP.
     parameters.push_back(p);
   }
 #endif
@@ -3466,7 +3462,7 @@ found at the root node. "
       -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_FAKECUTOFF);
     p.setDoubleValue(0.0);
     p.setLonghelp(
-      "0.0 off - otherwise add a constraint forcing objective below this value\
+      "A value of 0.0 means off. Otherwise, add a constraint forcing objective below this value\
  in feasibility pump");
     parameters.push_back(p);
   }
@@ -3475,7 +3471,7 @@ found at the root node. "
       -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_FAKEINCREMENT, 1);
     p.setDoubleValue(0.0);
     p.setLonghelp(
-      "0.0 off - otherwise use as absolute increment to cutoff \
+      "A value of 0.0 means off. Otherwise use as absolute increment to cutoff \
 when solution found in feasibility pump");
     parameters.push_back(p);
   }
@@ -3780,7 +3776,7 @@ sequential Lps to get a good approximate solution.");
   }
 #if CLP_MULTIPLE_FACTORIZATIONS > 0
   {
-    CbcOrClpParam p("small!Factorization", "Whether to use small factorization",
+    CbcOrClpParam p("small!Factorization", "Threshold for using small factorization",
       -1, 10000, CBC_PARAM_INT_SMALLFACT, 1);
     p.setLonghelp(
       "If processed problem <= this use small factorization");
@@ -3833,9 +3829,9 @@ this does branch and cut." );
      p.append("orderhigh");
      p.append("orderlow");
      p.setLonghelp(
-       "This sets priorities for SOS.  The first two just set priority \
-    relative to integers.  Orderhigh gives first set highest priority and integers \
-    a low priority.  Orderlow gives integers high priority then SOS in order.");
+       "This sets priorities for SOS.  Values 'high' and 'low' just set a priority \
+    relative to the for integer variables.  Value 'orderhigh' gives first highest priority to the first SOS and integer variables \
+    a low priority.  Value 'orderlow' gives integer variables a high priority then SOS in order.");
     parameters.push_back(p);
   }
 #else
@@ -3930,8 +3926,8 @@ see also option trustPseudoCosts.");
       0, 10000, CLP_PARAM_INT_SUBSTITUTION, 0);
     p.setLonghelp(
       "Normally Presolve gets rid of 'free' variables when there are no more than 3 \
- variables in column.  If you increase this the number of rows may decrease but number of \
- elements may increase.");
+ coefficients in a row.  If you increase this, the number of rows may decrease but the number of \
+ coefficients may increase.");
     parameters.push_back(p);
   }
 #endif
@@ -3995,7 +3991,7 @@ trust the pseudo costs and do not do any more strong branching.");
 #endif
 #ifdef COIN_HAS_CBC
   {
-    CbcOrClpParam p("tune!PreProcess", "Dubious tuning parameters",
+    CbcOrClpParam p("tune!PreProcess", "Dubious tuning parameters for preprocessing",
       0, COIN_INT_MAX, CLP_PARAM_INT_PROCESSTUNE, 1);
     p.setLonghelp(
       "Format aabbcccc - \n If aa then this is number of major passes (i.e. with presolve) \n \
