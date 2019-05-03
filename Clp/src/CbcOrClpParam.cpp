@@ -1538,7 +1538,7 @@ are printed out on ?.");
   {
     CbcOrClpParam p("allow!ableGap", "Stop when gap between best possible and \
 best less than this",
-      0.0, 1.0e20, CBC_PARAM_DBL_ALLOWABLEGAP);
+      0.0, COIN_DBL_MAX, CBC_PARAM_DBL_ALLOWABLEGAP);
     p.setDoubleValue(0.0);
     p.setLonghelp(
       "If the gap between best known solution and the best possible solution is less than this \
@@ -1559,7 +1559,7 @@ basis anyway.");
 #ifdef COIN_HAS_CBC
   {
     CbcOrClpParam p("artif!icialCost", "Costs >= this treated as artificials in feasibility pump",
-      0.0, 1.0e100, CBC_PARAM_DBL_ARTIFICIALCOST, 1);
+      0.0, COIN_DBL_MAX, CBC_PARAM_DBL_ARTIFICIALCOST, 1);
     p.setDoubleValue(0.0);
     p.setLonghelp(
       "0.0 off - otherwise variables with costs >= this are treated as artificials and fixed to lower bound in feasibility pump");
@@ -1845,7 +1845,7 @@ Cbc/examples/driver4.cpp.");
     p.setLonghelp(
       "Interior point algorithms do not obtain a basic solution.\
  This option will crossover to a basic solution suitable for ranging or branch and cut.  With the current state \
-of quadratic it may be a good idea to switch off crossover for quadratic (and maybe \
+of the solver for quadratic programs it may be a good idea to switch off crossover for this case (and maybe \
 presolve as well) - the option 'maybe' does this.");
     parameters.push_back(p);
   }
@@ -1862,7 +1862,7 @@ presolve as well) - the option 'maybe' does this.");
   }
   {
     CbcOrClpParam p("cutD!epth", "Depth in tree at which to do cuts",
-      -1, 999999, CBC_PARAM_INT_CUTDEPTH);
+      -1, COIN_INT_MAX, CBC_PARAM_INT_CUTDEPTH);
     p.setLonghelp(
       "Cut generators may be off, on, on only at the root node, or on if they look useful. \
       Setting this option to a positive value K let CBC call a cutgenerator on a node whenever the depth in the tree is a multiple of K. \
@@ -1883,7 +1883,7 @@ at root and 100 in tree.");
   }
   {
     CbcOrClpParam p("cuto!ff", "Bound on the objective value for all solutions",
-      -1.0e100, 1.0e100, CBC_PARAM_DBL_CUTOFF);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_CUTOFF);
     p.setDoubleValue(1.0e50);
     p.setLonghelp(
       "All solutions must have a better objective value (in a minimization sense) than the value of this option.  \
@@ -1957,19 +1957,19 @@ The actual logic is too twisted to describe here.");
   }
   {
     CbcOrClpParam p("dextra3", "Extra double parameter 3",
-      -1.0e100, 1.0e100, CBC_PARAM_DBL_DEXTRA3, 0);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_DEXTRA3, 0);
     p.setDoubleValue(0.0);
     parameters.push_back(p);
   }
   {
     CbcOrClpParam p("dextra4", "Extra double parameter 4",
-      -1.0e100, 1.0e100, CBC_PARAM_DBL_DEXTRA4, 0);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_DEXTRA4, 0);
     p.setDoubleValue(0.0);
     parameters.push_back(p);
   }
   {
     CbcOrClpParam p("dextra4", "Extra double parameter 5",
-      -1.0e100, 1.0e100, CBC_PARAM_DBL_DEXTRA5, 0);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_DEXTRA5, 0);
     p.setDoubleValue(0.0);
     parameters.push_back(p);
   }
@@ -2203,7 +2203,7 @@ The time and iterations may be affected by settings such as presolve, scaling, c
   {
     CbcOrClpParam p("dualT!olerance", "For an optimal solution \
 no dual infeasibility may exceed this value",
-      1.0e-20, 1.0e12, CLP_PARAM_DBL_DUALTOLERANCE);
+      1.0e-20, COIN_DBL_MAX, CLP_PARAM_DBL_DUALTOLERANCE);
     p.setLonghelp(
       "Normally the default tolerance is fine, but one may want to increase it a\
  bit if the dual simplex algorithm seems to be having a hard time.  One method which can be faster is \
@@ -2395,7 +2395,7 @@ Some fine tuning is available by options passFeasibilityPump and pumpTune. "
   {
     CbcOrClpParam p("fix!OnDj", "Try heuristic based on fixing variables with \
 reduced costs greater than this",
-      -1.0e20, 1.0e20, CBC_PARAM_DBL_DJFIX, 1);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_DJFIX, 1);
     p.setLonghelp(
       "If this is set integer variables with reduced costs greater than this will be fixed \
 before branch and bound - use with extreme caution!");
@@ -2544,7 +2544,7 @@ you should be past that stage:-)");
 #ifdef COIN_HAS_CBC
   {
     CbcOrClpParam p("hOp!tions", "Heuristic options",
-      -9999999, 9999999, CBC_PARAM_INT_HOPTIONS, 1);
+      -COIN_INT_MAX, COIN_INT_MAX, CBC_PARAM_INT_HOPTIONS, 1);
     p.setIntValue(0);
     p.setLonghelp(
       "1 says stop heuristic immediately allowable gap reached. \
@@ -2563,7 +2563,7 @@ while 8 will adapt cutoff rhs after first solution if it looks as if code is sta
 #ifdef COIN_HAS_CLP
   {
     CbcOrClpParam p("idiot!Crash", "Whether to try idiot crash",
-      -1, 99999999, CLP_PARAM_INT_IDIOT);
+      -1, COIN_INT_MAX, CLP_PARAM_INT_IDIOT);
 
     p.setLonghelp(
       "This is a type of 'crash' which works well on some homogeneous problems.\
@@ -2588,7 +2588,7 @@ If 'keepnames' is off, then names are dropped -> Rnnnnnnn and Cnnnnnnn.");
   {
     CbcOrClpParam p("inc!rement", "A valid solution must be at least this \
 much better than last integer solution",
-      -1.0e20, 1.0e20, CBC_PARAM_DBL_INCREMENT);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_INCREMENT);
 
     p.setLonghelp(
       "Whenever a solution is found the bound on the objective value for new solutions is set to the\
@@ -2601,7 +2601,7 @@ the objective function, then the increment can be set to 0.01.  Be careful if se
   {
     CbcOrClpParam p("inf!easibilityWeight", "Each integer infeasibility is expected \
 to cost this much",
-      0.0, 1.0e20, CBC_PARAM_DBL_INFEASIBILITYWEIGHT, 1);
+      0.0, COIN_DBL_MAX, CBC_PARAM_DBL_INFEASIBILITYWEIGHT, 1);
     p.setLonghelp(
       "A primitive way of deciding which node to explore next.  Satisfying each integer infeasibility is \
 expected to cost this much.");
@@ -2734,7 +2734,7 @@ The length options for gomory cuts are used.");
   {
 #ifndef COIN_HAS_CBC
     CbcOrClpParam p("log!Level", "Level of detail in Solver output",
-      -1, 999999, CLP_PARAM_INT_SOLVERLOGLEVEL);
+      -1, COIN_INT_MAX, CLP_PARAM_INT_SOLVERLOGLEVEL);
     parameters.push_back(p);
 #else
     CbcOrClpParam p("log!Level", "Level of detail in Coin branch and Cut output",
@@ -2758,7 +2758,7 @@ You can also use the parameters 'direction maximize'.");
   {
     CbcOrClpParam p("maxF!actor", "Maximum number of iterations between \
 refactorizations",
-      1, 999999, CLP_PARAM_INT_MAXFACTOR);
+      1, COIN_INT_MAX, CLP_PARAM_INT_MAXFACTOR);
     p.setLonghelp(
       "If this is left at its default value of 200 then CLP will guess a\
  value to use.  CLP may decide to re-factorize earlier for accuracy.");
@@ -2767,7 +2767,7 @@ refactorizations",
   {
     CbcOrClpParam p("maxIt!erations", "Maximum number of iterations before \
 stopping",
-      0, 2147483647, CLP_PARAM_INT_MAXITERATION);
+      0, COIN_INT_MAX, CLP_PARAM_INT_MAXITERATION);
     p.setLonghelp(
       "This can be used for testing purposes.  The corresponding library call\n\
       \tsetMaximumIterations(value)\n can be useful.  If the code stops on\
@@ -2778,7 +2778,7 @@ stopping",
 #ifdef COIN_HAS_CBC
   {
     CbcOrClpParam p("maxN!odes", "Maximum number of nodes to do",
-      -1, 2147483647, CBC_PARAM_INT_MAXNODES);
+      -1, COIN_INT_MAX, CBC_PARAM_INT_MAXNODES);
     p.setLonghelp(
       "This is a repeatable way to limit search.  Normally using time is easier \
 but then the results may not be repeatable.");
@@ -2786,14 +2786,14 @@ but then the results may not be repeatable.");
   }
   {
     CbcOrClpParam p("maxSaved!Solutions", "Maximum number of solutions to save",
-      0, 2147483647, CBC_PARAM_INT_MAXSAVEDSOLS);
+      0, COIN_INT_MAX, CBC_PARAM_INT_MAXSAVEDSOLS);
     p.setLonghelp(
       "Number of solutions to save.");
     parameters.push_back(p);
   }
   {
     CbcOrClpParam p("maxSo!lutions", "Maximum number of feasible solutions to get",
-      1, 2147483647, CBC_PARAM_INT_MAXSOLS);
+      1, COIN_INT_MAX, CBC_PARAM_INT_MAXSOLS);
     p.setLonghelp(
       "You may want to stop after (say) two solutions or an hour.  \
 This is checked every node in tree, so it is possible to get more solutions from heuristics.");
@@ -2929,7 +2929,7 @@ haroldo.santos@gmail.com. ");
   }
   {
     CbcOrClpParam p("multiple!RootPasses", "Do multiple root passes to collect cuts and solutions",
-      0, 100000000, CBC_PARAM_INT_MULTIPLEROOTS, 0);
+      0, COIN_INT_MAX, CBC_PARAM_INT_MULTIPLEROOTS, 0);
     p.setIntValue(0);
     p.setLonghelp(
       "Solve (in parallel, if enabled) the root phase this number of times, \
@@ -3051,7 +3051,7 @@ This is a first try and will hopefully become more sophisticated.");
 #endif
   {
     CbcOrClpParam p("objective!Scale", "Scale factor to apply to objective",
-      -1.0e20, 1.0e20, CLP_PARAM_DBL_OBJSCALE, 1);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CLP_PARAM_DBL_OBJSCALE, 1);
     p.setLonghelp(
       "If the objective function has some very large values, you may wish to scale them\
  internally by this amount.  It can also be set by autoscale.  It is applied after scaling.  You are unlikely to need this.");
@@ -3132,7 +3132,7 @@ missing ones have value 0.0.");
 #ifdef COIN_HAS_CBC
   {
     CbcOrClpParam p("passC!uts", "Number of rounds that cut generators are applied in the root node",
-      -9999999, 9999999, CBC_PARAM_INT_CUTPASS);
+      -COIN_INT_MAX, COIN_INT_MAX, CBC_PARAM_INT_CUTPASS);
 
     p.setIntValue(20);
     p.setLonghelp(
@@ -3162,7 +3162,7 @@ A negative value -n means that n passes are also applied if the objective does n
 #ifdef COIN_HAS_CBC
   {
     CbcOrClpParam p("passT!reeCuts", "Number of rounds that cut generators are applied in the tree",
-      -9999999, 9999999, CBC_PARAM_INT_CUTPASSINTREE);
+      -COIN_INT_MAX, COIN_INT_MAX, CBC_PARAM_INT_CUTPASSINTREE);
     p.setIntValue(1);
     p.setLonghelp("The default is to do one pass. A negative value -n means that n passes are also applied if the objective does not drop.");
     parameters.push_back(p);
@@ -3281,7 +3281,7 @@ it also tries to strengthen the model - this can be very useful and is worth try
 #ifdef COIN_HAS_CLP
   {
     CbcOrClpParam p("preT!olerance", "Tolerance to use in presolve",
-      1.0e-20, 1.0e12, CLP_PARAM_DBL_PRESOLVETOLERANCE);
+      1.0e-20, COIN_DBL_MAX, CLP_PARAM_DBL_PRESOLVETOLERANCE);
     p.setLonghelp(
       "One may want to increase this tolerance if presolve says the problem is \
 infeasible and one has awkward numbers and is sure that the problem is really feasible.");
@@ -3326,7 +3326,7 @@ infeasible and one has awkward numbers and is sure that the problem is really fe
   {
     CbcOrClpParam p("primalT!olerance", "For a feasible solution \
 no primal infeasibility, i.e., constraint violation, may exceed this value",
-      1.0e-20, 1.0e12, CLP_PARAM_DBL_PRIMALTOLERANCE);
+      1.0e-20, COIN_DBL_MAX, CLP_PARAM_DBL_PRIMALTOLERANCE);
     p.setLonghelp(
       "Normally the default tolerance is fine, but one may want to increase it a\
  bit if the primal simplex algorithm seems to be having a hard time.");
@@ -3336,7 +3336,7 @@ no primal infeasibility, i.e., constraint violation, may exceed this value",
   {
     CbcOrClpParam p("primalW!eight", "Initially algorithm acts as if it \
 costs this much to be infeasible",
-      1.0e-20, 1.0e20, CLP_PARAM_DBL_PRIMALWEIGHT);
+      1.0e-20, COIN_DBL_MAX, CLP_PARAM_DBL_PRIMALWEIGHT);
     p.setLonghelp(
       "The primal algorithm in Clp is a single phase algorithm as opposed to a two phase\
  algorithm where you first get feasible then optimal.  So Clp is minimizing this weight times\
@@ -3463,7 +3463,7 @@ found at the root node. "
   }
   {
     CbcOrClpParam p("pumpC!utoff", "Fake cutoff for use in feasibility pump",
-      -1.0e100, 1.0e100, CBC_PARAM_DBL_FAKECUTOFF);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_FAKECUTOFF);
     p.setDoubleValue(0.0);
     p.setLonghelp(
       "0.0 off - otherwise add a constraint forcing objective below this value\
@@ -3472,7 +3472,7 @@ found at the root node. "
   }
   {
     CbcOrClpParam p("pumpI!ncrement", "Fake increment for use in feasibility pump",
-      -1.0e100, 1.0e100, CBC_PARAM_DBL_FAKEINCREMENT, 1);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CBC_PARAM_DBL_FAKEINCREMENT, 1);
     p.setDoubleValue(0.0);
     p.setLonghelp(
       "0.0 off - otherwise use as absolute increment to cutoff \
@@ -3543,7 +3543,7 @@ are fixed and a small branch and bound is tried.");
   {
     CbcOrClpParam p("ratio!Gap", "Stop when gap between best possible and \
 best known is less than this fraction of larger of two",
-      0.0, 1.0e20, CBC_PARAM_DBL_GAPRATIO);
+      0.0, COIN_DBL_MAX, CBC_PARAM_DBL_GAPRATIO);
     p.setDoubleValue(0.0);
     p.setLonghelp(
       "If the gap between the best known solution and the best possible solution is less than this fraction \
@@ -3572,7 +3572,7 @@ way of using absolute value rather than fraction.");
 #ifdef COIN_HAS_CLP
   {
     CbcOrClpParam p("reallyO!bjectiveScale", "Scale factor to apply to objective in place",
-      -1.0e20, 1.0e20, CLP_PARAM_DBL_OBJSCALE2, 0);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CLP_PARAM_DBL_OBJSCALE2, 0);
     p.setLonghelp("You can set this to -1.0 to test maximization or other to stress code");
     p.setDoubleValue(1.0);
     parameters.push_back(p);
@@ -3645,7 +3645,7 @@ See option cuts for more information on the possible values.");
   }
   {
     CbcOrClpParam p("rhs!Scale", "Scale factor to apply to rhs and bounds",
-      -1.0e20, 1.0e20, CLP_PARAM_DBL_RHSSCALE, 0);
+      -COIN_DBL_MAX, COIN_DBL_MAX, CLP_PARAM_DBL_RHSSCALE, 0);
     p.setLonghelp(
       "If the rhs or bounds have some very large meaningful values, you may wish to scale them\
  internally by this amount.  It can also be set by autoscale.  This should not be needed.");
@@ -3735,7 +3735,7 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
 #ifndef COIN_HAS_CBC
   {
     CbcOrClpParam p("sec!onds", "Maximum seconds",
-      -1.0, 1.0e12, CLP_PARAM_DBL_TIMELIMIT);
+      -1.0, COIN_DBL_MAX, CLP_PARAM_DBL_TIMELIMIT);
 
     p.setLonghelp("After this many seconds clp will act as if maximum iterations had been reached \
 (if value >=0).");
@@ -3744,7 +3744,7 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
 #else
   {
     CbcOrClpParam p("sec!onds", "maximum seconds",
-      -1.0, 1.0e100, CBC_PARAM_DBL_TIMELIMIT_BAB);
+      -1.0, COIN_DBL_MAX, CBC_PARAM_DBL_TIMELIMIT_BAB);
     p.setLonghelp(
       "After this many seconds coin solver will act as if maximum nodes had been reached.");
     parameters.push_back(p);
@@ -3863,7 +3863,7 @@ this does branch and cut." );
   }
   {
     CbcOrClpParam p("sprint!Crash", "Whether to try sprint crash",
-      -1, 5000000, CLP_PARAM_INT_SPRINT);
+      -1, COIN_INT_MAX, CLP_PARAM_INT_SPRINT);
     p.setLonghelp(
       "For long and thin problems this method may solve a series of small problems\
  created by taking a subset of the columns.  The idea as 'Sprint' was introduced by J. Forrest after\
@@ -3959,7 +3959,7 @@ if 200+n use threads for root cuts, 400+n threads used in sub-trees.");
   {
     CbcOrClpParam p("tighten!Factor", "Tighten bounds using this times largest \
 activity at continuous solution",
-      1.0e-3, 1.0e20, CBC_PARAM_DBL_TIGHTENFACTOR, 0);
+      1.0e-3, COIN_DBL_MAX, CBC_PARAM_DBL_TIGHTENFACTOR, 0);
     p.setLonghelp(
       "This sleazy trick can help on some problems.");
     parameters.push_back(p);
@@ -3985,7 +3985,7 @@ activity at continuous solution",
 #ifdef COIN_HAS_CBC
   {
     CbcOrClpParam p("trust!PseudoCosts", "Number of branches before we trust pseudocosts",
-      -3, 2000000000, CBC_PARAM_INT_NUMBERBEFORE);
+      -3, COIN_INT_MAX, CBC_PARAM_INT_NUMBERBEFORE);
     p.setLonghelp(
       "Using strong branching computes pseudo-costs.  This parameter determines after how many branches for a variable we just \
 trust the pseudo costs and do not do any more strong branching.");
@@ -3996,7 +3996,7 @@ trust the pseudo costs and do not do any more strong branching.");
 #ifdef COIN_HAS_CBC
   {
     CbcOrClpParam p("tune!PreProcess", "Dubious tuning parameters",
-      0, 2000000000, CLP_PARAM_INT_PROCESSTUNE, 1);
+      0, COIN_INT_MAX, CLP_PARAM_INT_PROCESSTUNE, 1);
     p.setLonghelp(
       "Format aabbcccc - \n If aa then this is number of major passes (i.e. with presolve) \n \
 If bb and bb>0 then this is number of minor passes (if unset or 0 then 10) \n \
