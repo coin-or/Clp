@@ -226,7 +226,7 @@ int clapack_dgetrs(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE Tran
 typedef unsigned char CoinCheckZero;
 template < class T >
 inline void
-CoinAbcMemset0(register T *to, const int size)
+CoinAbcMemset0(T *to, const int size)
 {
 #ifndef NDEBUG
   // Some debug so check
@@ -238,7 +238,7 @@ CoinAbcMemset0(register T *to, const int size)
 }
 template < class T >
 inline void
-CoinAbcMemcpy(register T *to, register const T *from, const int size)
+CoinAbcMemcpy(T *to, const T *from, const int size)
 {
 #ifndef NDEBUG
   // Some debug so check
@@ -300,7 +300,7 @@ public:
       from basis until largest infeasibility < allowedInfeasibility.
       if allowedInfeasibility>= incomingInfeasibility this is
       always possible altough you may end up with an all slack basis.
-      
+
       Defaults are 1.0,10.0
   */
   double incomingInfeasibility_;
