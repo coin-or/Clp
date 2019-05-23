@@ -2715,9 +2715,9 @@ The length options for gomory cuts are used.");
     p.append("ifmove");
     p.append("forceOn");
     p.setLonghelp(
-      "These cuts may be expensive to compute. "
       CUTS_LONGHELP
-      " Reference: https://github.com/coin-or/Cgl/wiki/CglLandP");
+      "These cuts may be expensive to compute. \
+       Reference: https://github.com/coin-or/Cgl/wiki/CglLandP");
     parameters.push_back(p);
   }
   {
@@ -3589,9 +3589,9 @@ way of using absolute value rather than fraction.");
     p.append("ifmove");
     p.append("forceOn");
     p.setLonghelp(
-      "These cuts may be expensive to generate. "
       CUTS_LONGHELP
-      " Reference: https://github.com/coin-or/Cgl/wiki/CglRedSplit");
+      "These cuts may be expensive to generate. \
+      Reference: https://github.com/coin-or/Cgl/wiki/CglRedSplit");
     parameters.push_back(p);
   }
   {
