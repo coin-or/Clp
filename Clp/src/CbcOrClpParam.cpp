@@ -457,7 +457,8 @@ void CbcOrClpParam::printString() const
 void CoinReadPrintit(const char *input)
 {
   int length = static_cast< int >(strlen(input));
-  char temp[101];
+  assert(length <= 1000);
+  char temp[1001];
   int i;
   int n = 0;
   for (i = 0; i < length; i++) {
@@ -2715,9 +2716,9 @@ The length options for gomory cuts are used.");
     p.append("ifmove");
     p.append("forceOn");
     p.setLonghelp(
+      "These cuts may be expensive to compute. "
       CUTS_LONGHELP
-      "These cuts may be expensive to compute. \
-       Reference: https://github.com/coin-or/Cgl/wiki/CglLandP");
+      " Reference: https://github.com/coin-or/Cgl/wiki/CglLandP");
     parameters.push_back(p);
   }
   {
@@ -3589,9 +3590,9 @@ way of using absolute value rather than fraction.");
     p.append("ifmove");
     p.append("forceOn");
     p.setLonghelp(
+      "These cuts may be expensive to generate. "
       CUTS_LONGHELP
-      "These cuts may be expensive to generate. \
-      Reference: https://github.com/coin-or/Cgl/wiki/CglRedSplit");
+      " Reference: https://github.com/coin-or/Cgl/wiki/CglRedSplit");
     parameters.push_back(p);
   }
   {
