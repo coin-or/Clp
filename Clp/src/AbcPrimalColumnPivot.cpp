@@ -15,73 +15,68 @@
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
-AbcPrimalColumnPivot::AbcPrimalColumnPivot () :
-     model_(NULL),
-     type_(-1),
-     looksOptimal_(false)
+AbcPrimalColumnPivot::AbcPrimalColumnPivot()
+  : model_(NULL)
+  , type_(-1)
+  , looksOptimal_(false)
 {
-
 }
 
 //-------------------------------------------------------------------
 // Copy constructor
 //-------------------------------------------------------------------
-AbcPrimalColumnPivot::AbcPrimalColumnPivot (const AbcPrimalColumnPivot & source) :
-     model_(source.model_),
-     type_(source.type_),
-     looksOptimal_(source.looksOptimal_)
+AbcPrimalColumnPivot::AbcPrimalColumnPivot(const AbcPrimalColumnPivot &source)
+  : model_(source.model_)
+  , type_(source.type_)
+  , looksOptimal_(source.looksOptimal_)
 {
-
 }
 
 //-------------------------------------------------------------------
 // Destructor
 //-------------------------------------------------------------------
-AbcPrimalColumnPivot::~AbcPrimalColumnPivot ()
+AbcPrimalColumnPivot::~AbcPrimalColumnPivot()
 {
-
 }
 
 //----------------------------------------------------------------
 // Assignment operator
 //-------------------------------------------------------------------
 AbcPrimalColumnPivot &
-AbcPrimalColumnPivot::operator=(const AbcPrimalColumnPivot& rhs)
+AbcPrimalColumnPivot::operator=(const AbcPrimalColumnPivot &rhs)
 {
-     if (this != &rhs) {
-          type_ = rhs.type_;
-          model_ = rhs.model_;
-          looksOptimal_ = rhs.looksOptimal_;
-     }
-     return *this;
+  if (this != &rhs) {
+    type_ = rhs.type_;
+    model_ = rhs.model_;
+    looksOptimal_ = rhs.looksOptimal_;
+  }
+  return *this;
 }
-void
-AbcPrimalColumnPivot::saveWeights(AbcSimplex * model, int )
+void AbcPrimalColumnPivot::saveWeights(AbcSimplex *model, int)
 {
-     model_ = model;
+  model_ = model;
 }
 // checks accuracy and may re-initialize (may be empty)
 
-void
-AbcPrimalColumnPivot::updateWeights(CoinIndexedVector *)
+void AbcPrimalColumnPivot::updateWeights(CoinIndexedVector *)
 {
 }
 
 // Gets rid of all arrays
-void
-AbcPrimalColumnPivot::clearArrays()
+void AbcPrimalColumnPivot::clearArrays()
 {
 }
 /* Returns number of extra columns for sprint algorithm - 0 means off.
    Also number of iterations before recompute
 */
-int
-AbcPrimalColumnPivot::numberSprintColumns(int & ) const
+int AbcPrimalColumnPivot::numberSprintColumns(int &) const
 {
-     return 0;
+  return 0;
 }
 // Switch off sprint idea
-void
-AbcPrimalColumnPivot::switchOffSprint()
+void AbcPrimalColumnPivot::switchOffSprint()
 {
 }
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

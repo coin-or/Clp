@@ -15,7 +15,7 @@
 #if 0
 #undef ABC_PARALLEL
 #define ABC_PARALLEL 2
-#undef cilk_for 
+#undef cilk_for
 #undef cilk_spawn
 #undef cilk_sync
 #include <cilk/cilk.h>
@@ -47,9 +47,8 @@ typedef struct {
 */
 
 class AbcSimplexDual : public AbcSimplex {
-  
+
 public:
-  
   /**@name Description of algorithm */
   //@{
   /** Dual algorithm
@@ -140,7 +139,7 @@ public:
       
       for use of exotic parameter startFinishoptions see Abcsimplex.hpp
   */
-  
+
   int dual();
   /** For strong branching.  On input lower and upper are new bounds
       while on output they are change in objective function values
@@ -150,20 +149,20 @@ public:
       Solutions are filled in as well - even down, odd up - also
       status and number of iterations
   */
-  int strongBranching(int numberVariables, const int * variables,
-		      double * newLower, double * newUpper,
-		      double ** outputSolution,
-		      int * outputStatus, int * outputIterations,
-		      bool stopOnFirstInfeasible = true,
-		      bool alwaysFinish = false,
-		      int startFinishOptions = 0);
+  int strongBranching(int numberVariables, const int *variables,
+    double *newLower, double *newUpper,
+    double **outputSolution,
+    int *outputStatus, int *outputIterations,
+    bool stopOnFirstInfeasible = true,
+    bool alwaysFinish = false,
+    int startFinishOptions = 0);
   /// This does first part of StrongBranching
-  AbcSimplexFactorization * setupForStrongBranching(char * arrays, int numberRows,
-						    int numberColumns, bool solveLp = false);
+  AbcSimplexFactorization *setupForStrongBranching(char *arrays, int numberRows,
+    int numberColumns, bool solveLp = false);
   /// This cleans up after strong branching
-  void cleanupAfterStrongBranching(AbcSimplexFactorization * factorization);
+  void cleanupAfterStrongBranching(AbcSimplexFactorization *factorization);
   //@}
-  
+
   /**@name Functions used in dual */
   //@{
   /** This has the flow between re-factorizations
@@ -180,10 +179,10 @@ public:
       If givenPi not NULL then in values pass (copy from ClpSimplexDual)
   */
   int whileIteratingSerial();
-#if ABC_PARALLEL==1
+#if ABC_PARALLEL == 1
   int whileIteratingThread();
 #endif
-#if ABC_PARALLEL==2
+#if ABC_PARALLEL == 2
   int whileIteratingCilk();
 #endif
   void whileIterating2();
@@ -197,13 +196,13 @@ public:
   void createDualPricingVectorSerial();
   int getTableauColumnFlipAndStartReplaceSerial();
   void getTableauColumnPart1Serial();
-#if ABC_PARALLEL==1
+#if ABC_PARALLEL == 1
   /// Create dual pricing vector
   void createDualPricingVectorThread();
   int getTableauColumnFlipAndStartReplaceThread();
   void getTableauColumnPart1Thread();
 #endif
-#if ABC_PARALLEL==2
+#if ABC_PARALLEL == 2
   /// Create dual pricing vector
   void createDualPricingVectorCilk();
   int getTableauColumnFlipAndStartReplaceCilk();
@@ -236,7 +235,7 @@ public:
      Returns guess at upper theta (infinite if no pivot) and may set sequenceIn_ if free
      Can do all (if tableauRow created)
   */
-  void dualColumn1(bool doAll=false);
+  void dualColumn1(bool doAll = false);
   /**
      Array has tableau row (row section)
      Just does slack part
@@ -251,19 +250,19 @@ public:
      If necessary will modify costs
   */
   void dualColumn2();
-  void dualColumn2Most(dualColumnResult & result);
-  void dualColumn2First(dualColumnResult & result);
+  void dualColumn2Most(dualColumnResult &result);
+  void dualColumn2First(dualColumnResult &result);
   /**
      Chooses part of incoming
      Puts flipped ones in list
      If necessary will modify costs
   */
-  void dualColumn2(dualColumnResult & result);
+  void dualColumn2(dualColumnResult &result);
   /**
      This sees what is best thing to do in branch and bound cleanup
      If sequenceIn_ < 0 then can't do anything
   */
-  void checkPossibleCleanup(CoinIndexedVector * array);
+  void checkPossibleCleanup(CoinIndexedVector *array);
   /**
      Chooses dual pivot row
      Would be faster with separate region to scan
@@ -278,15 +277,15 @@ public:
       Returns -1 if not initialize and no effect
       fills cost of change vector
   */
-  int changeBounds(int initialize, double & changeCost);
+  int changeBounds(int initialize, double &changeCost);
   /** As changeBounds but just changes new bounds for a single variable.
       Returns true if change */
-  bool changeBound( int iSequence);
+  bool changeBound(int iSequence);
   /// Restores bound to original bound
   void originalBound(int iSequence);
   /** Checks if tentative optimal actually means unbounded in dual
       Returns -3 if not, 2 if is unbounded */
-  int checkUnbounded(CoinIndexedVector & ray,  double changeCost);
+  int checkUnbounded(CoinIndexedVector &ray, double changeCost);
   /**  Refactorizes if necessary
        Checks if finished.  Updates status.
        lastCleaned refers to iteration at which some objective/feasibility
@@ -312,14 +311,14 @@ public:
   /// Perturbs problem
   void perturb(double factor);
   /// Perturbs problem B
-  void perturbB(double factor,int type);
+  void perturbB(double factor, int type);
   /// Make non free variables dual feasible by moving to a bound
-  int makeNonFreeVariablesDualFeasible(bool changeCosts=false);
+  int makeNonFreeVariablesDualFeasible(bool changeCosts = false);
   int fastDual(bool alwaysFinish = false);
   /** Checks number of variables at fake bounds.  This is used by fastDual
       so can exit gracefully before end */
   int numberAtFakeBound();
-  
+
   /** Pivot in a variable and choose an outgoing one.  Assumes dual
       feasible - will not go through a reduced cost.  Returns step length in theta
       Return codes as before but -1 means no acceptable pivot
@@ -329,15 +328,18 @@ public:
   int nextSuperBasic();
   /// Startup part of dual
   void startupSolve();
-  /// Ending part of dual 
+  /// Ending part of dual
   void finishSolve();
   void gutsOfDual();
   //int dual2(int ifValuesPass,int startFinishOptions=0);
   int resetFakeBounds(int type);
-  
+
   //@}
 };
-#if ABC_PARALLEL==1
-void * abc_parallelManager(void * simplex);
+#if ABC_PARALLEL == 1
+void *abc_parallelManager(void *simplex);
 #endif
 #endif
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

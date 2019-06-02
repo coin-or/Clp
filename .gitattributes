@@ -18,6 +18,10 @@ Clp/MSVisualStudio/v10alt/genDefForClp.ps1 -text
 Clp/MSVisualStudio/v10alt/libClp.vcxproj -text
 Clp/MSVisualStudio/v10alt/libOsiClp.vcxproj -text
 Clp/MSVisualStudio/v10alt/osiclp.props -text
+Clp/MSVisualStudio/v14/libClp/libClp.vcxproj -text
+Clp/MSVisualStudio/v14/libOsiClp/libOsiClp.vcxproj -text
+Clp/MSVisualStudio/v15/libClp/libClp.vcxproj -text
+Clp/MSVisualStudio/v15/libOsiClp/libOsiClp.vcxproj -text
 Clp/MSVisualStudio/v9/Clp.sln -text
 Clp/MSVisualStudio/v9/ClpExamplesMinimum/ClpExamplesMinimum.vcproj -text
 Clp/MSVisualStudio/v9/ClpExamplesTestBarrier/ClpExamplesTestBarrier.vcproj -text
@@ -153,6 +157,7 @@ Clp/src/config.h.in -text
 Clp/src/config_clp.h.in -text
 Clp/src/config_clp_default.h -text
 Clp/src/config_default.h -text
+Clp/src/format-source.sh -text
 Clp/test/OsiClpSolverInterfaceTest.cpp -text
 Clp/test/osiUnitTest.cpp -text
 /appveyor.yml -text

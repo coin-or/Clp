@@ -15,24 +15,23 @@
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
-ClpEventHandler::ClpEventHandler (ClpSimplex * model) :
-     model_(model)
+ClpEventHandler::ClpEventHandler(ClpSimplex *model)
+  : model_(model)
 {
-
 }
 
 //-------------------------------------------------------------------
 // Copy constructor
 //-------------------------------------------------------------------
-ClpEventHandler::ClpEventHandler (const ClpEventHandler & rhs)
-     : model_(rhs.model_)
+ClpEventHandler::ClpEventHandler(const ClpEventHandler &rhs)
+  : model_(rhs.model_)
 {
 }
 
 //-------------------------------------------------------------------
 // Destructor
 //-------------------------------------------------------------------
-ClpEventHandler::~ClpEventHandler ()
+ClpEventHandler::~ClpEventHandler()
 {
 }
 
@@ -40,41 +39,40 @@ ClpEventHandler::~ClpEventHandler ()
 // Assignment operator
 //-------------------------------------------------------------------
 ClpEventHandler &
-ClpEventHandler::operator=(const ClpEventHandler& rhs)
+ClpEventHandler::operator=(const ClpEventHandler &rhs)
 {
-     if (this != &rhs) {
-          model_ = rhs.model_;
-     }
-     return *this;
+  if (this != &rhs) {
+    model_ = rhs.model_;
+  }
+  return *this;
 }
 // Clone
 ClpEventHandler *
 ClpEventHandler::clone() const
 {
-     return new ClpEventHandler(*this);
+  return new ClpEventHandler(*this);
 }
 // Event
-int
-ClpEventHandler::event(Event whichEvent)
+int ClpEventHandler::event(Event whichEvent)
 {
-     if (whichEvent != theta)
-          return -1; // do nothing
-     else
-          return 0; // say normal exit
+
+  assert (!model_||model_->eventHandler()==this);
+  if (whichEvent != theta)
+    return -1; // do nothing
+  else
+    return 0; // say normal exit
 }
 /* This can do whatever it likes.  Return code -1 means no action.
    This passes in something
 */
-int 
-ClpEventHandler::eventWithInfo(Event whichEvent, void * info) 
-{ 
+int ClpEventHandler::eventWithInfo(Event whichEvent, void *info)
+{
   return -1;
 }
 /* set model. */
-void
-ClpEventHandler::setSimplex(ClpSimplex * model)
+void ClpEventHandler::setSimplex(ClpSimplex *model)
 {
-     model_ = model;
+  model_ = model;
 }
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -83,24 +81,23 @@ ClpEventHandler::setSimplex(ClpSimplex * model)
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
-ClpDisasterHandler::ClpDisasterHandler (ClpSimplex * model) :
-     model_(model)
+ClpDisasterHandler::ClpDisasterHandler(ClpSimplex *model)
+  : model_(model)
 {
-
 }
 
 //-------------------------------------------------------------------
 // Copy constructor
 //-------------------------------------------------------------------
-ClpDisasterHandler::ClpDisasterHandler (const ClpDisasterHandler & rhs)
-     : model_(rhs.model_)
+ClpDisasterHandler::ClpDisasterHandler(const ClpDisasterHandler &rhs)
+  : model_(rhs.model_)
 {
 }
 
 //-------------------------------------------------------------------
 // Destructor
 //-------------------------------------------------------------------
-ClpDisasterHandler::~ClpDisasterHandler ()
+ClpDisasterHandler::~ClpDisasterHandler()
 {
 }
 
@@ -108,24 +105,23 @@ ClpDisasterHandler::~ClpDisasterHandler ()
 // Assignment operator
 //-------------------------------------------------------------------
 ClpDisasterHandler &
-ClpDisasterHandler::operator=(const ClpDisasterHandler& rhs)
+ClpDisasterHandler::operator=(const ClpDisasterHandler &rhs)
 {
-     if (this != &rhs) {
-          model_ = rhs.model_;
-     }
-     return *this;
+  if (this != &rhs) {
+    model_ = rhs.model_;
+  }
+  return *this;
 }
 /* set model. */
-void
-ClpDisasterHandler::setSimplex(ClpSimplex * model)
+void ClpDisasterHandler::setSimplex(ClpSimplex *model)
 {
-     model_ = model;
+  model_ = model;
 }
 // Type of disaster 0 can fix, 1 abort
-int
-ClpDisasterHandler::typeOfDisaster()
+int ClpDisasterHandler::typeOfDisaster()
 {
-     return 0;
+  return 0;
 }
 
-
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

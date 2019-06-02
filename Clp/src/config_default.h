@@ -21,3 +21,6 @@
 
 /* Define to 1 if Clp is used */
 #define COIN_HAS_CLP 1
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

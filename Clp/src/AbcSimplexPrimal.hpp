@@ -23,10 +23,9 @@
 class AbcSimplexPrimal : public AbcSimplex {
 
 public:
-
-     /**@name Description of algorithm */
-     //@{
-     /** Primal algorithm
+  /**@name Description of algorithm */
+  //@{
+  /** Primal algorithm
 
          Method
 
@@ -112,25 +111,25 @@ public:
         for use of exotic parameter startFinishoptions see Clpsimplex.hpp
      */
 
-     int primal(int ifValuesPass = 0, int startFinishOptions = 0);
-     //@}
+  int primal(int ifValuesPass = 0, int startFinishOptions = 0);
+  //@}
 
-     /**@name For advanced users */
-     //@{
-     /// Do not change infeasibility cost and always say optimal
-     void alwaysOptimal(bool onOff);
-     bool alwaysOptimal() const;
-     /** Normally outgoing variables can go out to slightly negative
+  /**@name For advanced users */
+  //@{
+  /// Do not change infeasibility cost and always say optimal
+  void alwaysOptimal(bool onOff);
+  bool alwaysOptimal() const;
+  /** Normally outgoing variables can go out to slightly negative
          values (but within tolerance) - this is to help stability and
          and degeneracy.  This can be switched off
      */
-     void exactOutgoing(bool onOff);
-     bool exactOutgoing() const;
-     //@}
+  void exactOutgoing(bool onOff);
+  bool exactOutgoing() const;
+  //@}
 
-     /**@name Functions used in primal */
-     //@{
-     /** This has the flow between re-factorizations
+  /**@name Functions used in primal */
+  //@{
+  /** This has the flow between re-factorizations
 
          Returns a code to say where decision to exit was made
          Problem status set to:
@@ -142,9 +141,9 @@ public:
 
          valuesOption has original value of valuesPass
       */
-     int whileIterating(int valuesOption);
+  int whileIterating(int valuesOption);
 
-     /** Do last half of an iteration.  This is split out so people can
+  /** Do last half of an iteration.  This is split out so people can
          force incoming variable.  If solveType_ is 2 then this may
          re-factorize while normally it would exit to re-factorize.
          Return codes
@@ -162,40 +161,39 @@ public:
          feasible - will not go through a bound.  Returns step length in theta
          Returns ray in ray_
      */
-     int pivotResult(int ifValuesPass = 0);
-     int pivotResult4(int ifValuesPass = 0);
+  int pivotResult(int ifValuesPass = 0);
+  int pivotResult4(int ifValuesPass = 0);
 
-
-     /** The primals are updated by the given array.
+  /** The primals are updated by the given array.
          Returns number of infeasibilities.
          After rowArray will have cost changes for use next iteration
      */
-     int updatePrimalsInPrimal(CoinIndexedVector * rowArray,
-                               double theta,
-                               double & objectiveChange,
-                               int valuesPass);
-     /** The primals are updated by the given array.
+  int updatePrimalsInPrimal(CoinIndexedVector *rowArray,
+    double theta,
+    double &objectiveChange,
+    int valuesPass);
+  /** The primals are updated by the given array.
 	 costs are changed 
      */
-     void updatePrimalsInPrimal(CoinIndexedVector & rowArray,
-				double theta,bool valuesPass);
-     /** After rowArray will have cost changes for use next iteration
+  void updatePrimalsInPrimal(CoinIndexedVector &rowArray,
+    double theta, bool valuesPass);
+  /** After rowArray will have cost changes for use next iteration
      */
-     void createUpdateDuals(CoinIndexedVector & rowArray,
-			   const double * originalCost,
-			    const double extraCost[4],
-			   double & objectiveChange,
-			   int valuesPass);
-     /** Update minor candidate vector - new reduced cost returned
+  void createUpdateDuals(CoinIndexedVector &rowArray,
+    const double *originalCost,
+    const double extraCost[4],
+    double &objectiveChange,
+    int valuesPass);
+  /** Update minor candidate vector - new reduced cost returned
 	 later try and get change in reduced cost (then may not need sequence in)*/
-     double updateMinorCandidate(const CoinIndexedVector & updateBy,
-				 CoinIndexedVector & candidate,
-				 int sequenceIn);
-     /// Update partial Ftran by R update
-     void updatePartialUpdate(CoinIndexedVector & partialUpdate);
+  double updateMinorCandidate(const CoinIndexedVector &updateBy,
+    CoinIndexedVector &candidate,
+    int sequenceIn);
+  /// Update partial Ftran by R update
+  void updatePartialUpdate(CoinIndexedVector &partialUpdate);
   /// Do FT update as separate function for minor iterations (nonzero return code on problems)
-  int doFTUpdate(CoinIndexedVector * vector[4]);
-     /**
+  int doFTUpdate(CoinIndexedVector *vector[4]);
+  /**
          Row array has pivot column
          This chooses pivot row.
          Rhs array is used for distance to next bound (for speed)
@@ -203,10 +201,10 @@ public:
          variables go through bounds
          If valuesPass non-zero then compute dj for direction
      */
-     void primalRow(CoinIndexedVector * rowArray,
-                    CoinIndexedVector * rhsArray,
-                    CoinIndexedVector * spareArray,
-		    int valuesPass);
+  void primalRow(CoinIndexedVector *rowArray,
+    CoinIndexedVector *rhsArray,
+    CoinIndexedVector *spareArray,
+    int valuesPass);
   typedef struct {
     double theta_;
     double alpha_;
@@ -226,26 +224,26 @@ public:
     int pivotRow_;
     int valuesPass_;
   } pivotStruct;
-     void primalRow(CoinIndexedVector * rowArray,
-                    CoinIndexedVector * rhsArray,
-                    CoinIndexedVector * spareArray,
-		    pivotStruct & stuff);
-     /**
+  void primalRow(CoinIndexedVector *rowArray,
+    CoinIndexedVector *rhsArray,
+    CoinIndexedVector *spareArray,
+    pivotStruct &stuff);
+  /**
          Chooses primal pivot column
          updateArray has cost updates (also use pivotRow_ from last iteration)
          Would be faster with separate region to scan
          and will have this (with square of infeasibility) when steepest
          For easy problems we can just choose one of the first columns we look at
      */
-     void primalColumn(CoinPartitionedVector * updateArray,
-                       CoinPartitionedVector * spareRow2,
-                       CoinPartitionedVector * spareColumn1);
+  void primalColumn(CoinPartitionedVector *updateArray,
+    CoinPartitionedVector *spareRow2,
+    CoinPartitionedVector *spareColumn1);
 
-     /** Checks if tentative optimal actually means unbounded in primal
+  /** Checks if tentative optimal actually means unbounded in primal
          Returns -3 if not, 2 if is unbounded */
-     int checkUnbounded(CoinIndexedVector * ray, CoinIndexedVector * spare,
-                        double changeCost);
-     /**  Refactorizes if necessary
+  int checkUnbounded(CoinIndexedVector *ray, CoinIndexedVector *spare,
+    double changeCost);
+  /**  Refactorizes if necessary
           Checks if finished.  Updates status.
           lastCleaned refers to iteration at which some objective/feasibility
           cleaning too place.
@@ -255,28 +253,30 @@ public:
            - 2 restoring from saved
      */
   void statusOfProblemInPrimal(int type);
-     /// Perturbs problem (method depends on perturbation())
-     void perturb(int type);
-     /// Take off effect of perturbation and say whether to try dual
-     bool unPerturb();
-     /// Unflag all variables and return number unflagged
-     int unflag();
-     /** Get next superbasic -1 if none,
+  /// Perturbs problem (method depends on perturbation())
+  void perturb(int type);
+  /// Take off effect of perturbation and say whether to try dual
+  bool unPerturb();
+  /// Unflag all variables and return number unflagged
+  int unflag();
+  /** Get next superbasic -1 if none,
          Normal type is 1
          If type is 3 then initializes sorted list
          if 2 uses list.
      */
-     int nextSuperBasic(int superBasicType, CoinIndexedVector * columnArray);
+  int nextSuperBasic(int superBasicType, CoinIndexedVector *columnArray);
 
-     /// Create primal ray
-     void primalRay(CoinIndexedVector * rowArray);
-     /// Clears all bits and clears rowArray[1] etc
-     void clearAll();
+  /// Create primal ray
+  void primalRay(CoinIndexedVector *rowArray);
+  /// Clears all bits and clears rowArray[1] etc
+  void clearAll();
 
-     /// Sort of lexicographic resolve
-     int lexSolve();
+  /// Sort of lexicographic resolve
+  int lexSolve();
 
-     //@}
+  //@}
 };
 #endif
 
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

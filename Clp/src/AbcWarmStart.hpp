@@ -5,7 +5,6 @@
   This code is licensed under the terms of the Eclipse Public License (EPL).
 */
 
-
 #ifndef AbcWarmStart_H
 #define AbcWarmStart_H
 #include "AbcCommon.hpp"
@@ -29,37 +28,37 @@ public:
   /// Create Basis type 3,4
   void createBasis34();
   /// delete basis
-  void deleteBasis(AbcWarmStart * basis);
-/*! \name Constructors, destructors, and related functions */
+  void deleteBasis(AbcWarmStart *basis);
+  /*! \name Constructors, destructors, and related functions */
 
-//@{
+  //@{
 
   /** Default constructor
 
     Creates a warm start object organizer
   */
-  AbcWarmStartOrganizer(AbcSimplex * model=NULL);
+  AbcWarmStartOrganizer(AbcSimplex *model = NULL);
 
   /** Copy constructor */
-  AbcWarmStartOrganizer(const AbcWarmStartOrganizer& ws) ;
+  AbcWarmStartOrganizer(const AbcWarmStartOrganizer &ws);
 
   /** Destructor */
   virtual ~AbcWarmStartOrganizer();
 
   /** Assignment */
 
-  virtual AbcWarmStartOrganizer& operator=(const AbcWarmStartOrganizer& rhs) ;
-//@}
+  virtual AbcWarmStartOrganizer &operator=(const AbcWarmStartOrganizer &rhs);
+  //@}
 
 protected:
   /** \name Protected data members */
   //@{
   /// Pointer to AbcSimplex (can only be applied to that)
-  AbcSimplex * model_;
+  AbcSimplex *model_;
   /// Pointer to first basis
-  AbcWarmStart * firstBasis_;
+  AbcWarmStart *firstBasis_;
   /// Pointer to last basis
-  AbcWarmStart * lastBasis_;
+  AbcWarmStart *lastBasis_;
   /// Number of bases
   int numberBases_;
   /// Size of bases (extra)
@@ -74,15 +73,15 @@ protected:
 
 class AbcWarmStart : public virtual CoinWarmStartBasis {
 public:
-/*! \name Methods to modify the warm start object */
-//@{
+  /*! \name Methods to modify the warm start object */
+  //@{
 
   /*! \brief Set basis capacity; existing basis is discarded.
 
     After execution of this routine, the warm start object does not describe
     a valid basis: all structural and artificial variables have status isFree.
   */
-  virtual void setSize(int ns, int na) ;
+  virtual void setSize(int ns, int na);
 
   /*! \brief Set basis capacity; existing basis is maintained.
 
@@ -92,7 +91,7 @@ public:
     (added rows) is set to basic. (The basis can be invalid if new structural
     variables do not have a finite lower bound.)
   */
-  virtual void resize (int newNumberRows, int newNumberColumns);
+  virtual void resize(int newNumberRows, int newNumberColumns);
 
   /** \brief Delete a set of rows from the basis
 
@@ -110,7 +109,7 @@ public:
     the client.
   */
 
-  virtual void compressRows (int tgtCnt, const int *tgts) ;
+  virtual void compressRows(int tgtCnt, const int *tgts);
 
   /** \brief Delete a set of rows from the basis
 
@@ -123,7 +122,7 @@ public:
     the client.
   */
 
-  virtual void deleteRows(int rawTgtCnt, const int *rawTgts) ;
+  virtual void deleteRows(int rawTgtCnt, const int *rawTgts);
 
   /** \brief Delete a set of columns from the basis
 
@@ -135,22 +134,26 @@ public:
     made basic. This correction is left to the client.
  */
 
-  virtual void deleteColumns(int number, const int * which);
+  virtual void deleteColumns(int number, const int *which);
   /// Set model
-  inline void setModel(AbcSimplex * model)
-  { model_=model;}
+  inline void setModel(AbcSimplex *model)
+  {
+    model_ = model;
+  }
   /// Get model
-  inline AbcSimplex * model() const
-  { return model_;}
+  inline AbcSimplex *model() const
+  {
+    return model_;
+  }
   /// Create Basis type 0
-  void createBasis0(const AbcSimplex * model);
+  void createBasis0(const AbcSimplex *model);
   /// Create Basis type 12
-  void createBasis12(const AbcSimplex * model);
+  void createBasis12(const AbcSimplex *model);
   /// Create Basis type 34
-  void createBasis34(const AbcSimplex * model);
-/*! \name Constructors, destructors, and related functions */
+  void createBasis34(const AbcSimplex *model);
+  /*! \name Constructors, destructors, and related functions */
 
-//@{
+  //@{
 
   /** Default constructor
 
@@ -168,15 +171,15 @@ public:
     \sa AbcWarmStart::Status for a description of the packing used in
     the status arrays.
   */
-  AbcWarmStart(AbcSimplex * model,int type) ;
+  AbcWarmStart(AbcSimplex *model, int type);
 
   /** Copy constructor */
-  AbcWarmStart(const AbcWarmStart& ws) ;
+  AbcWarmStart(const AbcWarmStart &ws);
 
   /** `Virtual constructor' */
   virtual CoinWarmStart *clone() const
   {
-     return new AbcWarmStart(*this);
+    return new AbcWarmStart(*this);
   }
 
   /** Destructor */
@@ -184,7 +187,7 @@ public:
 
   /** Assignment */
 
-  virtual AbcWarmStart& operator=(const AbcWarmStart& rhs) ;
+  virtual AbcWarmStart &operator=(const AbcWarmStart &rhs);
 
   /** Assign the status vectors to be the warm start information.
   
@@ -201,8 +204,8 @@ public:
       The pointers passed to this method will be
       freed using delete[], so they must be created using new[].
   */
-  virtual void assignBasisStatus(int ns, int na, char*& sStat, char*& aStat) ;
-//@}
+  virtual void assignBasisStatus(int ns, int na, char *&sStat, char *&aStat);
+  //@}
 
 protected:
   /** \name Protected data members */
@@ -218,16 +221,16 @@ protected:
   int typeExtraInformation_;
   /// Length of extra information in bytes
   int lengthExtraInformation_;
-  /// The extra information. 
-  char * extraInformation_;
+  /// The extra information.
+  char *extraInformation_;
   /// Pointer back to AbcSimplex (can only be applied to that)
-  AbcSimplex * model_;
+  AbcSimplex *model_;
   /// Pointer back to AbcWarmStartOrganizer for organization
-  AbcWarmStartOrganizer * organizer_;
+  AbcWarmStartOrganizer *organizer_;
   /// Pointer to previous basis
-  AbcWarmStart * previousBasis_;
+  AbcWarmStart *previousBasis_;
   /// Pointer to next basis
-  AbcWarmStart * nextBasis_;
+  AbcWarmStart *nextBasis_;
   /// Sequence stamp for deletion
   int stamp_;
   /** Number of valid rows (rest should have slacks)
@@ -238,3 +241,6 @@ protected:
   //@}
 };
 #endif
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

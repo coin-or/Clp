@@ -11,12 +11,12 @@
 #include "AbcSimplex.hpp"
 #endif
 #ifndef ABC_INHERIT
-void ClpMain0(ClpSimplex * models);
-int ClpMain1(int argc, const char *argv[],ClpSimplex * model);
+void ClpMain0(ClpSimplex *models);
+int ClpMain1(int argc, const char *argv[], ClpSimplex *model);
 #else
-void ClpMain0(AbcSimplex * models);
-int ClpMain1(int argc, const char *argv[],AbcSimplex * model);
-#endif 
+void ClpMain0(AbcSimplex *models);
+int ClpMain1(int argc, const char *argv[], AbcSimplex *model);
+#endif
 //#define CILK_TEST
 #ifdef CILK_TEST
 static void cilkTest();
@@ -28,9 +28,8 @@ static void cilkTest();
   The openblas_set_num_threads(1) seems to work even with other blas
  */
 #if CLP_USE_OPENBLAS
-extern "C" 
-{
-  void openblas_set_num_threads(int num_threads);
+extern "C" {
+void openblas_set_num_threads(int num_threads);
 }
 #endif
 #ifdef LAPACK_TEST
@@ -38,11 +37,10 @@ extern "C"
 #ifndef COIN_FACTORIZATION_DENSE_CODE
 #define COIN_FACTORIZATION_DENSE_CODE 1
 #endif
-#if COIN_FACTORIZATION_DENSE_CODE==1
+#if COIN_FACTORIZATION_DENSE_CODE == 1
 // using simple lapack interface
-extern "C" 
-{
-  void openblas_set_num_threads(int num_threads);
+extern "C" {
+void openblas_set_num_threads(int num_threads);
 #if 0
   /** LAPACK Fortran subroutine DGETRF. */
   void LAPACK_dgetrf(int * m, int *n,
@@ -57,48 +55,49 @@ extern "C"
 }
 int test_lapack(int n)
 {
-  int* ipiv;
+  int *ipiv;
   int info;
   int i, j;
-  double * m, *x, *y;
-  
-  int LDB,LDA, N, NRHS;
+  double *m, *x, *y;
+
+  int LDB, LDA, N, NRHS;
   char transp = 'N';
- 
-  
-  m=(double*)malloc(sizeof(double)*n*n);
-  x=(double*)malloc(sizeof(double)*n);
-  y=(double*)malloc(sizeof(double)*n);
-  ipiv=(int*)malloc(sizeof(int)*n);
- 
-  for (i=0; i<n; ++i) {
-    x[i]=1.0;
-    for (j=0; j<n; ++j) {
-      m[i*n+j]=(rand()%100+1)/10.0;
-      //      printf("m[%d,%d]=%lf\n",i,j, m[i*n+j]); 
+
+  m = (double *)malloc(sizeof(double) * n * n);
+  x = (double *)malloc(sizeof(double) * n);
+  y = (double *)malloc(sizeof(double) * n);
+  ipiv = (int *)malloc(sizeof(int) * n);
+
+  for (i = 0; i < n; ++i) {
+    x[i] = 1.0;
+    for (j = 0; j < n; ++j) {
+      m[i * n + j] = (rand() % 100 + 1) / 10.0;
+      //      printf("m[%d,%d]=%lf\n",i,j, m[i*n+j]);
     }
   }
- 
+
   /* test cblas.h */
   //cblas_dgemv(CblasColMajor, CblasNoTrans, n, n, 1.0, m, n,
   //	      x, 1, 0.0, y, 1);
- 
-  //  for (i=0; i<n; ++i)  printf("x[%d]=%lf\n",i, x[i]); 
-  //for (i=0; i<n; ++i)  printf("y[%d]=%lf\n",i, y[i]); 
- 
-	LDB=n;
-	LDA=n;
-	N=n;
-	NRHS=1;
-	info=0;
-	
-	LAPACK_dgetrf(&N, &N, m, &LDA,ipiv, &info);
-	
-if (info != 0) fprintf(stderr, "dgetrf failure with error %d\n", info);
- 
+
+  //  for (i=0; i<n; ++i)  printf("x[%d]=%lf\n",i, x[i]);
+  //for (i=0; i<n; ++i)  printf("y[%d]=%lf\n",i, y[i]);
+
+  LDB = n;
+  LDA = n;
+  N = n;
+  NRHS = 1;
+  info = 0;
+
+  LAPACK_dgetrf(&N, &N, m, &LDA, ipiv, &info);
+
+  if (info != 0)
+    fprintf(stderr, "dgetrf failure with error %d\n", info);
+
   LAPACK_dgetrs(&transp, &N, &NRHS, m, &LDA, ipiv, y, &LDB, &info);
-  
-  if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+
+  if (info != 0)
+    fprintf(stderr, "failure with error %d\n", info);
   //  for (i=0; i<n; ++i) printf("%lf\n", y[i]);
 
   free(m);
@@ -107,61 +106,63 @@ if (info != 0) fprintf(stderr, "dgetrf failure with error %d\n", info);
   free(ipiv);
   return 0;
 }
-#elif COIN_FACTORIZATION_DENSE_CODE==2
+#elif COIN_FACTORIZATION_DENSE_CODE == 2
 // C interface
-enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102};
-enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112};
-extern "C" 
-{
-int clapack_dgetrf ( const enum CBLAS_ORDER Order, const int M, const int N, double *A, const int lda, int *ipiv );
-int clapack_dgetrs ( const enum CBLAS_ORDER Order, 
-		       const enum CBLAS_TRANSPOSE Trans, 
-		       const int N, const int NRHS,
-		       const double *A, const int lda, const int *ipiv, double *B, 
-		       const int ldb );
+enum CBLAS_ORDER { CblasRowMajor = 101,
+  CblasColMajor = 102 };
+enum CBLAS_TRANSPOSE { CblasNoTrans = 111,
+  CblasTrans = 112 };
+extern "C" {
+int clapack_dgetrf(const enum CBLAS_ORDER Order, const int M, const int N, double *A, const int lda, int *ipiv);
+int clapack_dgetrs(const enum CBLAS_ORDER Order,
+  const enum CBLAS_TRANSPOSE Trans,
+  const int N, const int NRHS,
+  const double *A, const int lda, const int *ipiv, double *B,
+  const int ldb);
 }
 int test_lapack(int n)
 {
-  int* ipiv;
+  int *ipiv;
   int info;
   int i, j;
-  double * m, *x, *y;
-  
-  int LDB,LDA, N, NRHS;
+  double *m, *x, *y;
+
+  int LDB, LDA, N, NRHS;
   char transp = 'N';
- 
-  
-  m=(double*)malloc(sizeof(double)*n*n);
-  x=(double*)malloc(sizeof(double)*n);
-  y=(double*)malloc(sizeof(double)*n);
-  ipiv=(int*)malloc(sizeof(int)*n);
- 
-  for (i=0; i<n; ++i) {
-    x[i]=1.0;
-    for (j=0; j<n; ++j) {
-      m[i*n+j]=(rand()%100+1)/10.0;
-      //      printf("m[%d,%d]=%lf\n",i,j, m[i*n+j]); 
+
+  m = (double *)malloc(sizeof(double) * n * n);
+  x = (double *)malloc(sizeof(double) * n);
+  y = (double *)malloc(sizeof(double) * n);
+  ipiv = (int *)malloc(sizeof(int) * n);
+
+  for (i = 0; i < n; ++i) {
+    x[i] = 1.0;
+    for (j = 0; j < n; ++j) {
+      m[i * n + j] = (rand() % 100 + 1) / 10.0;
+      //      printf("m[%d,%d]=%lf\n",i,j, m[i*n+j]);
     }
   }
- 
+
   /* test cblas.h */
   //cblas_dgemv(CblasColMajor, CblasNoTrans, n, n, 1.0, m, n,
   //	      x, 1, 0.0, y, 1);
- 
-  //  for (i=0; i<n; ++i)  printf("x[%d]=%lf\n",i, x[i]); 
-  //for (i=0; i<n; ++i)  printf("y[%d]=%lf\n",i, y[i]); 
- 
-	LDB=n;
-	LDA=n;
-	N=n;
-	NRHS=1;
-	info=clapack_dgetrf ( CblasColMajor,n,n,m,n,ipiv );
-	
-if (info != 0) fprintf(stderr, "dgetrf failure with error %d\n", info);
- 
-  clapack_dgetrs ( CblasColMajor,CblasNoTrans,n,1,m,n,ipiv,y,n);
-  
-  if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+
+  //  for (i=0; i<n; ++i)  printf("x[%d]=%lf\n",i, x[i]);
+  //for (i=0; i<n; ++i)  printf("y[%d]=%lf\n",i, y[i]);
+
+  LDB = n;
+  LDA = n;
+  N = n;
+  NRHS = 1;
+  info = clapack_dgetrf(CblasColMajor, n, n, m, n, ipiv);
+
+  if (info != 0)
+    fprintf(stderr, "dgetrf failure with error %d\n", info);
+
+  clapack_dgetrs(CblasColMajor, CblasNoTrans, n, 1, m, n, ipiv, y, n);
+
+  if (info != 0)
+    fprintf(stderr, "failure with error %d\n", info);
   //  for (i=0; i<n; ++i) printf("%lf\n", y[i]);
 
   free(m);
@@ -179,80 +180,80 @@ if (info != 0) fprintf(stderr, "dgetrf failure with error %d\n", info);
 #include <new>
 static double malloc_times = 0.0;
 static double malloc_total = 0.0;
-static int malloc_amount[] = {0, 32, 128, 256, 1024, 4096, 16384, 65536, 262144, COIN_INT_MAX};
+static int malloc_amount[] = { 0, 32, 128, 256, 1024, 4096, 16384, 65536, 262144, COIN_INT_MAX };
 static int malloc_n = 10;
-double malloc_counts[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+double malloc_counts[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 bool malloc_counts_on = true;
-void * operator new (size_t size) throw (std::bad_alloc)
+void *operator new(size_t size) throw(std::bad_alloc)
 {
-    malloc_times ++;
-    malloc_total += size;
-    int i;
-    for (i = 0; i < malloc_n; i++) {
-        if ((int) size <= malloc_amount[i]) {
-            malloc_counts[i]++;
-            break;
-        }
+  malloc_times++;
+  malloc_total += size;
+  int i;
+  for (i = 0; i < malloc_n; i++) {
+    if ((int)size <= malloc_amount[i]) {
+      malloc_counts[i]++;
+      break;
     }
-    if (size>100000) {
-      printf("allocating %ld bytes\n",size);
-    }
-    void * p = malloc(size);
-    return p;
+  }
+  if (size > 100000) {
+    printf("allocating %ld bytes\n", size);
+  }
+  void *p = malloc(size);
+  return p;
 }
-void operator delete (void *p) throw()
+void operator delete(void *p) throw()
 {
-    free(p);
+  free(p);
 }
 static void malloc_stats2()
 {
-    double average = malloc_total / malloc_times;
-    printf("count %g bytes %g - average %g\n", malloc_times, malloc_total, average);
-    for (int i = 0; i < malloc_n; i++)
-        printf("%g ", malloc_counts[i]);
-    printf("\n");
-    malloc_times = 0.0;
-    malloc_total = 0.0;
-    memset(malloc_counts, 0, sizeof(malloc_counts));
-    // print results
+  double average = malloc_total / malloc_times;
+  printf("count %g bytes %g - average %g\n", malloc_times, malloc_total, average);
+  for (int i = 0; i < malloc_n; i++)
+    printf("%g ", malloc_counts[i]);
+  printf("\n");
+  malloc_times = 0.0;
+  malloc_total = 0.0;
+  memset(malloc_counts, 0, sizeof(malloc_counts));
+  // print results
 }
-#endif	//CLP_MALLOC_STATISTICS
+#endif //CLP_MALLOC_STATISTICS
 int
 #if defined(_MSC_VER)
-__cdecl
+  __cdecl
 #endif // _MSC_VER
-main (int argc, const char *argv[])
+  main(int argc, const char *argv[])
 {
-#ifdef CILK_TEST 
+#ifdef CILK_TEST
   cilkTest();
-#endif  
+#endif
 #if CLP_USE_OPENBLAS
   openblas_set_num_threads(CLP_USE_OPENBLAS);
-#endif  
+#endif
 #ifdef LAPACK_TEST
   //void openblas_set_num_threads(int num_threads);
   openblas_set_num_threads(1);
-  if(argc<2){
+  if (argc < 2) {
     printf("Error - need size of matrix for lapack test\n");
-    return 1; 
+    return 1;
   }
-  int n=atoi(argv[1]);
-  printf("n=%d\n",n);
-  if(argc>2){
-    int nThreads=atoi(argv[2]);
-    printf("Using %d threads\n",nThreads);
+  int n = atoi(argv[1]);
+  printf("n=%d\n", n);
+  if (argc > 2) {
+    int nThreads = atoi(argv[2]);
+    printf("Using %d threads\n", nThreads);
     openblas_set_num_threads(nThreads);
   }
   test_lapack(n);
   return 0;
 #endif
 #ifndef ABC_INHERIT
-  ClpSimplex * models = new ClpSimplex[1];
+  ClpSimplex *models = new ClpSimplex[1];
 #else
-  AbcSimplex * models = new AbcSimplex[1];
+  AbcSimplex *models = new AbcSimplex[1];
 #endif
   std::cout << "Coin LP version " << CLP_VERSION
-	    << ", build " << __DATE__ << std::endl;
+            << ", build " << __DATE__ << std::endl;
   // Print command line
   if (argc > 1) {
     printf("command line - ");
@@ -261,8 +262,8 @@ main (int argc, const char *argv[])
     printf("\n");
   }
   ClpMain0(models);
-  int returnCode = ClpMain1(argc, argv,models);
-  delete [] models;
+  int returnCode = ClpMain1(argc, argv, models);
+  delete[] models;
   return returnCode;
 }
 /*
@@ -322,24 +323,24 @@ main (int argc, const char *argv[])
 
 double dowork(double i)
 {
-    // Waste time:
-    int j;
-    double k = i;
-    for (j = 0; j < 50000; ++j) {
-        k += k / ((j + 1) * (k + 1));
-    }
+  // Waste time:
+  int j;
+  double k = i;
+  for (j = 0; j < 50000; ++j) {
+    k += k / ((j + 1) * (k + 1));
+  }
 
-    return k;
+  return k;
 }
-static void doSomeWork(double * a,int low, int high)
+static void doSomeWork(double *a, int low, int high)
 {
-  if (high-low>300) {
-    int mid=(high+low)>>1;
-    cilk_spawn doSomeWork(a,low,mid);
-    doSomeWork(a,mid,high);
+  if (high - low > 300) {
+    int mid = (high + low) >> 1;
+    cilk_spawn doSomeWork(a, low, mid);
+    doSomeWork(a, mid, high);
     cilk_sync;
   } else {
-    for(int i = low; i < high; ++i) {
+    for (int i = low; i < high; ++i) {
       a[i] = dowork(a[i]);
     }
   }
@@ -347,53 +348,56 @@ static void doSomeWork(double * a,int low, int high)
 
 void cilkTest()
 {
-    unsigned int n = 10000;
-    //cilk::cilkview cv;
+  unsigned int n = 10000;
+  //cilk::cilkview cv;
 
+  double *a = new double[n];
 
-    double* a = new double[n];
+  for (unsigned int i = 0; i < n; i++) {
+    // Populate A
+    a[i] = (double)((i * i) % 1024 + 512) / 512;
+  }
 
-    for(unsigned int i = 0; i < n; i++) {
-        // Populate A 
-        a[i] = (double) ((i * i) % 1024 + 512) / 512;
-    }
+  std::cout << "Iterating over " << n << " integers" << std::endl;
 
-    std::cout << "Iterating over " << n << " integers" << std::endl;
-
-    //cv.start();
+  //cv.start();
 #if 1
-    //#pragma cilk_grainsize=CILK_FOR_GRAINSIZE
-    cilk_for(unsigned int i = 0; i < n; ++i) {
-        a[i] = dowork(a[i]);
-    }
+  //#pragma cilk grainsize = CILK_FOR_GRAINSIZE
+  cilk_for(unsigned int i = 0; i < n; ++i)
+  {
+    a[i] = dowork(a[i]);
+  }
 #else
-    doSomeWork(a,0,n);
+  doSomeWork(a, 0, n);
 #endif
-    int * which =new int[n];
-    unsigned int n2=n>>1;
-    for (int i=0;i<n2;i++) 
-      which[i]=n-2*i;
-    cilk::reducer_max_index<int,double> maximumIndex(-1,0.0);
-    cilk_for(unsigned int i = 0; i < n2; ++i) {
-      int iWhich=which[i];
-      maximumIndex.calc_max(iWhich,a[iWhich]);
+  int *which = new int[n];
+  unsigned int n2 = n >> 1;
+  for (int i = 0; i < n2; i++)
+    which[i] = n - 2 * i;
+  cilk::reducer_max_index< int, double > maximumIndex(-1, 0.0);
+  cilk_for(unsigned int i = 0; i < n2; ++i)
+  {
+    int iWhich = which[i];
+    maximumIndex.calc_max(iWhich, a[iWhich]);
+  }
+  int bestIndex = maximumIndex.get_index();
+  int bestIndex2 = -1;
+  double largest = 0.0;
+  cilk_for(unsigned int i = 0; i < n2; ++i)
+  {
+    int iWhich = which[i];
+    if (a[iWhich] > largest) {
+      bestIndex2 = iWhich;
+      largest = a[iWhich];
     }
-    int bestIndex=maximumIndex.get_index();
-    int bestIndex2=-1;
-    double largest=0.0;
-    cilk_for(unsigned int i = 0; i < n2; ++i) {
-      int iWhich=which[i];
-      if (a[iWhich]>largest) {
-	bestIndex2=iWhich;
-	largest=a[iWhich];
-      }
-    }
-    assert (bestIndex==bestIndex2);
-    //cv.stop();
-    //cv.dump("cilk-for-results", false);
+  }
+  assert(bestIndex == bestIndex2);
+  //cv.stop();
+  //cv.dump("cilk-for-results", false);
 
-    //std::cout << cv.accumulated_milliseconds() / 1000.f << " seconds" << std::endl;
+  //std::cout << cv.accumulated_milliseconds() / 1000.f << " seconds" << std::endl;
 
-    exit(0);
+  exit(0);
 }
 #endif
+

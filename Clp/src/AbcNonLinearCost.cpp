@@ -19,36 +19,35 @@
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
-AbcNonLinearCost::AbcNonLinearCost () :
-  changeCost_(0.0),
-  feasibleCost_(0.0),
-  infeasibilityWeight_(-1.0),
-  largestInfeasibility_(0.0),
-  sumInfeasibilities_(0.0),
-  averageTheta_(0.0),
-  numberRows_(0),
-  numberColumns_(0),
-  model_(NULL),
-  numberInfeasibilities_(-1),
-  status_(NULL),
-  bound_(NULL),
-  cost_(NULL)
+AbcNonLinearCost::AbcNonLinearCost()
+  : changeCost_(0.0)
+  , feasibleCost_(0.0)
+  , infeasibilityWeight_(-1.0)
+  , largestInfeasibility_(0.0)
+  , sumInfeasibilities_(0.0)
+  , averageTheta_(0.0)
+  , numberRows_(0)
+  , numberColumns_(0)
+  , model_(NULL)
+  , numberInfeasibilities_(-1)
+  , status_(NULL)
+  , bound_(NULL)
+  , cost_(NULL)
 {
-  
 }
 //#define VALIDATE
 #ifdef VALIDATE
-static double * saveLowerV = NULL;
-static double * saveUpperV = NULL;
+static double *saveLowerV = NULL;
+static double *saveUpperV = NULL;
 #ifdef NDEBUG
 Validate should not be set if no debug
 #endif
 #endif
-				 /* Constructor from simplex.
+  /* Constructor from simplex.
 				    This will just set up wasteful arrays for linear, but
 				    later may do dual analysis and even finding duplicate columns
 				 */
-AbcNonLinearCost::AbcNonLinearCost ( AbcSimplex * model)
+  AbcNonLinearCost::AbcNonLinearCost(AbcSimplex * model)
 {
   model_ = model;
   numberRows_ = model_->numberRows();
@@ -59,7 +58,7 @@ AbcNonLinearCost::AbcNonLinearCost ( AbcSimplex * model)
   changeCost_ = 0.0;
   feasibleCost_ = 0.0;
   infeasibilityWeight_ = -1.0;
-  double * cost = model_->costRegion();
+  double *cost = model_->costRegion();
   // check if all 0
   int iSequence;
   bool allZero = true;
@@ -84,8 +83,7 @@ AbcNonLinearCost::AbcNonLinearCost ( AbcSimplex * model)
   }
 }
 // Refresh - assuming regions OK
-void 
-AbcNonLinearCost::refresh()
+void AbcNonLinearCost::refresh()
 {
   int numberTotal = numberRows_ + numberColumns_;
   numberInfeasibilities_ = 0;
@@ -93,10 +91,10 @@ AbcNonLinearCost::refresh()
   largestInfeasibility_ = 0.0;
   double infeasibilityCost = model_->infeasibilityCost();
   double primalTolerance = model_->currentPrimalTolerance();
-  double * cost = model_->costRegion();
-  double * upper = model_->upperRegion();
-  double * lower = model_->lowerRegion();
-  double * solution = model_->solutionRegion();
+  double *cost = model_->costRegion();
+  double *upper = model_->upperRegion();
+  double *lower = model_->lowerRegion();
+  double *solution = model_->solutionRegion();
   for (int iSequence = 0; iSequence < numberTotal; iSequence++) {
     cost_[iSequence] = cost[iSequence];
     double value = solution[iSequence];
@@ -104,20 +102,20 @@ AbcNonLinearCost::refresh()
     double upperValue = upper[iSequence];
     if (value - upperValue <= primalTolerance) {
       if (value - lowerValue >= -primalTolerance) {
-	// feasible
-	status_[iSequence] = static_cast<unsigned char>(CLP_FEASIBLE | (CLP_SAME << 4));
-	bound_[iSequence] = 0.0;
+        // feasible
+        status_[iSequence] = static_cast< unsigned char >(CLP_FEASIBLE | (CLP_SAME << 4));
+        bound_[iSequence] = 0.0;
       } else {
-	// below
-	double infeasibility = lowerValue - value - primalTolerance;
-	sumInfeasibilities_ += infeasibility;
-	largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
-	cost[iSequence] -= infeasibilityCost;
-	numberInfeasibilities_++;
-	status_[iSequence] = static_cast<unsigned char>(CLP_BELOW_LOWER | (CLP_SAME << 4));
-	bound_[iSequence] = upperValue;
-	upper[iSequence] = lowerValue;
-	lower[iSequence] = -COIN_DBL_MAX;
+        // below
+        double infeasibility = lowerValue - value - primalTolerance;
+        sumInfeasibilities_ += infeasibility;
+        largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
+        cost[iSequence] -= infeasibilityCost;
+        numberInfeasibilities_++;
+        status_[iSequence] = static_cast< unsigned char >(CLP_BELOW_LOWER | (CLP_SAME << 4));
+        bound_[iSequence] = upperValue;
+        upper[iSequence] = lowerValue;
+        lower[iSequence] = -COIN_DBL_MAX;
       }
     } else {
       // above
@@ -126,29 +124,26 @@ AbcNonLinearCost::refresh()
       largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
       cost[iSequence] += infeasibilityCost;
       numberInfeasibilities_++;
-      status_[iSequence] = static_cast<unsigned char>(CLP_ABOVE_UPPER | (CLP_SAME << 4));
+      status_[iSequence] = static_cast< unsigned char >(CLP_ABOVE_UPPER | (CLP_SAME << 4));
       bound_[iSequence] = lowerValue;
       lower[iSequence] = upperValue;
       upper[iSequence] = COIN_DBL_MAX;
     }
   }
   //     checkInfeasibilities(model_->primalTolerance());
-  
 }
 // Refresh - from original
-void 
-AbcNonLinearCost::refreshFromPerturbed(double tolerance)
+void AbcNonLinearCost::refreshFromPerturbed(double tolerance)
 {
   // original costs and perturbed bounds
-  model_->copyFromSaved(32+2);
+  model_->copyFromSaved(32 + 2);
   refresh();
   //checkInfeasibilities(tolerance);
 }
 // Refreshes costs always makes row costs zero
-void
-AbcNonLinearCost::refreshCosts(const double * columnCosts)
+void AbcNonLinearCost::refreshCosts(const double *columnCosts)
 {
-  double * cost = model_->costRegion();
+  double *cost = model_->costRegion();
   // zero row costs
   memset(cost + numberColumns_, 0, numberRows_ * sizeof(double));
   // copy column costs
@@ -160,20 +155,20 @@ AbcNonLinearCost::refreshCosts(const double * columnCosts)
 //-------------------------------------------------------------------
 // Copy constructor
 //-------------------------------------------------------------------
-AbcNonLinearCost::AbcNonLinearCost (const AbcNonLinearCost & rhs) :
-  changeCost_(0.0),
-  feasibleCost_(0.0),
-  infeasibilityWeight_(-1.0),
-  largestInfeasibility_(0.0),
-  sumInfeasibilities_(0.0),
-  averageTheta_(0.0),
-  numberRows_(rhs.numberRows_),
-  numberColumns_(rhs.numberColumns_),
-  model_(NULL),
-  numberInfeasibilities_(-1),
-  status_(NULL),
-  bound_(NULL),
-  cost_(NULL)
+AbcNonLinearCost::AbcNonLinearCost(const AbcNonLinearCost &rhs)
+  : changeCost_(0.0)
+  , feasibleCost_(0.0)
+  , infeasibilityWeight_(-1.0)
+  , largestInfeasibility_(0.0)
+  , sumInfeasibilities_(0.0)
+  , averageTheta_(0.0)
+  , numberRows_(rhs.numberRows_)
+  , numberColumns_(rhs.numberColumns_)
+  , model_(NULL)
+  , numberInfeasibilities_(-1)
+  , status_(NULL)
+  , bound_(NULL)
+  , cost_(NULL)
 {
   if (numberRows_) {
     int numberTotal = numberRows_ + numberColumns_;
@@ -194,25 +189,25 @@ AbcNonLinearCost::AbcNonLinearCost (const AbcNonLinearCost & rhs) :
 //-------------------------------------------------------------------
 // Destructor
 //-------------------------------------------------------------------
-AbcNonLinearCost::~AbcNonLinearCost ()
+AbcNonLinearCost::~AbcNonLinearCost()
 {
-  delete [] status_;
-  delete [] bound_;
-  delete [] cost_;
+  delete[] status_;
+  delete[] bound_;
+  delete[] cost_;
 }
 
 //----------------------------------------------------------------
 // Assignment operator
 //-------------------------------------------------------------------
 AbcNonLinearCost &
-AbcNonLinearCost::operator=(const AbcNonLinearCost& rhs)
+AbcNonLinearCost::operator=(const AbcNonLinearCost &rhs)
 {
   if (this != &rhs) {
     numberRows_ = rhs.numberRows_;
     numberColumns_ = rhs.numberColumns_;
-    delete [] status_;
-    delete [] bound_;
-    delete [] cost_;
+    delete[] status_;
+    delete[] bound_;
+    delete[] cost_;
     status_ = NULL;
     bound_ = NULL;
     cost_ = NULL;
@@ -237,8 +232,7 @@ AbcNonLinearCost::operator=(const AbcNonLinearCost& rhs)
 // We will need to re-think objective offsets later
 // We will also need a 2 bit per variable array for some
 // purpose which will come to me later
-void
-AbcNonLinearCost::checkInfeasibilities(double oldTolerance)
+void AbcNonLinearCost::checkInfeasibilities(double oldTolerance)
 {
   numberInfeasibilities_ = 0;
   double infeasibilityCost = model_->infeasibilityCost();
@@ -247,10 +241,10 @@ AbcNonLinearCost::checkInfeasibilities(double oldTolerance)
   sumInfeasibilities_ = 0.0;
   double primalTolerance = model_->currentPrimalTolerance();
   int iSequence;
-  double * solution = model_->solutionRegion();
-  double * upper = model_->upperRegion();
-  double * lower = model_->lowerRegion();
-  double * cost = model_->costRegion();
+  double *solution = model_->solutionRegion();
+  double *upper = model_->upperRegion();
+  double *lower = model_->lowerRegion();
+  double *cost = model_->costRegion();
   bool toNearest = oldTolerance <= 0.0;
   feasibleCost_ = 0.0;
   //bool checkCosts = (infeasibilityWeight_ != infeasibilityCost);
@@ -260,7 +254,7 @@ AbcNonLinearCost::checkInfeasibilities(double oldTolerance)
   for (iSequence = 0; iSequence < numberTotal; iSequence++) {
     double value = solution[iSequence];
     unsigned char iStatus = status_[iSequence];
-    assert (currentStatus(iStatus) == CLP_SAME);
+    assert(currentStatus(iStatus) == CLP_SAME);
     double lowerValue = lower[iSequence];
     double upperValue = upper[iSequence];
     double costValue = cost_[iSequence];
@@ -280,124 +274,124 @@ AbcNonLinearCost::checkInfeasibilities(double oldTolerance)
     AbcSimplex::Status status = model_->getInternalStatus(iSequence);
     if (upperValue == lowerValue && status != AbcSimplex::isFixed) {
       if (status != AbcSimplex::basic) {
-	model_->setInternalStatus(iSequence, AbcSimplex::isFixed);
-	status = AbcSimplex::isFixed;
+        model_->setInternalStatus(iSequence, AbcSimplex::isFixed);
+        status = AbcSimplex::isFixed;
       }
     }
-    switch(status) {
-      
+    switch (status) {
+
     case AbcSimplex::basic:
     case AbcSimplex::superBasic:
       if (value - upperValue <= primalTolerance) {
-	if (value - lowerValue >= -primalTolerance) {
-	  // feasible
-	  //newWhere=CLP_FEASIBLE;
-	} else {
-	  // below
-	  newWhere = CLP_BELOW_LOWER;
-	  assert (fabs(lowerValue) < 1.0e100);
-	  double infeasibility = lowerValue - value - primalTolerance;
-	  sumInfeasibilities_ += infeasibility;
-	  largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
-	  costValue = trueCost - infeasibilityCost;
-	  changeCost_ -= lowerValue * (costValue - cost[iSequence]);
-	  numberInfeasibilities_++;
-	}
+        if (value - lowerValue >= -primalTolerance) {
+          // feasible
+          //newWhere=CLP_FEASIBLE;
+        } else {
+          // below
+          newWhere = CLP_BELOW_LOWER;
+          assert(fabs(lowerValue) < 1.0e100);
+          double infeasibility = lowerValue - value - primalTolerance;
+          sumInfeasibilities_ += infeasibility;
+          largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
+          costValue = trueCost - infeasibilityCost;
+          changeCost_ -= lowerValue * (costValue - cost[iSequence]);
+          numberInfeasibilities_++;
+        }
       } else {
-	// above
-	newWhere = CLP_ABOVE_UPPER;
-	double infeasibility = value - upperValue - primalTolerance;
-	sumInfeasibilities_ += infeasibility;
-	largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
-	costValue = trueCost + infeasibilityCost;
-	changeCost_ -= upperValue * (costValue - cost[iSequence]);
-	numberInfeasibilities_++;
+        // above
+        newWhere = CLP_ABOVE_UPPER;
+        double infeasibility = value - upperValue - primalTolerance;
+        sumInfeasibilities_ += infeasibility;
+        largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
+        costValue = trueCost + infeasibilityCost;
+        changeCost_ -= upperValue * (costValue - cost[iSequence]);
+        numberInfeasibilities_++;
       }
       break;
     case AbcSimplex::isFree:
       break;
     case AbcSimplex::atUpperBound:
       if (!toNearest) {
-	// With increasing tolerances - we may be at wrong place
-	if (fabs(value - upperValue) > oldTolerance * 1.0001) {
-	  if (fabs(value - lowerValue) <= oldTolerance * 1.0001) {
-	    if  (fabs(value - lowerValue) > primalTolerance) {
-	      solution[iSequence] = lowerValue;
-	      value = lowerValue;
-	    }
-	    model_->setInternalStatus(iSequence, AbcSimplex::atLowerBound);
-	  } else {
-	    if (value < upperValue) {
-	      if (value > lowerValue) {
-		model_->setInternalStatus(iSequence, AbcSimplex::superBasic);
-	      } else {
-		// set to lower bound as infeasible
-		solution[iSequence] = lowerValue;
-		value = lowerValue;
-		model_->setInternalStatus(iSequence, AbcSimplex::atLowerBound);
-	      }
-	    } else {
-	      // set to upper bound as infeasible
-	      solution[iSequence] = upperValue;
-	      value = upperValue;
-	    }
-	  }
-	} else if  (fabs(value - upperValue) > primalTolerance) {
-	  solution[iSequence] = upperValue;
-	  value = upperValue;
-	}
+        // With increasing tolerances - we may be at wrong place
+        if (fabs(value - upperValue) > oldTolerance * 1.0001) {
+          if (fabs(value - lowerValue) <= oldTolerance * 1.0001) {
+            if (fabs(value - lowerValue) > primalTolerance) {
+              solution[iSequence] = lowerValue;
+              value = lowerValue;
+            }
+            model_->setInternalStatus(iSequence, AbcSimplex::atLowerBound);
+          } else {
+            if (value < upperValue) {
+              if (value > lowerValue) {
+                model_->setInternalStatus(iSequence, AbcSimplex::superBasic);
+              } else {
+                // set to lower bound as infeasible
+                solution[iSequence] = lowerValue;
+                value = lowerValue;
+                model_->setInternalStatus(iSequence, AbcSimplex::atLowerBound);
+              }
+            } else {
+              // set to upper bound as infeasible
+              solution[iSequence] = upperValue;
+              value = upperValue;
+            }
+          }
+        } else if (fabs(value - upperValue) > primalTolerance) {
+          solution[iSequence] = upperValue;
+          value = upperValue;
+        }
       } else {
-	// Set to nearest and make at bound
-	if (fabs(value - lowerValue) < fabs(value - upperValue)) {
-	  solution[iSequence] = lowerValue;
-	  value = lowerValue;
-	  model_->setInternalStatus(iSequence, AbcSimplex::atLowerBound);
-	} else {
-	  solution[iSequence] = upperValue;
-	  value = upperValue;
-	}
+        // Set to nearest and make at bound
+        if (fabs(value - lowerValue) < fabs(value - upperValue)) {
+          solution[iSequence] = lowerValue;
+          value = lowerValue;
+          model_->setInternalStatus(iSequence, AbcSimplex::atLowerBound);
+        } else {
+          solution[iSequence] = upperValue;
+          value = upperValue;
+        }
       }
       break;
     case AbcSimplex::atLowerBound:
       if (!toNearest) {
-	// With increasing tolerances - we may be at wrong place
-	if (fabs(value - lowerValue) > oldTolerance * 1.0001) {
-	  if (fabs(value - upperValue) <= oldTolerance * 1.0001) {
-	    if  (fabs(value - upperValue) > primalTolerance) {
-	      solution[iSequence] = upperValue;
-	      value = upperValue;
-	    }
-	    model_->setInternalStatus(iSequence, AbcSimplex::atUpperBound);
-	  } else {
-	    if (value < upperValue) {
-	      if (value > lowerValue) {
-		model_->setInternalStatus(iSequence, AbcSimplex::superBasic);
-	      } else {
-		// set to lower bound as infeasible
-		solution[iSequence] = lowerValue;
-		value = lowerValue;
-	      }
-	    } else {
-	      // set to upper bound as infeasible
-	      solution[iSequence] = upperValue;
-	      value = upperValue;
-	      model_->setInternalStatus(iSequence, AbcSimplex::atUpperBound);
-	    }
-	  }
-	} else if  (fabs(value - lowerValue) > primalTolerance) {
-	  solution[iSequence] = lowerValue;
-	  value = lowerValue;
-	}
+        // With increasing tolerances - we may be at wrong place
+        if (fabs(value - lowerValue) > oldTolerance * 1.0001) {
+          if (fabs(value - upperValue) <= oldTolerance * 1.0001) {
+            if (fabs(value - upperValue) > primalTolerance) {
+              solution[iSequence] = upperValue;
+              value = upperValue;
+            }
+            model_->setInternalStatus(iSequence, AbcSimplex::atUpperBound);
+          } else {
+            if (value < upperValue) {
+              if (value > lowerValue) {
+                model_->setInternalStatus(iSequence, AbcSimplex::superBasic);
+              } else {
+                // set to lower bound as infeasible
+                solution[iSequence] = lowerValue;
+                value = lowerValue;
+              }
+            } else {
+              // set to upper bound as infeasible
+              solution[iSequence] = upperValue;
+              value = upperValue;
+              model_->setInternalStatus(iSequence, AbcSimplex::atUpperBound);
+            }
+          }
+        } else if (fabs(value - lowerValue) > primalTolerance) {
+          solution[iSequence] = lowerValue;
+          value = lowerValue;
+        }
       } else {
-	// Set to nearest and make at bound
-	if (fabs(value - lowerValue) < fabs(value - upperValue)) {
-	  solution[iSequence] = lowerValue;
-	  value = lowerValue;
-	} else {
-	  solution[iSequence] = upperValue;
-	  value = upperValue;
-	  model_->setInternalStatus(iSequence, AbcSimplex::atUpperBound);
-	}
+        // Set to nearest and make at bound
+        if (fabs(value - lowerValue) < fabs(value - upperValue)) {
+          solution[iSequence] = lowerValue;
+          value = lowerValue;
+        } else {
+          solution[iSequence] = upperValue;
+          value = upperValue;
+          model_->setInternalStatus(iSequence, AbcSimplex::atUpperBound);
+        }
       }
       break;
     case AbcSimplex::isFixed:
@@ -408,17 +402,17 @@ AbcNonLinearCost::checkInfeasibilities(double oldTolerance)
     if (iWhere != newWhere) {
       setOriginalStatus(status_[iSequence], newWhere);
       if (newWhere == CLP_BELOW_LOWER) {
-	bound_[iSequence] = upperValue;
-	upperValue = lowerValue;
-	lowerValue = -COIN_DBL_MAX;
-	costValue = trueCost - infeasibilityCost;
+        bound_[iSequence] = upperValue;
+        upperValue = lowerValue;
+        lowerValue = -COIN_DBL_MAX;
+        costValue = trueCost - infeasibilityCost;
       } else if (newWhere == CLP_ABOVE_UPPER) {
-	bound_[iSequence] = lowerValue;
-	lowerValue = upperValue;
-	upperValue = COIN_DBL_MAX;
-	costValue = trueCost + infeasibilityCost;
+        bound_[iSequence] = lowerValue;
+        lowerValue = upperValue;
+        upperValue = COIN_DBL_MAX;
+        costValue = trueCost + infeasibilityCost;
       } else {
-	costValue = trueCost;
+        costValue = trueCost;
       }
       lower[iSequence] = lowerValue;
       upper[iSequence] = upperValue;
@@ -430,17 +424,16 @@ AbcNonLinearCost::checkInfeasibilities(double oldTolerance)
   model_->moveToBasic(14); // all except solution
 }
 // Puts feasible bounds into lower and upper
-void
-AbcNonLinearCost::feasibleBounds()
+void AbcNonLinearCost::feasibleBounds()
 {
   int iSequence;
-  double * upper = model_->upperRegion();
-  double * lower = model_->lowerRegion();
-  double * cost = model_->costRegion();
+  double *upper = model_->upperRegion();
+  double *lower = model_->lowerRegion();
+  double *cost = model_->costRegion();
   int numberTotal = numberColumns_ + numberRows_;
   for (iSequence = 0; iSequence < numberTotal; iSequence++) {
     unsigned char iStatus = status_[iSequence];
-    assert (currentStatus(iStatus) == CLP_SAME);
+    assert(currentStatus(iStatus) == CLP_SAME);
     double lowerValue = lower[iSequence];
     double upperValue = upper[iSequence];
     double costValue = cost_[iSequence];
@@ -448,7 +441,7 @@ AbcNonLinearCost::feasibleBounds()
     if (iWhere == CLP_BELOW_LOWER) {
       lowerValue = upperValue;
       upperValue = bound_[iSequence];
-      assert (fabs(lowerValue) < 1.0e100);
+      assert(fabs(lowerValue) < 1.0e100);
     } else if (iWhere == CLP_ABOVE_UPPER) {
       upperValue = lowerValue;
       lowerValue = bound_[iSequence];
@@ -459,38 +452,36 @@ AbcNonLinearCost::feasibleBounds()
     cost[iSequence] = costValue;
   }
 }
-void
-AbcNonLinearCost::goBackAll(const CoinIndexedVector * update)
+void AbcNonLinearCost::goBackAll(const CoinIndexedVector *update)
 {
-  assert (model_ != NULL);
-  const int * pivotVariable = model_->pivotVariable();
+  assert(model_ != NULL);
+  const int *pivotVariable = model_->pivotVariable();
   int number = update->getNumElements();
-  const int * index = update->getIndices();
+  const int *index = update->getIndices();
   for (int i = 0; i < number; i++) {
     int iRow = index[i];
     int iSequence = pivotVariable[iRow];
     setSameStatus(status_[iSequence]);
   }
 }
-void
-AbcNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
+void AbcNonLinearCost::checkInfeasibilities(int numberInArray, const int *index)
 {
-  assert (model_ != NULL);
+  assert(model_ != NULL);
   double primalTolerance = model_->currentPrimalTolerance();
-  const int * pivotVariable = model_->pivotVariable();
-  double * upper = model_->upperRegion();
-  double * lower = model_->lowerRegion();
-  double * cost = model_->costRegion();
-  double * solutionBasic = model_->solutionBasic();
-  double * upperBasic = model_->upperBasic();
-  double * lowerBasic = model_->lowerBasic();
-  double * costBasic = model_->costBasic();
+  const int *pivotVariable = model_->pivotVariable();
+  double *upper = model_->upperRegion();
+  double *lower = model_->lowerRegion();
+  double *cost = model_->costRegion();
+  double *solutionBasic = model_->solutionBasic();
+  double *upperBasic = model_->upperBasic();
+  double *lowerBasic = model_->lowerBasic();
+  double *costBasic = model_->costBasic();
   for (int i = 0; i < numberInArray; i++) {
     int iRow = index[i];
     int iSequence = pivotVariable[iRow];
     double value = solutionBasic[iRow];
     unsigned char iStatus = status_[iSequence];
-    assert (currentStatus(iStatus) == CLP_SAME);
+    assert(currentStatus(iStatus) == CLP_SAME);
     double lowerValue = lowerBasic[iRow];
     double upperValue = upperBasic[iRow];
     double costValue = cost_[iSequence];
@@ -499,7 +490,7 @@ AbcNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
       lowerValue = upperValue;
       upperValue = bound_[iSequence];
       numberInfeasibilities_--;
-      assert (fabs(lowerValue) < 1.0e100);
+      assert(fabs(lowerValue) < 1.0e100);
     } else if (iWhere == CLP_ABOVE_UPPER) {
       upperValue = lowerValue;
       lowerValue = bound_[iSequence];
@@ -509,14 +500,14 @@ AbcNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
     int newWhere = CLP_FEASIBLE;
     if (value - upperValue <= primalTolerance) {
       if (value - lowerValue >= -primalTolerance) {
-	// feasible
-	//newWhere=CLP_FEASIBLE;
+        // feasible
+        //newWhere=CLP_FEASIBLE;
       } else {
-	// below
-	newWhere = CLP_BELOW_LOWER;
-	assert (fabs(lowerValue) < 1.0e100);
-	costValue -= infeasibilityWeight_;
-	numberInfeasibilities_++;
+        // below
+        newWhere = CLP_BELOW_LOWER;
+        assert(fabs(lowerValue) < 1.0e100);
+        costValue -= infeasibilityWeight_;
+        numberInfeasibilities_++;
       }
     } else {
       // above
@@ -527,13 +518,13 @@ AbcNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
     if (iWhere != newWhere) {
       setOriginalStatus(status_[iSequence], newWhere);
       if (newWhere == CLP_BELOW_LOWER) {
-	bound_[iSequence] = upperValue;
-	upperValue = lowerValue;
-	lowerValue = -COIN_DBL_MAX;
+        bound_[iSequence] = upperValue;
+        upperValue = lowerValue;
+        lowerValue = -COIN_DBL_MAX;
       } else if (newWhere == CLP_ABOVE_UPPER) {
-	bound_[iSequence] = lowerValue;
-	lowerValue = upperValue;
-	upperValue = COIN_DBL_MAX;
+        bound_[iSequence] = lowerValue;
+        lowerValue = upperValue;
+        upperValue = COIN_DBL_MAX;
       }
       lower[iSequence] = lowerValue;
       upper[iSequence] = upperValue;
@@ -550,28 +541,27 @@ AbcNonLinearCost::checkInfeasibilities(int numberInArray, const int * index)
    On input array is empty (but indices exist).  On exit just
    changed costs will be stored as normal CoinIndexedVector
 */
-void
-AbcNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
+void AbcNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector *update)
 {
-  assert (model_ != NULL);
+  assert(model_ != NULL);
   double primalTolerance = model_->currentPrimalTolerance();
-  const int * pivotVariable = model_->pivotVariable();
+  const int *pivotVariable = model_->pivotVariable();
   int number = 0;
-  int * index = update->getIndices();
-  double * work = update->denseVector();
-  double * upper = model_->upperRegion();
-  double * lower = model_->lowerRegion();
-  double * cost = model_->costRegion();
-  double * solutionBasic = model_->solutionBasic();
-  double * upperBasic = model_->upperBasic();
-  double * lowerBasic = model_->lowerBasic();
-  double * costBasic = model_->costBasic();
+  int *index = update->getIndices();
+  double *work = update->denseVector();
+  double *upper = model_->upperRegion();
+  double *lower = model_->lowerRegion();
+  double *cost = model_->costRegion();
+  double *solutionBasic = model_->solutionBasic();
+  double *upperBasic = model_->upperBasic();
+  double *lowerBasic = model_->lowerBasic();
+  double *costBasic = model_->costBasic();
   for (int i = 0; i < numberInArray; i++) {
     int iRow = index[i];
     int iSequence = pivotVariable[iRow];
     double value = solutionBasic[iRow];
     unsigned char iStatus = status_[iSequence];
-    assert (currentStatus(iStatus) == CLP_SAME);
+    assert(currentStatus(iStatus) == CLP_SAME);
     double lowerValue = lowerBasic[iRow];
     double upperValue = upperBasic[iRow];
     double costValue = cost_[iSequence];
@@ -580,7 +570,7 @@ AbcNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
       lowerValue = upperValue;
       upperValue = bound_[iSequence];
       numberInfeasibilities_--;
-      assert (fabs(lowerValue) < 1.0e100);
+      assert(fabs(lowerValue) < 1.0e100);
     } else if (iWhere == CLP_ABOVE_UPPER) {
       upperValue = lowerValue;
       lowerValue = bound_[iSequence];
@@ -590,14 +580,14 @@ AbcNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
     int newWhere = CLP_FEASIBLE;
     if (value - upperValue <= primalTolerance) {
       if (value - lowerValue >= -primalTolerance) {
-	// feasible
-	//newWhere=CLP_FEASIBLE;
+        // feasible
+        //newWhere=CLP_FEASIBLE;
       } else {
-	// below
-	newWhere = CLP_BELOW_LOWER;
-	costValue -= infeasibilityWeight_;
-	numberInfeasibilities_++;
-	assert (fabs(lowerValue) < 1.0e100);
+        // below
+        newWhere = CLP_BELOW_LOWER;
+        costValue -= infeasibilityWeight_;
+        numberInfeasibilities_++;
+        assert(fabs(lowerValue) < 1.0e100);
       }
     } else {
       // above
@@ -610,13 +600,13 @@ AbcNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
       index[number++] = iRow;
       setOriginalStatus(status_[iSequence], newWhere);
       if (newWhere == CLP_BELOW_LOWER) {
-	bound_[iSequence] = upperValue;
-	upperValue = lowerValue;
-	lowerValue = -COIN_DBL_MAX;
+        bound_[iSequence] = upperValue;
+        upperValue = lowerValue;
+        lowerValue = -COIN_DBL_MAX;
       } else if (newWhere == CLP_ABOVE_UPPER) {
-	bound_[iSequence] = lowerValue;
-	lowerValue = upperValue;
-	upperValue = COIN_DBL_MAX;
+        bound_[iSequence] = lowerValue;
+        lowerValue = upperValue;
+        upperValue = COIN_DBL_MAX;
       }
       lower[iSequence] = lowerValue;
       upper[iSequence] = upperValue;
@@ -632,15 +622,15 @@ AbcNonLinearCost::checkChanged(int numberInArray, CoinIndexedVector * update)
 double
 AbcNonLinearCost::setOne(int iSequence, double value)
 {
-  assert (model_ != NULL);
+  assert(model_ != NULL);
   double primalTolerance = model_->currentPrimalTolerance();
   // difference in cost
   double difference = 0.0;
-  double * upper = model_->upperRegion();
-  double * lower = model_->lowerRegion();
-  double * cost = model_->costRegion();
+  double *upper = model_->upperRegion();
+  double *lower = model_->lowerRegion();
+  double *cost = model_->costRegion();
   unsigned char iStatus = status_[iSequence];
-  assert (currentStatus(iStatus) == CLP_SAME);
+  assert(currentStatus(iStatus) == CLP_SAME);
   double lowerValue = lower[iSequence];
   double upperValue = upper[iSequence];
   double costValue = cost_[iSequence];
@@ -649,7 +639,7 @@ AbcNonLinearCost::setOne(int iSequence, double value)
     lowerValue = upperValue;
     upperValue = bound_[iSequence];
     numberInfeasibilities_--;
-    assert (fabs(lowerValue) < 1.0e100);
+    assert(fabs(lowerValue) < 1.0e100);
   } else if (iWhere == CLP_ABOVE_UPPER) {
     upperValue = lowerValue;
     lowerValue = bound_[iSequence];
@@ -666,7 +656,7 @@ AbcNonLinearCost::setOne(int iSequence, double value)
       newWhere = CLP_BELOW_LOWER;
       costValue -= infeasibilityWeight_;
       numberInfeasibilities_++;
-      assert (fabs(lowerValue) < 1.0e100);
+      assert(fabs(lowerValue) < 1.0e100);
     }
   } else {
     // above
@@ -694,8 +684,8 @@ AbcNonLinearCost::setOne(int iSequence, double value)
   if (upperValue == lowerValue) {
     model_->setInternalStatus(iSequence, AbcSimplex::isFixed);
   }
-  switch(status) {
-    
+  switch (status) {
+
   case AbcSimplex::basic:
   case AbcSimplex::superBasic:
   case AbcSimplex::isFree:
@@ -721,19 +711,19 @@ AbcNonLinearCost::setOne(int iSequence, double value)
 double
 AbcNonLinearCost::setOneBasic(int iRow, double value)
 {
-  assert (model_ != NULL);
-  int iSequence=model_->pivotVariable()[iRow];
+  assert(model_ != NULL);
+  int iSequence = model_->pivotVariable()[iRow];
   double primalTolerance = model_->currentPrimalTolerance();
   // difference in cost
   double difference = 0.0;
-  double * upper = model_->upperRegion();
-  double * lower = model_->lowerRegion();
-  double * cost = model_->costRegion();
-  double * upperBasic = model_->upperBasic();
-  double * lowerBasic = model_->lowerBasic();
-  double * costBasic = model_->costBasic();
+  double *upper = model_->upperRegion();
+  double *lower = model_->lowerRegion();
+  double *cost = model_->costRegion();
+  double *upperBasic = model_->upperBasic();
+  double *lowerBasic = model_->lowerBasic();
+  double *costBasic = model_->costBasic();
   unsigned char iStatus = status_[iSequence];
-  assert (currentStatus(iStatus) == CLP_SAME);
+  assert(currentStatus(iStatus) == CLP_SAME);
   double lowerValue = lowerBasic[iRow];
   double upperValue = upperBasic[iRow];
   double costValue = cost_[iSequence];
@@ -742,7 +732,7 @@ AbcNonLinearCost::setOneBasic(int iRow, double value)
     lowerValue = upperValue;
     upperValue = bound_[iSequence];
     numberInfeasibilities_--;
-    assert (fabs(lowerValue) < 1.0e100);
+    assert(fabs(lowerValue) < 1.0e100);
   } else if (iWhere == CLP_ABOVE_UPPER) {
     upperValue = lowerValue;
     lowerValue = bound_[iSequence];
@@ -759,7 +749,7 @@ AbcNonLinearCost::setOneBasic(int iRow, double value)
       newWhere = CLP_BELOW_LOWER;
       costValue -= infeasibilityWeight_;
       numberInfeasibilities_++;
-      assert (fabs(lowerValue) < 1.0e100);
+      assert(fabs(lowerValue) < 1.0e100);
     }
   } else {
     // above
@@ -792,22 +782,21 @@ AbcNonLinearCost::setOneBasic(int iRow, double value)
 /* Sets bounds and cost for outgoing variable
    may change value
    Returns direction */
-int
-AbcNonLinearCost::setOneOutgoing(int iRow, double & value)
+int AbcNonLinearCost::setOneOutgoing(int iRow, double &value)
 {
-  assert (model_ != NULL);
-  int iSequence=model_->pivotVariable()[iRow];
+  assert(model_ != NULL);
+  int iSequence = model_->pivotVariable()[iRow];
   double primalTolerance = model_->currentPrimalTolerance();
   // difference in cost
   double difference = 0.0;
   int direction = 0;
-  double * upper = model_->upperRegion();
-  double * lower = model_->lowerRegion();
-  double * cost = model_->costRegion();
-  double * upperBasic = model_->upperBasic();
-  double * lowerBasic = model_->lowerBasic();
+  double *upper = model_->upperRegion();
+  double *lower = model_->lowerRegion();
+  double *cost = model_->costRegion();
+  double *upperBasic = model_->upperBasic();
+  double *lowerBasic = model_->lowerBasic();
   unsigned char iStatus = status_[iSequence];
-  assert (currentStatus(iStatus) == CLP_SAME);
+  assert(currentStatus(iStatus) == CLP_SAME);
   double lowerValue = lowerBasic[iRow];
   double upperValue = upperBasic[iRow];
   double costValue = cost_[iSequence];
@@ -825,7 +814,7 @@ AbcNonLinearCost::setOneOutgoing(int iRow, double & value)
     lowerValue = upperValue;
     upperValue = bound_[iSequence];
     numberInfeasibilities_--;
-    assert (fabs(lowerValue) < 1.0e100);
+    assert(fabs(lowerValue) < 1.0e100);
   } else if (iWhere == CLP_ABOVE_UPPER) {
     upperValue = lowerValue;
     lowerValue = bound_[iSequence];
@@ -845,7 +834,7 @@ AbcNonLinearCost::setOneOutgoing(int iRow, double & value)
       newWhere = CLP_BELOW_LOWER;
       costValue -= infeasibilityWeight_;
       numberInfeasibilities_++;
-      assert (fabs(lowerValue) < 1.0e100);
+      assert(fabs(lowerValue) < 1.0e100);
     }
   } else {
     // above
@@ -890,18 +879,18 @@ AbcNonLinearCost::setOneOutgoing(int iRow, double & value)
 double
 AbcNonLinearCost::nearest(int iRow, double solutionValue)
 {
-  assert (model_ != NULL);
-  int iSequence=model_->pivotVariable()[iRow];
+  assert(model_ != NULL);
+  int iSequence = model_->pivotVariable()[iRow];
   double nearest = 0.0;
-  const double * upperBasic = model_->upperBasic();
-  const double * lowerBasic = model_->lowerBasic();
+  const double *upperBasic = model_->upperBasic();
+  const double *lowerBasic = model_->lowerBasic();
   double lowerValue = lowerBasic[iRow];
   double upperValue = upperBasic[iRow];
   int iWhere = originalStatus(status_[iSequence]);
   if (iWhere == CLP_BELOW_LOWER) {
     lowerValue = upperValue;
     upperValue = bound_[iSequence];
-    assert (fabs(lowerValue) < 1.0e100);
+    assert(fabs(lowerValue) < 1.0e100);
   } else if (iWhere == CLP_ABOVE_UPPER) {
     upperValue = lowerValue;
     lowerValue = bound_[iSequence];
@@ -918,64 +907,64 @@ AbcNonLinearCost::feasibleReportCost() const
 {
   double value;
   model_->getDblParam(ClpObjOffset, value);
-  return (feasibleCost_ + model_->objectiveAsObject()->nonlinearOffset()) * model_->optimizationDirection() /
-    (model_->objectiveScale() * model_->rhsScale()) - value;
+  return (feasibleCost_ + model_->objectiveAsObject()->nonlinearOffset()) * model_->optimizationDirection() / (model_->objectiveScale() * model_->rhsScale()) - value;
 }
 // Get rid of real costs (just for moment)
-void
-AbcNonLinearCost::zapCosts()
+void AbcNonLinearCost::zapCosts()
 {
 }
 #ifdef VALIDATE
 // For debug
-void
-AbcNonLinearCost::validate()
+void AbcNonLinearCost::validate()
 {
   double primalTolerance = model_->currentPrimalTolerance();
   int iSequence;
-  const double * solution = model_->solutionRegion();
-  const double * upper = model_->upperRegion();
-  const double * lower = model_->lowerRegion();
-  const double * cost = model_->costRegion();
+  const double *solution = model_->solutionRegion();
+  const double *upper = model_->upperRegion();
+  const double *lower = model_->lowerRegion();
+  const double *cost = model_->costRegion();
   double infeasibilityCost = model_->infeasibilityCost();
   int numberTotal = numberRows_ + numberColumns_;
   int numberInfeasibilities = 0;
   double sumInfeasibilities = 0.0;
-  
+
   for (iSequence = 0; iSequence < numberTotal; iSequence++) {
     double value = solution[iSequence];
     int iStatus = status_[iSequence];
-    assert (currentStatus(iStatus) == CLP_SAME);
+    assert(currentStatus(iStatus) == CLP_SAME);
     double lowerValue = lower[iSequence];
     double upperValue = upper[iSequence];
-    double costValue = cost_[iSequence]; 
+    double costValue = cost_[iSequence];
     int iWhere = originalStatus(iStatus);
     if (iWhere == CLP_BELOW_LOWER) {
       lowerValue = upperValue;
       upperValue = bound_[iSequence];
-      assert (fabs(lowerValue) < 1.0e100);
+      assert(fabs(lowerValue) < 1.0e100);
       costValue -= infeasibilityCost;
-      assert (value <= lowerValue - primalTolerance);
+      assert(value <= lowerValue - primalTolerance);
       numberInfeasibilities++;
       sumInfeasibilities += lowerValue - value - primalTolerance;
-      assert (model_->getInternalStatus(iSequence) == AbcSimplex::basic);
+      assert(model_->getInternalStatus(iSequence) == AbcSimplex::basic);
     } else if (iWhere == CLP_ABOVE_UPPER) {
       upperValue = lowerValue;
       lowerValue = bound_[iSequence];
       costValue += infeasibilityCost;
-      assert (value >= upperValue + primalTolerance);
+      assert(value >= upperValue + primalTolerance);
       numberInfeasibilities++;
       sumInfeasibilities += value - upperValue - primalTolerance;
-      assert (model_->getInternalStatus(iSequence) == AbcSimplex::basic);
+      assert(model_->getInternalStatus(iSequence) == AbcSimplex::basic);
     } else {
-      assert (value >= lowerValue - primalTolerance && value <= upperValue + primalTolerance);
+      assert(value >= lowerValue - primalTolerance && value <= upperValue + primalTolerance);
     }
-    assert (lowerValue == saveLowerV[iSequence]);
-    assert (upperValue == saveUpperV[iSequence]);
-    assert (costValue == cost[iSequence]);
+    assert(lowerValue == saveLowerV[iSequence]);
+    assert(upperValue == saveUpperV[iSequence]);
+    assert(costValue == cost[iSequence]);
   }
   if (numberInfeasibilities)
     printf("JJ %d infeasibilities summing to %g\n",
-	   numberInfeasibilities, sumInfeasibilities);
+      numberInfeasibilities, sumInfeasibilities);
 }
 #endif
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

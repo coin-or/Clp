@@ -51,34 +51,33 @@
 //-------------------------------------------------------------------
 // Default Constructor
 //-------------------------------------------------------------------
-AbcSimplexFactorization::AbcSimplexFactorization (int /*numberRows*/)
+AbcSimplexFactorization::AbcSimplexFactorization(int /*numberRows*/)
 {
-  model_=NULL;
+  model_ = NULL;
   coinAbcFactorization_ = new CoinAbcFactorization();
   forceB_ = 0;
   goDenseThreshold_ = USE_DENSE_FAC;
   goSmallThreshold_ = USE_SMALL_FAC;
   goLongThreshold_ = USE_LONG_FAC;
-  numberSlacks_=0;
+  numberSlacks_ = 0;
 }
 
 //-------------------------------------------------------------------
 // Copy constructor
 //-------------------------------------------------------------------
-AbcSimplexFactorization::AbcSimplexFactorization (const AbcSimplexFactorization & rhs,
-						  int denseIfSmaller)
+AbcSimplexFactorization::AbcSimplexFactorization(const AbcSimplexFactorization &rhs,
+  int denseIfSmaller)
 {
   forceB_ = rhs.forceB_;
   goDenseThreshold_ = rhs.goDenseThreshold_;
   goSmallThreshold_ = rhs.goSmallThreshold_;
   goLongThreshold_ = rhs.goLongThreshold_;
-  numberSlacks_=rhs.numberSlacks_;
-  model_=rhs.model_;
+  numberSlacks_ = rhs.numberSlacks_;
+  model_ = rhs.model_;
 #ifndef ABC_USE_COIN_FACTORIZATION
   int goDense = 0;
   if (denseIfSmaller > 0 && denseIfSmaller <= goDenseThreshold_) {
-    CoinAbcDenseFactorization * denseR =
-      dynamic_cast<CoinAbcDenseFactorization *>(rhs.coinAbcFactorization_);
+    CoinAbcDenseFactorization *denseR = dynamic_cast< CoinAbcDenseFactorization * >(rhs.coinAbcFactorization_);
     if (!denseR)
       goDense = 1;
   }
@@ -111,7 +110,7 @@ AbcSimplexFactorization::AbcSimplexFactorization (const AbcSimplexFactorization 
       coinAbcFactorization_ = new CoinAbcLongFactorization();
     else
       coinAbcFactorization_ = new CoinAbcFactorization();
-    assert (coinAbcFactorization_);
+    assert(coinAbcFactorization_);
     coinAbcFactorization_->maximumPivots(rhs.coinAbcFactorization_->maximumPivots());
     coinAbcFactorization_->pivotTolerance(rhs.coinAbcFactorization_->pivotTolerance());
     coinAbcFactorization_->zeroTolerance(rhs.coinAbcFactorization_->zeroTolerance());
@@ -123,7 +122,7 @@ AbcSimplexFactorization::AbcSimplexFactorization (const AbcSimplexFactorization 
 //-------------------------------------------------------------------
 // Destructor
 //-------------------------------------------------------------------
-AbcSimplexFactorization::~AbcSimplexFactorization ()
+AbcSimplexFactorization::~AbcSimplexFactorization()
 {
   delete coinAbcFactorization_;
 }
@@ -132,16 +131,16 @@ AbcSimplexFactorization::~AbcSimplexFactorization ()
 // Assignment operator
 //-------------------------------------------------------------------
 AbcSimplexFactorization &
-AbcSimplexFactorization::operator=(const AbcSimplexFactorization& rhs)
+AbcSimplexFactorization::operator=(const AbcSimplexFactorization &rhs)
 {
   if (this != &rhs) {
     forceB_ = rhs.forceB_;
-    model_=rhs.model_;
+    model_ = rhs.model_;
     goDenseThreshold_ = rhs.goDenseThreshold_;
     goSmallThreshold_ = rhs.goSmallThreshold_;
     goLongThreshold_ = rhs.goLongThreshold_;
-    numberSlacks_=rhs.numberSlacks_;
-    
+    numberSlacks_ = rhs.numberSlacks_;
+
     if (rhs.coinAbcFactorization_) {
       delete coinAbcFactorization_;
 #ifndef ABC_USE_COIN_FACTORIZATION
@@ -154,8 +153,7 @@ AbcSimplexFactorization::operator=(const AbcSimplexFactorization& rhs)
   return *this;
 }
 // Go over to dense code
-void
-AbcSimplexFactorization::goDenseOrSmall(int numberRows)
+void AbcSimplexFactorization::goDenseOrSmall(int numberRows)
 {
 #ifndef ABC_USE_COIN_FACTORIZATION
   if (!forceB_) {
@@ -173,8 +171,7 @@ AbcSimplexFactorization::goDenseOrSmall(int numberRows)
 #endif
 }
 // If nonzero force use of 1,dense 2,small 3,long
-void
-AbcSimplexFactorization::forceOtherFactorization(int which)
+void AbcSimplexFactorization::forceOtherFactorization(int which)
 {
 #ifndef ABC_USE_COIN_FACTORIZATION
   delete coinAbcFactorization_;
@@ -204,142 +201,128 @@ AbcSimplexFactorization::forceOtherFactorization(int which)
 #endif
 }
 #ifdef CLP_FACTORIZATION_NEW_TIMING
-static bool readTwiddle=false;
-static double weightIncU=1.0;
-static double weightR=2.0;
-static double weightRest=1.0;
-static double weightFactL=30.0;
-static double weightFactDense=0.1; 
-static double weightNrows=10.0;
-static double increaseNeeded=1.1;
+static bool readTwiddle = false;
+static double weightIncU = 1.0;
+static double weightR = 2.0;
+static double weightRest = 1.0;
+static double weightFactL = 30.0;
+static double weightFactDense = 0.1;
+static double weightNrows = 10.0;
+static double increaseNeeded = 1.1;
 static double constWeightIterate = 1.0;
 static double weightNrowsIterate = 3.0;
-bool 
-AbcSimplexFactorization::timeToRefactorize() const 
+bool AbcSimplexFactorization::timeToRefactorize() const
 {
-  bool reFactor = (coinAbcFactorization_->pivots() * 3 > coinAbcFactorization_->maximumPivots() * 2 &&
-		   coinAbcFactorization_->numberElementsR() * 3 > (coinAbcFactorization_->numberElementsL() +
-								   coinAbcFactorization_->numberElementsU()) * 2 + 1000 &&
-		   !coinAbcFactorization_->numberDense());
-  bool reFactor3=false;
-  int numberPivots=coinAbcFactorization_->pivots();
+  bool reFactor = (coinAbcFactorization_->pivots() * 3 > coinAbcFactorization_->maximumPivots() * 2 && coinAbcFactorization_->numberElementsR() * 3 > (coinAbcFactorization_->numberElementsL() + coinAbcFactorization_->numberElementsU()) * 2 + 1000 && !coinAbcFactorization_->numberDense());
+  bool reFactor3 = false;
+  int numberPivots = coinAbcFactorization_->pivots();
   //if (coinAbcFactorization_->pivots()<2)
-  if (numberPivots>lastNumberPivots_) {
+  if (numberPivots > lastNumberPivots_) {
     if (!lastNumberPivots_) {
       //lastR=0;
       //lastU=endLengthU;
-      totalInR_=0.0;
-      totalInIncreasingU_=0.0;
-      shortestAverage_=COIN_DBL_MAX;
+      totalInR_ = 0.0;
+      totalInIncreasingU_ = 0.0;
+      shortestAverage_ = COIN_DBL_MAX;
       if (!readTwiddle) {
-	readTwiddle=true;
-	char * environ = getenv("CLP_TWIDDLE");
-	if (environ) {
-	  sscanf(environ,"%lg %lg %lg %lg %lg %lg %lg %lg %lg",
-		 &weightIncU,&weightR,&weightRest,&weightFactL,
-		 &weightFactDense,&weightNrows,&increaseNeeded,
-		 &constWeightIterate,&weightNrowsIterate);
-	}
-	printf("weightIncU %g, weightR %g, weightRest %g, weightFactL %g, weightFactDense %g, weightNrows %g increaseNeeded %g constWeightIterate %g weightNrowsIterate %g\n",
-	       weightIncU,weightR,weightRest,weightFactL,
-	       weightFactDense,weightNrows,increaseNeeded,
-	       constWeightIterate,weightNrowsIterate);
+        readTwiddle = true;
+        char *environ = getenv("CLP_TWIDDLE");
+        if (environ) {
+          sscanf(environ, "%lg %lg %lg %lg %lg %lg %lg %lg %lg",
+            &weightIncU, &weightR, &weightRest, &weightFactL,
+            &weightFactDense, &weightNrows, &increaseNeeded,
+            &constWeightIterate, &weightNrowsIterate);
+        }
+        printf("weightIncU %g, weightR %g, weightRest %g, weightFactL %g, weightFactDense %g, weightNrows %g increaseNeeded %g constWeightIterate %g weightNrowsIterate %g\n",
+          weightIncU, weightR, weightRest, weightFactL,
+          weightFactDense, weightNrows, increaseNeeded,
+          constWeightIterate, weightNrowsIterate);
       }
     }
-    lastNumberPivots_=numberPivots;
-    int numberDense=coinAbcFactorization_->numberDense();
-    double nnd=numberDense*numberDense;
-    int lengthL=coinAbcFactorization_->numberElementsL();
-    int lengthR=coinAbcFactorization_->numberElementsR();
+    lastNumberPivots_ = numberPivots;
+    int numberDense = coinAbcFactorization_->numberDense();
+    double nnd = numberDense * numberDense;
+    int lengthL = coinAbcFactorization_->numberElementsL();
+    int lengthR = coinAbcFactorization_->numberElementsR();
     int numberRows = coinAbcFactorization_->numberRows();
-    int lengthU=coinAbcFactorization_->numberElementsU()-
-      (numberRows-numberDense);
+    int lengthU = coinAbcFactorization_->numberElementsU() - (numberRows - numberDense);
     totalInR_ += lengthR;
-    int effectiveU=lengthU-effectiveStartNumberU_;
+    int effectiveU = lengthU - effectiveStartNumberU_;
     totalInIncreasingU_ += effectiveU;
     //lastR=lengthR;
     //lastU=lengthU;
-    double rest=lengthL+0.05*nnd;
-    double constWeightFactor = weightFactL*lengthL+weightFactDense*nnd
-      + weightNrows*numberRows;
-    double constWeightIterateX = constWeightIterate*(lengthL+endLengthU_)
-      + weightNrowsIterate*numberRows;
-    double variableWeight = weightIncU*totalInIncreasingU_+
-      weightR*totalInR_+weightRest*rest;
-    double average=constWeightIterateX+
-      (constWeightFactor+variableWeight)/static_cast<double>(numberPivots);
+    double rest = lengthL + 0.05 * nnd;
+    double constWeightFactor = weightFactL * lengthL + weightFactDense * nnd
+      + weightNrows * numberRows;
+    double constWeightIterateX = constWeightIterate * (lengthL + endLengthU_)
+      + weightNrowsIterate * numberRows;
+    double variableWeight = weightIncU * totalInIncreasingU_ + weightR * totalInR_ + weightRest * rest;
+    double average = constWeightIterateX + (constWeightFactor + variableWeight) / static_cast< double >(numberPivots);
 #if 0
     if ((numberPivots%20)==0&&!ifPrint3)
       printf("PIV %d nrow %d startU %d now %d L %d R %d dense %g average %g\n",
 	     numberPivots,numberRows,effectiveStartNumberU_,
 	     lengthU,lengthL,lengthR,nnd,average);
 #endif
-    shortestAverage_=CoinMin(shortestAverage_,average);
-    if (average>increaseNeeded*shortestAverage_&&
-	coinAbcFactorization_->pivots()>30) {
+    shortestAverage_ = CoinMin(shortestAverage_, average);
+    if (average > increaseNeeded * shortestAverage_ && coinAbcFactorization_->pivots() > 30) {
       //printf("PIVX %d nrow %d startU %d now %d L %d R %d dense %g average %g\n",
       //     numberPivots,numberRows,effectiveStartNumberU_,
       //     lengthU,lengthL,lengthR,nnd,average);
-      reFactor3=true;
+      reFactor3 = true;
     }
   }
-  if (reFactor|| reFactor3) {
-    reFactor=true;
+  if (reFactor || reFactor3) {
+    reFactor = true;
   }
   return reFactor;
 }
-#if CLP_FACTORIZATION_NEW_TIMING>1
-void 
-AbcSimplexFactorization::statsRefactor(char when) const
+#if CLP_FACTORIZATION_NEW_TIMING > 1
+void AbcSimplexFactorization::statsRefactor(char when) const
 {
-  int numberPivots=coinAbcFactorization_->pivots();
-  int numberDense=coinAbcFactorization_->numberDense();
-  double nnd=numberDense*numberDense;
-  int lengthL=coinAbcFactorization_->numberElementsL();
-  int lengthR=coinAbcFactorization_->numberElementsR();
+  int numberPivots = coinAbcFactorization_->pivots();
+  int numberDense = coinAbcFactorization_->numberDense();
+  double nnd = numberDense * numberDense;
+  int lengthL = coinAbcFactorization_->numberElementsL();
+  int lengthR = coinAbcFactorization_->numberElementsR();
   int numberRows = coinAbcFactorization_->numberRows();
-  int lengthU=coinAbcFactorization_->numberElementsU()-
-    (numberRows-numberDense);
-  double rest=lengthL+0.05*nnd;
-  double constWeightFactor = weightFactL*lengthL+weightFactDense*nnd
-    + weightNrows*numberRows;
-  double constWeightIterateX = constWeightIterate*(lengthL+endLengthU_)
-    + weightNrowsIterate*numberRows;
-  double variableWeight = weightIncU*totalInIncreasingU_+
-    weightR*totalInR_+weightRest*rest;
-  double average=constWeightIterateX+
-    (constWeightFactor+variableWeight)/static_cast<double>(numberPivots);
+  int lengthU = coinAbcFactorization_->numberElementsU() - (numberRows - numberDense);
+  double rest = lengthL + 0.05 * nnd;
+  double constWeightFactor = weightFactL * lengthL + weightFactDense * nnd
+    + weightNrows * numberRows;
+  double constWeightIterateX = constWeightIterate * (lengthL + endLengthU_)
+    + weightNrowsIterate * numberRows;
+  double variableWeight = weightIncU * totalInIncreasingU_ + weightR * totalInR_ + weightRest * rest;
+  double average = constWeightIterateX + (constWeightFactor + variableWeight) / static_cast< double >(numberPivots);
   printf("APIV%c %d nrow %d startU %d now %d L %d R %d dense %g average %g - shortest %g\n",
-	 when,numberPivots,numberRows,effectiveStartNumberU_,
-	 lengthU,lengthL,lengthR,nnd,average,shortestAverage_);
+    when, numberPivots, numberRows, effectiveStartNumberU_,
+    lengthU, lengthL, lengthR, nnd, average, shortestAverage_);
 }
 #endif
 #else
-bool 
-AbcSimplexFactorization::timeToRefactorize() const 
+bool AbcSimplexFactorization::timeToRefactorize() const
 {
   return coinAbcFactorization_->pivots() > coinAbcFactorization_->numberRows() / 2.45 + 20;
 }
 #endif
 /* returns empty fake vector carved out of existing
    later - maybe use associated arrays */
-static CoinIndexedVector * fakeVector(CoinIndexedVector * vector,
-				      int fakeCapacity)
+static CoinIndexedVector *fakeVector(CoinIndexedVector *vector,
+  int fakeCapacity)
 {
-  int oldCapacity=vector->capacity();
-  CoinIndexedVector * newVector = new CoinIndexedVector();
+  int oldCapacity = vector->capacity();
+  CoinIndexedVector *newVector = new CoinIndexedVector();
   newVector->setCapacity(fakeCapacity);
-  newVector->setDenseVector(vector->denseVector()+oldCapacity);
-  newVector->setIndexVector(vector->getIndices()+
-			    oldCapacity+((oldCapacity+3)>>2));
+  newVector->setDenseVector(vector->denseVector() + oldCapacity);
+  newVector->setIndexVector(vector->getIndices() + oldCapacity + ((oldCapacity + 3) >> 2));
   vector->checkClean();
   newVector->checkClear();
   return newVector;
 }
-static void deleteFakeVector(CoinIndexedVector * vector,
-			     CoinIndexedVector * fakeVector)
+static void deleteFakeVector(CoinIndexedVector *vector,
+  CoinIndexedVector *fakeVector)
 {
-  int * index = vector->getIndices();
+  int *index = vector->getIndices();
   fakeVector->checkClear();
   fakeVector->setCapacity(0);
   fakeVector->setDenseVector(NULL);
@@ -348,25 +331,24 @@ static void deleteFakeVector(CoinIndexedVector * vector,
   vector->checkClean();
 }
 // Synchronize stuff
-void 
-AbcSimplexFactorization::synchronize(const ClpFactorization * otherFactorization,const AbcSimplex * model)
+void AbcSimplexFactorization::synchronize(const ClpFactorization *otherFactorization, const AbcSimplex *model)
 {
-  goDenseThreshold_=otherFactorization->goDenseThreshold();
-  goSmallThreshold_=otherFactorization->goSmallThreshold();
-  goLongThreshold_=otherFactorization->goOslThreshold();
+  goDenseThreshold_ = otherFactorization->goDenseThreshold();
+  goSmallThreshold_ = otherFactorization->goSmallThreshold();
+  goLongThreshold_ = otherFactorization->goOslThreshold();
   //forceOtherFactorization(otherFactorization->typeOfFactorization());
   goDenseOrSmall(model->numberRows());
-  maximumPivots(static_cast<int>(otherFactorization->maximumPivots()*1.2));
+  maximumPivots(static_cast< int >(otherFactorization->maximumPivots() * 1.2));
 #ifdef ABC_USE_COIN_FACTORIZATION
   // redo region sizes
-  int maximumRows=model->numberRows()+maximumPivots()+1;
+  int maximumRows = model->numberRows() + maximumPivots() + 1;
   int currentCapacity = model->usefulArray(0)->capacity();
-  int newCapacity = currentCapacity+maximumRows+3;
-  for (int i=0;i<ABC_NUMBER_USEFUL;i++) {
-    CoinPartitionedVector * vector = model->usefulArray(i);
+  int newCapacity = currentCapacity + maximumRows + 3;
+  for (int i = 0; i < ABC_NUMBER_USEFUL; i++) {
+    CoinPartitionedVector *vector = model->usefulArray(i);
     vector->reserve(newCapacity);
-    // zero 
-    CoinZeroN(vector->getIndices(),newCapacity);
+    // zero
+    CoinZeroN(vector->getIndices(), newCapacity);
     // but pretend old
     //vector->setCapacity(currentCapacity);
 #if 0 //ndef NDEBUG
@@ -394,15 +376,14 @@ extern int currentLengthR;
 extern int currentLengthU;
 extern int currentTakeoutU;
 #endif
-int
-AbcSimplexFactorization::factorize ( AbcSimplex * model,
-				     int solveType, bool valuesPass)
+int AbcSimplexFactorization::factorize(AbcSimplex *model,
+  int solveType, bool valuesPass)
 {
 #ifdef CLP_FACTORIZATION_INSTRUMENT
-  externalTimeStart=CoinCpuTime();
+  externalTimeStart = CoinCpuTime();
 #endif
-  model_= model;
-  AbcMatrix * matrix = model->abcMatrix();
+  model_ = model;
+  AbcMatrix *matrix = model->abcMatrix();
   int numberRows = model->numberRows();
   if (!numberRows)
     return 0;
@@ -410,48 +391,49 @@ AbcSimplexFactorization::factorize ( AbcSimplex * model,
   coinAbcFactorization_->setStatus(-99);
 #ifndef ABC_USE_COIN_FACTORIZATION
   const
-#endif 
-    int *  COIN_RESTRICT pivotVariable = model->pivotVariable();
+#endif
+    int *COIN_RESTRICT pivotVariable
+    = model->pivotVariable();
   //returns 0 -okay, -1 singular, -2 too many in basis */
   // allow dense
-  int solveMode = coinAbcFactorization_->solveMode()&1;
-  if (model->numberIterations()>model->baseIteration())
-    solveMode |= 9;  // was +8 - this allows dense
+  int solveMode = coinAbcFactorization_->solveMode() & 1;
+  if (model->numberIterations() > model->baseIteration())
+    solveMode |= 9; // was +8 - this allows dense
   else
     solveMode = 1; // try dense
   if (valuesPass)
     solveMode += 4;
   coinAbcFactorization_->setSolveMode(solveMode);
   while (status() < -98) {
-    
+
     int i;
     int numberBasic = 0;
     // Move pivot variables across if they look good
-    int *  COIN_RESTRICT pivotTemp = model->usefulArray(0)->getIndices();
+    int *COIN_RESTRICT pivotTemp = model->usefulArray(0)->getIndices();
 #ifndef NDEBUG
     model_->checkArrays();
 #endif
-    assert (!model->usefulArray(0)->getNumElements());
+    assert(!model->usefulArray(0)->getNumElements());
     // Seems to prefer things in order so quickest
     // way is to go though like this
     for (i = 0; i < numberRows; i++) {
-      if (pivotVariable[i]<numberRows)
-	pivotTemp[numberBasic++] = pivotVariable[i];
+      if (pivotVariable[i] < numberRows)
+        pivotTemp[numberBasic++] = pivotVariable[i];
     }
     numberSlacks_ = numberBasic;
     /* Put column basic variables into pivotVariable
     */
     for (i = 0; i < numberRows; i++) {
-      if (pivotVariable[i]>=numberRows)
-	pivotTemp[numberBasic++] = pivotVariable[i];
+      if (pivotVariable[i] >= numberRows)
+        pivotTemp[numberBasic++] = pivotVariable[i];
     }
     CoinBigIndex numberElements = numberSlacks_;
-    
+
     // compute how much in basis
     int numberColumnBasic = numberBasic - numberSlacks_;
-    
+
     numberElements += matrix->countBasis(pivotTemp + numberSlacks_,
-					 numberColumnBasic);
+      numberColumnBasic);
     //printf("Basis has %d slacks - size %d\n",numberSlacks_,numberElements);
     // Not needed for dense
     numberElements = 3 * numberBasic + 3 * numberElements + 20000;
@@ -462,20 +444,20 @@ AbcSimplexFactorization::factorize ( AbcSimplex * model,
     coinAbcFactorization_->gutsOfDestructor();
     coinAbcFactorization_->gutsOfInitialize(2);
 #endif
-    coinAbcFactorization_->getAreas ( numberRows,
-				    numberSlacks_ + numberColumnBasic, numberElements,
-				    2 * numberElements );
+    coinAbcFactorization_->getAreas(numberRows,
+      numberSlacks_ + numberColumnBasic, numberElements,
+      2 * numberElements);
 #if 0
     if (!model->numberIterations())
       printf("do I need destructor etc in getAreas?\n");
 #endif
     // Fill in counts so we can skip part of preProcess
     // This is NOT needed for dense but would be needed for later versions
-    CoinFactorizationDouble *  COIN_RESTRICT elementU;
-    int *  COIN_RESTRICT indexRowU;
-    CoinBigIndex *  COIN_RESTRICT startColumnU;
-    int *  COIN_RESTRICT numberInRow;
-    int *  COIN_RESTRICT numberInColumn;
+    CoinFactorizationDouble *COIN_RESTRICT elementU;
+    int *COIN_RESTRICT indexRowU;
+    CoinBigIndex *COIN_RESTRICT startColumnU;
+    int *COIN_RESTRICT numberInRow;
+    int *COIN_RESTRICT numberInColumn;
 #define slackValue 1.0
 #ifndef ABC_USE_COIN_FACTORIZATION
     elementU = coinAbcFactorization_->elements();
@@ -484,16 +466,16 @@ AbcSimplexFactorization::factorize ( AbcSimplex * model,
     numberInRow = coinAbcFactorization_->numberInRow();
     numberInColumn = coinAbcFactorization_->numberInColumn();
     coinAbcFactorization_->setNumberSlacks(numberSlacks_);
-    CoinZeroN ( numberInRow, numberRows  );
-    CoinZeroN ( numberInColumn, numberRows );
+    CoinZeroN(numberInRow, numberRows);
+    CoinZeroN(numberInColumn, numberRows);
 #else
     elementU = coinAbcFactorization_->elementU();
     indexRowU = coinAbcFactorization_->indexRowU();
     startColumnU = coinAbcFactorization_->startColumnU();
     numberInRow = coinAbcFactorization_->numberInRow();
     numberInColumn = coinAbcFactorization_->numberInColumn();
-    CoinZeroN ( numberInRow, coinAbcFactorization_->numberRows() + 1 );
-    CoinZeroN ( numberInColumn, coinAbcFactorization_->maximumColumnsExtra() + 1 );
+    CoinZeroN(numberInRow, coinAbcFactorization_->numberRows() + 1);
+    CoinZeroN(numberInColumn, coinAbcFactorization_->maximumColumnsExtra() + 1);
 #endif
     for (i = 0; i < numberSlacks_; i++) {
       int iRow = pivotTemp[i];
@@ -507,38 +489,38 @@ AbcSimplexFactorization::factorize ( AbcSimplex * model,
     // can change for gub so redo
     numberColumnBasic = numberRows - numberSlacks_;
     matrix->fillBasis(pivotTemp + numberSlacks_,
-		      numberColumnBasic,
-		      indexRowU,
-		      startColumnU + numberSlacks_,
-		      numberInRow,
-		      numberInColumn + numberSlacks_,
-		      elementU);
-    numberElements = startColumnU[numberRows-1]
-      + numberInColumn[numberRows-1];
+      numberColumnBasic,
+      indexRowU,
+      startColumnU + numberSlacks_,
+      numberInRow,
+      numberInColumn + numberSlacks_,
+      elementU);
+    numberElements = startColumnU[numberRows - 1]
+      + numberInColumn[numberRows - 1];
 #ifndef ABC_USE_COIN_FACTORIZATION
-    coinAbcFactorization_->preProcess ( );
-    coinAbcFactorization_->factor (model);
+    coinAbcFactorization_->preProcess();
+    coinAbcFactorization_->factor(model);
 #else
     // recompute number basic
     numberBasic = numberSlacks_ + numberColumnBasic;
     if (numberBasic)
-      numberElements = startColumnU[numberBasic-1]
-	+ numberInColumn[numberBasic-1];
+      numberElements = startColumnU[numberBasic - 1]
+        + numberInColumn[numberBasic - 1];
     else
       numberElements = 0;
     coinAbcFactorization_->setNumberElementsU(numberElements);
 #ifdef CLP_FACTORIZATION_NEW_TIMING
-    lastNumberPivots_=0;
-    effectiveStartNumberU_=numberElements-numberRows;
+    lastNumberPivots_ = 0;
+    effectiveStartNumberU_ = numberElements - numberRows;
     //printf("%d slacks,%d in U at beginning\n",
     //numberRowBasic,numberElements);
 #endif
     //saveFactorization("dump.d");
     if (coinAbcFactorization_->biasLU() >= 3 || coinAbcFactorization_->numberRows() != coinAbcFactorization_->numberColumns())
-      coinAbcFactorization_->preProcess ( 2 );
+      coinAbcFactorization_->preProcess(2);
     else
-      coinAbcFactorization_->preProcess ( 3 ); // no row copy
-    coinAbcFactorization_->factor (  );
+      coinAbcFactorization_->preProcess(3); // no row copy
+    coinAbcFactorization_->factor();
 #endif
 #if 0
     if (model_->numberIterations()==23) {
@@ -547,114 +529,112 @@ AbcSimplexFactorization::factorize ( AbcSimplex * model,
 	factor->show_self();
     }
 #endif
-    if (coinAbcFactorization_->status() == -1 &&
-	(coinAbcFactorization_->solveMode() & 1) != 0) {
+    if (coinAbcFactorization_->status() == -1 && (coinAbcFactorization_->solveMode() & 1) != 0) {
       int solveMode = coinAbcFactorization_->solveMode();
-      solveMode --; // so bottom will be 0
+      solveMode--; // so bottom will be 0
       coinAbcFactorization_->setSolveMode(solveMode);
       coinAbcFactorization_->setStatus(-99);
     } else if (coinAbcFactorization_->status() == -99) {
       // get more memory
-      coinAbcFactorization_->areaFactor( coinAbcFactorization_->areaFactor() * 2.0);
+      coinAbcFactorization_->areaFactor(coinAbcFactorization_->areaFactor() * 2.0);
     }
-    if (coinAbcFactorization_->status() == -99) 
+    if (coinAbcFactorization_->status() == -99)
       continue;
     // If we get here status is 0 or -1
     if (coinAbcFactorization_->status() == 0 && numberBasic == numberRows) {
 #ifndef ABC_USE_COIN_FACTORIZATION
       coinAbcFactorization_->postProcess(pivotTemp, model->pivotVariable());
 #else
-      const int * permuteBack = coinAbcFactorization_->permuteBack();
-      const int * back = coinAbcFactorization_->pivotColumnBack();
+      const int *permuteBack = coinAbcFactorization_->permuteBack();
+      const int *back = coinAbcFactorization_->pivotColumnBack();
       // Redo pivot order
       for (i = 0; i < numberRows; i++) {
-	int k = pivotTemp[i];
-	// so rowIsBasic[k] would be permuteBack[back[i]]
-	int j = permuteBack[back[i]];
-	//assert (pivotVariable[j] == -1);
-	pivotVariable[j] = k;
+        int k = pivotTemp[i];
+        // so rowIsBasic[k] would be permuteBack[back[i]]
+        int j = permuteBack[back[i]];
+        //assert (pivotVariable[j] == -1);
+        pivotVariable[j] = k;
       }
       // Set up permutation vector
       // these arrays start off as copies of permute
       // (and we could use permute_ instead of pivotColumn (not back though))
-      ClpDisjointCopyN ( coinAbcFactorization_->permute(), numberRows , coinAbcFactorization_->pivotColumn()  );
-      ClpDisjointCopyN ( coinAbcFactorization_->permuteBack(), numberRows , coinAbcFactorization_->pivotColumnBack()  );
+      ClpDisjointCopyN(coinAbcFactorization_->permute(), numberRows, coinAbcFactorization_->pivotColumn());
+      ClpDisjointCopyN(coinAbcFactorization_->permuteBack(), numberRows, coinAbcFactorization_->pivotColumnBack());
       // See if worth going sparse and when
       coinAbcFactorization_->checkSparse();
 #ifdef CLP_FACTORIZATION_NEW_TIMING
-      endLengthU_ = coinAbcFactorization_->numberElements() - 
-	coinAbcFactorization_->numberDense()*coinAbcFactorization_->numberDense()
-	-coinAbcFactorization_->numberElementsL();
+      endLengthU_ = coinAbcFactorization_->numberElements() - coinAbcFactorization_->numberDense() * coinAbcFactorization_->numberDense()
+        - coinAbcFactorization_->numberElementsL();
 #endif
 #endif
       model_->moveToBasic();
-    } else if (solveType == 0 || solveType == 2/*||solveType==1*/) {
+    } else if (solveType == 0 || solveType == 2 /*||solveType==1*/) {
       // Change pivotTemp to be correct list
       anyChanged = true;
       coinAbcFactorization_->makeNonSingular(pivotTemp);
-      const double *  COIN_RESTRICT lowerArray = model->lowerRegion();
-      const double *  COIN_RESTRICT upperArray = model->upperRegion();
-      double *  COIN_RESTRICT solution = model->solutionRegion();
+      const double *COIN_RESTRICT lowerArray = model->lowerRegion();
+      const double *COIN_RESTRICT upperArray = model->upperRegion();
+      double *COIN_RESTRICT solution = model->solutionRegion();
       //int * pivotVariable=model_->pivotVariable();
       //int * fromExternal=model_->fromExternal();
-      int numberTotal=model_->numberTotal();
+      int numberTotal = model_->numberTotal();
       //can use external status_
-      unsigned char *  COIN_RESTRICT statusArray = model_->statusArray();
-      CoinAbcMemset0(statusArray,numberTotal);
-      for (int iRow=0;iRow<numberRows;iRow++) {
-	int iPivot=pivotVariable[iRow];
-	//if (iPivot!=pivotTemp[iRow])
-	//printf("row %d bad pivot %d good %d\n",iRow,iPivot,pivotTemp[iRow]);
-	statusArray[iPivot]=1;
+      unsigned char *COIN_RESTRICT statusArray = model_->statusArray();
+      CoinAbcMemset0(statusArray, numberTotal);
+      for (int iRow = 0; iRow < numberRows; iRow++) {
+        int iPivot = pivotVariable[iRow];
+        //if (iPivot!=pivotTemp[iRow])
+        //printf("row %d bad pivot %d good %d\n",iRow,iPivot,pivotTemp[iRow]);
+        statusArray[iPivot] = 1;
       }
-      for (int iRow=0;iRow<numberRows;iRow++) {
-	int iPivot=pivotTemp[iRow];
-	statusArray[iPivot]|=2;
+      for (int iRow = 0; iRow < numberRows; iRow++) {
+        int iPivot = pivotTemp[iRow];
+        statusArray[iPivot] |= 2;
       }
-      int jPivot=0;
+      int jPivot = 0;
       double largeValue = model->largeValue();
-      for (int iRow=0;iRow<numberRows;iRow++) {
-	int iPivot=pivotVariable[iRow];
-	if (statusArray[iPivot]==1) {
-	  // clean
-	  while (statusArray[jPivot]!=2) {
-	    jPivot++;
-	  }
-	  statusArray[iPivot]=0;
-	  statusArray[jPivot]=0;
+      for (int iRow = 0; iRow < numberRows; iRow++) {
+        int iPivot = pivotVariable[iRow];
+        if (statusArray[iPivot] == 1) {
+          // clean
+          while (statusArray[jPivot] != 2) {
+            jPivot++;
+          }
+          statusArray[iPivot] = 0;
+          statusArray[jPivot] = 0;
 #ifndef NDEBUG
-	  printf("On Row %d replacing %d by %d\n",iRow,iPivot,jPivot);
+          printf("On Row %d replacing %d by %d\n", iRow, iPivot, jPivot);
 #endif
-	  AbcSimplex::Status thisStatus;
-	  if (!valuesPass) {
-	    double lower = lowerArray[iPivot];
-	    double upper = upperArray[iPivot];
-	    double value = solution[iPivot];
-	    if (lower > -largeValue || upper < largeValue) {
-	      if (lower!=upper) {
-		if (fabs(value - lower) < fabs(value - upper)) {
-		  thisStatus=AbcSimplex::atLowerBound;
-		  solution[iPivot] = lower;
-		} else {
-		  thisStatus= AbcSimplex::atUpperBound;
-		  solution[iPivot] = upper;
-		}
-	      } else {
-		thisStatus= AbcSimplex::isFixed;
-	      }
-	    } else {
-	      thisStatus=AbcSimplex::isFree;
-	    }
-	  } else {
-	    thisStatus=AbcSimplex::superBasic;
-	  }
-	  model_->setInternalStatus(iPivot,thisStatus);
-	  model_->setInternalStatus(jPivot,AbcSimplex::basic);
-	  // swap (solution will be wrong - but that doesn't matter as basic)
-	  model_->swap(iRow,jPivot);
-	}
+          AbcSimplex::Status thisStatus;
+          if (!valuesPass) {
+            double lower = lowerArray[iPivot];
+            double upper = upperArray[iPivot];
+            double value = solution[iPivot];
+            if (lower > -largeValue || upper < largeValue) {
+              if (lower != upper) {
+                if (fabs(value - lower) < fabs(value - upper)) {
+                  thisStatus = AbcSimplex::atLowerBound;
+                  solution[iPivot] = lower;
+                } else {
+                  thisStatus = AbcSimplex::atUpperBound;
+                  solution[iPivot] = upper;
+                }
+              } else {
+                thisStatus = AbcSimplex::isFixed;
+              }
+            } else {
+              thisStatus = AbcSimplex::isFree;
+            }
+          } else {
+            thisStatus = AbcSimplex::superBasic;
+          }
+          model_->setInternalStatus(iPivot, thisStatus);
+          model_->setInternalStatus(jPivot, AbcSimplex::basic);
+          // swap (solution will be wrong - but that doesn't matter as basic)
+          model_->swap(iRow, jPivot);
+        }
       }
-      CoinAbcMemcpy(model_->pivotVariable(),pivotTemp,numberRows);
+      CoinAbcMemcpy(model_->pivotVariable(), pivotTemp, numberRows);
 #ifndef NDEBUG
       model_->checkConsistentPivots();
 #endif
@@ -664,9 +644,9 @@ AbcSimplexFactorization::factorize ( AbcSimplex * model,
     }
   }
   //coinAbcFactorization_->setSolveMode(solveMode|1);
-  if ( anyChanged && model->algorithm() < 0 && solveType > 0) {
+  if (anyChanged && model->algorithm() < 0 && solveType > 0) {
     double dummyCost;
-    static_cast<AbcSimplexDual *> (model)->changeBounds(3,dummyCost);
+    static_cast< AbcSimplexDual * >(model)->changeBounds(3, dummyCost);
   }
   return coinAbcFactorization_->status();
 }
@@ -737,15 +717,14 @@ AbcSimplexFactorization::replaceColumn ( const AbcSimplex * model,
 #endif
 /* Replaces one Column to basis,
    partial update already in U */
-void 
-AbcSimplexFactorization::replaceColumnPart3 ( const AbcSimplex * model,
-					      CoinIndexedVector * regionSparse,
-					      CoinIndexedVector * tableauColumn,
-					      int pivotRow,
-#ifdef ABC_LONG_FACTORIZATION 
-					      long
+void AbcSimplexFactorization::replaceColumnPart3(const AbcSimplex *model,
+  CoinIndexedVector *regionSparse,
+  CoinIndexedVector *tableauColumn,
+  int pivotRow,
+#ifdef ABC_LONG_FACTORIZATION
+  long
 #endif
-					      double alpha )
+  double alpha)
 {
 #ifndef ABC_USE_COIN_FACTORIZATION
   bool tab = coinAbcFactorization_->wantsTableauColumn();
@@ -753,53 +732,52 @@ AbcSimplexFactorization::replaceColumnPart3 ( const AbcSimplex * model,
   tempInfo[0] = model->numberIterations();
   coinAbcFactorization_->setUsefulInformation(tempInfo, 1);
   if (tab)
-    coinAbcFactorization_->replaceColumnPart3(model,NULL,tableauColumn,
-				       pivotRow,
-					      tableauColumn->denseVector()[pivotRow]);
+    coinAbcFactorization_->replaceColumnPart3(model, NULL, tableauColumn,
+      pivotRow,
+      tableauColumn->denseVector()[pivotRow]);
   else
-    coinAbcFactorization_->replaceColumnPart3(model,regionSparse,NULL,
-					      pivotRow,
-					      alpha);
+    coinAbcFactorization_->replaceColumnPart3(model, regionSparse, NULL,
+      pivotRow,
+      alpha);
 #else
 #ifdef CLP_FACTORIZATION_NEW_TIMING
-  int nOld=0;
-  int nNew=0;
+  int nOld = 0;
+  int nNew = 0;
   int seq;
-  const CoinPackedMatrix * matrix=model->matrix();
-  const int * columnLength = matrix->getVectorLengths();
-  seq=model->sequenceIn();
-  if (seq>=0&&seq<model->numberColumns()+model->numberRows()) {
-    if (seq<model->numberRows())
-      nNew=1;
+  const CoinPackedMatrix *matrix = model->matrix();
+  const int *columnLength = matrix->getVectorLengths();
+  seq = model->sequenceIn();
+  if (seq >= 0 && seq < model->numberColumns() + model->numberRows()) {
+    if (seq < model->numberRows())
+      nNew = 1;
     else
-      nNew=columnLength[seq-model->numberRows()];
+      nNew = columnLength[seq - model->numberRows()];
   }
-  seq=model->sequenceOut();
-  if (seq>=0&&seq<model->numberColumns()+model->numberRows()) {
-    if (seq<model->numberRows())
-      nOld=1;
+  seq = model->sequenceOut();
+  if (seq >= 0 && seq < model->numberColumns() + model->numberRows()) {
+    if (seq < model->numberRows())
+      nOld = 1;
     else
-      nOld=columnLength[seq-model->numberRows()];
+      nOld = columnLength[seq - model->numberRows()];
   }
-  effectiveStartNumberU_ += nNew-nOld;
+  effectiveStartNumberU_ += nNew - nOld;
 #endif
   coinAbcFactorization_->replaceColumnPart3(regionSparse,
-					      pivotRow,
-					      alpha);
+    pivotRow,
+    alpha);
 #endif
 }
 /* Replaces one Column to basis,
    partial update in vector */
-void 
-AbcSimplexFactorization::replaceColumnPart3 ( const AbcSimplex * model,
-					      CoinIndexedVector * regionSparse,
-					      CoinIndexedVector * tableauColumn,
-					      CoinIndexedVector * partialUpdate,
-					      int pivotRow,
-#ifdef ABC_LONG_FACTORIZATION 
-					      long
+void AbcSimplexFactorization::replaceColumnPart3(const AbcSimplex *model,
+  CoinIndexedVector *regionSparse,
+  CoinIndexedVector *tableauColumn,
+  CoinIndexedVector *partialUpdate,
+  int pivotRow,
+#ifdef ABC_LONG_FACTORIZATION
+  long
 #endif
-					      double alpha )
+  double alpha)
 {
 #ifndef ABC_USE_COIN_FACTORIZATION
   bool tab = coinAbcFactorization_->wantsTableauColumn();
@@ -807,17 +785,17 @@ AbcSimplexFactorization::replaceColumnPart3 ( const AbcSimplex * model,
   tempInfo[0] = model->numberIterations();
   coinAbcFactorization_->setUsefulInformation(tempInfo, 1);
   if (tab)
-    coinAbcFactorization_->replaceColumnPart3(model,NULL,tableauColumn,
-					      pivotRow,
-					      tableauColumn->denseVector()[pivotRow]);
+    coinAbcFactorization_->replaceColumnPart3(model, NULL, tableauColumn,
+      pivotRow,
+      tableauColumn->denseVector()[pivotRow]);
   else
-    coinAbcFactorization_->replaceColumnPart3(model,regionSparse,NULL,partialUpdate,
-					      pivotRow,
-					      alpha);
+    coinAbcFactorization_->replaceColumnPart3(model, regionSparse, NULL, partialUpdate,
+      pivotRow,
+      alpha);
 #else
-    coinAbcFactorization_->replaceColumnPart3(regionSparse,partialUpdate,
-					      pivotRow,
-					      alpha);
+  coinAbcFactorization_->replaceColumnPart3(regionSparse, partialUpdate,
+    pivotRow,
+    alpha);
 #endif
 }
 #if 0
@@ -904,8 +882,7 @@ AbcSimplexFactorization::updateWeights ( CoinIndexedVector & regionSparse) const
 }
 #endif
 /* makes a row copy of L for speed and to allow very sparse problems */
-void
-AbcSimplexFactorization::goSparse()
+void AbcSimplexFactorization::goSparse()
 {
 #ifdef ABC_USE_COIN_FACTORIZATION
   // sparse methods
@@ -917,38 +894,39 @@ AbcSimplexFactorization::goSparse()
 #endif
 }
 // Set tolerances to safer of existing and given
-void
-AbcSimplexFactorization::saferTolerances (  double zeroValue,
-					    double pivotValue)
+void AbcSimplexFactorization::saferTolerances(double zeroValue,
+  double pivotValue)
 {
   double newValue1;
   // better to have small tolerance even if slower
   if (zeroValue > 0.0)
     newValue1 = zeroValue;
   else
-    newValue1 = -zeroTolerance() * zeroValue; 
-  newValue1 = CoinMin(zeroTolerance(),newValue1);
-  if (newValue1>1.0e-15)
+    newValue1 = -zeroTolerance() * zeroValue;
+  newValue1 = CoinMin(zeroTolerance(), newValue1);
+  if (newValue1 > 1.0e-15)
     zeroTolerance(newValue1);
-  double  newValue2;
+  double newValue2;
   // better to have large tolerance even if slower
   if (pivotValue > 0.0)
     newValue2 = pivotValue;
   else
     newValue2 = -pivotTolerance() * pivotValue;
-  newValue2 =CoinMin(CoinMax(pivotTolerance(), newValue2), 0.999);
-  if (newValue2>pivotTolerance()) {
+  newValue2 = CoinMin(CoinMax(pivotTolerance(), newValue2), 0.999);
+  if (newValue2 > pivotTolerance()) {
     pivotTolerance(newValue2);
     char line[100];
-    sprintf(line,"new zero tolerance %g new pivot tolerance %g",
-	    zeroTolerance(),pivotTolerance());
-    model_->messageHandler()->message(CLP_GENERAL2,*model_->messagesPointer())
+    sprintf(line, "new zero tolerance %g new pivot tolerance %g",
+      zeroTolerance(), pivotTolerance());
+    model_->messageHandler()->message(CLP_GENERAL2, *model_->messagesPointer())
       << line << CoinMessageEol;
   }
 }
 // Sets factorization
-void
-AbcSimplexFactorization::setFactorization(AbcSimplexFactorization & rhs)
+void AbcSimplexFactorization::setFactorization(AbcSimplexFactorization &rhs)
 {
   AbcSimplexFactorization::operator=(rhs);
 }
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

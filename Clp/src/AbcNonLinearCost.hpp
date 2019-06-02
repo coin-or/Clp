@@ -6,7 +6,6 @@
 #ifndef AbcNonLinearCost_H
 #define AbcNonLinearCost_H
 
-
 #include "CoinPragma.hpp"
 #include "AbcCommon.hpp"
 
@@ -49,30 +48,29 @@ inline int currentStatus(unsigned char status)
 {
   return (status >> 4);
 }
-inline void setOriginalStatus(unsigned char & status, int value)
+inline void setOriginalStatus(unsigned char &status, int value)
 {
-  status = static_cast<unsigned char>(status & ~15);
-  status = static_cast<unsigned char>(status | value);
+  status = static_cast< unsigned char >(status & ~15);
+  status = static_cast< unsigned char >(status | value);
 }
 inline void setCurrentStatus(unsigned char &status, int value)
 {
-  status = static_cast<unsigned char>(status & ~(15 << 4));
-  status = static_cast<unsigned char>(status | (value << 4));
+  status = static_cast< unsigned char >(status & ~(15 << 4));
+  status = static_cast< unsigned char >(status | (value << 4));
 }
 inline void setInitialStatus(unsigned char &status)
 {
-  status = static_cast<unsigned char>(CLP_FEASIBLE | (CLP_SAME << 4));
+  status = static_cast< unsigned char >(CLP_FEASIBLE | (CLP_SAME << 4));
 }
 inline void setSameStatus(unsigned char &status)
 {
-  status = static_cast<unsigned char>(status & ~(15 << 4));
-  status = static_cast<unsigned char>(status | (CLP_SAME << 4));
+  status = static_cast< unsigned char >(status & ~(15 << 4));
+  status = static_cast< unsigned char >(status | (CLP_SAME << 4));
 }
 #endif
-class AbcNonLinearCost  {
-  
+class AbcNonLinearCost {
+
 public:
-  
   /**@name Constructors, destructor */
   //@{
   /// Default constructor.
@@ -81,16 +79,15 @@ public:
       This will just set up wasteful arrays for linear, but
       later may do dual analysis and even finding duplicate columns .
   */
-  AbcNonLinearCost(AbcSimplex * model);
+  AbcNonLinearCost(AbcSimplex *model);
   /// Destructor
   ~AbcNonLinearCost();
   // Copy
-  AbcNonLinearCost(const AbcNonLinearCost&);
+  AbcNonLinearCost(const AbcNonLinearCost &);
   // Assignment
-  AbcNonLinearCost& operator=(const AbcNonLinearCost&);
+  AbcNonLinearCost &operator=(const AbcNonLinearCost &);
   //@}
-  
-  
+
   /**@name Actual work in primal */
   //@{
   /** Changes infeasible costs and computes number and cost of infeas
@@ -101,14 +98,14 @@ public:
   /** Changes infeasible costs for each variable
       The indices are row indices and need converting to sequences
   */
-  void checkInfeasibilities(int numberInArray, const int * index);
+  void checkInfeasibilities(int numberInArray, const int *index);
   /** Puts back correct infeasible costs for each variable
       The input indices are row indices and need converting to sequences
       for costs.
       On input array is empty (but indices exist).  On exit just
       changed costs will be stored as normal CoinIndexedVector
   */
-  void checkChanged(int numberInArray, CoinIndexedVector * update);
+  void checkChanged(int numberInArray, CoinIndexedVector *update);
   /** Goes through one bound for each variable.
       If multiplier*work[iRow]>0 goes down, otherwise up.
       The indices are row indices and need converting to sequences
@@ -116,22 +113,22 @@ public:
       Rhs entries are increased
   */
   void goThru(int numberInArray, double multiplier,
-	      const int * index, const double * work,
-	      double * rhs);
+    const int *index, const double *work,
+    double *rhs);
   /** Takes off last iteration (i.e. offsets closer to 0)
    */
-  void goBack(int numberInArray, const int * index,
-	      double * rhs);
+  void goBack(int numberInArray, const int *index,
+    double *rhs);
   /** Puts back correct infeasible costs for each variable
       The input indices are row indices and need converting to sequences
       for costs.
       At the end of this all temporary offsets are zero
   */
-  void goBackAll(const CoinIndexedVector * update);
+  void goBackAll(const CoinIndexedVector *update);
   /// Temporary zeroing of feasible costs
   void zapCosts();
   /// Refreshes costs always makes row costs zero
-  void refreshCosts(const double * columnCosts);
+  void refreshCosts(const double *columnCosts);
   /// Puts feasible bounds into lower and upper
   void feasibleBounds();
   /// Refresh - assuming regions OK
@@ -155,18 +152,22 @@ public:
   /** Returns change in cost - one down if alpha >0.0, up if <0.0
       Value is current - new
   */
-  inline double changeInCost(int /*sequence*/, double alpha) const {
+  inline double changeInCost(int /*sequence*/, double alpha) const
+  {
     return (alpha > 0.0) ? infeasibilityWeight_ : -infeasibilityWeight_;
   }
-  inline double changeUpInCost(int /*sequence*/) const {
+  inline double changeUpInCost(int /*sequence*/) const
+  {
     return -infeasibilityWeight_;
   }
-  inline double changeDownInCost(int /*sequence*/) const {
+  inline double changeDownInCost(int /*sequence*/) const
+  {
     return infeasibilityWeight_;
   }
   /// This also updates next bound
-  inline double changeInCost(int iRow, double alpha, double &rhs) {
-    int sequence=model_->pivotVariable()[iRow];
+  inline double changeInCost(int iRow, double alpha, double &rhs)
+  {
+    int sequence = model_->pivotVariable()[iRow];
     double returnValue = 0.0;
     unsigned char iStatus = status_[sequence];
     int iWhere = currentStatus(iStatus);
@@ -175,21 +176,21 @@ public:
     // rhs always increases
     if (iWhere == CLP_FEASIBLE) {
       if (alpha > 0.0) {
-	// going below
-	iWhere = CLP_BELOW_LOWER;
-	rhs = COIN_DBL_MAX;
+        // going below
+        iWhere = CLP_BELOW_LOWER;
+        rhs = COIN_DBL_MAX;
       } else {
-	// going above
-	iWhere = CLP_ABOVE_UPPER;
-	rhs = COIN_DBL_MAX;
+        // going above
+        iWhere = CLP_ABOVE_UPPER;
+        rhs = COIN_DBL_MAX;
       }
     } else if (iWhere == CLP_BELOW_LOWER) {
-      assert (alpha < 0);
+      assert(alpha < 0);
       // going feasible
       iWhere = CLP_FEASIBLE;
       rhs += bound_[sequence] - model_->upperRegion()[sequence];
     } else {
-      assert (iWhere == CLP_ABOVE_UPPER);
+      assert(iWhere == CLP_ABOVE_UPPER);
       // going feasible
       iWhere = CLP_FEASIBLE;
       rhs += model_->lowerRegion()[sequence] - bound_[sequence];
@@ -199,53 +200,63 @@ public:
     return returnValue;
   }
   //@}
-  
-  
+
   /**@name Gets and sets */
   //@{
   /// Number of infeasibilities
-  inline int numberInfeasibilities() const {
+  inline int numberInfeasibilities() const
+  {
     return numberInfeasibilities_;
   }
   /// Change in cost
-  inline double changeInCost() const {
+  inline double changeInCost() const
+  {
     return changeCost_;
   }
   /// Feasible cost
-  inline double feasibleCost() const {
+  inline double feasibleCost() const
+  {
     return feasibleCost_;
   }
   /// Feasible cost with offset and direction (i.e. for reporting)
   double feasibleReportCost() const;
   /// Sum of infeasibilities
-  inline double sumInfeasibilities() const {
+  inline double sumInfeasibilities() const
+  {
     return sumInfeasibilities_;
   }
   /// Largest infeasibility
-  inline double largestInfeasibility() const {
+  inline double largestInfeasibility() const
+  {
     return largestInfeasibility_;
   }
   /// Average theta
-  inline double averageTheta() const {
+  inline double averageTheta() const
+  {
     return averageTheta_;
   }
-  inline void setAverageTheta(double value) {
+  inline void setAverageTheta(double value)
+  {
     averageTheta_ = value;
   }
-  inline void setChangeInCost(double value) {
+  inline void setChangeInCost(double value)
+  {
     changeCost_ = value;
   }
   //@}
   ///@name Private functions to deal with infeasible regions
-  inline unsigned char * statusArray() const {
+  inline unsigned char *statusArray() const
+  {
     return status_;
   }
   inline int getCurrentStatus(int sequence)
-  {return (status_[sequence] >> 4);}
+  {
+    return (status_[sequence] >> 4);
+  }
   /// For debug
   void validate();
   //@}
-  
+
 private:
   /**@name Data members */
   //@{
@@ -266,17 +277,20 @@ private:
   /// Number of columns (mainly for checking and copy)
   int numberColumns_;
   /// Model
-  AbcSimplex * model_;
+  AbcSimplex *model_;
   /// Number of infeasibilities found
   int numberInfeasibilities_;
   // new stuff
   /// Contains status at beginning and current
-  unsigned char * status_;
+  unsigned char *status_;
   /// Bound which has been replaced in lower_ or upper_
-  double * bound_;
+  double *bound_;
   /// Feasible cost array
-  double * cost_;
+  double *cost_;
   //@}
 };
 
 #endif
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/
