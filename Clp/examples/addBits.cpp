@@ -165,9 +165,13 @@ int main(int argc, const char *argv[])
      // If small switch on error printing
      if (numberColumns < 50)
           build.setLogLevel(1);
-     int numberErrors = model2.loadProblem(build);
      // should fail as we never set multiplier
-     assert(numberErrors);
+     int numberErrors = model2.loadProblem(build);
+     if( numberErrors == 0 )
+     {
+        printf("%d errors from model2.loadProblem(build), but we expected some", numberErrors);
+        return 1;
+     }
      time3 = CoinCpuTime() - time2;
      // subtract out unsuccessful times
      time1 += time3;

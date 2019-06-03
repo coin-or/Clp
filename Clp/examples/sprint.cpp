@@ -65,7 +65,7 @@ int main(int argc, const char *argv[])
           memset(rowSolution, 0, numberRows * sizeof(double));
           model.times(1.0, columnSolution, rowSolution);
 
-          int * addStarts = new int [numberRows+1];
+          CoinBigIndex * addStarts = new CoinBigIndex [numberRows+1];
           int * addRow = new int[numberRows];
           double * addElement = new double[numberRows];
           const double * lower = model.rowLower();
@@ -120,6 +120,8 @@ int main(int argc, const char *argv[])
      // Just take this number of columns in small problem
      int smallNumberColumns = CoinMin(3 * numberRows, numberColumns);
      smallNumberColumns = CoinMax(smallNumberColumns, 3000);
+     // To stop seg faults on unsuitable problems
+     smallNumberColumns = CoinMin(smallNumberColumns,numberColumns);
      // We will be using all rows
      int * whichRows = new int [numberRows];
      for (int iRow = 0; iRow < numberRows; iRow++)

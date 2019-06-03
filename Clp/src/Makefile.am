@@ -8,17 +8,13 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-if COIN_HAS_OSI
-  SUBDIRS = OsiClp
-endif
-
 ########################################################################
 #                               libClp                                 #
 ########################################################################
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
-lib_LTLIBRARIES = libClp.la
+lib_LTLIBRARIES = libClp.la libClpSolver.la
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = \
@@ -69,7 +65,67 @@ libClp_la_SOURCES = \
 	ClpSimplexPrimal.cpp ClpSimplexPrimal.hpp \
 	ClpSolve.cpp ClpSolve.hpp \
 	Idiot.cpp Idiot.hpp \
-	IdiSolve.cpp
+	IdiSolve.cpp \
+	ClpCholeskyPardiso.cpp ClpCholeskyPardiso.hpp \
+	ClpPESimplex.cpp ClpPESimplex.hpp \
+        ClpPEPrimalColumnDantzig.cpp ClpPEPrimalColumnDantzig.hpp \
+ 	ClpPEPrimalColumnSteepest.cpp ClpPEPrimalColumnSteepest.hpp \
+ 	ClpPEDualRowDantzig.cpp ClpPEDualRowDantzig.hpp \
+ 	ClpPEDualRowSteepest.cpp ClpPEDualRowSteepest.hpp
+
+if COIN_HAS_ABC
+libClp_la_SOURCES += \
+	AbcCommon.hpp \
+	AbcDualRowDantzig.cpp AbcDualRowDantzig.hpp \
+	AbcDualRowPivot.cpp AbcDualRowPivot.hpp \
+	AbcDualRowSteepest.cpp AbcDualRowSteepest.hpp \
+	AbcMatrix.cpp AbcMatrix.hpp \
+	AbcNonLinearCost.cpp AbcNonLinearCost.hpp \
+	AbcPrimalColumnDantzig.cpp AbcPrimalColumnDantzig.hpp \
+	AbcPrimalColumnPivot.cpp AbcPrimalColumnPivot.hpp \
+	AbcPrimalColumnSteepest.cpp AbcPrimalColumnSteepest.hpp \
+	AbcSimplex.cpp AbcSimplex.hpp \
+	AbcSimplexDual.cpp AbcSimplexDual.hpp \
+	AbcSimplexPrimal.cpp AbcSimplexPrimal.hpp \
+	AbcSimplexParallel.cpp \
+	AbcSimplexFactorization.cpp AbcSimplexFactorization.hpp \
+	AbcWarmStart.cpp AbcWarmStart.hpp \
+	CoinAbcBaseFactorization.hpp \
+	CoinAbcBaseFactorization1.cpp \
+	CoinAbcBaseFactorization2.cpp \
+	CoinAbcBaseFactorization3.cpp \
+	CoinAbcBaseFactorization4.cpp \
+	CoinAbcBaseFactorization5.cpp \
+	CoinAbcCommonFactorization.hpp \
+	CoinAbcCommon.hpp \
+	CoinAbcDenseFactorization.cpp \
+	CoinAbcDenseFactorization.hpp \
+	CoinAbcFactorization.hpp \
+	CoinAbcFactorization1.cpp \
+	CoinAbcFactorization2.cpp \
+	CoinAbcFactorization3.cpp \
+	CoinAbcFactorization4.cpp \
+	CoinAbcFactorization5.cpp \
+	CoinAbcHelperFunctions.cpp CoinAbcHelperFunctions.hpp \
+	CoinAbcOrderedFactorization1.cpp \
+	CoinAbcOrderedFactorization2.cpp \
+	CoinAbcOrderedFactorization3.cpp \
+	CoinAbcOrderedFactorization4.cpp \
+	CoinAbcOrderedFactorization5.cpp \
+	CoinAbcSmallFactorization1.cpp \
+	CoinAbcSmallFactorization2.cpp \
+	CoinAbcSmallFactorization3.cpp \
+	CoinAbcSmallFactorization4.cpp \
+	CoinAbcSmallFactorization5.cpp
+endif
+
+libClpSolver_la_SOURCES = \
+	ClpSolver.cpp \
+	CbcOrClpParam.cpp CbcOrClpParam.hpp \
+	Clp_ampl.cpp Clp_ampl.h \
+	MyEventHandler.cpp MyEventHandler.hpp \
+	MyMessageHandler.cpp MyMessageHandler.hpp \
+	unitTest.cpp
 
 # if AMD, CHOLMOD, or GLPK is available, then compile ClpCholeskyUfl.cpp
 if COIN_HAS_AMD
@@ -92,8 +148,15 @@ if COIN_HAS_WSMP
 libClp_la_SOURCES += ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.cpp ClpCholeskyWssmpKKT.hpp
 endif
 
+# List all additionally required libraries
+if DEPENDENCY_LINKING
+libClp_la_LIBADD = $(CLPLIB_LIBS)
+libClpSolver_la_LIBADD = $(CLPLIB_LIBS) libClp.la
+endif
+
 # This is for libtool
 libClp_la_LDFLAGS = $(LT_LDFLAGS) -module
+libClpSolver_la_LDFLAGS = $(LT_LDFLAGS)
 
 # Let's try adding the dependencies, eh?
 libClp_la_LIBADD = $(CLPLIB_LIBS)
@@ -107,18 +170,13 @@ libClp_la_LIBADD = $(CLPLIB_LIBS)
 bin_PROGRAMS = clp
 
 # List all source files for this executable, including headers
-clp_SOURCES = \
-	ClpMain.cpp \
-	CbcOrClpParam.cpp CbcOrClpParam.hpp \
-	MyEventHandler.cpp MyEventHandler.hpp \
-	MyMessageHandler.cpp MyMessageHandler.hpp \
-	unitTest.cpp
+clp_SOURCES = ClpMain.cpp 
 
 # List all additionally required libraries
-clp_LDADD = libClp.la $(CLPLIB_LIBS)
+clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
 
 # List all dependency libraries (similar to LDADD, but without -l, -L flags)
-clp_DEPENDENCIES = libClp.la $(CLPLIB_DEPENDENCIES)
+clp_DEPENDENCIES = libClpSolver.la libClp.la $(CLPLIB_DEPENDENCIES)
 
 ########################################################################
 #                            Additional flags                          #
@@ -183,10 +241,21 @@ includecoin_HEADERS = \
 	ClpSimplex.hpp \
 	ClpSimplexNonlinear.hpp \
 	ClpSimplexOther.hpp \
+	ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
 	CbcOrClpParam.hpp \
-	Idiot.hpp
+	Idiot.hpp \
+	ClpCholeskyPardiso.hpp \
+	ClpPESimplex.hpp \
+        ClpPEPrimalColumnDantzig.hpp \
+        ClpPEPrimalColumnSteepest.hpp \
+        ClpPEDualRowDantzig.hpp \
+        ClpPEDualRowSteepest.hpp
+
+if COIN_HAS_ABC
+includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
+endif
 
 
 # if AMD, CHOLMOD, or GLPK is available, then install ClpCholeskyUfl.hpp (for advanced users)
@@ -210,8 +279,23 @@ if COIN_HAS_WSMP
 includecoin_HEADERS += ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp
 endif
 
-# needed by Cbc
+# needed by Clp
 includecoin_HEADERS += CbcOrClpParam.cpp
+
+########################################################################
+#                     Installing manifest (MSVC++)                     #
+########################################################################
+
+if COIN_CXX_IS_CL
+install-exec-hook:
+	test -s clp.exe.manifest && \
+	mt -manifest clp.exe.manifest -outputresource:clp.exe;\
+	cp clp.exe $(bindir)/clp.exe
+endif
+
+#######################################################################
+# Create the Config.h file that has all public defines and install it #
+#######################################################################
 
 install-exec-local:
 	$(install_sh_DATA) config_clp.h $(DESTDIR)$(includecoindir)/ClpConfig.h

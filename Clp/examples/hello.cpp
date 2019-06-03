@@ -51,7 +51,7 @@ int main(int argc, const char *argv[])
      x[numberColumns] = '\0';
      for (iRow = 0; iRow < numberRows; iRow++) {
           memset(x, ' ', numberColumns);
-          for (int k = rowStart[iRow]; k < rowStart[iRow] + rowLength[iRow]; k++) {
+          for (CoinBigIndex k = rowStart[iRow]; k < rowStart[iRow] + rowLength[iRow]; k++) {
                int iColumn = column[k];
                x[iColumn] = 'x';
           }

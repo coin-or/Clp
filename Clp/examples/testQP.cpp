@@ -24,27 +24,27 @@ int main(int argc, const char *argv[])
           CoinMpsIO  m;
 #if defined(SAMPLEDIR)
           int status = m.readMps(SAMPLEDIR "/share2qp", "mps");
-#else
-          fprintf(stderr, "Do not know where to find sample MPS files.\n");
-          exit(1);
-#endif
           if (status) {
                printf("errors on input\n");
                exit(77);
           }
+#else
+          fprintf(stderr, "Do not know where to find sample MPS files.\n");
+          exit(1);
+#endif
           ClpInterior model;
           model.loadProblem(*m.getMatrixByCol(), m.getColLower(), m.getColUpper(),
                             m.getObjCoefficients(),
                             m.getRowLower(), m.getRowUpper());
           // get quadratic part
-          int * start = NULL;
+          CoinBigIndex * start = NULL;
           int * column = NULL;
           double * element = NULL;
           m.readQuadraticMps(NULL, start, column, element, 2);
           int j;
           for (j = 0; j < 79; j++) {
                if (start[j] < start[j+1]) {
-                    int i;
+                    CoinBigIndex i;
                     printf("Column %d ", j);
                     for (i = start[j]; i < start[j+1]; i++) {
                          printf("( %d, %g) ", column[i], element[i]);

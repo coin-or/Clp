@@ -32,44 +32,45 @@ for terms of use
 class ClpCholeskyUfl : public ClpCholeskyBase {
 
 public:
-     /**@name Virtual methods that the derived classes provides  */
-     //@{
-     /** Orders rows and saves pointer to matrix.and model.
+  /**@name Virtual methods that the derived classes provides  */
+  //@{
+  /** Orders rows and saves pointer to matrix.and model.
       Returns non-zero if not enough memory */
-     virtual int order(ClpInterior * model) ;
-     /** Does Symbolic factorization given permutation using CHOLMOD (if available).
+  virtual int order(ClpInterior *model);
+  /** Does Symbolic factorization given permutation using CHOLMOD (if available).
          This is called immediately after order.  If user provides this then
          user must provide factorize and solve.  Otherwise the default factorization is used
          returns non-zero if not enough memory. */
-     virtual int symbolic();
-     /** Factorize - filling in rowsDropped and returning number dropped using CHOLMOD (if available).
+  virtual int symbolic();
+  /** Factorize - filling in rowsDropped and returning number dropped using CHOLMOD (if available).
          If return code negative then out of memory */
-     virtual int factorize(const double * diagonal, int * rowsDropped) ;
-     /** Uses factorization to solve. Uses CHOLMOD (if available). */
-     virtual void solve (double * region) ;
-     //@}
+  virtual int factorize(const double *diagonal, int *rowsDropped);
+  /** Uses factorization to solve. Uses CHOLMOD (if available). */
+  virtual void solve(double *region);
+  //@}
 
-
-     /**@name Constructors, destructor */
-     //@{
-     /** Constructor which has dense columns activated.
+  /**@name Constructors, destructor */
+  //@{
+  /** Constructor which has dense columns activated.
          Default is off. */
-     ClpCholeskyUfl(int denseThreshold = -1);
-     /** Destructor  */
-     virtual ~ClpCholeskyUfl();
-     /// Clone
-     virtual ClpCholeskyBase * clone() const ;
-     //@}
-
+  ClpCholeskyUfl(int denseThreshold = -1);
+  /** Destructor  */
+  virtual ~ClpCholeskyUfl();
+  /// Clone
+  virtual ClpCholeskyBase *clone() const;
+  //@}
 
 private:
-     cholmod_factor * L_ ;
-     cholmod_common * c_ ;
+  cholmod_factor *L_;
+  cholmod_common *c_;
 
-     // Copy
-     ClpCholeskyUfl(const ClpCholeskyUfl&);
-     // Assignment
-     ClpCholeskyUfl& operator=(const ClpCholeskyUfl&);
+  // Copy
+  ClpCholeskyUfl(const ClpCholeskyUfl &);
+  // Assignment
+  ClpCholeskyUfl &operator=(const ClpCholeskyUfl &);
 };
 
 #endif
+
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/

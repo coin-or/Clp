@@ -1,5 +1,8 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define to 1, 2, 3, or 4 if Aboca should be build. */
+#undef CLP_HAS_ABC
+
 /* SVN revision number of project */
 #undef CLP_SVN_REV
 
@@ -23,6 +26,9 @@
 
 /* Define to 1 if the AMD package is available */
 #undef COIN_HAS_AMD
+
+/* Define to 1 if the ASL package is available */
+#undef COIN_HAS_ASL
 
 /* If defined, the BLAS Library is available. */
 #undef COIN_HAS_BLAS

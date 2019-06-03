@@ -33,7 +33,7 @@ int main(int argc, const char *argv[])
      int originalNumberColumns = model.numberColumns();
      int numberRows = model.numberRows();
 
-     int * addStarts = new int [numberRows+1];
+     CoinBigIndex * addStarts = new CoinBigIndex [numberRows+1];
      int * addRow = new int[numberRows];
      double * addElement = new double[numberRows];
      double * newUpper = new double[numberRows];

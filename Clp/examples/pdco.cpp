@@ -16,6 +16,10 @@
 #include <assert.h>
 #include <cmath>
 
+// easy way to allow compiling all sources for this example within one file,
+// so no need to do something special in Makefile
+#include "myPdco.cpp"
+
 int main(int argc, const char *argv[])
 {
 

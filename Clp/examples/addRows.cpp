@@ -15,6 +15,7 @@
 
 int main(int argc, const char *argv[])
 {
+#if COIN_BIG_INDEX<2
      try {
           // Empty model
           ClpSimplex  model;
@@ -230,35 +231,35 @@ int main(int argc, const char *argv[])
                std::cout << std::setw(6) << iColumn << " ";
                value = columnPrimal[iColumn];
                if (fabs(value) < 1.0e5)
-                    std::cout << setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
                else
-                    std::cout << setiosflags(std::ios::scientific) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::scientific) << std::setw(14) << value;
                value = columnDual[iColumn];
                if (fabs(value) < 1.0e5)
-                    std::cout << setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
                else
-                    std::cout << setiosflags(std::ios::scientific) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::scientific) << std::setw(14) << value;
                value = columnLower[iColumn];
                if (fabs(value) < 1.0e5)
-                    std::cout << setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
                else
-                    std::cout << setiosflags(std::ios::scientific) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::scientific) << std::setw(14) << value;
                value = columnUpper[iColumn];
                if (fabs(value) < 1.0e5)
-                    std::cout << setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
                else
-                    std::cout << setiosflags(std::ios::scientific) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::scientific) << std::setw(14) << value;
                value = columnObjective[iColumn];
                if (fabs(value) < 1.0e5)
-                    std::cout << setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::fixed | std::ios::showpoint) << std::setw(14) << value;
                else
-                    std::cout << setiosflags(std::ios::scientific) << std::setw(14) << value;
+                    std::cout << std::setiosflags(std::ios::scientific) << std::setw(14) << value;
 
                std::cout << std::endl;
           }
           std::cout << "--------------------------------------" << std::endl;
           // Test CoinAssert
-          std::cout << "If Clp compiled with -g below should give assert, if with -O1 or COIN_ASSERT CoinError" << std::endl;
+          std::cout << "If Clp compiled without NDEBUG below should give assert, if with NDEBUG or COIN_ASSERT CoinError" << std::endl;
           model = modelSave;
           model.deleteRows(2, del);
           // Deliberate error
@@ -278,5 +279,8 @@ int main(int argc, const char *argv[])
           if (e.lineNumber() >= 0)
                std::cout << "This was from a CoinAssert" << std::endl;
      }
+#else
+     printf("addRows not available with COIN_BIG_INDEX=2\n");
+#endif
      return 0;
 }

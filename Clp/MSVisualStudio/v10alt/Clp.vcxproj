@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="DebugDLL|Win32">
@@ -267,6 +267,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\CbcOrClpParam.cpp" />
     <ClCompile Include="..\..\src\ClpMain.cpp" />
+    <ClCompile Include="..\..\src\ClpSolver.cpp" />
     <ClCompile Include="..\..\src\MyEventHandler.cpp" />
     <ClCompile Include="..\..\src\MyMessageHandler.cpp" />
     <ClCompile Include="..\..\src\unitTest.cpp" />

@@ -12,6 +12,7 @@
 #include "CoinMpsIO.hpp"
 int main(int argc, const char *argv[])
 {
+#if COIN_BIG_INDEX<2
      ClpSimplex  model;
      int status;
      int maxFactor = 100;
@@ -244,7 +245,7 @@ int main(int argc, const char *argv[])
                          lower, upper,
                          start2, row2, element2, cost2,
                          lowerColumn2, upperColumn2);
-               model2.replaceMatrix(newMatrix);
+               model2.replaceMatrix(newMatrix,true);
                newMatrix->switchOffCheck();
                newMatrix->setRefreshFrequency(1000);
           }
@@ -274,7 +275,7 @@ int main(int argc, const char *argv[])
                                 start2, row2, element2, cost2,
                                 lowerColumn2, upperColumn2,
                                 oldMatrix->gubRowStatus(), oldMatrix->dynamicStatus());
-               model3.replaceMatrix(newMatrix);
+               model3.replaceMatrix(newMatrix,true);
                // and ordinary status (but only NON gub rows)
                memcpy(model3.statusArray(), model2.statusArray(),
                       (newMatrix->numberStaticRows() + model3.numberColumns()) *sizeof(unsigned char));
@@ -292,7 +293,7 @@ int main(int argc, const char *argv[])
                                        lowerColumn2, upperColumn2,
                                        oldMatrix->gubRowStatus(), oldMatrix->dynamicStatus(),
                                        oldMatrix->numberGubColumns(), oldMatrix->idGen());
-               model3.replaceMatrix(newMatrix);
+               model3.replaceMatrix(newMatrix,true);
                // and ordinary status (but only NON gub rows)
                memcpy(model3.statusArray(), model2.statusArray(),
                       (newMatrix->numberStaticRows() + model3.numberColumns()) *sizeof(unsigned char));
@@ -417,7 +418,9 @@ int main(int argc, const char *argv[])
                FILE * fp = fopen("xx.sol", "w");
                fwrite(gubSolution, sizeof(double), numberTotalColumns, fp);
                fwrite(status, sizeof(char), numberTotalColumns, fp);
+#ifndef NDEBUG
                const double * rowsol = model2.primalRowSolution();
+#endif
                double * rowsol2 = new double[originalNumberRows];
                memset(rowsol2, 0, originalNumberRows * sizeof(double));
                model.times(1.0, gubSolution, rowsol2);
@@ -439,6 +442,9 @@ int main(int argc, const char *argv[])
           }
           printf("obj offset is %g\n", model2.objectiveOffset());
           printf("Primal took %g seconds\n", CoinCpuTime() - time1);
+     } else {
+       printf("No gub rows - this is just example code so exiting\n");
+       exit(77);
      }
      delete [] mark;
      delete [] gubStart;
@@ -447,5 +453,8 @@ int main(int argc, const char *argv[])
      delete [] whichGub;
      delete [] lower;
      delete [] upper;
+#else
+     printf("testGub2 not available with COIN_BIG_INDEX=2\n");
+#endif
      return 0;
 }

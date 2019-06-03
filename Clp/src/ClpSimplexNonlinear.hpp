@@ -28,42 +28,43 @@ class ClpConstraint;
 class ClpSimplexNonlinear : public ClpSimplexPrimal {
 
 public:
-
-     /**@name Description of algorithm */
-     //@{
-     /** Primal algorithms for reduced gradient
+  /**@name Description of algorithm */
+  //@{
+  /** Primal algorithms for reduced gradient
          At present we have two algorithms:
 
      */
-     /// A reduced gradient method.
-     int primal();
-     /** Primal algorithm for quadratic
+  /// A reduced gradient method.
+  int primal();
+  /** Primal algorithm for quadratic
+         Using a semi-trust region approach as for pooling problem
+         This is in because I have it lying around
+     */
+  int primalSLP(int numberPasses, double deltaTolerance,
+    int otherOptions = 0);
+  /// May use a cut approach for solving any LP
+  int primalDualCuts(char *rowsIn, int startUp, int algorithm);
+  /** Primal algorithm for nonlinear constraints
          Using a semi-trust region approach as for pooling problem
          This is in because I have it lying around
 
      */
-     int primalSLP(int numberPasses, double deltaTolerance);
-     /** Primal algorithm for nonlinear constraints
-         Using a semi-trust region approach as for pooling problem
-         This is in because I have it lying around
+  int primalSLP(int numberConstraints, ClpConstraint **constraints,
+    int numberPasses, double deltaTolerance);
 
-     */
-     int primalSLP(int numberConstraints, ClpConstraint ** constraints,
-                   int numberPasses, double deltaTolerance);
-
-     /** Creates direction vector.  note longArray is long enough
+  /** Creates direction vector.  note longArray is long enough
          for rows and columns.  If numberNonBasic 0 then is updated
          otherwise mode is ignored and those are used.
          Norms are only for those > 1.0e3*dualTolerance
          If mode is nonzero then just largest dj */
-     void directionVector (CoinIndexedVector * longArray,
-                           CoinIndexedVector * spare1, CoinIndexedVector * spare2,
-                           int mode,
-                           double & normFlagged, double & normUnflagged,
-                           int & numberNonBasic);
-     /// Main part.
-     int whileIterating (int & pivotMode);
-     /**
+  void directionVector(CoinIndexedVector *longArray,
+    CoinIndexedVector *spare1, CoinIndexedVector *spare2,
+    int mode,
+    double &normFlagged, double &normUnflagged,
+    int &numberNonBasic);
+  /// Main part.
+  int whileIterating(int &pivotMode);
+  /**
          longArray has direction
          pivotMode -
                0 - use all dual infeasible variables
@@ -75,14 +76,14 @@ public:
          3 - if time to re-factorize
          If sequenceIn_ >=0 then that will be incoming variable
      */
-     int pivotColumn(CoinIndexedVector * longArray,
-                     CoinIndexedVector * rowArray,
-                     CoinIndexedVector * columnArray,
-                     CoinIndexedVector * spare,
-                     int & pivotMode,
-                     double & solutionError,
-                     double * array1);
-     /**  Refactorizes if necessary
+  int pivotColumn(CoinIndexedVector *longArray,
+    CoinIndexedVector *rowArray,
+    CoinIndexedVector *columnArray,
+    CoinIndexedVector *spare,
+    int &pivotMode,
+    double &solutionError,
+    double *array1);
+  /**  Refactorizes if necessary
           Checks if finished.  Updates status.
           lastCleaned refers to iteration at which some objective/feasibility
           cleaning too place.
@@ -91,11 +92,11 @@ public:
                - 1 normal -if good update save
            - 2 restoring from saved
      */
-     void statusOfProblemInPrimal(int & lastCleaned, int type,
-                                  ClpSimplexProgress * progress,
-                                  bool doFactorization,
-                                  double & bestObjectiveWhenFlagged);
-     /** Do last half of an iteration.
+  void statusOfProblemInPrimal(int &lastCleaned, int type,
+    ClpSimplexProgress *progress,
+    bool doFactorization,
+    double &bestObjectiveWhenFlagged);
+  /** Do last half of an iteration.
          Return codes
          Reasons to come out normal mode
          -1 normal
@@ -107,9 +108,10 @@ public:
          +3 max iterations (iteration done)
 
      */
-     int pivotNonlinearResult();
-     //@}
-
+  int pivotNonlinearResult();
+  //@}
 };
 #endif
 
+/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
+*/
