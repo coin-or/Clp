@@ -12,7 +12,7 @@ environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       ARCH: win32-msvc9
-      HOST_ARCH_ARG: --enable-msvc=MD
+      HOST_ARCH_ARG: CC=cl CXX=cl
       ADD_PATH: /mingw64/bin
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       ARCH: win32-msvc14
