@@ -457,7 +457,8 @@ void CbcOrClpParam::printString() const
 void CoinReadPrintit(const char *input)
 {
   int length = static_cast< int >(strlen(input));
-  char temp[101];
+  assert(length <= 1000);
+  char temp[1001];
   int i;
   int n = 0;
   for (i = 0; i < length; i++) {
