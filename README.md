@@ -24,8 +24,42 @@ The project is currently managed by John Forrest, Lou Hafer, [Julian Hall](https
 
 The Clp website is https://github.com/coin-or/Clp.
 
-Clp is available in [Debian](http://packages.debian.org/search?searchon=sourcenames&keywords=clp) and [Ubuntu](https://launchpad.net/ubuntu/+source/clp).
+## CITE
 
+[![DOI](https://zenodo.org/badge/173496299.svg)](https://zenodo.org/badge/latestdoi/173496299)
+
+## CURRENT BUILD STATUS
+
+[![Build Status](https://travis-ci.org/coin-or/Clp.svg?branch=master)](https://travis-ci.org/coin-or/Clp)
+
+[![Build status](https://ci.appveyor.com/api/projects/status/h3daf7woiig6n176?svg=true)](https://ci.appveyor.com/project/tkralphs/clp-m0kud)
+
+## DOWNLOAD
+
+Binaries for most platforms are available for download from [Bintray](https://bintray.com/coin-or/download/Clp)
+
+[ ![Download](https://api.bintray.com/packages/coin-or/download/Cbc/images/download.svg?version=1.17) ](https://bintray.com/coin-or/download/Clp/1.17/link)
+
+ * *Linux*: On Debian/Ubuntu, Cbc is available in the package `coinor-clp` and can be installed with apt. On Fedora, Cbc is available in the package `coin-or-Clp`.
+ * *Windows*: The easiest way to get Cbc on Windows is to download from *[Bintray](https://bintray.com/coin-or/download/Clp)*, although an old interactive installer for the [COIN-OR Optimization Suite](http://www.coin-or.org/download/binary/CoinAll) is also still available.
+ * *Mac OS X*: The easiest way to get Cbc on Mac OS X is through [Homebrew](https://brew.sh).
+   * `brew tap coin-or-tools/coinor`
+   * `brew install clp`
+ * AMPL also provides stand-alone [Clp executables](http://ampl.com/products/solvers/open-source/#clp) that can be used with (or without) AMPL.
+ * The [GAMS](http://www.gams.com) distribution includes Clp.
+
+Due to license incompatibilities, pre-compiled binaries lack some functionality.
+If binaries are not available for your platform for the latest version and you would like to request them to be built and posted, feel free to let us know on the mailing list.
+
+*Source code* can be obtained either by
+
+ * Downloading a snapshot of the source code for the latest release version of Cbc from the [Clp source code download page](http://www.coin-or.org/download/source/Clp), or
+ * Checking out the code from [Github](https://github.com/coin-or/Clp) or using the `coinbrew` script (recommended). 
+
+Below is a quick start guide for building on common platforms. More detailed
+build instructions are
+[https://coin-or.github.io/user_introduction.html](here) (this is a work in
+progress).
 
 ## Getting Started using CoinBrew
 
