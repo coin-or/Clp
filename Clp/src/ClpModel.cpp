@@ -129,8 +129,8 @@ ClpModel::ClpModel(bool emptyMessages)
 
   dblParam_[ClpDualObjectiveLimit] = COIN_DBL_MAX;
   dblParam_[ClpPrimalObjectiveLimit] = COIN_DBL_MAX;
-  dblParam_[ClpDualTolerance] = 1e-7;
-  dblParam_[ClpPrimalTolerance] = 1e-7;
+  dblParam_[ClpDualTolerance] = 1e-6;
+  dblParam_[ClpPrimalTolerance] = 1e-6;
   dblParam_[ClpObjOffset] = 0.0;
   dblParam_[ClpMaxSeconds] = -1.0;
   dblParam_[ClpMaxWallSeconds] = -1.0;
