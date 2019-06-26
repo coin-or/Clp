@@ -1540,7 +1540,7 @@ are printed out on ?.");
     CbcOrClpParam p("allow!ableGap", "Stop when gap between best possible and \
 best less than this",
       0.0, COIN_DBL_MAX, CBC_PARAM_DBL_ALLOWABLEGAP);
-    p.setDoubleValue(0.0);
+    p.setDoubleValue(1e-10);
     p.setLonghelp(
       "If the gap between best known solution and the best possible solution is less than this \
 value, then the search will be terminated.  Also see ratioGap.");
@@ -3541,7 +3541,7 @@ are fixed and a small branch and bound is tried.");
     CbcOrClpParam p("ratio!Gap", "Stop when gap between best possible and \
 best known is less than this fraction of larger of two",
       0.0, COIN_DBL_MAX, CBC_PARAM_DBL_GAPRATIO);
-    p.setDoubleValue(0.0);
+    p.setDoubleValue(1e-4);
     p.setLonghelp(
       "If the gap between the best known solution and the best possible solution is less than this fraction \
 of the objective value at the root node then the search will terminate.  See 'allowableGap' for a \
