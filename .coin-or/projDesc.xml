@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type = "text/xsl" href = "http://www.coin-or.org/projects/autoGen.xsl"?>
+<projectData xmlns="coin-or.org" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="coin-or.org http://www.coin-or.org/projects/autoGen.xsd">
+  <projectBasics>
+    <projectName>CLP</projectName>
+    <projectRepo>Clp</projectRepo>
+    <projectDescription>
+      CLP is a high quality open-source LP solver.  Its main strengths
+      are its Dual and Primal Simplex algorithms.  It also has a
+      barrier algorithm for Linear and Quadratic objectives.  There are
+      limited facilities for Nonlinear and Quadratic objectives using
+      the Simplex algorithm.  It is available as a library and as a 
+      standalone solver. It was written by John Forrest, jjforre at us.ibm.com.
+    </projectDescription>
+    <projectShortDescription>
+      A simplex solver.
+    </projectShortDescription>
+    <projectManager>Julian Hall, jajhall@ed.ac.uk</projectManager>
+    <projectHomePage>https://github.com/coin-or/Clp</projectHomePage>
+    <projectLicense>Eclipse Public License 1.0</projectLicense>
+    <projectLicenseURL>http://www.opensource.org/licenses/eclipse-1.0</projectLicenseURL>
+    <coinLinkedProjects>
+      <coinProject>
+        <repoName>CoinUtils</repoName>
+      </coinProject>
+      <coinProject>
+        <repoName>Osi</repoName>
+      </coinProject>
+    </coinLinkedProjects>
+    <otherLinkedPackages>
+    </otherLinkedPackages>
+    <projectLanguage>C++</projectLanguage>
+    <developmentStatus>
+      <activityStatus>Active</activityStatus>
+      <maturityLevel>5</maturityLevel>
+    </developmentStatus>
+    <testedPlatforms>
+      <platform>
+        <operatingSystem>Microsoft Windows</operatingSystem>
+        <compiler>Visual Studio, cl</compiler>
+      </platform>
+      <platform>
+        <operatingSystem>Microsoft Windows / Cygwin / Msys / MinGW</operatingSystem>
+        <compiler>gcc, cl</compiler>
+      </platform>
+      <platform>
+        <operatingSystem>Linux</operatingSystem>
+        <compiler>gcc</compiler>
+      </platform>
+      <platform>
+        <operatingSystem>MacOS X</operatingSystem>
+        <compiler>gcc</compiler>
+      </platform>
+    </testedPlatforms>
+    <projectCategories>
+      <category>                                  
+        Optimization deterministic linear continuous
+      </category>
+    </projectCategories>
+  </projectBasics>
+  <leftMenuLinks>
+    <documentation>https://coin-or.github.io/Clp</documentation>
+    <sourceCodeDownload>http://www.coin-or.org/download/source/Clp</sourceCodeDownload>
+    <binaryDownload></binaryDownload>
+    <mailingList>http://list.coin-or.org/mailman/listinfo/clp</mailingList>
+  </leftMenuLinks>
+</projectData>
