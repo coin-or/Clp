@@ -375,6 +375,7 @@ int ClpDualRowSteepest::pivotRow()
     model_->setLargestDualError(0.0);
     // can't loop
     chosenRow = pivotRow();
+    number = infeasible_->getNumElements();
     model_->setLargestDualError(saveError);
   }
   if (chosenRow < 0 && lastPivotRow < 0) {
@@ -390,6 +391,9 @@ int ClpDualRowSteepest::pivotRow()
     infeasible_->setNumElements(nLeft);
     model_->setNumberPrimalInfeasibilities(nLeft);
   }
+#ifndef NDEBUG
+  //infeasible_->checkClean();
+#endif
   return chosenRow;
 }
 #if 0
