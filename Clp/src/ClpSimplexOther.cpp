@@ -7040,6 +7040,8 @@ int ClpSimplex::modifyCoefficientsAndPivot(int number,
         returnCode = 3; // refactorize
       }
     }
+
+    delete[] which2;
   }
   if (newStatus) {
     for (int i = 0; i < number; i++) {
