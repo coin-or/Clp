@@ -2533,6 +2533,59 @@ setting some parameters which may help you to think of possibilities.");
     parameters.push_back(p);
   }
   {
+    CbcOrClpParam p("merge!Cliques", "Whether to perform merging of cliques (before\
+      initial solve or after preprocessing)", "off", CBC_PARAM_STR_CLIQUEMERGING);
+    p.append("before");
+    p.append("after");
+    p.setLonghelp("This switches the merge cliques strategy to preprocess and produce a stronger formulation");
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("bkclique!Cuts", "Whether to use Bron-Kerbosch Clique cuts",
+                      "off", CBC_PARAM_STR_BKCLIQUECUTS);
+    p.append("on");
+    p.append("root");
+    p.append("ifmove");
+    p.append("forceOn");
+    p.append("onglobal");
+    p.setLonghelp("This switches on Bron-Kerbosch clique cuts (either at root or in entire tree) \
+                    See branchAndCut for information on options.");
+   parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("oddholewc!Cuts", "Whether to use odd wheel cuts",
+                      "off", CBC_PARAM_STR_ODDHOLEWCCUTS);
+    p.append("on");
+    p.append("root");
+    p.append("ifmove");
+    p.append("forceOn");
+    p.append("onglobal");
+    p.setLonghelp("This switches on odd wheel inequalities (either at root or in entire tree) \
+                  See branchAndCut for information on options.");
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("maxitbk", "Maximum number of iterations of Bron-Kerbosch \
+                      algorithm in Bron-Kerbosch Clique Separation routine",
+                        1, 2147483647, CBC_PARAM_INT_MAXITBK);
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("maxitbkext!ension", "Maximum number of iterations of Bron-Kerbosch \
+                      algorithm in extension module of Bron-Kerbosch Clique Separation routine",
+                        1, 2147483647, CBC_PARAM_INT_MAXITBKEXT);
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("clqext!method", "Maximum number of iterations of Bron-Kerbosch \
+                      algorithm in Bron-Kerbosch Clique Separation routine",
+                        0, 4, CBC_PARAM_INT_CLQEXTMETHOD);
+    p.setLonghelp("Sets the method used in the extension module \
+        of Aggressive Clique Separation routine. 0=no extension; 1=random extension; \
+        2=max degree extension; 3=greedy extension; 4=exact extension.");
+    parameters.push_back(p);
+  }
+  {
     CbcOrClpParam p("help", "Print out version, non-standard options and some help",
       CLP_PARAM_ACTION_HELP, 3);
     p.setLonghelp(
