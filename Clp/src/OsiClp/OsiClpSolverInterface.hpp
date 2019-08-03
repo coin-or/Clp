@@ -338,6 +338,7 @@ public:
   void stopFastDual();
   /// Sets integer tolerance and increment
   void setStuff(double tolerance, double increment);
+#ifdef CONFLICT_CUTS
   /// Return a conflict analysis cut from small model
   OsiRowCut *smallModelCut(const double *originalLower, const double *originalUpper,
     int numberRowsAtContinuous, const int *whichGenerator,
@@ -349,7 +350,7 @@ public:
     int numberRowsAtContinuous, const int *whichGenerator,
     int typeCut = 0);
   //@}
-
+#endif
   //---------------------------------------------------------------------------
   /**@name Problem information methods
      
