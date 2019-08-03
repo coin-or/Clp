@@ -174,8 +174,6 @@ public:
      and can be queried by other methods.
   */
   virtual void enableSimplexInterface(bool doingPrimal);
-  /// Copy across enabled stuff from one solver to another
-  void copyEnabledSuff(OsiClpSolverInterface &rhs);
 
   /*! \brief Undo setting changes made by #enableSimplexInterface */
   virtual void disableSimplexInterface();
