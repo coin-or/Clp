@@ -177,8 +177,6 @@ public:
 
   /*! \brief Undo setting changes made by #enableSimplexInterface */
   virtual void disableSimplexInterface();
-  /// Copy across enabled stuff from one solver to another
-  void copyEnabledStuff(ClpSimplex &rhs);
 
   /** Perform a pivot by substituting a colIn for colOut in the basis. 
       The status of the leaving variable is given in statOut. Where
