@@ -131,9 +131,6 @@ int mainTest(int argc, const char *argv[], int algorithm,
 #endif
 static void statistics(ClpSimplex *originalModel, ClpSimplex *model);
 static void generateCode(const char *fileName, int type);
-// Returns next valid field
-int CbcOrClpRead_mode = 1;
-FILE *CbcOrClpReadCommand = stdin;
 // Alternative to environment
 extern char *alternativeEnvironment;
 extern int CbcOrClpEnvironmentIndex;
@@ -353,7 +350,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         printf("Unable to handle integer problems\n");
         return 1;
       }
-      CbcOrClpRead_mode = 2; // so will start with parameters
+      setCbcOrClpReadMode(2); // so will start with parameters
       // see if log in list (including environment)
       for (int i = 1; i < info.numberArguments; i++) {
         if (!strcmp(info.arguments[i], "log")) {
@@ -1533,7 +1530,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               totalTime += time2 - time1;
               time1 = time2;
               // Go to canned file if just input file
-              if (CbcOrClpRead_mode == 2 && argc == 2) {
+              if (getCbcOrClpReadMode() == 2 && argc == 2) {
                 // only if ends .mps
                 char *find = const_cast< char * >(strstr(fileName.c_str(), ".mps"));
                 if (find && find[4] == '\0') {
@@ -1542,8 +1539,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                   find[3] = 'r';
                   FILE *fp = fopen(fileName.c_str(), "r");
                   if (fp) {
-                    CbcOrClpReadCommand = fp; // Read from that file
-                    CbcOrClpRead_mode = -1;
+                    setCbcOrClpReadCommand(fp); // Read from that file
+                    setCbcOrClpReadMode(-1);
                   }
                 }
               }
@@ -2091,7 +2088,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           }
         } break;
         case CLP_PARAM_ACTION_STDIN:
-          CbcOrClpRead_mode = -1;
+          setCbcOrClpReadMode(-1);
           break;
         case CLP_PARAM_ACTION_NETLIB_DUAL:
         case CLP_PARAM_ACTION_NETLIB_EITHER:

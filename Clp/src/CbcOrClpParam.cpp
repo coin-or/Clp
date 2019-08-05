@@ -61,6 +61,12 @@ void setCbcOrClpPrinting(bool yesNo)
 {
   doPrinting = yesNo;
 }
+// Returns next valid field
+static int CbcOrClpRead_mode = 1;
+static FILE *CbcOrClpReadCommand = stdin;
+int getCbcOrClpReadMode() { return CbcOrClpRead_mode; }
+void setCbcOrClpReadMode(int mode) { CbcOrClpRead_mode = mode; }
+void setCbcOrClpReadCommand(FILE* f) { CbcOrClpReadCommand = f; }
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################

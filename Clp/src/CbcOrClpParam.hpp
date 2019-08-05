@@ -573,6 +573,10 @@ int CoinReadGetIntField(int argc, const char *argv[], int *valid);
 double CoinReadGetDoubleField(int argc, const char *argv[], int *valid);
 void CoinReadPrintit(const char *input);
 void setCbcOrClpPrinting(bool yesNo);
+int getCbcOrClpReadMode();
+void setCbcOrClpReadMode(int mode);
+void setCbcOrClpReadCommand(FILE* f);
+
 #define CBCMAXPARAMETERS 250
 /*
   Subroutine to establish the cbc parameter array. See the description of
