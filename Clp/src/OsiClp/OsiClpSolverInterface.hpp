@@ -968,7 +968,6 @@ public:
   /// This loads a model from a coinModel object - returns number of errors
   virtual int loadFromCoinModel(CoinModel &modelObject, bool keepSolution = false);
 
-  using OsiSolverInterface::readMps;
   /** Read an mps file from the given filename (defaults to Osi reader) - returns
       number of errors (see OsiMpsReader class) */
   virtual int readMps(const char *filename,
