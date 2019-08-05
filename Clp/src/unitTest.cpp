@@ -72,7 +72,7 @@ extern double largeRowsCount;
 //#############################################################################
 
 // Function Prototypes. Function definitions is in this file.
-void testingMessage(const char *const msg);
+static void testingMessage(const char *const msg);
 #if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
 static int barrierAvailable = 1;
 static std::string nameBarrier = "barrier-UFL";
@@ -1396,7 +1396,7 @@ int mainTest(int argc, const char *argv[], int algorithm,
 }
 
 // Display message on stdout and stderr
-void testingMessage(const char *const msg)
+static void testingMessage(const char *const msg)
 {
   std::cerr << msg;
   //cout <<endl <<"*****************************************"
