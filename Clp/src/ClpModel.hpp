@@ -140,8 +140,6 @@ public:
   bool isInteger(int index) const;
   /// Resizes rim part of model
   void resize(int newNumberRows, int newNumberColumns);
-  /// Makes sure matrix dimensions are at least model dimensions
-  void synchronizeMatrix();
   /// Deletes rows
   void deleteRows(int number, const int *which);
   /// Add one row
