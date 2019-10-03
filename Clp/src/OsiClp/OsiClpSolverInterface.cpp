@@ -2787,7 +2787,6 @@ void OsiClpSolverInterface::unmarkHotStart()
   modelPtr_->specialOptions_ = saveData_.specialOptions_;
 }
 
-#ifdef CONFLICT_CUTS
 // Return a conflict analysis cut from small model
 OsiRowCut *
 OsiClpSolverInterface::smallModelCut(const double *originalLower, const double *originalUpper,
@@ -3581,7 +3580,6 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
   }
   return cut;
 }
-#endif
 
 //#############################################################################
 // Problem information methods (original data)

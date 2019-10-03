@@ -6309,7 +6309,7 @@ int ClpSimplex::barrier(bool crossover)
   assert(!doKKT);
   ClpCholeskyTaucs *cholesky = new ClpCholeskyTaucs();
   barrier.setCholesky(cholesky);
-#elifdef COIN_HAS_MUMPS
+#elif defined(COIN_HAS_MUMPS)
   if (!doKKT) {
     ClpCholeskyMumps *cholesky = new ClpCholeskyMumps();
     barrier.setCholesky(cholesky);
@@ -6932,9 +6932,10 @@ int ClpSimplex::saveModel(const char *fileName)
         put += lengthNames_ + 1;
       }
       numberWritten = fwrite(array, lengthNames_ + 1, numberColumns_, fp);
-      if (numberWritten != static_cast< size_t >(numberColumns_))
+      if (numberWritten != static_cast< size_t >(numberColumns_)) {
+        delete[] array;
         return 1;
-      delete[] array;
+      }
     }
 #endif
     // integers
