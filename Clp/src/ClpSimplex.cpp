@@ -611,7 +611,7 @@ int ClpSimplex::gutsOfSolution(double *givenDuals,
     int numberOut = 0;
     // But may be very large rhs etc
     double useError = CoinMin(largestPrimalError_,
-      1.0e5 / maximumAbsElement(solution_, numberRows_ + numberColumns_));
+			      1.0e5 / (1.0+maximumAbsElement(solution_, numberRows_ + numberColumns_)));
     if ((oldValue < incomingInfeasibility_ || badInfeasibility > (CoinMax(10.0 * allowedInfeasibility_, 100.0 * oldValue)))
       && (badInfeasibility > CoinMax(incomingInfeasibility_, allowedInfeasibility_) || useError > 1.0e-3)) {
       if (algorithm_ > 1) {
@@ -1831,7 +1831,8 @@ int ClpSimplex::internalFactorize(int solveType)
           double big_bound = largeValue_;
           double value = columnActivityWork_[iColumn];
           if (lower > -big_bound || upper < big_bound) {
-            if ((getColumnStatus(iColumn) == atLowerBound && columnActivityWork_[iColumn] == lower) || (getColumnStatus(iColumn) == atUpperBound && columnActivityWork_[iColumn] == upper)) {
+            if ((getColumnStatus(iColumn) == atLowerBound && value == lower) ||
+		(getColumnStatus(iColumn) == atUpperBound && value == upper)) {
               // status looks plausible
             } else {
               // set to sensible
