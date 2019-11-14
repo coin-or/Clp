@@ -1054,6 +1054,7 @@ int CbcOrClpParam::intParameter(CbcModel &model) const
 #ifdef CBC_THREAD
   case CBC_PARAM_INT_THREADS:
     value = model.getNumberThreads();
+	break;
 #endif
   case CBC_PARAM_INT_RANDOMSEED:
     value = model.getRandomSeed();
