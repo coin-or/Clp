@@ -30,10 +30,6 @@ matrix:
       osx_image: xcode10
       env: OSX=10.13 
       compiler: clang
-    - os: osx
-      osx_image: xcode9.2
-      env: OSX=10.12 
-      compiler: clang      
 
 before_script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
