@@ -10,6 +10,14 @@ environment:
       secure: a9n4jf90wlFCdaYa6fOmYxsF97ur2dnK8Ys3gn5R90JBzTDq6cD2GlEwmmts75mq
     BINTRAY_USERNAME: tkralphs
   matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      ARCH: x86_64-w64-mingw32
+      HOST_ARCH_ARG: --host=x86_64-w64-mingw32
+      ADD_PATH: /mingw64/bin
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      ARCH: i686-w64-mingw32
+      HOST_ARCH_ARG: --host=i686-w64-mingw32
+      ADD_PATH: /mingw32/bin
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       ARCH: win64-msvc14-md
       HOST_ARCH_ARG: --enable-msvc=MD
@@ -58,14 +66,6 @@ environment:
       ARCH: win64-msvc16-mtd
       HOST_ARCH_ARG: --enable-msvc --enable-debug
       ADD_PATH: /mingw64/bin
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      ARCH: x86_64-w64-mingw32
-      HOST_ARCH_ARG: --host=x86_64-w64-mingw32
-      ADD_PATH: /mingw64/bin
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      ARCH: i686-w64-mingw32
-      HOST_ARCH_ARG: --host=i686-w64-mingw32
-      ADD_PATH: /mingw32/bin
 
 install:
   - for /f "delims=" %%i in ('C:\msys64\usr\bin\bash -lc "if [ $APPVEYOR_REPO_BRANCH = 'master' ]; then echo 'master'; else echo $APPVEYOR_REPO_BRANCH | cut -d "/" -f 2; fi"') do set VERSION=%%i
@@ -82,6 +82,14 @@ build_script:
   - C:\msys64\usr\bin\bash -lc "cd C:\projects; ./coinbrew fetch https://github.com/%APPVEYOR_REPO_NAME%:%APPVEYOR_REPO_BRANCH% --no-prompt --no-third-party --skip-update"
   - C:\msys64\usr\bin\bash -lc "cd C:\projects; export PATH=$ADD_PATH:$PATH; ./coinbrew build %APPVEYOR_PROJECT_NAME% --no-prompt --no-third-party --build=x86_64-w64-mingw32 $HOST_ARCH_ARG --verbosity 2 --test"
 after_build:
+  - IF %ARCH%==x86_64-w64-mingw32 (cp C:\msys64\mingw64\bin\libblas.dll C:\projects\dist\bin)
+  - IF %ARCH%==x86_64-w64-mingw32 (cp C:\msys64\mingw64\bin\liblapack.dll C:\projects\dist\bin)
+  - IF %ARCH%==x86_64-w64-mingw32 (cp C:\msys64\mingw64\bin\libgfortran-5.dll C:\projects\dist\bin)
+  - IF %ARCH%==x86_64-w64-mingw32 (cp C:\msys64\mingw64\bin\libgcc_s_seh-1.dll C:\projects\dist\bin)
+  - IF %ARCH%==i686-w64-mingw32 (cp C:\msys64\mingw32\bin\libblas.dll C:\projects\dist\bin)
+  - IF %ARCH%==i686-w64-mingw32 (cp C:\msys64\mingw32\bin\liblapack.dll C:\projects\dist\bin)
+  - IF %ARCH%==i686-w64-mingw32 (cp C:\msys64\mingw32\bin\libgfortran-5.dll C:\projects\dist\bin)
+  - IF %ARCH%==i686-w64-mingw32 (cp C:\msys64\mingw32\bin\libgcc_s_dw2-1.dll C:\projects\dist\bin)
   - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\dist\bin
   - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\dist\include
   - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\dist\lib
