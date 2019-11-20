@@ -111,6 +111,7 @@
 #include "ClpDualRowDantzig.hpp"
 #include "ClpMessage.hpp"
 #include "ClpLinearObjective.hpp"
+#include "CoinTime.hpp"
 #include <cfloat>
 #include <cassert>
 #include <string>
@@ -5347,7 +5348,7 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
   // mark as having gone optimal if looks like it
   if (!numberPrimalInfeasibilities_ && !numberDualInfeasibilities_)
     progressFlag_ |= 8;
-  if (handler_->detail(CLP_SIMPLEX_STATUS, messages_) < 100) {
+  if (handler_->detail(CLP_SIMPLEX_STATUS, messages_) < 100 && (CoinWallclockTime() - lastStatusUpdate_ > minIntervalProgressUpdate_)) {
     handler_->message(CLP_SIMPLEX_STATUS, messages_)
       << numberIterations_ << objectiveValue();
     handler_->printing(sumPrimalInfeasibilities_ > 0.0)
@@ -5358,6 +5359,7 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
       < numberDualInfeasibilities_)
       << numberDualInfeasibilitiesWithoutFree_;
     handler_->message() << CoinMessageEol;
+    lastStatusUpdate_ = CoinWallclockTime();
   }
 #if 0
      count_status++;

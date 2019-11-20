@@ -1973,6 +1973,12 @@ protected:
   /// And OsiCLP
   friend class OsiCLPSolverInterface;
   //@}
+  
+  /// minimum interval beween intermediate progress messages
+  double minIntervalProgressUpdate_;
+
+  /// last time when status was updated
+  double lastStatusUpdate_;
 };
 //#############################################################################
 /** A function that tests the methods in the ClpSimplex class. The

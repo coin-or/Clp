@@ -132,6 +132,9 @@ ClpSimplex::ClpSimplex(bool emptyMessages)
   , abcSimplex_(NULL)
   , abcState_(0)
 #endif
+  , minIntervalProgressUpdate_(0.7)
+  , lastStatusUpdate_(0.0)
+
 {
   int i;
   for (i = 0; i < 6; i++) {
@@ -248,6 +251,8 @@ ClpSimplex::ClpSimplex(const ClpModel *rhs,
   , abcSimplex_(NULL)
   , abcState_(0)
 #endif
+  , minIntervalProgressUpdate_(0.7)
+  , lastStatusUpdate_(0.0)
 {
   int i;
   for (i = 0; i < 6; i++) {
@@ -402,6 +407,8 @@ ClpSimplex::ClpSimplex(const ClpSimplex *rhs,
   , abcSimplex_(NULL)
   , abcState_(rhs->abcState_)
 #endif
+  , minIntervalProgressUpdate_(0.7)
+  , lastStatusUpdate_(0.0)
 {
   int i;
   for (i = 0; i < 6; i++) {
@@ -2707,6 +2714,8 @@ void ClpSimplex::gutsOfCopy(const ClpSimplex &rhs)
     nonLinearCost_ = NULL;
   solveType_ = rhs.solveType_;
   eventHandler_->setSimplex(this);
+  minIntervalProgressUpdate_ = rhs.minIntervalProgressUpdate_;
+  lastStatusUpdate_ = rhs.lastStatusUpdate_;
 }
 // type == 0 do everything, most + pivot data, 2 factorization data as well
 void ClpSimplex::gutsOfDelete(int type)
