@@ -182,7 +182,7 @@ Clp_setProblemName(Clp_Simplex *model, int maxNumberCharacters, char *array);
 COINLIBAPI int COINLINKAGE Clp_numberIterations(Clp_Simplex *model);
 COINLIBAPI void COINLINKAGE Clp_setNumberIterations(Clp_Simplex *model, int numberIterations);
 /** Maximum number of iterations */
-COINLIBAPI int maximumIterations(Clp_Simplex *model);
+COINLIBAPI int COINLINKAGE Clp_maximumIterations(Clp_Simplex *model);
 COINLIBAPI void COINLINKAGE Clp_setMaximumIterations(Clp_Simplex *model, int value);
 /** Maximum time in seconds (from when set called) */
 COINLIBAPI double COINLINKAGE Clp_maximumSeconds(Clp_Simplex *model);
