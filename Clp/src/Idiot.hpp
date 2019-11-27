@@ -298,6 +298,8 @@ private:
   int majorIterations_;
   int logLevel_;
   int logFreq_;
+  double minIntervalStatusUpdate_;
+  double lastStatusUpdate_;
   int checkFrequency_; /* can exit after 5 * this iterations (on drop) */
   int lambdaIterations_; /* do at least this many lambda iterations */
   int maxIts2_; /* do this many iterations on subsequent goes */
