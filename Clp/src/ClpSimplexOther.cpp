@@ -10507,7 +10507,7 @@ int ClpSimplex::outDuplicateRows(int numberLook, int *whichRows, bool noOverlaps
         << "Null model" << CoinMessageEol;
       return NULL;
     }
-    char *environment = new char[100];
+    char *environment = new char[256];
     double *obj = CoinCopyOfArray(objective(), numberColumns_);
     std::sort(obj, obj + numberColumns_);
     bool allInt = true;
