@@ -495,7 +495,6 @@ CLPLIB_CFLAGS_NOPC = @CLPLIB_CFLAGS_NOPC@
 CLPLIB_LFLAGS = @CLPLIB_LFLAGS@
 CLPLIB_LFLAGS_NOPC = @CLPLIB_LFLAGS_NOPC@
 CLPLIB_PCFILES = @CLPLIB_PCFILES@
-CLP_SVN_REV = @CLP_SVN_REV@
 COIN_PKG_CONFIG_PATH = @COIN_PKG_CONFIG_PATH@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
@@ -607,7 +606,6 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
-have_svnversion = @have_svnversion@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -1532,13 +1530,12 @@ uninstall-doxygen-docs:
 	fi
 	rmdir $(DESTDIR)$(pkgdocdir) || true
 
-install-doc: $(DocFiles)
+install-doc:
 	$(mkdir_p) "$(DESTDIR)$(pkgdocdir)"
 	for file in $(DocFiles); do \
 	  if test -f "$$file"; then dir=; else dir="$(srcdir)/"; fi; \
 	  if test -f "$$dir$$file"; then \
-	    $(INSTALL_DATA) "$$dir$$file" \
-	        "$(DESTDIR)$(pkgdocdir)/$$file"; \
+	    $(INSTALL_DATA) "$$dir$$file" "$(DESTDIR)$(pkgdocdir)/$$file"; \
 	  fi; \
 	done
 

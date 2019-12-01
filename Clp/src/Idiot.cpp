@@ -15,6 +15,7 @@
 #include "CoinFactorization.hpp"
 #include "CoinMessageHandler.hpp"
 #include "CoinHelperFunctions.hpp"
+#include "CoinTime.hpp"
 #include "AbcCommon.hpp"
 #include "ClpEventHandler.hpp"
 // Redefine stuff for Clp
@@ -386,6 +387,7 @@ void Idiot::crash(int numberPass, CoinMessageHandler *handler,
 
 void Idiot::solve()
 {
+  this->lastStatusUpdate_ = CoinWallclockTime();
   CoinMessages dummy;
   solve2(NULL, &dummy);
 }
@@ -829,7 +831,7 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
     for (i = 0; i < nrows; i++)
       rowsol[i] += rowsol2[i];
   }
-  if ((logLevel_ & 1) != 0) {
+  if ( ((logLevel_ & 1) != 0) && (CoinWallclockTime()-lastStatusUpdate_ > minIntervalStatusUpdate_) ) {
 #ifndef OSI_IDIOT
     if (!handler) {
 #endif
@@ -842,6 +844,7 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
         << CoinMessageEol;
     }
 #endif
+    lastStatusUpdate_ = CoinWallclockTime();
   }
   int numberBaseTrys = 0; // for first time
   int numberAway = -1;
@@ -901,7 +904,7 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
         maxInfeasibility = CoinMax(maxInfeasibility, infeasibility);
       }
     }
-    if ((logLevel_ & 1) != 0) {
+    if ( ((logLevel_ & 1) != 0) && (CoinWallclockTime()-lastStatusUpdate_ > minIntervalStatusUpdate_) ) {
 #ifndef OSI_IDIOT
       if (!handler) {
 #endif
@@ -914,6 +917,7 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
           << CoinMessageEol;
       }
 #endif
+      lastStatusUpdate_ = CoinWallclockTime();
     }
 #ifndef OSI_IDIOT
     if (fixAfterSome) {
@@ -2235,6 +2239,8 @@ Idiot::Idiot()
   maxBigIts_ = 3;
   maxIts_ = 5;
   logLevel_ = 1;
+  minIntervalStatusUpdate_ = 0.9;
+  lastStatusUpdate_ = CoinWallclockTime();
   logFreq_ = 100;
   maxIts2_ = 100;
   djTolerance_ = 1e-1;
@@ -2271,6 +2277,8 @@ Idiot::Idiot(OsiSolverInterface &model)
   maxBigIts_ = 3;
   maxIts_ = 5;
   logLevel_ = 1;
+  minIntervalStatusUpdate_ = 0.9;
+  lastStatusUpdate_ = CoinWallclockTime();
   logFreq_ = 100;
   maxIts2_ = 100;
   djTolerance_ = 1e-1;
@@ -2307,6 +2315,8 @@ Idiot::Idiot(OsiSolverInterface &model)
 // Copy constructor.
 Idiot::Idiot(const Idiot &rhs)
 {
+  this->minIntervalStatusUpdate_ = rhs.minIntervalStatusUpdate_;
+  this->lastStatusUpdate_ = rhs.lastStatusUpdate_;
   model_ = rhs.model_;
   if (model_ && rhs.whenUsed_) {
     int numberColumns = model_->getNumCols();
@@ -2342,6 +2352,8 @@ Idiot::Idiot(const Idiot &rhs)
 Idiot &
 Idiot::operator=(const Idiot &rhs)
 {
+  this->minIntervalStatusUpdate_ = rhs.minIntervalStatusUpdate_;
+  this->lastStatusUpdate_ = rhs.lastStatusUpdate_;
   if (this != &rhs) {
     delete[] whenUsed_;
     model_ = rhs.model_;

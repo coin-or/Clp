@@ -9,9 +9,6 @@
 /* Define to 1 if the MUMPS package is available. */
 #undef CLP_HAS_MUMPS
 
-/* SVN revision number of project */
-#undef CLP_SVN_REV
-
 /* Version number of project */
 #undef CLP_VERSION
 
@@ -30,9 +27,6 @@
 /* Define to 1 if ASL is available. */
 #undef COIN_HAS_ASL
 
-/* Define to 1 if BLAS is available. */
-#undef COIN_HAS_BLAS
-
 /* Define to 1 if the CHOLMOD package is available */
 #undef COIN_HAS_CHOLMOD
 
@@ -41,6 +35,9 @@
 
 /* Define to 1 if Glpk is available. */
 #undef COIN_HAS_GLPK
+
+/* Define to 1 if the LAPACK package is available */
+#undef COIN_HAS_LAPACK
 
 /* Define to 1 if the MUMPS package is available */
 #undef COIN_HAS_MUMPS
@@ -62,6 +59,13 @@
 
 /* Define to 1 if the WSMP package is available */
 #undef COIN_HAS_WSMP
+
+/* Define to a macro mangling the given C identifier (in lower and upper
+   case). */
+#undef COIN_LAPACK_FUNC
+
+/* As COIN_LAPACK_FUNC, but for C identifiers containing underscores. */
+#undef COIN_LAPACK_FUNC_
 
 /* Define to 1 if your C++ compiler doesn't accept -c and -o together. */
 #undef CXX_NO_MINUS_C_MINUS_O

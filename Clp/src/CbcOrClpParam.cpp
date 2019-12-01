@@ -61,6 +61,12 @@ void setCbcOrClpPrinting(bool yesNo)
 {
   doPrinting = yesNo;
 }
+// Returns next valid field
+static int CbcOrClpRead_mode = 1;
+static FILE *CbcOrClpReadCommand = stdin;
+int getCbcOrClpReadMode() { return CbcOrClpRead_mode; }
+void setCbcOrClpReadMode(int mode) { CbcOrClpRead_mode = mode; }
+void setCbcOrClpReadCommand(FILE* f) { CbcOrClpReadCommand = f; }
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -1048,6 +1054,7 @@ int CbcOrClpParam::intParameter(CbcModel &model) const
 #ifdef CBC_THREAD
   case CBC_PARAM_INT_THREADS:
     value = model.getNumberThreads();
+	break;
 #endif
   case CBC_PARAM_INT_RANDOMSEED:
     value = model.getRandomSeed();
@@ -2530,6 +2537,59 @@ setting some parameters which may help you to think of possibilities.");
       "This option can be used to switch on or off all heuristics that search for feasible solutions,\
       except for the local tree search, as it dramatically alters the search.\
       Then individual heuristics can be turned off or on.");
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("merge!Cliques", "Whether to perform merging of cliques (before\
+      initial solve or after preprocessing)", "off", CBC_PARAM_STR_CLIQUEMERGING);
+    p.append("before");
+    p.append("after");
+    p.setLonghelp("This switches the merge cliques strategy to preprocess and produce a stronger formulation");
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("bkclique!Cuts", "Whether to use Bron-Kerbosch Clique cuts",
+                      "off", CBC_PARAM_STR_BKCLIQUECUTS);
+    p.append("on");
+    p.append("root");
+    p.append("ifmove");
+    p.append("forceOn");
+    p.append("onglobal");
+    p.setLonghelp("This switches on Bron-Kerbosch clique cuts (either at root or in entire tree) \
+                    See branchAndCut for information on options.");
+   parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("oddholewc!Cuts", "Whether to use odd wheel cuts",
+                      "off", CBC_PARAM_STR_ODDHOLEWCCUTS);
+    p.append("on");
+    p.append("root");
+    p.append("ifmove");
+    p.append("forceOn");
+    p.append("onglobal");
+    p.setLonghelp("This switches on odd wheel inequalities (either at root or in entire tree) \
+                  See branchAndCut for information on options.");
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("maxitbk", "Maximum number of iterations of Bron-Kerbosch \
+                      algorithm in Bron-Kerbosch Clique Separation routine",
+                        1, 2147483647, CBC_PARAM_INT_MAXITBK);
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("maxitbkext!ension", "Maximum number of iterations of Bron-Kerbosch \
+                      algorithm in extension module of Bron-Kerbosch Clique Separation routine",
+                        1, 2147483647, CBC_PARAM_INT_MAXITBKEXT);
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("clqext!method", "Maximum number of iterations of Bron-Kerbosch \
+                      algorithm in Bron-Kerbosch Clique Separation routine",
+                        0, 4, CBC_PARAM_INT_CLQEXTMETHOD);
+    p.setLonghelp("Sets the method used in the extension module \
+        of Aggressive Clique Separation routine. 0=no extension; 1=random extension; \
+        2=max degree extension; 3=greedy extension; 4=exact extension.");
     parameters.push_back(p);
   }
   {

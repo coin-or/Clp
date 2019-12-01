@@ -45,8 +45,6 @@ AC_LANG_PUSH(C++)
 # there's no Fortran compiler, it's necessary to specify a library and
 # function to use when attempting a link. For Clp, libblas (-lblas) and
 # DAXPY are appropriate choices.
-# Yes, we should be able to leverage this and avoid the check for BLAS below,
-# but I haven't quite figured it out yet.
 
 AC_COIN_PROG_F77
 if test "$F77" != "unavailable" ; then
@@ -139,7 +137,7 @@ fi
 AC_COIN_CHK_LIB(WSMP,[ClpLib],[],[],[],no)
 
 if test "$use_wsmp" = yes ; then
-  AC_COIN_CHK_BLAS(ClpLib)
+  AC_COIN_CHK_LAPACK(ClpLib)
   use_wsmp=
   AC_COIN_CHK_PKG_FLINK([use_wsmp],wssmp,[$wsmp_libs])
   if test -n "$use_wsmp" ; then
@@ -152,7 +150,7 @@ if test "$use_wsmp" = yes ; then
   fi
 else
   # to please configure
-  AM_CONDITIONAL(COIN_HAS_BLAS, [test 0 = 1])
+  AM_CONDITIONAL(COIN_HAS_LAPACK, [test 0 = 1])
   :
 fi
 AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" = yes])

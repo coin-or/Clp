@@ -91,6 +91,8 @@
 #include "ClpPrimalColumnPivot.hpp"
 #include "ClpMessage.hpp"
 #include "ClpEventHandler.hpp"
+#include "ClpSimplexPrimal.hpp"
+#include "CoinTime.hpp"
 #include <cfloat>
 #include <cassert>
 #include <string>
@@ -572,7 +574,7 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
     createRim(1);
     memset(cost_, 0, (numberRows_ + numberColumns_) * sizeof(double));
 #endif
-    delete nonLinearCost_;
+    delete nonLinearCost_; 
     nonLinearCost_ = new ClpNonLinearCost(this);
     nonLinearCost_->checkInfeasibilities(0.0);
     sumPrimalInfeasibilities_ = nonLinearCost_->sumInfeasibilities();
@@ -1115,16 +1117,19 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   //problemStatus_=-1;;
   progressFlag_ = 0; //reset progress flag
 
-  handler_->message(CLP_SIMPLEX_STATUS, messages_)
-    << numberIterations_ << nonLinearCost_->feasibleReportCost();
-  handler_->printing(nonLinearCost_->numberInfeasibilities() > 0)
-    << nonLinearCost_->sumInfeasibilities() << nonLinearCost_->numberInfeasibilities();
-  handler_->printing(sumDualInfeasibilities_ > 0.0)
-    << sumDualInfeasibilities_ << numberDualInfeasibilities_;
-  handler_->printing(numberDualInfeasibilitiesWithoutFree_
-    < numberDualInfeasibilities_)
-    << numberDualInfeasibilitiesWithoutFree_;
-  handler_->message() << CoinMessageEol;
+  if ((CoinWallclockTime() - lastStatusUpdate_ > minIntervalProgressUpdate_)) {
+    handler_->message(CLP_SIMPLEX_STATUS, messages_)
+      << numberIterations_ << nonLinearCost_->feasibleReportCost();
+    handler_->printing(nonLinearCost_->numberInfeasibilities() > 0)
+      << nonLinearCost_->sumInfeasibilities() << nonLinearCost_->numberInfeasibilities();
+    handler_->printing(sumDualInfeasibilities_ > 0.0)
+      << sumDualInfeasibilities_ << numberDualInfeasibilities_;
+    handler_->printing(numberDualInfeasibilitiesWithoutFree_
+      < numberDualInfeasibilities_)
+      << numberDualInfeasibilitiesWithoutFree_;
+    handler_->message() << CoinMessageEol;
+    lastStatusUpdate_ = CoinWallclockTime();
+  }
   if (!primalFeasible()) {
     nonLinearCost_->checkInfeasibilities(primalTolerance_);
     gutsOfSolution(NULL, NULL, ifValuesPass != 0);
@@ -3612,7 +3617,9 @@ int ClpSimplexPrimal::nextSuperBasic(int superBasicType,
   int returnValue = -1;
   bool finished = false;
   while (!finished) {
-    returnValue = firstFree_;
+    if (firstFree_>=0 && !flagged(firstFree_) &&
+	getStatus(firstFree_) == superBasic) 
+      returnValue = firstFree_;
     int iColumn = firstFree_ + 1;
     if (superBasicType > 1) {
       if (superBasicType > 2) {
