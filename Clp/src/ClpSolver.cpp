@@ -1425,10 +1425,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           // See if gmpl file
           int gmpl = 0;
           std::string gmplData;
-          if (field == "-") {
+          if (field[0] == '-') {
             // stdin
             canOpen = true;
             fileName = "-";
+	    if (field == "-lp")
+	      gmpl = -1;
           } else {
             // See if .lp
             {
