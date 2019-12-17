@@ -3510,7 +3510,7 @@ File is in csv format with allowed headings - name, number, priority, direction,
   }
 #endif
   {
-    CbcOrClpParam p("progress(Interval)", "Time interval for printing progress",
+    CbcOrClpParam p("progress!(Interval)", "Time interval for printing progress",
 		    -COIN_DBL_MAX,COIN_DBL_MAX,
 		    CLP_PARAM_DBL_PROGRESS);
     p.setLonghelp(

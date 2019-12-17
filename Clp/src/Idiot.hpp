@@ -234,6 +234,16 @@ public:
   {
     model_ = model;
   };
+  /// Get minimum interval beween intermediate status messages
+  inline double getMinIntervalStatusUpdate()
+  {
+    return minIntervalStatusUpdate_;
+  }
+  /// Set minimum interval beween intermediate status messages
+  inline void setMinIntervalStatusUpdate(double value)
+  {
+    minIntervalStatusUpdate_ = value;
+  }
   //@}
 
   /// Stuff for internal use
