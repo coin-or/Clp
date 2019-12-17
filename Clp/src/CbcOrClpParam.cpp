@@ -594,6 +594,9 @@ CbcOrClpParam::setDoubleParameterWithMessage(ClpSimplex *model, double value, in
     case CLP_PARAM_DBL_PRESOLVETOLERANCE:
       model->setDblParam(ClpPresolveTolerance, value);
       break;
+    case CLP_PARAM_DBL_PROGRESS:
+      model->setMinIntervalProgressUpdate(value);
+      break;
     default:
       break;
     }
@@ -1389,13 +1392,22 @@ CoinReadGetString(int argc, const char *argv[])
     if (CbcOrClpRead_mode > 0) {
       if (CbcOrClpRead_mode < argc || CbcOrClpEnvironmentIndex >= 0) {
         if (CbcOrClpEnvironmentIndex < 0) {
-          if (argv[CbcOrClpRead_mode][0] != '-') {
+	  const char * input = argv[CbcOrClpRead_mode];
+	  if (strcmp(input,"--")&&strcmp(input,"stdin")&&
+	      strcmp(input,"stdin_lp")) {
             field = argv[CbcOrClpRead_mode++];
-          } else if (!strcmp(argv[CbcOrClpRead_mode], "--")) {
+          } else {
             CbcOrClpRead_mode++;
             // -- means import from stdin
-            field = "-";
-          }
+	    // but allow for other than mps files
+	    // Clp does things in different way !!
+	    if (!strcmp(input,"--"))
+	      field = "-";
+	    else if (!strcmp(input,"stdin"))
+	      field = "-";
+	    else if (!strcmp(input,"stdin_lp"))
+	      field = "-lp";
+	  }
         } else {
           fillEnv();
           field = line;
@@ -3496,6 +3508,18 @@ File is in csv format with allowed headings - name, number, priority, direction,
     Reference: https://github.com/coin-or/Cgl/wiki/CglProbing");
     parameters.push_back(p);
   }
+#endif
+  {
+    CbcOrClpParam p("progress(Interval)", "Time interval for printing progress",
+		    -COIN_DBL_MAX,COIN_DBL_MAX,
+		    CLP_PARAM_DBL_PROGRESS);
+    p.setLonghelp(
+      "This sets a minimum interval for some printing - elapsed seconds");
+
+    p.setDoubleValue(0.7);
+    parameters.push_back(p);
+  }
+#ifdef COIN_HAS_CBC
   {
     CbcOrClpParam p("proximity!Search", "Whether to do proximity search heuristic",
       "off", CBC_PARAM_STR_PROXIMITY);

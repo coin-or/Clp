@@ -787,6 +787,16 @@ public:
   {
     numberPrimalInfeasibilities_ = value;
   }
+  /// Get minimum interval beween intermediate progress messages
+  inline double getMinIntervalProgressUpdate()
+  {
+    return minIntervalProgressUpdate_;
+  }
+  /// Set minimum interval beween intermediate progress messages
+  inline void setMinIntervalProgressUpdate(double value)
+  {
+    minIntervalProgressUpdate_ = value;
+  }
   /** Save model to file, returns 0 if success.  This is designed for
          use outside algorithms so does not save iterating arrays etc.
      It does not save any messaging information.
