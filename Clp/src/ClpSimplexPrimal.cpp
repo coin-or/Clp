@@ -572,7 +572,7 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
     createRim(1);
     memset(cost_, 0, (numberRows_ + numberColumns_) * sizeof(double));
 #endif
-    delete nonLinearCost_;
+    delete nonLinearCost_; 
     nonLinearCost_ = new ClpNonLinearCost(this);
     nonLinearCost_->checkInfeasibilities(0.0);
     sumPrimalInfeasibilities_ = nonLinearCost_->sumInfeasibilities();
@@ -3612,7 +3612,9 @@ int ClpSimplexPrimal::nextSuperBasic(int superBasicType,
   int returnValue = -1;
   bool finished = false;
   while (!finished) {
-    returnValue = firstFree_;
+    if (firstFree_>=0 && !flagged(firstFree_) &&
+	getStatus(firstFree_) == superBasic) 
+      returnValue = firstFree_;
     int iColumn = firstFree_ + 1;
     if (superBasicType > 1) {
       if (superBasicType > 2) {
