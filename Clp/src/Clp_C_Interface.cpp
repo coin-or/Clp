@@ -377,7 +377,7 @@ Clp_chgObjCoefficients(Clp_Simplex *model, const double *objIn)
 /* Change matrix coefficients */
 COINLIBAPI void COINLINKAGE
 Clp_modifyCoefficient(Clp_Simplex *model, int row, int column, double newElement,
-  bool keepZero)
+  int keepZero)
 {
   model->model_->modifyCoefficient(row, column, newElement, keepZero);
 }
