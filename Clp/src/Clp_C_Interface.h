@@ -11,6 +11,11 @@
 /* include all defines and ugly stuff */
 #include "Coin_C_defines.h"
 
+/* accidentally used a bool for Clp_modifyCoefficient, so need to include stdbool.h
+ * Clp_modifyCoefficient signature will change to use int with Clp 1.18
+ */
+#include <stdbool.h>
+
 #if defined(CLP_EXTERN_C)
 typedef struct {
   ClpSolve options;
@@ -143,7 +148,10 @@ COINLIBAPI void COINLINKAGE Clp_chgColumnLower(Clp_Simplex *model, const double 
 COINLIBAPI void COINLINKAGE Clp_chgColumnUpper(Clp_Simplex *model, const double *columnUpper);
 /** Change objective coefficients */
 COINLIBAPI void COINLINKAGE Clp_chgObjCoefficients(Clp_Simplex *model, const double *objIn);
-/** Change matrix coefficients */
+/** Change matrix coefficients
+ * 
+ * \note Clp 1.18 will change the type of @param keepZero to int.
+ */
 COINLIBAPI void COINLINKAGE Clp_modifyCoefficient(Clp_Simplex *model, int row, int column, double newElement,
   bool keepZero);
 /** Drops names - makes lengthnames 0 and names empty */
