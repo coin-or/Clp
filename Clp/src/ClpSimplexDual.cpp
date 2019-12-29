@@ -3560,7 +3560,6 @@ void moveAndZero(clpTempInfo *info, int type, void *extra)
 #elif defined(__arm__)
 #include <arm_neon.h>
 #else
-#include <immintrin.h>
 //#include <fmaintrin.h>
 #endif
 int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
