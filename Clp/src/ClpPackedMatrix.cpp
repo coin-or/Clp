@@ -6752,7 +6752,6 @@ ClpPackedMatrix3::ClpPackedMatrix3()
 #elif defined(__arm__)
 #include <arm_neon.h>
 #else
-#include <immintrin.h>
 //#include <fmaintrin.h>
 #endif
 /* Constructor from copy. */
