@@ -3036,8 +3036,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         }
         // sort
         CoinSort_2(weight + saveN, weight + numberSort, sort + saveN);
-        if (numberSort < smallNumberColumns)
-          printf("using %d columns not %d\n", numberSort, smallNumberColumns);
+        //if (numberSort < smallNumberColumns)
+	//printf("using %d columns not %d\n", numberSort, smallNumberColumns);
         numberSort = CoinMin(smallNumberColumns, numberSort);
         // try singletons
         char *markX = new char[numberColumns];
