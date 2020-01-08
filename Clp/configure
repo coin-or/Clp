@@ -705,6 +705,7 @@ COIN_HAS_PKGCONFIG_FALSE
 COIN_HAS_PKGCONFIG_TRUE
 ac_ct_PKG_CONFIG
 PKG_CONFIG
+RPATH_FLAGS
 LT_LDFLAGS
 CXXCPP
 CPP
@@ -16628,6 +16629,50 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
   # shared libraries should have no undefined symbols
   # for Windows DLLs, it is mandatory to add this
   LT_LDFLAGS="$LT_LDFLAGS -no-undefined"
+
+
+# set RPATH_FLAGS to the compiler link flags required to hardcode location
+# of the shared objects (expanded_libdir is set somewhere in configure before)
+# (use in examples Makefile)
+RPATH_FLAGS=
+
+if test $enable_shared = yes; then
+  case $build in
+    *-linux-*)
+      if test "$GCC" = "yes"; then
+        RPATH_FLAGS=
+        for dir in $expanded_libdir; do
+          RPATH_FLAGS="$RPATH_FLAGS -Wl,--rpath -Wl,$dir"
+        done
+      fi ;;
+    *-darwin*)
+        RPATH_FLAGS=nothing ;;
+    *-ibm-*)
+      case "$CC" in
+      xlc* | */xlc* | mpxlc* | */mpxlc*)
+        RPATH_FLAGS=nothing ;;
+      esac ;;
+    *-hp-*)
+        RPATH_FLAGS=nothing ;;
+    *-mingw* | *-msys* )
+        RPATH_FLAGS=nothing ;;
+    *-*-solaris*)
+        RPATH_FLAGS=
+        for dir in $expanded_libdir; do
+          RPATH_FLAGS="$RPATH_FLAGS -R$dir"
+        done
+  esac
+
+  if test "$RPATH_FLAGS" = ""; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Could not automatically determine how to tell the linker about automatic inclusion of the path for shared libraries.  The test examples might not work if you link against shared objects.  You will need to set the LD_LIBRARY_PATH, DYLP_LIBRARY_PATH, or LIBDIR variable manually." >&5
+$as_echo "$as_me: WARNING: Could not automatically determine how to tell the linker about automatic inclusion of the path for shared libraries.  The test examples might not work if you link against shared objects.  You will need to set the LD_LIBRARY_PATH, DYLP_LIBRARY_PATH, or LIBDIR variable manually." >&2;}
+  fi
+  if test "$RPATH_FLAGS" = "nothing"; then
+    RPATH_FLAGS=
+  fi
+fi
+
+
 
 
 #############################################################################

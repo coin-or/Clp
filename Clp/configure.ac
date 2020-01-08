@@ -44,6 +44,11 @@ AC_LANG_PUSH(C++)
 
 AC_COIN_PROG_LIBTOOL
 
+# set RPATH_FLAGS to the compiler link flags required to hardcode location
+# of the shared objects (expanded_libdir is set somewhere in configure before)
+# (use in examples Makefile)
+AC_COIN_RPATH_FLAGS([$expanded_libdir])
+
 #############################################################################
 #                   Math headers                                            #
 #############################################################################
