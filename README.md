@@ -20,7 +20,7 @@ CLP also includes a barrier method for solving LPs.
 Clp is written in C++ and is released as open source code under the [Eclipse Public License (EPL)](http://www.opensource.org/licenses/eclipse-1.0).
 It is available from the [COIN-OR initiative](http://www.coin-or.org/).
 The code is written primarily by John J. Forrest, now retired from IBM Research.
-The project is currently managed by John Forrest, Lou Hafer, [Julian Hall](https://www.maths.ed.ac.uk/hall/), and Matthew Saltzman.
+The project is currently managed by John Forrest, Lou Hafer, [Julian Hall](https://www.maths.ed.ac.uk/school-of-mathematics/people?person=47), and Matthew Saltzman.
 
 The Clp website is https://github.com/coin-or/Clp.
 
@@ -58,7 +58,7 @@ If binaries are not available for your platform for the latest version and you w
 
 Below is a quick start guide for building on common platforms. More detailed
 build instructions are
-[https://coin-or.github.io/user_introduction.html](here) (this is a work in
+[here](https://coin-or.github.io/user_introduction.html) (this is a work in
 progress).
 
 ## BUILDING from source

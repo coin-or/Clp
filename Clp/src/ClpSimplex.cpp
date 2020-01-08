@@ -407,8 +407,8 @@ ClpSimplex::ClpSimplex(const ClpSimplex *rhs,
   , abcSimplex_(NULL)
   , abcState_(rhs->abcState_)
 #endif
-  , minIntervalProgressUpdate_(0.7)
-  , lastStatusUpdate_(0.0)
+  , minIntervalProgressUpdate_(rhs->minIntervalProgressUpdate_)
+  , lastStatusUpdate_(rhs->lastStatusUpdate_)
 {
   int i;
   for (i = 0; i < 6; i++) {
@@ -7649,7 +7649,8 @@ int ClpSimplex::readLp(const char *filename, const double epsilon)
   }
   CoinLpIO m;
   m.setEpsilon(epsilon);
-  fclose(fp);
+  if (fp != stdin)
+    fclose(fp);
   m.readLp(filename);
 
   // set problem name
