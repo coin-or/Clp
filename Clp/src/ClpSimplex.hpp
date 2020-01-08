@@ -104,7 +104,7 @@ class AbcSimplex;
 */
 
 class CLPLIB_EXPORT ClpSimplex : public ClpModel {
-  friend void ClpSimplexUnitTest(const std::string &mpsDir);
+  friend CLPLIB_EXPORT void ClpSimplexUnitTest(const std::string &mpsDir);
 
 public:
   /** enums for status of various sorts.

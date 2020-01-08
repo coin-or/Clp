@@ -70,7 +70,7 @@ class ClpCholeskyBase;
 */
 
 class CLPLIB_EXPORT ClpInterior : public ClpModel {
-  friend void ClpInteriorUnitTest(const std::string &mpsDir,
+  friend CLPLIB_EXPORT void ClpInteriorUnitTest(const std::string &mpsDir,
     const std::string &netlibDir);
 
 public:
