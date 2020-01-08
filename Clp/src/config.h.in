@@ -36,9 +36,6 @@
 /* Define to 1 if Glpk is available. */
 #undef COIN_HAS_GLPK
 
-/* Define to 1 if the LAPACK package is available */
-#undef COIN_HAS_LAPACK
-
 /* Define to 1 if the MUMPS package is available */
 #undef COIN_HAS_MUMPS
 
@@ -57,15 +54,8 @@
 /* Define to 1 if Sample is available. */
 #undef COIN_HAS_SAMPLE
 
-/* Define to 1 if the WSMP package is available */
+/* Define to 1 if WSMP is available */
 #undef COIN_HAS_WSMP
-
-/* Define to a macro mangling the given C identifier (in lower and upper
-   case). */
-#undef COIN_LAPACK_FUNC
-
-/* As COIN_LAPACK_FUNC, but for C identifiers containing underscores. */
-#undef COIN_LAPACK_FUNC_
 
 /* Define to 1 if your C++ compiler doesn't accept -c and -o together. */
 #undef CXX_NO_MINUS_C_MINUS_O
@@ -167,3 +157,10 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* Define to a macro mangling the given C identifier (in lower and upper
+   case). */
+#undef WSMP_FUNC
+
+/* As WSMP_FUNC, but for C identifiers containing underscores. */
+#undef WSMP_FUNC_

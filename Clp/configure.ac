@@ -131,26 +131,21 @@ fi
 
 # WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
 
-AC_COIN_CHK_LIB(WSMP,[ClpLib],[],[],[],no)
+AC_ARG_WITH([wsmp],
+            AC_HELP_STRING([--with-wsmp],[specify WSMP library]),
+            [have_wsmp=yes; wsmp_lflags=$withval],
+            [have_wsmp=no])
 
-if test "$use_wsmp" = yes ; then
-  AC_COIN_CHK_LAPACK(ClpLib)
-  use_wsmp=
-  AC_COIN_CHK_PKG_FLINK([use_wsmp],wssmp,[$wsmp_libs])
-  if test -n "$use_wsmp" ; then
-    wsmp_libs=$use_wsmp
-    AC_DEFINE_UNQUOTED([COIN_HAS_WSMP],[1],
-        [Define to 1 if the WSMP package is available])
-    CLPLIB_LIBS="$use_wsmp $CLPLIB_LIBS"
-  else
-    AC_MSG_WARN([WSMP failed to link with $wsmp_libs])
-  fi
-else
-  # to please configure
-  AM_CONDITIONAL(COIN_HAS_LAPACK, [false])
-  :
+if test "$have_wsmp" = "yes"; then
+  AC_COIN_TRY_LINK([wssmp],[$wsmp_lflags],[],
+    [AC_COIN_DEFINENAMEMANGLING([WSMP],[$wssmp_namemangling])
+     CLPLIB_LFLAGS="$wsmp_lflags $CLPLIB_LFLAGS"
+     AC_DEFINE(COIN_HAS_WSMP,1,[Define to 1 if WSMP is available])
+    ],
+    [AC_MSG_ERROR([Symbol wssmp not found with WSMP flags $wsmp_lflags.])])
 fi
-AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" = yes])
+
+AM_CONDITIONAL([COIN_HAS_WSMP],[test $have_wsmp = yes])
 
 #############################################################################
 #                             Other dependencies                            #

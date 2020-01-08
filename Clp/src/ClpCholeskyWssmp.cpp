@@ -62,9 +62,9 @@ ClpCholeskyBase *ClpCholeskyWssmp::clone() const
 // so I have linked in ekkwssmp which is an older version
 #ifndef USE_EKKWSSMP
 extern "C" {
-void F77_FUNC(wsetmaxthrds, WSETMAXTHRDS)(const int *NTHREADS);
+void WSMP_FUNC(wsetmaxthrds, WSETMAXTHRDS)(const int *NTHREADS);
 
-void F77_FUNC(wssmp, WSSMP)(const int *N, const int *IA,
+void WSMP_FUNC(wssmp, WSSMP)(const int *N, const int *IA,
   const int *JA, const double *AVALS,
   double *DIAG, int *PERM,
   int *INVP, double *B,
@@ -72,7 +72,7 @@ void F77_FUNC(wssmp, WSSMP)(const int *N, const int *IA,
   double *AUX, const int *NAUX,
   int *MRP, int *IPARM,
   double *DPARM);
-void F77_FUNC_(wsmp_clear, WSMP_CLEAR)(void);
+void WSMP_FUNC_(wsmp_clear, WSMP_CLEAR)(void);
 }
 #else
 /* minimum needed for user */
@@ -93,7 +93,7 @@ extern "C" void ekkwssmp(EKKModel *, int *n,
   double *rhs, int *ldb, int *nrhs,
   double *aux, int *naux,
   int *mrp, int *iparm, double *dparm);
-static void F77_FUNC(wssmp, WSSMP)(int *n, int *ia, int *ja,
+static void WSMP_FUNC(wssmp, WSSMP)(int *n, int *ia, int *ja,
   double *avals, double *diag, int *perm, int *invp,
   double *b, int *ldb, int *nrhs, double *aux, int *naux, int *mrp, int *iparm, double *dparm)
 {
@@ -280,10 +280,10 @@ int ClpCholeskyWssmp::order(ClpInterior *model)
     i2 = 1;
   else
     i2 = model->numberThreads();
-  F77_FUNC(wsetmaxthrds, WSETMAXTHRDS)
+  WSMP_FUNC(wsetmaxthrds, WSETMAXTHRDS)
   (&i2);
 #endif
-  F77_FUNC(wssmp, WSSMP)
+  WSMP_FUNC(wssmp, WSSMP)
   (&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
     NULL, permute_, permuteInverse_, 0, &numberRows_, &i1,
     NULL, &i0, NULL, integerParameters_, doubleParameters_);
@@ -299,7 +299,7 @@ int ClpCholeskyWssmp::order(ClpInterior *model)
   integerParameters_[15 + 4] = 1;
   doubleParameters_[10] = 1.0e-20;
   doubleParameters_[11] = 1.0e-15;
-  F77_FUNC(wssmp, WSSMP)
+  WSMP_FUNC(wssmp, WSSMP)
   (&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
     NULL, permute_, permuteInverse_, NULL, &numberRows_, &i1,
     NULL, &i0, NULL, integerParameters_, doubleParameters_);
@@ -323,7 +323,7 @@ int ClpCholeskyWssmp::order(ClpInterior *model)
     integerParameters_[1] = 2;
     integerParameters_[2] = 2;
     integerParameters_[7] = 1; // no permute
-    F77_FUNC(wssmp, WSSMP)
+    WSMP_FUNC(wssmp, WSSMP)
     (&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
       NULL, permute_, permuteInverse_, NULL, &numberRows_, &i1,
       NULL, &i0, NULL, integerParameters_, doubleParameters_);
@@ -466,7 +466,7 @@ int ClpCholeskyWssmp::factorize(const double *diagonal, int *rowsDropped)
     integerParameters_[9] = 1;
   else
     integerParameters_[9] = 0;
-  F77_FUNC(wssmp, WSSMP)
+  WSMP_FUNC(wssmp, WSSMP)
   (&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
     NULL, permute_, permuteInverse_, NULL, &numberRows_, &i1,
     NULL, &i0, rowsDropped, integerParameters_, doubleParameters_);
@@ -500,7 +500,7 @@ int ClpCholeskyWssmp::factorize(const double *diagonal, int *rowsDropped)
     int i0 = 0;
     integerParameters_[1] = 4;
     integerParameters_[2] = 4;
-    F77_FUNC(wssmp, WSSMP)
+    WSMP_FUNC(wssmp, WSSMP)
     (&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
       NULL, permute_, permuteInverse_, denseColumn_, &numberRows_, &numberDense,
       NULL, &i0, NULL, integerParameters_, doubleParameters_);
@@ -597,14 +597,14 @@ void ClpCholeskyWssmp::solve(double *region)
   integerParameters_[6] = 6;
 #endif
   if (!whichDense_) {
-    F77_FUNC(wssmp, WSSMP)
+    WSMP_FUNC(wssmp, WSSMP)
     (&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
       NULL, permute_, permuteInverse_, region, &numberRows_, &i1,
       NULL, &i0, NULL, integerParameters_, doubleParameters_);
   } else {
     // dense columns
     integerParameters_[29] = 1;
-    F77_FUNC(wssmp, WSSMP)
+    WSMP_FUNC(wssmp, WSSMP)
     (&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
       NULL, permute_, permuteInverse_, region, &numberRows_, &i1,
       NULL, &i0, NULL, integerParameters_, doubleParameters_);
@@ -631,7 +631,7 @@ void ClpCholeskyWssmp::solve(double *region)
     // and finish off
     integerParameters_[29] = 2;
     integerParameters_[1] = 4;
-    F77_FUNC(wssmp, WSSMP)
+    WSMP_FUNC(wssmp, WSSMP)
     (&numberRows_, choleskyStart_, choleskyRow_, sparseFactor_,
       NULL, permute_, permuteInverse_, region, &numberRows_, &i1,
       NULL, &i0, NULL, integerParameters_, doubleParameters_);
