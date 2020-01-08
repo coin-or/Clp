@@ -743,7 +743,7 @@ clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 # and that therefore should be installed in 'include/coin'
 includecoindir = $(pkgincludedir)
 
-# needed by Clp
+# needed by Cbc
 includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpCholeskyDense.hpp ClpConstraint.hpp ClpConstraintLinear.hpp \
 	ClpConstraintQuadratic.hpp ClpDualRowDantzig.hpp \

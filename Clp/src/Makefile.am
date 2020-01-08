@@ -74,7 +74,7 @@ libClp_la_SOURCES = \
 	IdiSolve.cpp \
 	ClpCholeskyPardiso.cpp ClpCholeskyPardiso.hpp \
 	ClpPESimplex.cpp ClpPESimplex.hpp \
-        ClpPEPrimalColumnDantzig.cpp ClpPEPrimalColumnDantzig.hpp \
+	ClpPEPrimalColumnDantzig.cpp ClpPEPrimalColumnDantzig.hpp \
  	ClpPEPrimalColumnSteepest.cpp ClpPEPrimalColumnSteepest.hpp \
  	ClpPEDualRowDantzig.cpp ClpPEDualRowDantzig.hpp \
  	ClpPEDualRowSteepest.cpp ClpPEDualRowSteepest.hpp
@@ -236,10 +236,10 @@ includecoin_HEADERS = \
 	Idiot.hpp \
 	ClpCholeskyPardiso.hpp \
 	ClpPESimplex.hpp \
-        ClpPEPrimalColumnDantzig.hpp \
-        ClpPEPrimalColumnSteepest.hpp \
-        ClpPEDualRowDantzig.hpp \
-        ClpPEDualRowSteepest.hpp
+	ClpPEPrimalColumnDantzig.hpp \
+	ClpPEPrimalColumnSteepest.hpp \
+	ClpPEDualRowDantzig.hpp \
+	ClpPEDualRowSteepest.hpp
 
 if COIN_HAS_ABC
 includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
@@ -267,7 +267,7 @@ if COIN_HAS_WSMP
 includecoin_HEADERS += ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp
 endif
 
-# needed by Clp
+# needed by Cbc
 includecoin_HEADERS += CbcOrClpParam.cpp
 
 
