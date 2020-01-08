@@ -65,14 +65,18 @@ int debugInt[24];
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #endif
+#ifdef UFL_BARRIER
 #include "ClpCholeskyUfl.hpp"
+#endif
 #ifdef TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
 #ifdef PARDISO_BARRIER
 #include "ClpCholeskyPardiso.hpp"
 #endif
+#ifdef COIN_HAS_MUMPS
 #include "ClpCholeskyMumps.hpp"
+#endif
 #ifdef COIN_HAS_VOL
 #include "VolVolume.hpp"
 #include "CoinHelperFunctions.hpp"
