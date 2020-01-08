@@ -24,9 +24,6 @@
 /* Define to 1 if the AMD package is available */
 #undef COIN_HAS_AMD
 
-/* Define to 1 if ASL is available. */
-#undef COIN_HAS_ASL
-
 /* Define to 1 if the CHOLMOD package is available */
 #undef COIN_HAS_CHOLMOD
 

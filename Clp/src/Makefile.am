@@ -128,7 +128,6 @@ endif
 libClpSolver_la_SOURCES = \
 	ClpSolver.cpp \
 	CbcOrClpParam.cpp CbcOrClpParam.hpp \
-	Clp_ampl.cpp Clp_ampl.h \
 	MyEventHandler.cpp MyEventHandler.hpp \
 	MyMessageHandler.cpp MyMessageHandler.hpp \
 	unitTest.cpp

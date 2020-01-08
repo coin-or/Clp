@@ -282,7 +282,7 @@ libClp_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(libClp_la_LDFLAGS) $(LDFLAGS) -o $@
 libClpSolver_la_DEPENDENCIES = libClp.la
-am_libClpSolver_la_OBJECTS = ClpSolver.lo CbcOrClpParam.lo Clp_ampl.lo \
+am_libClpSolver_la_OBJECTS = ClpSolver.lo CbcOrClpParam.lo \
 	MyEventHandler.lo MyMessageHandler.lo unitTest.lo
 libClpSolver_la_OBJECTS = $(am_libClpSolver_la_OBJECTS)
 libClpSolver_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
@@ -363,7 +363,6 @@ am__depfiles_remade = ./$(DEPDIR)/AbcDualRowDantzig.Plo \
 	./$(DEPDIR)/ClpSimplexOther.Plo \
 	./$(DEPDIR)/ClpSimplexPrimal.Plo ./$(DEPDIR)/ClpSolve.Plo \
 	./$(DEPDIR)/ClpSolver.Plo ./$(DEPDIR)/Clp_C_Interface.Plo \
-	./$(DEPDIR)/Clp_ampl.Plo \
 	./$(DEPDIR)/CoinAbcBaseFactorization1.Plo \
 	./$(DEPDIR)/CoinAbcBaseFactorization2.Plo \
 	./$(DEPDIR)/CoinAbcBaseFactorization3.Plo \
@@ -716,7 +715,6 @@ libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 libClpSolver_la_SOURCES = \
 	ClpSolver.cpp \
 	CbcOrClpParam.cpp CbcOrClpParam.hpp \
-	Clp_ampl.cpp Clp_ampl.h \
 	MyEventHandler.cpp MyEventHandler.hpp \
 	MyMessageHandler.cpp MyMessageHandler.hpp \
 	unitTest.cpp
@@ -997,7 +995,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSolve.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpSolver.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_C_Interface.Plo@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/Clp_ampl.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization1.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization2.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/CoinAbcBaseFactorization3.Plo@am__quote@ # am--include-marker
@@ -1248,7 +1245,6 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/ClpSolve.Plo
 	-rm -f ./$(DEPDIR)/ClpSolver.Plo
 	-rm -f ./$(DEPDIR)/Clp_C_Interface.Plo
-	-rm -f ./$(DEPDIR)/Clp_ampl.Plo
 	-rm -f ./$(DEPDIR)/CoinAbcBaseFactorization1.Plo
 	-rm -f ./$(DEPDIR)/CoinAbcBaseFactorization2.Plo
 	-rm -f ./$(DEPDIR)/CoinAbcBaseFactorization3.Plo
@@ -1393,7 +1389,6 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/ClpSolve.Plo
 	-rm -f ./$(DEPDIR)/ClpSolver.Plo
 	-rm -f ./$(DEPDIR)/Clp_C_Interface.Plo
-	-rm -f ./$(DEPDIR)/Clp_ampl.Plo
 	-rm -f ./$(DEPDIR)/CoinAbcBaseFactorization1.Plo
 	-rm -f ./$(DEPDIR)/CoinAbcBaseFactorization2.Plo
 	-rm -f ./$(DEPDIR)/CoinAbcBaseFactorization3.Plo

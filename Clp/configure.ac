@@ -143,10 +143,6 @@ AM_CONDITIONAL([COIN_HAS_WSMP],[test $have_wsmp = yes])
 #                             Other dependencies                            #
 #############################################################################
 
-# AMPL solver library
-
-AC_COIN_CHK_PKG(ASL,[ClpLib],[coinasl])
-
 AC_COIN_CHK_GNU_READLINE([ClpLib])
 
 ##############################################################################

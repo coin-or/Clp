@@ -6302,7 +6302,7 @@ int ClpSimplex::barrier(bool crossover)
   assert(!doKKT);
   ClpCholeskyPardiso *cholesky = new ClpCholeskyPardiso();
   barrier.setCholesky(cholesky);
-#elif WSSMP_BARRIER
+#elif defined(WSSMP_BARRIER)
   if (!doKKT) {
     ClpCholeskyWssmp *cholesky = new ClpCholeskyWssmp(CoinMax(100, model2->numberRows() / 10));
     barrier.setCholesky(cholesky);

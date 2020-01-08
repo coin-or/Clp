@@ -126,8 +126,6 @@ Clp/src/ClpPdco.hpp -text
 Clp/src/ClpPdcoBase.cpp -text
 Clp/src/ClpPdcoBase.hpp -text
 Clp/src/ClpSolver.cpp -text
-Clp/src/Clp_ampl.cpp -text
-Clp/src/Clp_ampl.h -text
 Clp/src/CoinAbcBaseFactorization.hpp -text
 Clp/src/CoinAbcBaseFactorization1.cpp -text
 Clp/src/CoinAbcBaseFactorization2.cpp -text
