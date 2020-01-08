@@ -27,7 +27,7 @@ libOsiClp_la_LIBADD = $(OSICLPLIB_LFLAGS) ../libClp.la
 libOsiClp_la_LDFLAGS = $(LT_LDFLAGS)
 
 # Here list all include flags, relative to this "srcdir" directory.
-AM_CPPFLAGS = -I$(srcdir)/.. $(OSICLPLIB_CFLAGS)
+AM_CPPFLAGS = -I$(srcdir)/.. $(OSICLPLIB_CFLAGS) -DOSICLP_BUILD
 
 ########################################################################
 #                Headers that need to be installed                     #
@@ -38,3 +38,6 @@ AM_CPPFLAGS = -I$(srcdir)/.. $(OSICLPLIB_CFLAGS)
 
 includecoindir = $(pkgincludedir)
 includecoin_HEADERS = OsiClpSolverInterface.hpp
+
+install-exec-local:
+	$(install_sh_DATA) config_osiclp.h $(DESTDIR)$(includecoindir)/OsiClpConfig.h

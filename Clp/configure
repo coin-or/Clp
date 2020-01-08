@@ -20264,6 +20264,11 @@ ac_config_files="$ac_config_files doxydoc/doxygen.conf"
 ac_config_headers="$ac_config_headers src/config.h src/config_clp.h"
 
 
+if test $coin_has_osi = yes ; then
+  ac_config_headers="$ac_config_headers src/OsiClp/config_osiclp.h"
+
+fi
+
 # Finally, we let configure write all the output...
 
   cat >confcache <<\_ACEOF
@@ -21477,6 +21482,7 @@ do
     "doxydoc/doxygen.conf") CONFIG_FILES="$CONFIG_FILES doxydoc/doxygen.conf" ;;
     "src/config.h") CONFIG_HEADERS="$CONFIG_HEADERS src/config.h" ;;
     "src/config_clp.h") CONFIG_HEADERS="$CONFIG_HEADERS src/config_clp.h" ;;
+    "src/OsiClp/config_osiclp.h") CONFIG_HEADERS="$CONFIG_HEADERS src/OsiClp/config_osiclp.h" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

@@ -158,6 +158,7 @@ Clp/src/OsiClp/Makefile.am -text
 Clp/src/OsiClp/Makefile.in -text
 Clp/src/OsiClp/OsiClpSolverInterface.cpp -text
 Clp/src/OsiClp/OsiClpSolverInterface.hpp -text
+Clp/src/OsiClp/config_osiclp.h.in -text
 Clp/src/OsiClp/osi-clp.pc.in -text
 Clp/src/config.h.in -text
 Clp/src/config_clp.h.in -text

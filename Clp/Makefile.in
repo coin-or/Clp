@@ -128,7 +128,8 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/src/config.h \
-	$(top_builddir)/src/config_clp.h
+	$(top_builddir)/src/config_clp.h \
+	$(top_builddir)/src/OsiClp/config_osiclp.h
 CONFIG_CLEAN_FILES = examples/Makefile clp.pc osi-clp.pc \
 	doxydoc/doxygen.conf
 CONFIG_CLEAN_VPATH_FILES =
