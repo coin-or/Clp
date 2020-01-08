@@ -21,7 +21,7 @@ lib_LTLIBRARIES = libOsiClp.la
 libOsiClp_la_SOURCES = OsiClpSolverInterface.cpp OsiClpSolverInterface.hpp
 
 # List all additionally required libraries
-libOsiClp_la_LIBADD = $(OSICLPLIB_LIBS) ../libClp.la
+libOsiClp_la_LIBADD = $(OSICLPLIB_LFLAGS) ../libClp.la
 
 # This is for libtool (on Windows)
 libOsiClp_la_LDFLAGS = $(LT_LDFLAGS)
