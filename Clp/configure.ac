@@ -40,19 +40,6 @@ AC_COIN_PROG_CXX
 
 AC_LANG_PUSH(C++)
 
-# Sort out what we need to do to link to Fortran libraries. Check if there's a
-# Fortran compiler and call the appropriate macro based on the result. If
-# there's no Fortran compiler, it's necessary to specify a library and
-# function to use when attempting a link. For Clp, libblas (-lblas) and
-# DAXPY are appropriate choices.
-
-AC_COIN_PROG_F77
-if test "$F77" != "unavailable" ; then
-  AC_COIN_F77_SETUP
-else
-  AC_COIN_F77_WRAPPERS(blas,DAXPY)
-fi
-
 # Initialize libtool
 
 AC_COIN_PROG_LIBTOOL
