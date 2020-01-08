@@ -19,6 +19,7 @@
 #include "ClpNode.hpp"
 #include "CoinIndexedVector.hpp"
 #include "CoinFinite.hpp"
+#include "OsiClpConfig.h"
 
 class OsiRowCut;
 class OsiClpUserSolver;
@@ -34,7 +35,7 @@ Instantiation of OsiClpSolverInterface for the Model Algorithm.
 
 */
 
-class OsiClpSolverInterface : virtual public OsiSolverInterface {
+class OSICLPLIB_EXPORT OsiClpSolverInterface : virtual public OsiSolverInterface {
   friend void OsiClpSolverInterfaceUnitTest(const std::string &mpsDir, const std::string &netlibDir);
 
 public:
@@ -1501,7 +1502,7 @@ protected:
   //@}
 };
 
-class OsiClpDisasterHandler : public ClpDisasterHandler {
+class OSICLPLIB_EXPORT OsiClpDisasterHandler : public ClpDisasterHandler {
 public:
   /**@name Virtual methods that the derived classe should provide.
   */
@@ -1594,9 +1595,11 @@ protected:
   //@}
 };
 // So unit test can find out if NDEBUG set
+OSICLPLIB_EXPORT
 bool OsiClpHasNDEBUG();
 //#############################################################################
 /** A function that tests the methods in the OsiClpSolverInterface class. */
+OSICLPLIB_EXPORT
 void OsiClpSolverInterfaceUnitTest(const std::string &mpsDir, const std::string &netlibDir);
 #endif
 
