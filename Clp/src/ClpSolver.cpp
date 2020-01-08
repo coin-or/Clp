@@ -168,8 +168,10 @@ void userChoiceWasGood(ClpSimplex *model)
 }
 #endif
 #ifndef ABC_INHERIT
+CLPLIB_EXPORT
 void ClpMain0(ClpSimplex *models)
 #else
+CLPLIB_EXPORT
 void ClpMain0(AbcSimplex *models)
 #endif
 {
@@ -181,8 +183,10 @@ void ClpMain0(AbcSimplex *models)
 #endif
 }
 #ifndef ABC_INHERIT
+CLPLIB_EXPORT
 int ClpMain1(int argc, const char *argv[], ClpSimplex *models)
 #else
+CLPLIB_EXPORT
 int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #endif
 {
