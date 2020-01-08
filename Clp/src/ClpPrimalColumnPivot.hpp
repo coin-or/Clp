@@ -6,6 +6,8 @@
 #ifndef ClpPrimalcolumnPivot_H
 #define ClpPrimalcolumnPivot_H
 
+#include "ClpConfig.h"
+
 class ClpSimplex;
 class CoinIndexedVector;
 
@@ -22,7 +24,7 @@ If  you wish to inherit from this look at ClpPrimalColumnDantzig.cpp
 as that is simplest version.
 */
 
-class ClpPrimalColumnPivot {
+class CLPLIB_EXPORT ClpPrimalColumnPivot {
 
 public:
   ///@name Algorithmic methods

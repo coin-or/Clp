@@ -24,7 +24,7 @@ See Forrest-Goldfarb paper for algorithm
 
 */
 
-class ClpPEDualRowSteepest : public ClpDualRowSteepest {
+class CLPLIB_EXPORT ClpPEDualRowSteepest : public ClpDualRowSteepest {
 
 public:
   /** Default Constructor

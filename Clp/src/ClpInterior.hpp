@@ -69,7 +69,7 @@ class ClpCholeskyBase;
 
 */
 
-class ClpInterior : public ClpModel {
+class CLPLIB_EXPORT ClpInterior : public ClpModel {
   friend void ClpInteriorUnitTest(const std::string &mpsDir,
     const std::string &netlibDir);
 
@@ -613,6 +613,7 @@ protected:
 
     It also does some testing of ClpFactorization class
  */
+CLPLIB_EXPORT
 void ClpInteriorUnitTest(const std::string &mpsDir,
   const std::string &netlibDir);
 

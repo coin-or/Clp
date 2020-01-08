@@ -15,6 +15,7 @@ class ClpMatrixBase;
 class CoinIndexedVector;
 class ClpSimplex;
 #include "CoinTypes.hpp"
+#include "ClpConfig.h"
 #ifndef COIN_FAST_CODE
 #define COIN_FAST_CODE
 #endif
@@ -22,7 +23,7 @@ class ClpSimplex;
 /** This deals with Factorization and Updates for network structures
  */
 
-class ClpNetworkBasis {
+class CLPLIB_EXPORT ClpNetworkBasis {
 
 public:
   /**@name Constructors and destructor and copy */

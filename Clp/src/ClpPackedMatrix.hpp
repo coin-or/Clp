@@ -20,7 +20,7 @@
 class ClpPackedMatrix2;
 class ClpPackedMatrix3;
 class CoinDoubleArrayWithLength;
-class ClpPackedMatrix : public ClpMatrixBase {
+class CLPLIB_EXPORT ClpPackedMatrix : public ClpMatrixBase {
 
 public:
   /**@name Useful methods */
@@ -523,7 +523,7 @@ typedef struct {
   int numberLook;
 } dualColumn0Struct;
 #endif
-class ClpPackedMatrix2 {
+class CLPLIB_EXPORT ClpPackedMatrix2 {
 
 public:
   /**@name Useful methods */
@@ -601,7 +601,7 @@ typedef struct {
   int numberElements_; // number elements per column
   int numberOnes_; // later
 } blockStruct;
-class ClpPackedMatrix3 {
+class CLPLIB_EXPORT ClpPackedMatrix3 {
 
 public:
   /**@name Useful methods */

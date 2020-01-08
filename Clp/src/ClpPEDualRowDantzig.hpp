@@ -22,7 +22,7 @@
 #include "ClpPackedMatrix.hpp"
 #include "ClpPESimplex.hpp"
 
-class ClpPEDualRowDantzig : public ClpDualRowDantzig {
+class CLPLIB_EXPORT ClpPEDualRowDantzig : public ClpDualRowDantzig {
 
 public:
   /// Default Constructor

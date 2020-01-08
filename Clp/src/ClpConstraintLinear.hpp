@@ -14,7 +14,7 @@
 
 */
 
-class ClpConstraintLinear : public ClpConstraint {
+class CLPLIB_EXPORT ClpConstraintLinear : public ClpConstraint {
 
 public:
   ///@name Stuff

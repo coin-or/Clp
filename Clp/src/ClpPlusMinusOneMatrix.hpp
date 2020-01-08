@@ -14,7 +14,7 @@
 
 */
 
-class ClpPlusMinusOneMatrix : public ClpMatrixBase {
+class CLPLIB_EXPORT ClpPlusMinusOneMatrix : public ClpMatrixBase {
 
 public:
   /**@name Useful methods */
@@ -309,7 +309,7 @@ typedef struct {
 } poolInfo;
 #endif
 #include "ClpPackedMatrix.hpp"
-class ClpPoolMatrix : public ClpMatrixBase {
+class CLPLIB_EXPORT ClpPoolMatrix : public ClpMatrixBase {
 
 public:
   /**@name Useful methods */

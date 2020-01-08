@@ -25,7 +25,7 @@ class ClpConstraint;
 
 */
 
-class ClpSimplexNonlinear : public ClpSimplexPrimal {
+class CLPLIB_EXPORT ClpSimplexNonlinear : public ClpSimplexPrimal {
 
 public:
   /**@name Description of algorithm */

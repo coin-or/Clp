@@ -12,7 +12,7 @@ class CoinPresolveAction;
 /** This is the Clp interface to CoinPresolve
 
 */
-class ClpPresolve {
+class CLPLIB_EXPORT ClpPresolve {
 public:
   /**@name Main Constructor, destructor */
   //@{

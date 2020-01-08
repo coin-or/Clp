@@ -14,7 +14,7 @@
 
 */
 
-class ClpConstraintQuadratic : public ClpConstraint {
+class CLPLIB_EXPORT ClpConstraintQuadratic : public ClpConstraint {
 
 public:
   ///@name Stuff

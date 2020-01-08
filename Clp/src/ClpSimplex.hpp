@@ -103,7 +103,7 @@ class AbcSimplex;
 
 */
 
-class ClpSimplex : public ClpModel {
+class CLPLIB_EXPORT ClpSimplex : public ClpModel {
   friend void ClpSimplexUnitTest(const std::string &mpsDir);
 
 public:
@@ -1999,6 +1999,7 @@ protected:
 
     It also does some testing of ClpFactorization class
  */
+CLPLIB_EXPORT
 void ClpSimplexUnitTest(const std::string &mpsDir);
 
 // For Devex stuff
@@ -2016,7 +2017,7 @@ typedef struct {
   int status;
   int stuff[4];
 } CoinThreadInfo;
-class CoinPthreadStuff {
+class CLPLIB_EXPORT CoinPthreadStuff {
 public:
   /**@name Constructors and destructor and copy */
   //@{

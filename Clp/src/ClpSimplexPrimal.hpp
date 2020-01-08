@@ -20,7 +20,7 @@
 
 */
 
-class ClpSimplexPrimal : public ClpSimplex {
+class CLPLIB_EXPORT ClpSimplexPrimal : public ClpSimplex {
 
 public:
   /**@name Description of algorithm */

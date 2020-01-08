@@ -8,6 +8,7 @@
 
 #include "CoinPragma.hpp"
 #include "CoinTypes.hpp"
+#include "ClpConfig.h"
 //#define CLP_LONG_CHOLESKY 0
 #ifndef CLP_LONG_CHOLESKY
 #define CLP_LONG_CHOLESKY 0
@@ -50,7 +51,7 @@ class ClpMatrixBase;
     Derived classes may be using more sophisticated methods
 */
 
-class ClpCholeskyBase {
+class CLPLIB_EXPORT ClpCholeskyBase {
 
 public:
   /**@name Virtual methods that the derived classes may provide  */

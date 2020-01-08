@@ -7,6 +7,8 @@
 #define ClpMessage_H
 
 #include "CoinPragma.hpp"
+#include "ClpConfig.h"
+
 #include <cstring>
 
 // This deals with Clp messages (as against Osi messages etc)
@@ -115,7 +117,7 @@ enum CLP_Message {
 
 /** This deals with Clp messages (as against Osi messages etc)
  */
-class ClpMessage : public CoinMessages {
+class CLPLIB_EXPORT ClpMessage : public CoinMessages {
 
 public:
   /**@name Constructors etc */

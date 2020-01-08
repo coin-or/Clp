@@ -20,7 +20,7 @@
 #include "ClpPackedMatrix.hpp"
 #include "ClpPESimplex.hpp"
 
-class ClpPEPrimalColumnDantzig : public ClpPrimalColumnDantzig {
+class CLPLIB_EXPORT ClpPEPrimalColumnDantzig : public ClpPrimalColumnDantzig {
 
 public:
   /** constructors */

@@ -18,7 +18,7 @@ class ClpSimplex;
 
 */
 
-class ClpGubMatrix : public ClpPackedMatrix {
+class CLPLIB_EXPORT ClpGubMatrix : public ClpPackedMatrix {
 
 public:
   /**@name Main functions provided */

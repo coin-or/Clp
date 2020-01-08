@@ -13,7 +13,7 @@ class ClpCholeskyDense;
 /** WssmpKKT class for Clp Cholesky factorization
 
 */
-class ClpCholeskyWssmpKKT : public ClpCholeskyBase {
+class CLPLIB_EXPORT ClpCholeskyWssmpKKT : public ClpCholeskyBase {
 
 public:
   /**@name Virtual methods that the derived classes provides  */

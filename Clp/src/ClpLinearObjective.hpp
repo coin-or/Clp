@@ -14,7 +14,7 @@
 
 */
 
-class ClpLinearObjective : public ClpObjective {
+class CLPLIB_EXPORT ClpLinearObjective : public ClpObjective {
 
 public:
   ///@name Stuff

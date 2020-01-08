@@ -15,7 +15,7 @@
 
 */
 
-class ClpQuadraticObjective : public ClpObjective {
+class CLPLIB_EXPORT ClpQuadraticObjective : public ClpObjective {
 
 public:
   ///@name Stuff

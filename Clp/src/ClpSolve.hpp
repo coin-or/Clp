@@ -17,7 +17,7 @@
 
 */
 
-class ClpSolve {
+class CLPLIB_EXPORT ClpSolve {
 
 public:
   /** enums for solve function */
@@ -307,7 +307,7 @@ private:
 };
 
 /// For saving extra information to see if looping.
-class ClpSimplexProgress {
+class CLPLIB_EXPORT ClpSimplexProgress {
 
 public:
   /**@name Constructors and destructor and copy */
@@ -466,7 +466,7 @@ public:
 #if CLP_HAS_ABC
 #include "AbcCommon.hpp"
 /// For saving extra information to see if looping.
-class AbcSimplexProgress : public ClpSimplexProgress {
+class CLPLIB_EXPORT AbcSimplexProgress : public ClpSimplexProgress {
 
 public:
   /**@name Constructors and destructor and copy */

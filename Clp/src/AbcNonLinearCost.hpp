@@ -9,8 +9,8 @@
 #include "CoinPragma.hpp"
 #include "AbcCommon.hpp"
 
-class AbcSimplex;
-class CoinIndexedVector;
+class CLPLIB_EXPORT AbcSimplex;
+class COINUTILSLIB_EXPORT CoinIndexedVector;
 
 /** Trivial class to deal with non linear costs
     
@@ -68,7 +68,7 @@ inline void setSameStatus(unsigned char &status)
   status = static_cast< unsigned char >(status | (CLP_SAME << 4));
 }
 #endif
-class AbcNonLinearCost {
+class CLPLIB_EXPORT AbcNonLinearCost {
 
 public:
   /**@name Constructors, destructor */

@@ -1,19 +1,22 @@
 /* src/config_clp.h.in.  */
 
+/* Library Visibility Attribute */
+#undef CLPLIB_EXPORT
+
 /* Define to 1, 2, 3, or 4 if Aboca should be built. */
 #undef CLP_HAS_ABC
 
-/* Define to 1 if MUMPS package is available */
+/* Define to 1 if the MUMPS package is available. */
 #undef CLP_HAS_MUMPS
 
 /* Version number of project */
 #undef CLP_VERSION
 
-/* Major Version number of project */
+/* Major version number of project. */
 #undef CLP_VERSION_MAJOR
 
-/* Minor Version number of project */
+/* Minor version number of project. */
 #undef CLP_VERSION_MINOR
 
-/* Release Version number of project */
+/* Release version number of project. */
 #undef CLP_VERSION_RELEASE

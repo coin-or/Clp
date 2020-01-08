@@ -18,7 +18,7 @@ typedef void DMUMPS_STRUC_C;
 /** Mumps class for Clp Cholesky factorization
 
 */
-class ClpCholeskyMumps : public ClpCholeskyBase {
+class CLPLIB_EXPORT ClpCholeskyMumps : public ClpCholeskyBase {
 
 public:
   /**@name Virtual methods that the derived classes provides  */

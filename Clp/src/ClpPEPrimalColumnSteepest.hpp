@@ -26,7 +26,7 @@ See Forrest-Goldfarb paper for algorithm
 
 */
 
-class ClpPEPrimalColumnSteepest : public ClpPrimalColumnSteepest {
+class CLPLIB_EXPORT ClpPEPrimalColumnSteepest : public ClpPrimalColumnSteepest {
 public:
   ///@name Constructors and destructors
   //@{

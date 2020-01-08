@@ -16,7 +16,7 @@
 class ClpFactorization;
 class ClpDualRowSteepest;
 class ClpNodeStuff;
-class ClpNode {
+class CLPLIB_EXPORT ClpNode {
 
 public:
   /**@name Useful methods */
@@ -185,7 +185,7 @@ protected:
   int maximumIntegers_;
   //@}
 };
-class ClpNodeStuff {
+class CLPLIB_EXPORT ClpNodeStuff {
 
 public:
   /**@name Constructors, destructor */
@@ -296,7 +296,7 @@ public:
 #endif
   //@}
 };
-class ClpHashValue {
+class CLPLIB_EXPORT ClpHashValue {
 
 public:
   /**@name Useful methods */

@@ -25,13 +25,16 @@
 /** SHARED METHODS FOR USEFUL ALGEBRAIC OPERATIONS */
 
 /** inner product between a coin vector and a pointer */
+CLPLIB_EXPORT
 double PEdot(CoinIndexedVector &v1, const double *v2);
 
 /** inner product between two coin vectors
     call the function with the sparser vector first for efficiency */
+CLPLIB_EXPORT
 double PEdot(CoinIndexedVector &v1, CoinIndexedVector &v2);
 
 /** compute the product x^T*[A I] for the indices "which" of [A I] */
+CLPLIB_EXPORT
 void PEtransposeTimesSubsetAll(ClpSimplex *model, int number, const int *which,
   const double *COIN_RESTRICT x, double *COIN_RESTRICT y,
   const double *COIN_RESTRICT rowScale,
@@ -39,7 +42,7 @@ void PEtransposeTimesSubsetAll(ClpSimplex *model, int number, const int *which,
 
 /** BASE CLASS FOR THE IMPROVED SIMPLEX
 */
-class ClpPESimplex {
+class CLPLIB_EXPORT ClpPESimplex {
 
 public:
   /** Constructor */

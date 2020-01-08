@@ -249,9 +249,9 @@ CoinAbcMemcpy(T *to, const T *from, const int size)
 #endif
   std::memcpy(to, from, size * sizeof(T));
 }
-class ClpSimplex;
-class AbcSimplex;
-class AbcTolerancesEtc {
+class CLPLIB_EXPORT ClpSimplex;
+class CLPLIB_EXPORT AbcSimplex;
+class CLPLIB_EXPORT AbcTolerancesEtc {
 
 public:
   ///@name Constructors and destructors

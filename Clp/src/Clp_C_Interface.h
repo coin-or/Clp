@@ -10,6 +10,9 @@
 
 /* include all defines and ugly stuff */
 #include "Coin_C_defines.h"
+#include "ClpConfig.h"
+#undef COINLIBAPI
+#define COINLIBAPI CLPLIB_EXPORT
 
 #if defined(CLP_EXTERN_C)
 typedef struct {
