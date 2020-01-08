@@ -100,8 +100,7 @@ AC_COIN_CHK_LIB(AMD,[ClpLib],[-lamd],[-I/usr/include/suitesparse],[],
 # Requires AMD, but apparently not for a link check with dynamic libraries.
 # cholmod.h
 
-AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],
-		[cholmod_start])
+AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],[cholmod_start])
 
 # ThirdParty/Glpk also brings AMD and will install amd.h. Note that a standard
 # package for glpk does not install amd.h.
@@ -114,7 +113,7 @@ if test $coin_has_cholmod = no -a $coin_has_amd = no ; then
   fi
 else
   # for configure
-  AM_CONDITIONAL(COIN_HAS_GLPK, [test 0 = 1])
+  AM_CONDITIONAL(COIN_HAS_GLPK, [false])
 fi
 
 # MUMPS. Check first for ThirdParty/MUMPS, on the assumption that if the user
@@ -124,12 +123,10 @@ fi
 
 AC_COIN_CHK_PKG(MUMPS,[ClpLib],[coinmumps])
 if test $coin_has_mumps = no ; then
-  AC_COIN_CHK_LIB(MUMPS,[ClpLib],[-ldmumps],[-I/usr/include/MUMPS],[],
-  		  [dmumps_c])
+  AC_COIN_CHK_LIB(MUMPS,[ClpLib],[-ldmumps],[-I/usr/include/MUMPS],[],[dmumps_c])
 fi
 if test $coin_has_mumps = yes ; then
-  AC_DEFINE(CLP_HAS_MUMPS,[1],
-  	    [Define to 1 if the MUMPS package is available.])
+  AC_DEFINE(CLP_HAS_MUMPS,[1],[Define to 1 if the MUMPS package is available.])
 fi
 
 # WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
@@ -150,7 +147,7 @@ if test "$use_wsmp" = yes ; then
   fi
 else
   # to please configure
-  AM_CONDITIONAL(COIN_HAS_LAPACK, [test 0 = 1])
+  AM_CONDITIONAL(COIN_HAS_LAPACK, [false])
   :
 fi
 AM_CONDITIONAL(COIN_HAS_WSMP, [test "$use_wsmp" = yes])
@@ -213,4 +210,3 @@ AC_CONFIG_HEADER([src/config.h src/config_clp.h])
 
 # Finally, we let configure write all the output...
 AC_COIN_FINALIZE
-

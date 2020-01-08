@@ -2862,8 +2862,7 @@ fi
 
 
 
-# We want --enable-msvc setup and checked.
-
+  # We want --enable-msvc setup and checked
 
 
   # Check whether --enable-debug was given.
@@ -2884,8 +2883,7 @@ fi
 
 # change default compiler flags
 # - debugging enabled: enable debug symbols (-g/-Z7)
-# - debugging disabled: disable debug code (-DNDEBUG); enable (more)
-#   optimization (-O2)
+# - debugging disabled: disable debug code (-DNDEBUG); enable (more) optimization (-O2)
 # - enable exceptions for (i)cl
 
   if test "$enable_debug" = yes ; then
@@ -13636,9 +13634,6 @@ fi
   # before this can be enabled.
   hardcode_into_libs=yes
 
-  # Add ABI-specific directories to the system library path.
-  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
-
   # Ideally, we could use ldconfig to report *all* directores which are
   # searched for libraries, however this is still not possible.  Aside from not
   # being certain /sbin/ldconfig is available, command
@@ -13647,7 +13642,7 @@ fi
   # appending ld.so.conf contents (and includes) to the search path.
   if test -f /etc/ld.so.conf; then
     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
-    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
+    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
   fi
 
   # We used to test for /lib/ld.so.1 and disable shared libraries on
@@ -17665,9 +17660,6 @@ fi
   # before this can be enabled.
   hardcode_into_libs=yes
 
-  # Add ABI-specific directories to the system library path.
-  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
-
   # Ideally, we could use ldconfig to report *all* directores which are
   # searched for libraries, however this is still not possible.  Aside from not
   # being certain /sbin/ldconfig is available, command
@@ -17676,7 +17668,7 @@ fi
   # appending ld.so.conf contents (and includes) to the search path.
   if test -f /etc/ld.so.conf; then
     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
-    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
+    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
   fi
 
   # We used to test for /lib/ld.so.1 and disable shared libraries on
@@ -20618,9 +20610,6 @@ fi
   # before this can be enabled.
   hardcode_into_libs=yes
 
-  # Add ABI-specific directories to the system library path.
-  sys_lib_dlsearch_path_spec="/lib64 /usr/lib64 /lib /usr/lib"
-
   # Ideally, we could use ldconfig to report *all* directores which are
   # searched for libraries, however this is still not possible.  Aside from not
   # being certain /sbin/ldconfig is available, command
@@ -20629,7 +20618,7 @@ fi
   # appending ld.so.conf contents (and includes) to the search path.
   if test -f /etc/ld.so.conf; then
     lt_ld_extra=`awk '/^include / { system(sprintf("cd /etc; cat %s 2>/dev/null", \$2)); skip = 1; } { if (!skip) print \$0; skip = 0; }' < /etc/ld.so.conf | $SED -e 's/#.*//;/^[	 ]*hwcap[	 ]/d;s/[:,	]/ /g;s/=[^=]*$//;s/=[^= ]* / /g;s/"//g;/^$/d' | tr '\n' ' '`
-    sys_lib_dlsearch_path_spec="$sys_lib_dlsearch_path_spec $lt_ld_extra"
+    sys_lib_dlsearch_path_spec="/lib /usr/lib $lt_ld_extra"
   fi
 
   # We used to test for /lib/ld.so.1 and disable shared libraries on
@@ -22692,8 +22681,8 @@ fi
 
   case $coin_has_amd in
     build | requested)
-      amd_lflags=-lamd
-         amd_cflags=-I/usr/include/suitesparse
+      amd_lflags="-lamd"
+         amd_cflags="-I/usr/include/suitesparse"
 
       coin_has_amd=yes
       ;;
@@ -22963,8 +22952,8 @@ fi
 
   case $coin_has_cholmod in
     build | requested)
-      cholmod_lflags=-lcholmod
-         cholmod_cflags=-I/usr/include/suitesparse
+      cholmod_lflags="-lcholmod"
+         cholmod_cflags="-I/usr/include/suitesparse"
 
       coin_has_cholmod=yes
       ;;
@@ -23346,7 +23335,7 @@ $as_echo "#define COIN_HAS_AMD 1" >>confdefs.h
   fi
 else
   # for configure
-   if test 0 = 1; then
+   if false; then
   COIN_HAS_GLPK_TRUE=
   COIN_HAS_GLPK_FALSE='#'
 else
@@ -23767,8 +23756,8 @@ fi
 
   case $coin_has_mumps in
     build | requested)
-      mumps_lflags=-ldmumps
-         mumps_cflags=-I/usr/include/MUMPS
+      mumps_lflags="-ldmumps"
+         mumps_cflags="-I/usr/include/MUMPS"
 
       coin_has_mumps=yes
       ;;
@@ -25487,7 +25476,7 @@ $as_echo "$as_me: WARNING: WSMP failed to link with $wsmp_libs" >&2;}
   fi
 else
   # to please configure
-   if test 0 = 1; then
+   if false; then
   COIN_HAS_LAPACK_TRUE=
   COIN_HAS_LAPACK_FALSE='#'
 else
@@ -29355,5 +29344,4 @@ fi
   #AC_MSG_NOTICE([In case of trouble, first consult the troubleshooting page at https://projects.coin-or.org/BuildTools/wiki/user-troubleshooting])
   { $as_echo "$as_me:${as_lineno-$LINENO}: Configuration of $PACKAGE_NAME successful" >&5
 $as_echo "$as_me: Configuration of $PACKAGE_NAME successful" >&6;}
-
 
