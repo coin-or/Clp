@@ -32,9 +32,11 @@ script:
   - export CFGFLAGS="--prefix=$HOME/install"
   - if $ENABLEDEBUG ; then CFGFLAGS="$CFGFLAGS --enable-debug" ; fi
   - if $ENABLESTATIC ; then CFGFLAGS="$CFGFLAGS --enable-static --disable-shared" ; fi
+  - git clone --depth 1 https://github.com/coin-or-tools/ThirdParty-ASL
   - git clone --depth 1 --branch autotools-update https://github.com/coin-or-tools/Data-Sample
   - git clone --depth 1 --branch autotools-update https://github.com/coin-or/CoinUtils
   - git clone --depth 1 --branch autotools-update https://github.com/coin-or/Osi
+  - pushd ThirdParty-ASL && ./get.ASL && ./configure $CFGFLAGS && make install && popd
   - pushd Data-Sample && ./configure $CFGFLAGS && make install && popd
   - pushd CoinUtils/CoinUtils && ./configure $CFGFLAGS && make install && popd
   - pushd Osi/Osi && ./configure $CFGFLAGS && make install && popd
