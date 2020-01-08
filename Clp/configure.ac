@@ -164,10 +164,6 @@ AC_COIN_DOXYGEN([CoinUtils Osi])
 #                   Finishing up by writing all the output                   #
 ##############################################################################
 
-# Temporary hacks to shut down these two. This needs to be fixed.
-
-AM_CONDITIONAL(COIN_CXX_IS_CL,[test 0 = 1])
-
 # Finalize libs and cflags.
 AC_COIN_FINALIZE_FLAGS([ClpLib OsiClpLib OsiClpUnitTest])
 AC_COIN_CHK_HERE([ClpLib],[OsiClpLib],[clp])

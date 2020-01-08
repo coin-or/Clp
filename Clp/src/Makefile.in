@@ -1170,7 +1170,6 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-@COIN_CXX_IS_CL_FALSE@install-exec-hook:
 clean: clean-am
 
 clean-am: clean-binPROGRAMS clean-generic clean-libLTLIBRARIES \
@@ -1300,8 +1299,7 @@ install-dvi-am:
 
 install-exec-am: install-binPROGRAMS install-exec-local \
 	install-libLTLIBRARIES
-	@$(NORMAL_INSTALL)
-	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
+
 install-html: install-html-am
 
 install-html-am:
@@ -1441,7 +1439,7 @@ ps-am:
 uninstall-am: uninstall-binPROGRAMS uninstall-includecoinHEADERS \
 	uninstall-libLTLIBRARIES uninstall-local
 
-.MAKE: all install-am install-exec-am install-strip
+.MAKE: all install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am am--depfiles check check-am clean \
 	clean-binPROGRAMS clean-generic clean-libLTLIBRARIES \
@@ -1450,15 +1448,14 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includecoinHEADERS \
 	distclean-libtool distclean-tags dvi dvi-am html html-am info \
 	info-am install install-am install-binPROGRAMS install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-exec-hook install-exec-local \
-	install-html install-html-am install-includecoinHEADERS \
-	install-info install-info-am install-libLTLIBRARIES \
-	install-man install-pdf install-pdf-am install-ps \
-	install-ps-am install-strip installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-compile mostlyclean-generic \
-	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-am uninstall \
-	uninstall-am uninstall-binPROGRAMS \
+	install-exec-am install-exec-local install-html \
+	install-html-am install-includecoinHEADERS install-info \
+	install-info-am install-libLTLIBRARIES install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-binPROGRAMS \
 	uninstall-includecoinHEADERS uninstall-libLTLIBRARIES \
 	uninstall-local
 
@@ -1571,15 +1568,6 @@ uninstall-doc:
 .PHONY: install-doc uninstall-doc \
 	doxygen-docs pdf-doxygen-docs clean-doxygen-docs \
 	install-doxygen-docs uninstall-doxygen-docs
-
-########################################################################
-#                     Installing manifest (MSVC++)                     #
-########################################################################
-
-@COIN_CXX_IS_CL_TRUE@install-exec-hook:
-@COIN_CXX_IS_CL_TRUE@	test -s clp.exe.manifest && \
-@COIN_CXX_IS_CL_TRUE@	mt -manifest clp.exe.manifest -outputresource:clp.exe;\
-@COIN_CXX_IS_CL_TRUE@	cp clp.exe $(bindir)/clp.exe
 
 #######################################################################
 # Create the Config.h file that has all public defines and install it #

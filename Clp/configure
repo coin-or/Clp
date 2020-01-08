@@ -648,8 +648,6 @@ OSICLPLIB_CFLAGS_NOPC
 OSICLPLIB_LFLAGS_NOPC
 CLPLIB_CFLAGS_NOPC
 CLPLIB_LFLAGS_NOPC
-COIN_CXX_IS_CL_FALSE
-COIN_CXX_IS_CL_TRUE
 coin_doxy_tagfiles
 COIN_HAS_LATEX_FALSE
 COIN_HAS_LATEX_TRUE
@@ -20299,17 +20297,6 @@ done
 #                   Finishing up by writing all the output                   #
 ##############################################################################
 
-# Temporary hacks to shut down these two. This needs to be fixed.
-
- if test 0 = 1; then
-  COIN_CXX_IS_CL_TRUE=
-  COIN_CXX_IS_CL_FALSE='#'
-else
-  COIN_CXX_IS_CL_TRUE='#'
-  COIN_CXX_IS_CL_FALSE=
-fi
-
-
 # Finalize libs and cflags.
 
    if test "$BUILDTOOLS_DEBUG" = 1 ; then
@@ -20728,10 +20715,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COIN_HAS_LATEX_TRUE}" && test -z "${COIN_HAS_LATEX_FALSE}"; then
   as_fn_error $? "conditional \"COIN_HAS_LATEX\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${COIN_CXX_IS_CL_TRUE}" && test -z "${COIN_CXX_IS_CL_FALSE}"; then
-  as_fn_error $? "conditional \"COIN_CXX_IS_CL\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
