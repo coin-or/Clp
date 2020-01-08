@@ -36,7 +36,7 @@ Instantiation of OsiClpSolverInterface for the Model Algorithm.
 */
 
 class OSICLPLIB_EXPORT OsiClpSolverInterface : virtual public OsiSolverInterface {
-  friend void OsiClpSolverInterfaceUnitTest(const std::string &mpsDir, const std::string &netlibDir);
+  friend void OSICLPLIB_EXPORT OsiClpSolverInterfaceUnitTest(const std::string &mpsDir, const std::string &netlibDir);
 
 public:
   //---------------------------------------------------------------------------
