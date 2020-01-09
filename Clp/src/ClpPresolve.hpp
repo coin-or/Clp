@@ -373,6 +373,7 @@ protected:
     const char *prohibitedRows = NULL,
     const char *prohibitedColumns = NULL);
 };
+
 #endif
 
 /* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
