@@ -28,7 +28,11 @@
 #ifdef OSICLP_BUILD
 
 #ifdef DLL_EXPORT
+#undef OSICLPLIB_EXPORT
 #define OSICLPLIB_EXPORT __declspec(dllexport)
+#elif defined(__GNUC__) && __GNUC__ >= 4
+#undef OSICLPLIB_EXPORT
+#define OSICLPLIB_EXPORT __attribute__((__visibility__("default")))
 #endif
 
 #else
@@ -38,13 +42,15 @@
 #else /* HAVE_CONFIG_H */
 
 #ifndef OSICLPLIB_EXPORT
-#ifdef _WIN32
-#ifdef OSICLP_BUILD
-#define OSICLPLIB_EXPORT __declspec(dllexport)
-#else
-#define OSICLPLIB_EXPORT __declspec(dllimport)
-#endif
-#endif
+# ifdef _WIN32
+#  ifdef OSICLP_BUILD
+#   define OSICLPLIB_EXPORT __declspec(dllexport)
+#  else
+#   define OSICLPLIB_EXPORT __declspec(dllimport)
+#  endif
+# elif defined(__GNUC__) && __GNUC__ >= 4
+#  define OSICLPLIB_EXPORT __attribute__((__visibility__("default")))
+# endif
 #endif
 
 #endif /* HAVE_CONFIG_H */

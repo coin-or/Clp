@@ -34,10 +34,13 @@ AM_CPPFLAGS = -I$(srcdir)/.. $(OSICLPLIB_CFLAGS) -DOSICLP_BUILD
 ########################################################################
 
 # Here list all the header files that are required by a user of the library,
-# and that therefore should be installed in 'include/coin'
+# and that therefore should be installed in 'include/coin-or'
 
 includecoindir = $(pkgincludedir)
 includecoin_HEADERS = OsiClpSolverInterface.hpp
 
 install-exec-local:
 	$(install_sh_DATA) config_osiclp.h $(DESTDIR)$(includecoindir)/OsiClpConfig.h
+
+uninstall-local:
+	rm -f $(DESTDIR)$(includecoindir)/OsiClpConfig.h
