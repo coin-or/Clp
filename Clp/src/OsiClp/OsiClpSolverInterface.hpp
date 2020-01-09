@@ -1598,9 +1598,6 @@ protected:
 OSICLPLIB_EXPORT
 bool OsiClpHasNDEBUG();
 //#############################################################################
-/** A function that tests the methods in the OsiClpSolverInterface class. */
-OSICLPLIB_EXPORT
-void OsiClpSolverInterfaceUnitTest(const std::string &mpsDir, const std::string &netlibDir);
 #endif
 
 /* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
