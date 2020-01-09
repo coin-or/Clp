@@ -10,10 +10,10 @@
 #include "CoinFactorization.hpp"
 #include "ClpConfig.h"
 
-class CLPLIB_EXPORT ClpMatrixBase;
-class CLPLIB_EXPORT ClpSimplex;
-class CLPLIB_EXPORT ClpNetworkBasis;
-class CLPLIB_EXPORT CoinOtherFactorization;
+class ClpMatrixBase;
+class ClpSimplex;
+class ClpNetworkBasis;
+class CoinOtherFactorization;
 #ifndef CLP_MULTIPLE_FACTORIZATIONS
 #define CLP_MULTIPLE_FACTORIZATIONS 4
 #endif
