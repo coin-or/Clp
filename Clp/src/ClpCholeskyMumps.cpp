@@ -11,16 +11,19 @@
 #define JOB_INIT -1
 #define JOB_END -2
 #define USE_COMM_WORLD -987654
-extern "C" {
-#include "dmumps_c.h"
+
+// The first header to include is the one for MPI.
 // In newer ThirdParty/Mumps, mpi.h is renamed to mumps_mpi.h.
-// We get informed about this by having COIN_USE_MUMPS_MPI_H defined.
+// We get informed about this by having COIN_USE_MUMPS_MPI_H defined,
+// either via compiler flags or in our version of mumps_compat.h.
+#include "mumps_compat.h"
 #ifdef COIN_USE_MUMPS_MPI_H
 #include "mumps_mpi.h"
 #else
 #include "mpi.h"
 #endif
-}
+
+#include "dmumps_c.h"
 
 #include "ClpCholeskyMumps.hpp"
 #include "ClpMessage.hpp"
