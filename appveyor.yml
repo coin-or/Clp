@@ -9,7 +9,7 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ARCH: win64-mingw
       ADD_PATH: /mingw64/bin
-      COINBREW_SKIPFLAGS: --skip 'Data/Netlib"
+      COINBREW_SKIPFLAGS: --skip 'Data/Netlib'
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ARCH: win64-msvc16
       COINBREW_CFGFLAGS: --enable-msvc
@@ -39,7 +39,7 @@ install:
 build_script:
   - C:\msys64\usr\bin\bash -lc "cd C:\projects; wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew"
   - C:\msys64\usr\bin\bash -lc "cd C:\projects; ./coinbrew fetch %APPVEYOR_PROJECT_NAME%:%APPVEYOR_REPO_BRANCH% --no-prompt $COINBREW_SKIPFLAGS"
-  - C:\msys64\usr\bin\bash -lc "cd C:\projects; export PATH=$ADD_PATH:$PATH; ./coinbrew build %APPVEYOR_PROJECT_NAME% --no-prompt $COINBREW_SKIPFLAGS $COINBREW_CFGFLAGS --verbosity=2 --test"
+  - C:\msys64\usr\bin\bash -lc "cd C:\projects; export PATH=$ADD_PATH:$PATH; ./coinbrew build %APPVEYOR_PROJECT_NAME% --no-prompt \"$COINBREW_SKIPFLAGS\" $COINBREW_CFGFLAGS --verbosity=2 --test"
 
 
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
