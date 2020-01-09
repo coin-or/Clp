@@ -9,19 +9,23 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ARCH: win64-mingw
       ADD_PATH: /mingw64/bin
-      COINBREW_SKIPFLAGS: --skip "Data/Netlib"
+      COINBREW_SKIPFLAGS: --skip 'Data/Netlib"
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ARCH: win64-msvc16
       COINBREW_CFGFLAGS: --enable-msvc
-      COINBREW_SKIPFLAGS: --skip "Data/Netlib ThirdParty/Mumps"
+      COINBREW_SKIPFLAGS: --skip 'Data/Netlib ThirdParty/Mumps'
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+      ARCH: win64-msvc16
+      COINBREW_CFGFLAGS: --enable-msvc --disable-shared --enable-debug
+      COINBREW_SKIPFLAGS: --skip 'Data/Netlib ThirdParty/Mumps'
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       ARCH: win64-msvc15
       COINBREW_CFGFLAGS: --enable-msvc
-      COINBREW_SKIPFLAGS: --skip "Data/Netlib ThirdParty/Mumps"
+      COINBREW_SKIPFLAGS: --skip 'Data/Netlib ThirdParty/Mumps'
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       ARCH: win64-msvc14
       COINBREW_CFGFLAGS: --enable-msvc
-      COINBREW_SKIPFLAGS: --skip "Data/Netlib ThirdParty/Mumps"
+      COINBREW_SKIPFLAGS: --skip 'Data/Netlib ThirdParty/Mumps'
 
 install:
   - for /f "delims=" %%i in ('C:\msys64\usr\bin\bash -lc "if [ $APPVEYOR_REPO_BRANCH = 'master' ]; then echo 'master'; else echo $APPVEYOR_REPO_BRANCH | cut -d "/" -f 2; fi"') do set VERSION=%%i
