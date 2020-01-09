@@ -11,13 +11,13 @@ environment:
       ADD_PATH: /mingw64/bin
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ARCH: win64-msvc16
-      HOST_ARCH_ARG: --enable-msvc
+      HOST_ARCH_ARG: --enable-msvc --skip ThirdParty/Mumps
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       ARCH: win64-msvc15
-      HOST_ARCH_ARG: --enable-msvc
+      HOST_ARCH_ARG: --enable-msvc --skip ThirdParty/Mumps
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       ARCH: win64-msvc14
-      HOST_ARCH_ARG: --enable-msvc
+      HOST_ARCH_ARG: --enable-msvc --skip ThirdParty/Mumps
 
 install:
   - for /f "delims=" %%i in ('C:\msys64\usr\bin\bash -lc "if [ $APPVEYOR_REPO_BRANCH = 'master' ]; then echo 'master'; else echo $APPVEYOR_REPO_BRANCH | cut -d "/" -f 2; fi"') do set VERSION=%%i
@@ -26,12 +26,12 @@ install:
   - IF %ARCH%==win64-msvc15 (CALL C:\"Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64 8.1)
   - IF %ARCH%==win64-msvc16 (CALL C:\"Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat" x64 8.1)
   - IF %ARCH%==win64-mingw (CALL C:\msys64\usr\bin\bash -lc "pacman -S mingw-w64-x86_64-lapack --noconfirm")
-  - IF %ARCH%==win64-mingw (CALL C:\msys64\usr\bin\bash -lc "PATH=/mingw64/bin:$PATH ; gcc --version; g++ --version; pkg-config --libs lapack ; echo PATH=$PATH")
+  - IF %ARCH%==win64-mingw (CALL C:\msys64\usr\bin\bash -lc "PATH=/mingw64/bin:$PATH ; gcc --version; g++ --version; gfortran --version; pkg-config --libs lapack ; echo PATH=$PATH")
 
 build_script:
   - C:\msys64\usr\bin\bash -lc "cd C:\projects; wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew"
-  - C:\msys64\usr\bin\bash -lc "cd C:\projects; ./coinbrew fetch %APPVEYOR_PROJECT_NAME%:%APPVEYOR_REPO_BRANCH% --no-prompt --skip Data/Netlib"
-  - C:\msys64\usr\bin\bash -lc "cd C:\projects; export PATH=$ADD_PATH:$PATH; ./coinbrew build %APPVEYOR_PROJECT_NAME% --no-prompt --skip Data/Netlib $HOST_ARCH_ARG --verbosity=3 --disable-silent-rules --test"
+  - C:\msys64\usr\bin\bash -lc "cd C:\projects; ./coinbrew fetch %APPVEYOR_PROJECT_NAME%:%APPVEYOR_REPO_BRANCH% --no-prompt --skip Data/Netlib $HOST_ARCH_ARG"
+  - C:\msys64\usr\bin\bash -lc "cd C:\projects; export PATH=$ADD_PATH:$PATH; ./coinbrew build %APPVEYOR_PROJECT_NAME% --no-prompt --skip Data/Netlib $HOST_ARCH_ARG --verbosity=2 --test"
 
 
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
