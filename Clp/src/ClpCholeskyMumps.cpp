@@ -53,12 +53,14 @@ ClpCholeskyMumps::ClpCholeskyMumps(int denseThreshold, int logLevel)
   mumps_->comm_fortran = USE_COMM_WORLD;
   int myid;
   int justName;
+#ifndef MUMPS_MPI_H  /* do not call dummy function, as it misses the DLL export specifier */
   MPI_Init(&justName, NULL);
 #ifndef NDEBUG
   int ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   assert(!ierr);
 #else
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+#endif
 #endif
   dmumps_c(mumps_);
 #define ICNTL(I) icntl[(I)-1] /* macro s.t. indices match documentation */
@@ -92,7 +94,9 @@ ClpCholeskyMumps::~ClpCholeskyMumps()
 {
   mumps_->job = JOB_END;
   dmumps_c(mumps_); /* Terminate instance */
+#ifndef MUMPS_MPI_H  /* do not call dummy function, as it misses the DLL export specifier */
   MPI_Finalize();
+#endif
   free(mumps_);
 }
 
