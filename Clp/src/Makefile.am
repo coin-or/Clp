@@ -132,16 +132,13 @@ libClpSolver_la_SOURCES = \
 	MyMessageHandler.cpp MyMessageHandler.hpp \
 	unitTest.cpp
 
-# if AMD, CHOLMOD, or GLPK is available, then compile ClpCholeskyUfl.cpp
+# if AMD or CHOLMOD is available, then compile ClpCholeskyUfl.cpp
 if COIN_HAS_AMD
 libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
 else
 if COIN_HAS_CHOLMOD
 libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
 else
-if COIN_HAS_GLPK
-libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
-endif
 endif
 endif
 
@@ -245,16 +242,13 @@ includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLine
 endif
 
 
-# if AMD, CHOLMOD, or GLPK is available, then install ClpCholeskyUfl.hpp (for advanced users)
+# if AMD or CHOLMOD is available, then install ClpCholeskyUfl.hpp (for advanced users)
 if COIN_HAS_AMD
 includecoin_HEADERS += ClpCholeskyUfl.hpp
 else
 if COIN_HAS_CHOLMOD
 includecoin_HEADERS += ClpCholeskyUfl.hpp
 else
-if COIN_HAS_GLPK
-includecoin_HEADERS += ClpCholeskyUfl.hpp
-endif
 endif
 endif
 

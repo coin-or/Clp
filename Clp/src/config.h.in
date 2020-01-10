@@ -30,9 +30,6 @@
 /* Define to 1 if CoinUtils is available. */
 #undef COIN_HAS_COINUTILS
 
-/* Define to 1 if Glpk is available. */
-#undef COIN_HAS_GLPK
-
 /* Define to 1 if the MUMPS package is available */
 #undef COIN_HAS_MUMPS
 

@@ -94,20 +94,6 @@ AC_COIN_CHK_LIB(AMD,[ClpLib],[-lamd],[-I/usr/include/suitesparse],[],
 
 AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],[cholmod_start])
 
-# ThirdParty/Glpk also brings AMD and will install amd.h. Note that a standard
-# package for glpk does not install amd.h.
-
-if test $coin_has_cholmod = no -a $coin_has_amd = no ; then
-  AC_COIN_CHK_PKG(Glpk,[ClpLib],[coinglpk])
-  if test $coin_has_glpk = yes ; then
-    AC_MSG_NOTICE([using AMD from ThirdParty/GLPK package])
-    AC_DEFINE(COIN_HAS_AMD,[1],[Define to 1 if the AMD package is available])
-  fi
-else
-  # for configure
-  AM_CONDITIONAL(COIN_HAS_GLPK, [false])
-fi
-
 # MUMPS. Check first for ThirdParty/MUMPS, on the assumption that if the user
 # bothered to build it, we should use it. If it's not present, try for a
 # system installation. If we find it, define CLP_HAS_MUMPS for export to code
