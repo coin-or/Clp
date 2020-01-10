@@ -3587,10 +3587,13 @@ fi
 
 
   # If enable-msvc, then test for Intel (on Windows) and MS C compiler
-  # explicitly and add compile-wrapper before AC_PROG_CC, because
-  # the compile-wrapper work around issues when having the wrong link.exe
-  # in the PATH first, which would upset tests in AC_PROG_CC.
-  # Further, if CC unset and not set by user, then stop with error.
+  # explicitly and add the compile wrapper before AC_PROG_CC. The compile
+  # wrapper works around issues related to finding MS link.exe. (Unix link.exe
+  # occurs first in PATH, which causes compile and link checks to fail.) For
+  # the same reason, set LD to use the compile wrapper. If CC remains unset
+  # (neither icl or cl was found, and CC was not set by the user), stop with
+  # an error.
+
   if test $enable_msvc = yes ; then
     for ac_prog in icl cl
 do
@@ -3636,14 +3639,18 @@ done
 
     if test -n "$CC" ; then
       CC="$am_aux_dir/compile $CC"
+      ac_cv_prog_CC="$CC"
+      LD="$CC"
     else
       as_fn_error $? "Neither MS nor Intel C compiler found in PATH and CC is unset." "$LINENO" 5
     fi
   fi
 
-  # look for some C compiler and check whether it works
-  # if user has set CC or we found icl/cl above, this shouldn't overwrite CC
-  # other than CXX of F77, this macro also takes care of adding the compile-wrapper
+  # Look for some C compiler and check that it works. If the user has set CC
+  # or we found icl/cl above, this shouldn't overwrite CC. Unlike the macros
+  # that establish C++ or Fortran compilers, PROG_CC also takes care of adding
+  # the compile wrapper if needed.
+
   ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -4433,11 +4440,14 @@ fi
 
 
 
-  # If enable-msvc, then test for Intel (on Windows) and MS C++ compiler
-  # explicitly and add compile-wrapper before AC_PROG_CXX, because
-  # the compile-wrapper work around issues when having the wrong link.exe
-  # in the PATH first, which would upset tests in AC_PROG_CXX.
-  # Further, if CXX unset and not set by user, then stop with error.
+  # If enable-msvc, then test for Intel (on Windows) and MS C compiler
+  # explicitly and add the compile wrapper before AC_PROG_CXX. The compile
+  # wrapper works around issues related to finding MS link.exe. (Unix link.exe
+  # occurs first in PATH, which causes compile and link checks to fail.) For
+  # the same reason, set LD to use the compile wrapper. If CC remains unset
+  # (neither icl or cl was found, and CC was not set by the user), stop with
+  # an error.
+
   if test $enable_msvc = yes ; then
     for ac_prog in icl cl
 do
@@ -4483,13 +4493,16 @@ done
 
     if test -n "$CXX" ; then
       CXX="$am_aux_dir/compile $CXX"
+      ac_cv_prog_CXX="$CXX"
+      LD="$CXX"
     else
       as_fn_error $? "Neither MS nor Intel C++ compiler found in PATH and CXX is unset." "$LINENO" 5
     fi
   fi
 
-  # look for some C++ compiler and check whether it works
-  # if user has set CXX or we found icl/cl above, this shouldn't overwrite CXX
+  # Look for some C++ compiler and check that it works. If the user has set
+  # CXX or we found icl/cl above, this shouldn't overwrite CXX.
+
   ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -4876,7 +4889,8 @@ fi
 
 
 
-  # If the compiler does not support -c -o, then wrap the compile script around it.
+  # If the compiler does not support -c -o, wrap it with the compile script.
+
   ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -16582,7 +16596,7 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 #    and explicitly dll-exporting them, leading to warnings about duplicates
 #    regarding those that are properly marked for dll-export in the source.
 #
-# Patch libtool also to circumbent some issues when using MinGW (Msys+GCC).
+# Patch libtool also to circumvent some issues when using MinGW (Msys+GCC).
 # 1. Relax check which libraries can be used when linking a DLL.
 #    libtool's func_mode_link() would reject linking MinGW system libraries,
 #    e.g., -lmingw32, when building a DLL, because it does not find this
