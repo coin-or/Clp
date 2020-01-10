@@ -343,7 +343,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         CoinModel *model;
       } coinModelStart;
       coinModelStart.model = NULL;
-      int returnCode = readAmpl(&info, argc, const_cast< char ** >(argv), &coinModelStart.voidModel);
+      int returnCode = readAmpl(&info, argc, const_cast< char ** >(argv), &coinModelStart.voidModel, "clp");
       if (returnCode)
         return returnCode;
       if (info.numberBinary + info.numberIntegers + info.numberSos
