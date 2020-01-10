@@ -38,8 +38,8 @@ install:
 
 build_script:
   - C:\msys64\usr\bin\bash -lc "cd C:\projects; wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew"
-  - C:\msys64\usr\bin\bash -lc "cd C:\projects; ./coinbrew fetch %APPVEYOR_PROJECT_NAME%:%APPVEYOR_REPO_BRANCH% --no-prompt --skip '$COINBREW_SKIPS'"
-  - C:\msys64\usr\bin\bash -lc "cd C:\projects; export PATH=$ADD_PATH:$PATH; ./coinbrew build %APPVEYOR_PROJECT_NAME% --no-prompt --skip '$COINBREW_SKIPS' $COINBREW_CFGFLAGS --verbosity=2 --test"
+  - C:\msys64\usr\bin\bash -lc "cd C:\projects; ./coinbrew fetch %APPVEYOR_PROJECT_NAME%:%APPVEYOR_REPO_BRANCH% --no-prompt --skip \"$COINBREW_SKIPS\""
+  - C:\msys64\usr\bin\bash -lc "cd C:\projects; export PATH=$ADD_PATH:$PATH; ./coinbrew build %APPVEYOR_PROJECT_NAME% --no-prompt --skip \"$COINBREW_SKIPS\" $COINBREW_CFGFLAGS --verbosity=2 --test"
 
 
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
