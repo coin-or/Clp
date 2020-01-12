@@ -293,16 +293,6 @@ public:
   void passInEventHandler(const ClpEventHandler *eventHandler);
   /// Puts solution back into small model
   void getbackSolution(const ClpSimplex &smallModel, const int *whichRow, const int *whichColumn);
-  /** Load nonlinear part of problem from AMPL info
-         Returns 0 if linear
-         1 if quadratic objective
-         2 if quadratic constraints
-         3 if nonlinear objective
-         4 if nonlinear constraints
-         -1 on failure
-     */
-  int loadNonLinear(void *info, int &numberConstraints,
-    ClpConstraint **&constraints);
 #ifdef ABC_INHERIT
   /// Loads tolerances etc
   void loadTolerancesEtc(const AbcTolerancesEtc &data);
