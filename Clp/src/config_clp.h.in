@@ -1,5 +1,8 @@
 /* src/config_clp.h.in.  */
 
+#ifndef __CONFIG_CLP_H__
+#define __CONFIG_CLP_H__
+
 /* Library Visibility Attribute */
 #undef CLPLIB_EXPORT
 
@@ -20,3 +23,5 @@
 
 /* Release version number of project. */
 #undef CLP_VERSION_RELEASE
+
+#endif
