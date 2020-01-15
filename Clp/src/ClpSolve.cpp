@@ -5559,7 +5559,7 @@ int ClpSimplex::solveDW(CoinStructuredModel *model, ClpSolve &options)
       if (reducePrint)
         sub[iBlock].setLogLevel(0);
     }
-#if defined(ABC_INHERIT) || defined(THREADS_IN_ANALYZE)
+#if defined(ABC_INHERIT)
     if (numberCpu < 2) {
 #endif
       for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
@@ -5569,7 +5569,7 @@ int ClpSimplex::solveDW(CoinStructuredModel *model, ClpSolve &options)
           sub[iBlock].dual();
         }
       }
-#if defined(ABC_INHERIT) || defined(THREADS_IN_ANALYZE)
+#if defined(ABC_INHERIT)
     } else {
       int iBlock = 0;
       while (iBlock < numberBlocks) {
