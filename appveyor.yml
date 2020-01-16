@@ -8,8 +8,6 @@ platform:
 #
 # skip Mumps on systems without fortran compiler
 #
-# skip ThirdParty/Glpk as not ready for MSVC yet, https://github.com/coin-or-tools/ThirdParty-Glpk/issues/3
-#
 # skip ThirdParty/ASL with MSVC 2017 due to compiler crash:
 # libtool: compile:  /c/projects/ThirdParty/ASL/compile cl -I. -I/c/projects/ThirdParty/ASL -DNo_dtoa -DNO_RUSAGE -Dstrtoull=_strtoui64 -DNO_SSIZE_T -nologo -DNDEBUG -O2 -MD -c /c/projects/ThirdParty/ASL/solvers/avltree.c  -DDLL_EXPORT -DPIC -o solvers/.libs/avltree.obj avltree.c
 # c:\projects\thirdparty\asl\solvers\avltree.c(59) : fatal error C1001: An internal error has occurred in the compiler.
@@ -34,15 +32,15 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ARCH: win64-msvc16
       COINBREW_CFGFLAGS: --enable-msvc
-      COINBREW_SKIPS: Data/Netlib ThirdParty/Mumps ThirdParty/Glpk
+      COINBREW_SKIPS: Data/Netlib ThirdParty/Mumps
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       ARCH: win64-msvc16
       COINBREW_CFGFLAGS: --enable-msvc --disable-shared --enable-debug
-      COINBREW_SKIPS: Data/Netlib ThirdParty/Mumps ThirdParty/Glpk
+      COINBREW_SKIPS: Data/Netlib ThirdParty/Mumps
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       ARCH: win64-msvc15
       COINBREW_CFGFLAGS: --enable-msvc
-      COINBREW_SKIPS: Data/Netlib ThirdParty/Mumps ThirdParty/Glpk ThirdParty/ASL
+      COINBREW_SKIPS: Data/Netlib ThirdParty/Mumps ThirdParty/ASL
     #- APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     #  ARCH: win64-msvc14
     #  COINBREW_CFGFLAGS: --enable-msvc
