@@ -6749,10 +6749,10 @@ ClpPackedMatrix3::ClpPackedMatrix3()
 }
 #ifdef _MSC_VER
 #include <intrin.h>
-#elif defined(__arm__)
+#elif defined(__ARM_FEATURE_SIMD32) || defined(__ARM_NEON)
 #include <arm_neon.h>
 #else
-#include <immintrin.h>
+//#include <immintrin.h> // deemed unnecessary in #126; if that was wrong, then try to do as suggested in #127
 //#include <fmaintrin.h>
 #endif
 /* Constructor from copy. */

@@ -3171,7 +3171,7 @@ void ClpPrimalColumnSteepest::saveWeights(ClpSimplex *model, int mode)
     int sequenceIn = model_->sequenceIn();
     assert(sequenceIn >= 0 && sequenceIn < model_->numberRows() + model_->numberColumns());
     // possible weights_ was never set up // assert(weights_);
-    if (weights_ && weights_[sequenceIn] == (mode_ != 1) ? 1.0 : 1.0 + ADD_ONE)
+    if (weights_ && weights_[sequenceIn] == ((mode_ != 1) ? 1.0 : 1.0 + ADD_ONE))
       return;
     else
       mode = 5;

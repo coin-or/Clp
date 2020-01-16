@@ -3036,8 +3036,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         }
         // sort
         CoinSort_2(weight + saveN, weight + numberSort, sort + saveN);
-        if (numberSort < smallNumberColumns)
-          printf("using %d columns not %d\n", numberSort, smallNumberColumns);
+        //if (numberSort < smallNumberColumns)
+	//printf("using %d columns not %d\n", numberSort, smallNumberColumns);
         numberSort = CoinMin(smallNumberColumns, numberSort);
         // try singletons
         char *markX = new char[numberColumns];
@@ -5006,7 +5006,7 @@ ClpSimplex::scaleObjective(double value)
   }
   return largest;
 }
-#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
+#if defined(ABC_INHERIT) || defined(THREADS_IN_ANALYZE)
 void *clp_parallelManager(void *stuff)
 {
   CoinPthreadStuff *driver = reinterpret_cast< CoinPthreadStuff * >(stuff);
@@ -5559,7 +5559,7 @@ int ClpSimplex::solveDW(CoinStructuredModel *model, ClpSolve &options)
       if (reducePrint)
         sub[iBlock].setLogLevel(0);
     }
-#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
+#if defined(ABC_INHERIT)
     if (numberCpu < 2) {
 #endif
       for (iBlock = 0; iBlock < numberBlocks; iBlock++) {
@@ -5569,7 +5569,7 @@ int ClpSimplex::solveDW(CoinStructuredModel *model, ClpSolve &options)
           sub[iBlock].dual();
         }
       }
-#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
+#if defined(ABC_INHERIT)
     } else {
       int iBlock = 0;
       while (iBlock < numberBlocks) {
@@ -5906,7 +5906,7 @@ static ClpSimplex *deBound(ClpSimplex *oldModel)
   delete[] change;
   return model;
 }
-#if defined(ABC_INHERIT) || defined(CBC_THREAD) || defined(THREADS_IN_ANALYZE)
+#if defined(ABC_INHERIT) || defined(THREADS_IN_ANALYZE)
 CoinPthreadStuff::CoinPthreadStuff(int numberThreads,
   void *parallelManager(void *stuff))
 {
