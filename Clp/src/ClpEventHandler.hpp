@@ -24,7 +24,7 @@ User can derive and construct from CbcModel  - not pretty
 
 */
 
-class ClpEventHandler {
+class CLPLIB_EXPORT ClpEventHandler {
 
 public:
   /** enums for what sort of event.
@@ -135,7 +135,7 @@ would otherwise give up
 
 */
 
-class ClpDisasterHandler {
+class CLPLIB_EXPORT ClpDisasterHandler {
 
 public:
   /**@name Virtual methods that the derived classe should provide.

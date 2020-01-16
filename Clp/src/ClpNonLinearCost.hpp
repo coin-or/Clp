@@ -74,7 +74,7 @@ inline void setSameStatus(unsigned char &status)
 #define CLP_METHOD1 (false)
 #define CLP_METHOD2 (true)
 #endif
-class ClpNonLinearCost {
+class CLPLIB_EXPORT ClpNonLinearCost {
 
 public:
 public:

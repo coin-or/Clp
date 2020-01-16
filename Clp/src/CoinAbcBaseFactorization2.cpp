@@ -1206,7 +1206,7 @@ CoinSimplexInt CoinAbcTypeFactorization::factorDense()
 #if ABC_DENSE_CODE != 2
 #ifndef CLAPACK
     CoinSimplexInt info;
-    F77_FUNC(dgetrf, DGETRF)
+    LAPACK_FUNC(dgetrf, DGETRF)
     (&numberDense_, &numberDense_, denseArea, &leadingDimension_, densePermute,
       &info);
 

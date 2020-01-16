@@ -17,7 +17,7 @@ See Forrest-Goldfarb paper for algorithm
 
 */
 
-class ClpDualRowSteepest : public ClpDualRowPivot {
+class CLPLIB_EXPORT ClpDualRowSteepest : public ClpDualRowPivot {
 
 public:
   ///@name Algorithmic methods

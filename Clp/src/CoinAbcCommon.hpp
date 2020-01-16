@@ -179,7 +179,7 @@ typedef long double CoinExponent;
 #define ABC_USE_LAPACK
 #endif
 #ifdef ABC_USE_LAPACK
-#define F77_FUNC(x, y) x##_
+#define LAPACK_FUNC(x, y) x##_
 #define ABC_DENSE_CODE 1
 /* Type of Fortran integer translated into C */
 #ifndef ipfint
@@ -197,12 +197,12 @@ enum CBLAS_TRANSPOSE { CblasNoTrans = 111,
 // using simple lapack interface
 extern "C" {
 /** LAPACK Fortran subroutine DGETRS. */
-void F77_FUNC(dgetrs, DGETRS)(char *trans, cipfint *n,
+void LAPACK_FUNC(dgetrs, DGETRS)(char *trans, cipfint *n,
   cipfint *nrhs, const CoinSimplexDouble *A, cipfint *ldA,
   cipfint *ipiv, CoinSimplexDouble *B, cipfint *ldB, ipfint *info,
   int trans_len);
 /** LAPACK Fortran subroutine DGETRF. */
-void F77_FUNC(dgetrf, DGETRF)(ipfint *m, ipfint *n,
+void LAPACK_FUNC(dgetrf, DGETRF)(ipfint *m, ipfint *n,
   CoinSimplexDouble *A, ipfint *ldA,
   ipfint *ipiv, ipfint *info);
 int clapack_dgetrf(const enum CBLAS_ORDER Order, const int M, const int N,
@@ -249,9 +249,9 @@ CoinAbcMemcpy(T *to, const T *from, const int size)
 #endif
   std::memcpy(to, from, size * sizeof(T));
 }
-class ClpSimplex;
-class AbcSimplex;
-class AbcTolerancesEtc {
+class CLPLIB_EXPORT ClpSimplex;
+class CLPLIB_EXPORT AbcSimplex;
+class CLPLIB_EXPORT AbcTolerancesEtc {
 
 public:
   ///@name Constructors and destructors

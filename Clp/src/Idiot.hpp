@@ -45,7 +45,7 @@ typedef struct {
 
 */
 
-class Idiot {
+class CLPLIB_EXPORT Idiot {
 
 public:
   /**@name Constructors and destructor

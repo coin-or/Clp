@@ -16,7 +16,7 @@
     This is just a simple example for real column generation
 */
 
-class ClpGubDynamicMatrix : public ClpGubMatrix {
+class CLPLIB_EXPORT ClpGubDynamicMatrix : public ClpGubMatrix {
 
 public:
   /**@name Main functions provided */

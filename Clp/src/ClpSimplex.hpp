@@ -103,8 +103,8 @@ class AbcSimplex;
 
 */
 
-class ClpSimplex : public ClpModel {
-  friend void ClpSimplexUnitTest(const std::string &mpsDir);
+class CLPLIB_EXPORT ClpSimplex : public ClpModel {
+  friend CLPLIB_EXPORT void ClpSimplexUnitTest(const std::string &mpsDir);
 
 public:
   /** enums for status of various sorts.
@@ -293,16 +293,6 @@ public:
   void passInEventHandler(const ClpEventHandler *eventHandler);
   /// Puts solution back into small model
   void getbackSolution(const ClpSimplex &smallModel, const int *whichRow, const int *whichColumn);
-  /** Load nonlinear part of problem from AMPL info
-         Returns 0 if linear
-         1 if quadratic objective
-         2 if quadratic constraints
-         3 if nonlinear objective
-         4 if nonlinear constraints
-         -1 on failure
-     */
-  int loadNonLinear(void *info, int &numberConstraints,
-    ClpConstraint **&constraints);
 #ifdef ABC_INHERIT
   /// Loads tolerances etc
   void loadTolerancesEtc(const AbcTolerancesEtc &data);
@@ -1999,6 +1989,7 @@ protected:
 
     It also does some testing of ClpFactorization class
  */
+CLPLIB_EXPORT
 void ClpSimplexUnitTest(const std::string &mpsDir);
 
 // For Devex stuff
@@ -2016,7 +2007,7 @@ typedef struct {
   int status;
   int stuff[4];
 } CoinThreadInfo;
-class CoinPthreadStuff {
+class CLPLIB_EXPORT CoinPthreadStuff {
 public:
   /**@name Constructors and destructor and copy */
   //@{

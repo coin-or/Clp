@@ -29,7 +29,7 @@ class ClpSimplex;
 
 */
 
-class ClpDynamicExampleMatrix : public ClpDynamicMatrix {
+class CLPLIB_EXPORT ClpDynamicExampleMatrix : public ClpDynamicMatrix {
 
 public:
   /**@name Main functions provided */

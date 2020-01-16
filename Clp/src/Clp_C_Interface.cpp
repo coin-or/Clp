@@ -410,6 +410,12 @@ Clp_copyNames(Clp_Simplex *model, const char *const *rowNamesIn,
   model->model_->copyNames(rowNames, columnNames);
 }
 
+/* Underlying model */
+COINLIBAPI void* COINLINKAGE
+Clp_model(Clp_Simplex * model)
+{
+  return model->model_ ;
+}
 /* Number of rows */
 COINLIBAPI int COINLINKAGE
 Clp_numberRows(Clp_Simplex *model)
@@ -494,7 +500,8 @@ Clp_setNumberIterations(Clp_Simplex *model, int numberIterations)
   model->model_->setNumberIterations(numberIterations);
 }
 /* Maximum number of iterations */
-COINLIBAPI int maximumIterations(Clp_Simplex *model)
+COINLIBAPI int COINLINKAGE
+Clp_maximumIterations(Clp_Simplex *model)
 {
   return model->model_->maximumIterations();
 }

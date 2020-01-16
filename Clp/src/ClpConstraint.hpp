@@ -15,7 +15,7 @@ class ClpModel;
 Abstract Base Class for describing a constraint or objective function
 
 */
-class ClpConstraint {
+class CLPLIB_EXPORT ClpConstraint {
 
 public:
   ///@name Stuff

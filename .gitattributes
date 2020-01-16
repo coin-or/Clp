@@ -5,6 +5,7 @@
 .ci/appveyor.pre -text
 .coin-or/projDesc.xml -text
 /.travis.yml -text
+Clp/Dependencies -text
 Clp/LICENSE -text
 Clp/MSVisualStudio/v10/Clp.sln -text
 Clp/MSVisualStudio/v10/ClpExamplesMinimum/ClpExamplesMinimum.vcxproj -text
@@ -45,8 +46,8 @@ Clp/MSVisualStudio/v9alt/genDefForClp.ps1 -text
 Clp/MSVisualStudio/v9alt/libClp.vcproj -text
 Clp/MSVisualStudio/v9alt/libOsiClp.vcproj -text
 Clp/MSVisualStudio/v9alt/osiclp.vsprops -text
-Clp/clp-uninstalled.pc.in -text
 Clp/clp.pc.in -text
+Clp/compile -text
 Clp/config.guess -text
 Clp/config.sub -text
 Clp/configure -text
@@ -66,6 +67,7 @@ Clp/examples/myPdco.hpp -text
 Clp/examples/pdco.cpp -text
 Clp/install-sh -text
 Clp/ltmain.sh -text
+Clp/m4/ac_clp_aboca.m4 -text
 Clp/missing -text
 Clp/src/AbcCommon.hpp -text
 Clp/src/AbcDualRowDantzig.cpp -text
@@ -124,8 +126,6 @@ Clp/src/ClpPdco.hpp -text
 Clp/src/ClpPdcoBase.cpp -text
 Clp/src/ClpPdcoBase.hpp -text
 Clp/src/ClpSolver.cpp -text
-Clp/src/Clp_ampl.cpp -text
-Clp/src/Clp_ampl.h -text
 Clp/src/CoinAbcBaseFactorization.hpp -text
 Clp/src/CoinAbcBaseFactorization1.cpp -text
 Clp/src/CoinAbcBaseFactorization2.cpp -text
@@ -158,7 +158,7 @@ Clp/src/OsiClp/Makefile.am -text
 Clp/src/OsiClp/Makefile.in -text
 Clp/src/OsiClp/OsiClpSolverInterface.cpp -text
 Clp/src/OsiClp/OsiClpSolverInterface.hpp -text
-Clp/src/OsiClp/osi-clp-uninstalled.pc.in -text
+Clp/src/OsiClp/config_osiclp.h.in -text
 Clp/src/OsiClp/osi-clp.pc.in -text
 Clp/src/config.h.in -text
 Clp/src/config_clp.h.in -text
@@ -167,15 +167,4 @@ Clp/src/config_default.h -text
 Clp/src/format-source.sh -text
 Clp/test/OsiClpSolverInterfaceTest.cpp -text
 Clp/test/osiUnitTest.cpp -text
-/Dependencies -text
-/LICENSE -text
-/README -text
 /appveyor.yml -text
-/config.guess -text
-/config.sub -text
-/configure -text
-/configure.ac -text
-/depcomp -text
-doxydoc/doxygen.conf.in -text
-/install-sh -text
-/missing -text

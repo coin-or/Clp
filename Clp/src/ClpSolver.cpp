@@ -29,6 +29,7 @@ int boundary_sort3 = 10000;
 #include "ClpConfig.h"
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
+#include "CoinModel.hpp"
 #ifdef COIN_HAS_GLPK
 #include "glpk.h"
 extern glp_tran *cbc_glp_tran;
@@ -76,9 +77,6 @@ extern glp_prob *cbc_glp_prob;
 #include "AbcDualRowSteepest.hpp"
 #include "AbcDualRowDantzig.hpp"
 #endif
-#ifdef COIN_HAS_ASL
-#include "Clp_ampl.h"
-#endif
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
@@ -89,7 +87,7 @@ static std::string mpsFile = "";
 extern double debugDouble[10];
 extern int debugInt[24];
 #endif
-#if defined(COIN_HAS_WSMP) || defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(COIN_HAS_MUMPS)
+#if defined(COIN_HAS_WSMP) || defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(CLP_HAS_MUMPS)
 #define FOREIGN_BARRIER
 #endif
 
@@ -170,8 +168,10 @@ void userChoiceWasGood(ClpSimplex *model)
 }
 #endif
 #ifndef ABC_INHERIT
+CLPLIB_EXPORT
 void ClpMain0(ClpSimplex *models)
 #else
+CLPLIB_EXPORT
 void ClpMain0(AbcSimplex *models)
 #endif
 {
@@ -183,8 +183,10 @@ void ClpMain0(AbcSimplex *models)
 #endif
 }
 #ifndef ABC_INHERIT
+CLPLIB_EXPORT
 int ClpMain1(int argc, const char *argv[], ClpSimplex *models)
 #else
+CLPLIB_EXPORT
 int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #endif
 {
@@ -308,7 +310,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
     goodModels[0] = true;
     numberGoodCommands = 1;
   }
-#ifdef COIN_HAS_ASL
   ampl_info info;
   int usingAmpl = 0;
   CoinMessageHandler *generalMessageHandler = models->messageHandler();
@@ -342,7 +343,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         CoinModel *model;
       } coinModelStart;
       coinModelStart.model = NULL;
-      int returnCode = readAmpl(&info, argc, const_cast< char ** >(argv), &coinModelStart.voidModel);
+      int returnCode = readAmpl(&info, argc, const_cast< char ** >(argv), &coinModelStart.voidModel, "clp");
       if (returnCode)
         return returnCode;
       if (info.numberBinary + info.numberIntegers + info.numberSos
@@ -408,7 +409,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
       argv = const_cast< const char ** >(info.arguments);
     }
   }
-#endif
 
   // Hidden stuff for barrier
   int choleskyType = 0;
@@ -507,10 +507,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           evenHidden = true;
           verbose &= ~8;
         }
-#ifdef COIN_HAS_ASL
         if (verbose < 4 && usingAmpl)
           verbose += 4;
-#endif
         if (verbose)
           maxAcross = 1;
         int limits[] = { 1, 101, 201, 401, 601 };
@@ -842,13 +840,11 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
       } else {
         // action
         if (type == CLP_PARAM_ACTION_EXIT) {
-#ifdef COIN_HAS_ASL
           if (usingAmpl) {
             writeAmpl(&info);
             freeArrays2(&info);
             freeArgs(&info);
           }
-#endif
           break; // stop all
         }
         switch (type) {
@@ -1115,7 +1111,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #endif
             try {
               status = model2->initialSolve(solveOptions);
-#ifdef COIN_HAS_ASL
               if (usingAmpl) {
                 double value = model2->getObjValue() * model2->getObjSense();
                 char buf[300];
@@ -1179,7 +1174,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                 strcpy(info.buffer, buf);
                 delete basis;
               }
-#endif
 #ifndef NDEBUG
               // if infeasible check ray
               if (model2->status() == 1) {
@@ -1304,12 +1298,10 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                 thisModel->primal(1);
                 currentModel = NULL;
               }
-#ifndef COIN_HAS_ASL
               CoinMessageHandler *generalMessageHandler = models->messageHandler();
               generalMessageHandler->setPrefix(false);
               CoinMessages generalMessages = models->messages();
               char generalPrint[100];
-#endif
               sprintf(generalPrint, "After translating dual back to primal - objective value is %g",
                 thisModel->objectiveValue());
               generalMessageHandler->message(CLP_GENERAL, generalMessages)

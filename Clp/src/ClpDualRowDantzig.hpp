@@ -16,7 +16,7 @@ This is simplest choice - choose largest infeasibility
 
 */
 
-class ClpDualRowDantzig : public ClpDualRowPivot {
+class CLPLIB_EXPORT ClpDualRowDantzig : public ClpDualRowPivot {
 
 public:
   ///@name Algorithmic methods

@@ -8,20 +8,27 @@
 
 AUTOMAKE_OPTIONS = foreign
 
+include BuildTools/Makemain.inc
+
 ########################################################################
-#                          Subdirectories                              #
+#            Subdirectories and installation of .pc files              #
 ########################################################################
 
 SUBDIRS = src
 
-# Don't do src/OsiClp recursively, since src/OsiClp/libOsiClp depends on src/libClp
+pkgconfiglibdir = $(libdir)/pkgconfig
+pkgconfiglib_DATA = clp.pc
+
+# Build OsiClp only if Osi is available.
+
 if COIN_HAS_OSI
   SUBDIRS += src/OsiClp
+  pkgconfiglib_DATA += osi-clp.pc
 endif
 
-# We don't want to compile the test subdirectory, unless the test target is
-# specified.  But we need to list it as subdirectory to make sure that it is
-# included in the tarball
+# We don't want to compile the test subdirectory unless the test target
+# is specified.  But we need to list it as subdirectory to make sure that
+# it's included in the tarball.
 
 if ALWAYS_FALSE
   SUBDIRS += test
@@ -87,16 +94,7 @@ test: all
 
 unitTest: test
 
-# Doxygen documentation
-
-doxydoc:
-	doxygen doxydoc/doxygen.conf
-
-clean-doxydoc:
-	( cd doxydoc ; rm -rf html *.log *.tag )
-
-
-clean-local: clean-doxydoc
+clean-local: clean-doxygen-docs
 	if test -r test/Makefile; then cd test; $(MAKE) clean; fi
 
 distclean-local:
@@ -104,38 +102,10 @@ distclean-local:
 
 install-exec-local: install-doc
 
-uninstall-local: uninstall-doc
+uninstall-local: uninstall-doc uninstall-doxygen-docs
 
-.PHONY: test unitTest doxydoc
+.PHONY: test unitTest
 
-########################################################################
-#                    Creation of the addlibs file                      #
-########################################################################
-
-pkgconfiglibdir = $(libdir)/pkgconfig
-pkgconfiglib_DATA = clp.pc
-
-if COIN_HAS_OSI
-pkgconfiglib_DATA += osi-clp.pc
-endif
-
-addlibsdir = $(DESTDIR)$(datadir)/coin/doc/Clp
-
-install-data-hook:
-	@$(mkdir_p) "$(addlibsdir)"
-if COIN_HAS_PKGCONFIG
-	PKG_CONFIG_PATH=@COIN_PKG_CONFIG_PATH@:$(DESTDIR)$(pkgconfiglibdir) \
-	$(PKG_CONFIG) --libs clp > $(addlibsdir)/clp_addlibs.txt
-else
-if COIN_CXX_IS_CL
-	echo "-libpath:`$(CYGPATH_W) @abs_lib_dir@` libClpSolver.lib libClp.lib @CLPLIB_LIBS_INSTALLED@" > $(addlibsdir)/clp_addlibs.txt
-else
-	echo -L@abs_lib_dir@ -lClp @CLPLIB_LIBS_INSTALLED@ > $(addlibsdir)/clp_addlibs.txt
-endif
-endif
-
-uninstall-hook:
-	rm -f $(addlibsdir)/clp_addlibs.txt
 
 ########################################################################
 #                         Maintainer Stuff                             #
@@ -144,6 +114,6 @@ uninstall-hook:
 CLEANFILES =
 
 # Files that are generated and should be cleaned with make distclean
+
 DISTCLEANFILES =
 
-include BuildTools/Makemain.inc

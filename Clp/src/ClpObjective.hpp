@@ -15,7 +15,7 @@ class ClpModel;
 Abstract Base Class for describing an objective function
 
 */
-class ClpObjective {
+class CLPLIB_EXPORT ClpObjective {
 
 public:
   ///@name Stuff

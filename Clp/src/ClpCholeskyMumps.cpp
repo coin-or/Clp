@@ -11,16 +11,19 @@
 #define JOB_INIT -1
 #define JOB_END -2
 #define USE_COMM_WORLD -987654
-extern "C" {
-#include "dmumps_c.h"
+
+// The first header to include is the one for MPI.
 // In newer ThirdParty/Mumps, mpi.h is renamed to mumps_mpi.h.
-// We get informed about this by having COIN_USE_MUMPS_MPI_H defined.
+// We get informed about this by having COIN_USE_MUMPS_MPI_H defined,
+// either via compiler flags or in our version of mumps_compat.h.
+#include "mumps_compat.h"
 #ifdef COIN_USE_MUMPS_MPI_H
 #include "mumps_mpi.h"
 #else
 #include "mpi.h"
 #endif
-}
+
+#include "dmumps_c.h"
 
 #include "ClpCholeskyMumps.hpp"
 #include "ClpMessage.hpp"
@@ -50,12 +53,14 @@ ClpCholeskyMumps::ClpCholeskyMumps(int denseThreshold, int logLevel)
   mumps_->comm_fortran = USE_COMM_WORLD;
   int myid;
   int justName;
+#ifndef MUMPS_MPI_H  /* do not call dummy function, as it misses the DLL export specifier */
   MPI_Init(&justName, NULL);
 #ifndef NDEBUG
   int ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
   assert(!ierr);
 #else
   MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+#endif
 #endif
   dmumps_c(mumps_);
 #define ICNTL(I) icntl[(I)-1] /* macro s.t. indices match documentation */
@@ -89,7 +94,9 @@ ClpCholeskyMumps::~ClpCholeskyMumps()
 {
   mumps_->job = JOB_END;
   dmumps_c(mumps_); /* Terminate instance */
+#ifndef MUMPS_MPI_H  /* do not call dummy function, as it misses the DLL export specifier */
   MPI_Finalize();
+#endif
   free(mumps_);
 }
 

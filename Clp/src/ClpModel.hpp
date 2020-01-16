@@ -35,7 +35,7 @@ class ClpEventHandler;
 */
 class CoinBuild;
 class CoinModel;
-class ClpModel {
+class CLPLIB_EXPORT ClpModel {
 
 public:
   /**@name Constructors and destructor
@@ -1396,7 +1396,7 @@ protected:
 };
 /** This is a tiny class where data can be saved round calls.
  */
-class ClpDataSave {
+class CLPLIB_EXPORT ClpDataSave {
 
 public:
   /**@name Constructors and destructor

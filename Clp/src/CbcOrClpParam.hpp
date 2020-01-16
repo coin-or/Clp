@@ -4,10 +4,14 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#ifdef USE_CBCCONFIG
-#include "CbcConfig.h"
+#if defined(USE_CBCCONFIG) || defined(CBCSOLVER_BUILD)
+#ifndef CBCSOLVERLIB_EXPORT
+#include "CbcSolverConfig.h"
+#endif
+#define CBCORCLPPARAM_EXPORT CBCSOLVERLIB_EXPORT
 #else
 #include "ClpConfig.h"
+#define CBCORCLPPARAM_EXPORT CLPLIB_EXPORT
 #endif
 
 #ifndef CbcOrClpParam_H
@@ -305,7 +309,7 @@ enum CbcOrClpParameterType
 
 /// Very simple class for setting parameters
 
-class CbcOrClpParam {
+class CBCORCLPPARAM_EXPORT CbcOrClpParam {
 public:
   /**@name Constructor and destructor */
   //@{
@@ -565,17 +569,27 @@ private:
   //@}
 };
 /// Simple read stuff
+CBCORCLPPARAM_EXPORT
 std::string CoinReadNextField();
 
+CBCORCLPPARAM_EXPORT
 std::string CoinReadGetCommand(int argc, const char *argv[]);
+CBCORCLPPARAM_EXPORT
 std::string CoinReadGetString(int argc, const char *argv[]);
 // valid 0 - okay, 1 bad, 2 not there
+CBCORCLPPARAM_EXPORT
 int CoinReadGetIntField(int argc, const char *argv[], int *valid);
+CBCORCLPPARAM_EXPORT
 double CoinReadGetDoubleField(int argc, const char *argv[], int *valid);
+CBCORCLPPARAM_EXPORT
 void CoinReadPrintit(const char *input);
+CBCORCLPPARAM_EXPORT
 void setCbcOrClpPrinting(bool yesNo);
+CBCORCLPPARAM_EXPORT
 int getCbcOrClpReadMode();
+CBCORCLPPARAM_EXPORT
 void setCbcOrClpReadMode(int mode);
+CBCORCLPPARAM_EXPORT
 void setCbcOrClpReadCommand(FILE* f);
 
 #define CBCMAXPARAMETERS 250
@@ -583,13 +597,18 @@ void setCbcOrClpReadCommand(FILE* f);
   Subroutine to establish the cbc parameter array. See the description of
   class CbcOrClpParam for details. Pulled from C..Main() for clarity.
 */
+CBCORCLPPARAM_EXPORT
 void establishParams(std::vector< CbcOrClpParam > &params);
 // Given a parameter type - returns its number in list
+CBCORCLPPARAM_EXPORT
 int whichParam(const CbcOrClpParameterType &name,
   const std::vector< CbcOrClpParam > &parameters);
 // Dump/restore a solution to file
+CBCORCLPPARAM_EXPORT
 void saveSolution(const ClpSimplex *lpSolver, std::string fileName);
+CBCORCLPPARAM_EXPORT
 void restoreSolution(ClpSimplex *lpSolver, std::string fileName, int mode);
+
 #endif /* CbcOrClpParam_H */
 
 /* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2

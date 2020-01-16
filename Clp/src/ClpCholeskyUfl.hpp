@@ -29,7 +29,7 @@ If  you wish to use CHOLMOD code from University of Florida see
 for terms of use
 
 */
-class ClpCholeskyUfl : public ClpCholeskyBase {
+class CLPLIB_EXPORT ClpCholeskyUfl : public ClpCholeskyBase {
 
 public:
   /**@name Virtual methods that the derived classes provides  */

@@ -1,81 +1,58 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* Define to 1, 2, 3, or 4 if Aboca should be build. */
+/* Library Visibility Attribute */
+#undef CLPLIB_EXPORT
+
+/* Define to 1, 2, 3, or 4 if Aboca should be built. */
 #undef CLP_HAS_ABC
 
-/* SVN revision number of project */
-#undef CLP_SVN_REV
+/* Define to 1 if the MUMPS package is available. */
+#undef CLP_HAS_MUMPS
 
 /* Version number of project */
 #undef CLP_VERSION
 
-/* Major Version number of project */
+/* Major version number of project. */
 #undef CLP_VERSION_MAJOR
 
-/* Minor Version number of project */
+/* Minor version number of project. */
 #undef CLP_VERSION_MINOR
 
-/* Release Version number of project */
+/* Release version number of project. */
 #undef CLP_VERSION_RELEASE
-
-/* Define to the debug sanity check level (0 is no test) */
-#undef COIN_CLP_CHECKLEVEL
-
-/* Define to the debug verbosity level (0 is no output) */
-#undef COIN_CLP_VERBOSITY
 
 /* Define to 1 if the AMD package is available */
 #undef COIN_HAS_AMD
 
-/* Define to 1 if the ASL package is available */
-#undef COIN_HAS_ASL
-
-/* If defined, the BLAS Library is available. */
-#undef COIN_HAS_BLAS
-
 /* Define to 1 if the CHOLMOD package is available */
 #undef COIN_HAS_CHOLMOD
 
-/* Define to 1 if the CoinUtils package is available */
+/* Define to 1 if CoinUtils is available. */
 #undef COIN_HAS_COINUTILS
 
-/* Define to 1 if the Glpk package is available */
-#undef COIN_HAS_GLPK
-
-/* Define to 1 if the Mumps package is available */
+/* Define to 1 if the MUMPS package is available */
 #undef COIN_HAS_MUMPS
 
-/* Define to 1 if the Netlib package is available */
+/* Define to 1 if Netlib is available. */
 #undef COIN_HAS_NETLIB
 
-/* Define to 1 if the Osi package is available */
+/* Define to 1 if Osi is available. */
 #undef COIN_HAS_OSI
 
-/* Define to 1 if the OsiTests package is available */
+/* Define to 1 if OsiTests is available. */
 #undef COIN_HAS_OSITESTS
 
 /* Define to 1 if readline is available */
 #undef COIN_HAS_READLINE
 
-/* Define to 1 if the Sample package is available */
+/* Define to 1 if Sample is available. */
 #undef COIN_HAS_SAMPLE
 
-/* Define to 1 if the WSMP package is available */
+/* Define to 1 if WSMP is available */
 #undef COIN_HAS_WSMP
 
-/* Define to dummy `main' function (if any) required to link to the Fortran
-   libraries. */
-#undef F77_DUMMY_MAIN
-
-/* Define to a macro mangling the given C identifier (in lower and upper
-   case), which must not contain underscores, for linking with Fortran. */
-#undef F77_FUNC
-
-/* As F77_FUNC, but for C identifiers containing underscores. */
-#undef F77_FUNC_
-
-/* Define if F77 and FC dummy `main' functions are identical. */
-#undef FC_DUMMY_MAIN_EQ_F77
+/* Define to 1 if your C++ compiler doesn't accept -c and -o together. */
+#undef CXX_NO_MINUS_C_MINUS_O
 
 /* Define to 1 if you have the <cfloat> header file. */
 #undef HAVE_CFLOAT
@@ -98,14 +75,14 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the `readline' library (-lreadline). */
+#undef HAVE_LIBREADLINE
+
 /* Define to 1 if you have the <math.h> header file. */
 #undef HAVE_MATH_H
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
-
-/* Define to 1 if you have the <readline/readline.h> header file. */
-#undef HAVE_READLINE_READLINE_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -128,8 +105,14 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Name of package */
-#undef PACKAGE
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
+#undef LT_OBJDIR
+
+/* Library Visibility Attribute */
+#undef OSICLPLIB_EXPORT
+
+/* Library Visibility Attribute */
+#undef OSICLPUNITTEST_EXPORT
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -143,11 +126,18 @@
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
 
+/* Define to the home page for this package. */
+#undef PACKAGE_URL
+
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Version number of package */
-#undef VERSION
+/* Define to a macro mangling the given C identifier (in lower and upper
+   case). */
+#undef WSMP_FUNC
+
+/* As WSMP_FUNC, but for C identifiers containing underscores. */
+#undef WSMP_FUNC_

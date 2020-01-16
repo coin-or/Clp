@@ -7,9 +7,10 @@
 #define ClpPdcoBase_H
 
 #include "CoinPragma.hpp"
-
 #include "CoinPackedMatrix.hpp"
 #include "CoinDenseVector.hpp"
+#include "ClpConfig.h"
+
 class ClpInterior;
 
 /** Abstract base class for tailoring everything for Pcdo
@@ -22,7 +23,7 @@ class ClpInterior;
     Eventually we should be able to use ClpObjective and ClpMatrixBase.
 */
 
-class ClpPdcoBase {
+class CLPLIB_EXPORT ClpPdcoBase {
 
 public:
   /**@name Virtual methods that the derived classes must provide */

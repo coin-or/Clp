@@ -11,7 +11,7 @@
 #include "ClpCholeskyBase.hpp"
 class ClpMatrixBase;
 
-class ClpCholeskyDense : public ClpCholeskyBase {
+class CLPLIB_EXPORT ClpCholeskyDense : public ClpCholeskyBase {
 
 public:
   /**@name Virtual methods that the derived classes provides  */
@@ -97,14 +97,17 @@ typedef struct {
 } ClpCholeskyDenseC;
 
 extern "C" {
+CLPLIB_EXPORT
 void ClpCholeskySpawn(void *);
 }
 /**Non leaf recursive factor */
+CLPLIB_EXPORT
 void ClpCholeskyCfactor(ClpCholeskyDenseC *thisStruct,
   longDouble *a, int n, int numberBlocks,
   longDouble *diagonal, longDouble *work, int *rowsDropped);
 
 /**Non leaf recursive triangle rectangle update */
+CLPLIB_EXPORT
 void ClpCholeskyCtriRec(ClpCholeskyDenseC *thisStruct,
   longDouble *aTri, int nThis,
   longDouble *aUnder, longDouble *diagonal,
@@ -112,6 +115,7 @@ void ClpCholeskyCtriRec(ClpCholeskyDenseC *thisStruct,
   int nLeft, int iBlock, int jBlock,
   int numberBlocks);
 /**Non leaf recursive rectangle triangle update */
+CLPLIB_EXPORT
 void ClpCholeskyCrecTri(ClpCholeskyDenseC *thisStruct,
   longDouble *aUnder, int nTri, int nDo,
   int iBlock, int jBlock, longDouble *aTri,
@@ -121,6 +125,7 @@ void ClpCholeskyCrecTri(ClpCholeskyDenseC *thisStruct,
     nUnder is number of rows in iBlock,
     nUnderK is number of rows in kBlock
 */
+CLPLIB_EXPORT
 void ClpCholeskyCrecRec(ClpCholeskyDenseC *thisStruct,
   longDouble *above, int nUnder, int nUnderK,
   int nDo, longDouble *aUnder, longDouble *aOther,
@@ -128,16 +133,19 @@ void ClpCholeskyCrecRec(ClpCholeskyDenseC *thisStruct,
   int iBlock, int jBlock,
   int numberBlocks);
 /**Leaf recursive factor */
+CLPLIB_EXPORT
 void ClpCholeskyCfactorLeaf(ClpCholeskyDenseC *thisStruct,
   longDouble *a, int n,
   longDouble *diagonal, longDouble *work,
   int *rowsDropped);
 /**Leaf recursive triangle rectangle update */
+CLPLIB_EXPORT
 void ClpCholeskyCtriRecLeaf(/*ClpCholeskyDenseC * thisStruct,*/
   longDouble *aTri, longDouble *aUnder,
   longDouble *diagonal, longDouble *work,
   int nUnder);
 /**Leaf recursive rectangle triangle update */
+CLPLIB_EXPORT
 void ClpCholeskyCrecTriLeaf(/*ClpCholeskyDenseC * thisStruct, */
   longDouble *aUnder, longDouble *aTri,
   /*longDouble * diagonal,*/ longDouble *work, int nUnder);
@@ -145,6 +153,7 @@ void ClpCholeskyCrecTriLeaf(/*ClpCholeskyDenseC * thisStruct, */
     nUnder is number of rows in iBlock,
     nUnderK is number of rows in kBlock
 */
+CLPLIB_EXPORT
 void ClpCholeskyCrecRecLeaf(/*ClpCholeskyDenseC * thisStruct, */
   const longDouble *COIN_RESTRICT above,
   const longDouble *COIN_RESTRICT aUnder,

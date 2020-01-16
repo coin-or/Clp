@@ -1,12 +1,14 @@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
-includedir=@includedir@/coin
+includedir=@includedir@/coin-or
 
 Name: OsiClp
 Description: COIN-OR Open Solver Interface for CLP
 URL: https://projects.coin-or.org/Osi
 Version: @PACKAGE_VERSION@
-Libs: -L${libdir} -lOsiClp @OSICLPLIB_PCLIBS@
+Libs: -L${libdir} -lOsiClp
+Libs.private: @OSICLPLIB_LFLAGS_NOPC@
 Cflags: -I${includedir}
-Requires: clp @OSICLPLIB_PCREQUIRES@
+Requires:
+Requires.private: @OSICLPLIB_PCFILES@

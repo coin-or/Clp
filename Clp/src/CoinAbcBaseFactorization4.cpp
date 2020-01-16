@@ -4058,7 +4058,7 @@ void CoinAbcTypeFactorization::updateColumnTransposeL(CoinIndexedVector *regionS
     char trans = 'T';
     CoinSimplexInt ione = 1;
     CoinSimplexInt info;
-    F77_FUNC(dgetrs, DGETRS)
+    LAPACK_FUNC(dgetrs, DGETRS)
     (&trans, &numberDense_, &ione, denseArea, &leadingDimension_,
       densePermute, denseRegion, &numberDense_, &info, 1);
 #else

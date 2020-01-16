@@ -16,5 +16,14 @@
 /* Release Version number of project */
 #define CLP_VERSION_RELEASE 9999
 
+#ifndef CLP_EXPORT
+#ifdef _WIN32
+/* assuming we link against a CoinUtils DLL */
+#define CLP_EXPORT __declspec(dllimport)
+#else
+#define CLP_EXPORT
+#endif
+#endif
+
 /* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
 */

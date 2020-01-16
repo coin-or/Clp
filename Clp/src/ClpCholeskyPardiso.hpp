@@ -17,7 +17,7 @@ class ClpCholeskyDense;
 /** Pardiso class for Clp Cholesky factorization
 
 */
-class ClpCholeskyPardiso : public ClpCholeskyBase {
+class CLPLIB_EXPORT  ClpCholeskyPardiso : public ClpCholeskyBase {
 
 public:
   /**@name Virtual methods that the derived classes provides  */

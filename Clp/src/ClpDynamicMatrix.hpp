@@ -16,7 +16,7 @@ class ClpSimplex;
 
 */
 
-class ClpDynamicMatrix : public ClpPackedMatrix {
+class CLPLIB_EXPORT ClpDynamicMatrix : public ClpPackedMatrix {
 
 public:
   /// enums for status of various sorts

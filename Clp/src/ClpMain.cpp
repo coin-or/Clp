@@ -11,10 +11,14 @@
 #include "AbcSimplex.hpp"
 #endif
 #ifndef ABC_INHERIT
+CLPLIB_EXPORT
 void ClpMain0(ClpSimplex *models);
+CLPLIB_EXPORT
 int ClpMain1(int argc, const char *argv[], ClpSimplex *model);
 #else
+CLPLIB_EXPORT
 void ClpMain0(AbcSimplex *models);
+CLPLIB_EXPORT
 int ClpMain1(int argc, const char *argv[], AbcSimplex *model);
 #endif
 //#define CILK_TEST

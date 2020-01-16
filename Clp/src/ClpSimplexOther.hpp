@@ -20,7 +20,7 @@
 
 */
 
-class ClpSimplexOther : public ClpSimplex {
+class CLPLIB_EXPORT ClpSimplexOther : public ClpSimplex {
 
 public:
   /**@name Methods */

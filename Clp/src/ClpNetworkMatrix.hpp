@@ -15,7 +15,7 @@
 If you want more sophisticated version then you could inherit from this.
 Also you might want to allow networks with gain */
 
-class ClpNetworkMatrix : public ClpMatrixBase {
+class CLPLIB_EXPORT ClpNetworkMatrix : public ClpMatrixBase {
 
 public:
   /**@name Useful methods */

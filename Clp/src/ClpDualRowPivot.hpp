@@ -6,6 +6,8 @@
 #ifndef ClpDualRowPivot_H
 #define ClpDualRowPivot_H
 
+#include "ClpConfig.h"
+
 class ClpSimplex;
 class CoinIndexedVector;
 
@@ -19,7 +21,7 @@ e.g. Dantzig choice then some functions may be null.
 
 */
 
-class ClpDualRowPivot {
+class CLPLIB_EXPORT ClpDualRowPivot {
 
 public:
   ///@name Algorithmic methods

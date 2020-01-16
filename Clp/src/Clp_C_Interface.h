@@ -10,6 +10,9 @@
 
 /* include all defines and ugly stuff */
 #include "Coin_C_defines.h"
+#include "ClpConfig.h"
+#undef COINLIBAPI
+#define COINLIBAPI CLPLIB_EXPORT
 
 #if defined(CLP_EXTERN_C)
 typedef struct {
@@ -155,6 +158,8 @@ COINLIBAPI void COINLINKAGE Clp_copyNames(Clp_Simplex *model, const char *const 
 /*@}*/
 /**@name gets and sets - you will find some synonyms at the end of this file */
 /*@{*/
+/** The underlying ClpSimplex model */
+COINLIBAPI void* COINLINKAGE Clp_model(Clp_Simplex *model);
 /** Number of rows */
 COINLIBAPI int COINLINKAGE Clp_numberRows(Clp_Simplex *model);
 /** Number of columns */
@@ -180,7 +185,7 @@ Clp_setProblemName(Clp_Simplex *model, int maxNumberCharacters, char *array);
 COINLIBAPI int COINLINKAGE Clp_numberIterations(Clp_Simplex *model);
 COINLIBAPI void COINLINKAGE Clp_setNumberIterations(Clp_Simplex *model, int numberIterations);
 /** Maximum number of iterations */
-COINLIBAPI int maximumIterations(Clp_Simplex *model);
+COINLIBAPI int COINLINKAGE Clp_maximumIterations(Clp_Simplex *model);
 COINLIBAPI void COINLINKAGE Clp_setMaximumIterations(Clp_Simplex *model, int value);
 /** Maximum time in seconds (from when set called) */
 COINLIBAPI double COINLINKAGE Clp_maximumSeconds(Clp_Simplex *model);

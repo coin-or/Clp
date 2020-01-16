@@ -1,10 +1,10 @@
-/* Copyright (C) 2011
+/* Copyright (C) 2020
  * All Rights Reserved.
  * This code is published under the Eclipse Public License.
  *
- * $Id$
+ * $Id: OsiClpConfig.h 2568 2020-01-08 08:57:16Z stefan $
  *
- * Include file for the configuration of Clp.
+ * Include file for the configuration of OsiClp.
  *
  * On systems where the code is configured with the configure script
  * (i.e., compilation is always done with HAVE_CONFIG_H defined), this
@@ -21,38 +21,42 @@
  * files.
  */
 
-#ifndef __CLPCONFIG_H__
-#define __CLPCONFIG_H__
+#ifndef __OSICLPCONFIG_H__
+#define __OSICLPCONFIG_H__
 
 #ifdef HAVE_CONFIG_H
-#ifdef CLP_BUILD
-#include "config.h"
+#ifdef OSICLP_BUILD
 
-/* overwrite CLPLIB_EXPORT from config.h when building Clp
- * we want it to be __declspec(dllexport) when building a DLL on Windows
- * we want it to be __attribute__((__visibility__("default"))) when building with GCC,
- *   so user can compile with -fvisibility=hidden
- */
 #ifdef DLL_EXPORT
-#undef CLPLIB_EXPORT
-#define CLPLIB_EXPORT __declspec(dllexport)
+#undef OSICLPLIB_EXPORT
+#define OSICLPLIB_EXPORT __declspec(dllexport)
 #elif defined(__GNUC__) && __GNUC__ >= 4
-#undef CLPLIB_EXPORT
-#define CLPLIB_EXPORT __attribute__((__visibility__("default")))
+#undef OSICLPLIB_EXPORT
+#define OSICLPLIB_EXPORT __attribute__((__visibility__("default")))
 #endif
 
 #else
-#include "config_clp.h"
+#include "config_osiclp.h"
 #endif
 
 #else /* HAVE_CONFIG_H */
 
-#ifdef CLP_BUILD
-#include "config_default.h"
-#else
-#include "config_clp_default.h"
+#ifndef OSICLPLIB_EXPORT
+# ifdef _WIN32
+#  ifdef OSICLP_BUILD
+#   define OSICLPLIB_EXPORT __declspec(dllexport)
+#  else
+#   define OSICLPLIB_EXPORT __declspec(dllimport)
+#  endif
+# elif defined(__GNUC__) && __GNUC__ >= 4
+#  define OSICLPLIB_EXPORT __attribute__((__visibility__("default")))
+# endif
 #endif
 
 #endif /* HAVE_CONFIG_H */
 
-#endif /*__CLPCONFIG_H__*/
+#ifndef OSICLPLIB_EXPORT
+#define OSICLPLIB_EXPORT
+#endif
+
+#endif /*__OSICLPCONFIG_H__*/

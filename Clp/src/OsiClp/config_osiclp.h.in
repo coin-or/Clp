@@ -1,0 +1,9 @@
+/* src/config_osiclp.h.in.  */
+
+#ifndef __CONFIG_OSICLP_H__
+#define __CONFIG_OSICLP_H__
+
+/* Library Visibility Attribute */
+#undef OSICLPLIB_EXPORT
+
+#endif

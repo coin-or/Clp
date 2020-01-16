@@ -8,8 +8,9 @@
 
 #include "CoinPragma.hpp"
 #include "CoinTypes.hpp"
-
 #include "CoinPackedMatrix.hpp"
+#include "ClpConfig.h"
+
 class CoinIndexedVector;
 class ClpSimplex;
 class ClpModel;
@@ -35,7 +36,7 @@ then it makes no sense to do steepest edge so there would be
 no point providing subsetTransposeTimes.
 */
 
-class ClpMatrixBase {
+class CLPLIB_EXPORT ClpMatrixBase {
 
 public:
   /**@name Virtual methods that the derived classes must provide */

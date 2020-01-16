@@ -6265,10 +6265,16 @@ int ClpSimplex::reducedGradient(int phase)
 #include "ClpPredictorCorrector.hpp"
 #include "ClpCholeskyBase.hpp"
 // Preference is PARDISO, WSSMP, UFL (just ordering), MUMPS, TAUCS then base
+#if WSSMP_BARRIER
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
+#endif
+#if 0 //defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD)
 #include "ClpCholeskyUfl.hpp"
+#endif
+#if defined(COIN_HAS_MUMPS)
 #include "ClpCholeskyMumps.hpp"
+#endif
 #if TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
@@ -6296,7 +6302,7 @@ int ClpSimplex::barrier(bool crossover)
   assert(!doKKT);
   ClpCholeskyPardiso *cholesky = new ClpCholeskyPardiso();
   barrier.setCholesky(cholesky);
-#elif WSSMP_BARRIER
+#elif defined(WSSMP_BARRIER)
   if (!doKKT) {
     ClpCholeskyWssmp *cholesky = new ClpCholeskyWssmp(CoinMax(100, model2->numberRows() / 10));
     barrier.setCholesky(cholesky);

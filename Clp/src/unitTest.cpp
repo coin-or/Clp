@@ -79,7 +79,7 @@ static std::string nameBarrier = "barrier-UFL";
 #elif COIN_HAS_WSMP
 static int barrierAvailable = 2;
 static std::string nameBarrier = "barrier-WSSMP";
-#elif defined(COIN_HAS_MUMPS)
+#elif defined(CLP_HAS_MUMPS)
 static int barrierAvailable = 3;
 static std::string nameBarrier = "barrier-MUMPS";
 #else
@@ -1194,7 +1194,7 @@ int mainTest(int argc, const char *argv[], int algorithm,
           solveOptions.setSpecialOption(4, 2);
           nameAlgorithm = "barrier-WSSMP";
 #endif
-#ifdef COIN_HAS_MUMPS
+#ifdef CLP_HAS_MUMPS
           solveOptions.setSpecialOption(4, 6);
           nameAlgorithm = "barrier-MUMPS";
 #endif

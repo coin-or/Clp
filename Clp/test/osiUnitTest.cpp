@@ -12,6 +12,11 @@
 
 using namespace OsiUnitTest;
 
+/** A function that tests the methods in the OsiClpSolverInterface class.
+ * Implemented in OsiClpSolverInterfaceTest.cpp
+ */
+void OsiClpSolverInterfaceUnitTest(const std::string &mpsDir, const std::string &netlibDir);
+
 //----------------------------------------------------------------
 // to see parameter list, call unitTest -usage
 //----------------------------------------------------------------

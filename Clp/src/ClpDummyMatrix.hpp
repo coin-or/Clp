@@ -15,7 +15,7 @@
     It just has dimensions but no data
 */
 
-class ClpDummyMatrix : public ClpMatrixBase {
+class CLPLIB_EXPORT ClpDummyMatrix : public ClpMatrixBase {
 
 public:
   /**@name Useful methods */

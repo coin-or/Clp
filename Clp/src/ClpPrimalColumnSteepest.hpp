@@ -18,7 +18,7 @@ See Forrest-Goldfarb paper for algorithm
 
 */
 
-class ClpPrimalColumnSteepest : public ClpPrimalColumnPivot {
+class CLPLIB_EXPORT ClpPrimalColumnSteepest : public ClpPrimalColumnPivot {
 
 public:
   ///@name Algorithmic methods

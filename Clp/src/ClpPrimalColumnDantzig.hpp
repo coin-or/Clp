@@ -16,7 +16,7 @@ This is simplest choice - choose largest infeasibility
 
 */
 
-class ClpPrimalColumnDantzig : public ClpPrimalColumnPivot {
+class CLPLIB_EXPORT ClpPrimalColumnDantzig : public ClpPrimalColumnPivot {
 
 public:
   ///@name Algorithmic methods

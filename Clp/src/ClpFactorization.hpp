@@ -7,8 +7,9 @@
 #define ClpFactorization_H
 
 #include "CoinPragma.hpp"
-
 #include "CoinFactorization.hpp"
+#include "ClpConfig.h"
+
 class ClpMatrixBase;
 class ClpSimplex;
 class ClpNetworkBasis;
@@ -31,7 +32,7 @@ class CoinOtherFactorization;
     is passed.  If a network then has a dummy CoinFactorization and
     a genuine ClpNetworkBasis object
 */
-class ClpFactorization
+class CLPLIB_EXPORT ClpFactorization
 #ifndef CLP_MULTIPLE_FACTORIZATIONS
   : public CoinFactorization
 #endif

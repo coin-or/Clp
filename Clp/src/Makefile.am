@@ -8,9 +8,15 @@
 
 AUTOMAKE_OPTIONS = foreign
 
+include $(top_srcdir)/BuildTools/Makemain.inc
+
 ########################################################################
 #                               libClp                                 #
 ########################################################################
+
+# Let the code know we're building the Clp library.
+
+AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCLP_BUILD
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
@@ -68,7 +74,7 @@ libClp_la_SOURCES = \
 	IdiSolve.cpp \
 	ClpCholeskyPardiso.cpp ClpCholeskyPardiso.hpp \
 	ClpPESimplex.cpp ClpPESimplex.hpp \
-        ClpPEPrimalColumnDantzig.cpp ClpPEPrimalColumnDantzig.hpp \
+	ClpPEPrimalColumnDantzig.cpp ClpPEPrimalColumnDantzig.hpp \
  	ClpPEPrimalColumnSteepest.cpp ClpPEPrimalColumnSteepest.hpp \
  	ClpPEDualRowDantzig.cpp ClpPEDualRowDantzig.hpp \
  	ClpPEDualRowSteepest.cpp ClpPEDualRowSteepest.hpp
@@ -122,21 +128,17 @@ endif
 libClpSolver_la_SOURCES = \
 	ClpSolver.cpp \
 	CbcOrClpParam.cpp CbcOrClpParam.hpp \
-	Clp_ampl.cpp Clp_ampl.h \
 	MyEventHandler.cpp MyEventHandler.hpp \
 	MyMessageHandler.cpp MyMessageHandler.hpp \
 	unitTest.cpp
 
-# if AMD, CHOLMOD, or GLPK is available, then compile ClpCholeskyUfl.cpp
+# if AMD or CHOLMOD is available, then compile ClpCholeskyUfl.cpp
 if COIN_HAS_AMD
 libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
 else
 if COIN_HAS_CHOLMOD
 libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
 else
-if COIN_HAS_GLPK
-libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
-endif
 endif
 endif
 
@@ -149,10 +151,8 @@ libClp_la_SOURCES += ClpCholeskyWssmp.cpp ClpCholeskyWssmp.hpp ClpCholeskyWssmpK
 endif
 
 # List all additionally required libraries
-if DEPENDENCY_LINKING
-libClp_la_LIBADD = $(CLPLIB_LIBS)
-libClpSolver_la_LIBADD = $(CLPLIB_LIBS) libClp.la
-endif
+libClp_la_LIBADD = $(CLPLIB_LFLAGS)
+libClpSolver_la_LIBADD = libClp.la
 
 # This is for libtool
 libClp_la_LDFLAGS = $(LT_LDFLAGS)
@@ -170,28 +170,15 @@ bin_PROGRAMS = clp
 clp_SOURCES = ClpMain.cpp 
 
 # List all additionally required libraries
-clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LIBS) $(ASL_LIBS)
-
-# List all dependency libraries (similar to LDADD, but without -l, -L flags)
-clp_DEPENDENCIES = libClpSolver.la libClp.la $(CLPLIB_DEPENDENCIES)
+clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 
 ########################################################################
 #                            Additional flags                          #
 ########################################################################
 
-# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it is build within Clp
-AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCOIN_HAS_CLP
-
-if COIN_HAS_CHOLMOD
-AM_CPPFLAGS += -I`$(CYGPATH_W) $(CHOLMODINCDIR)`
-endif
-
-if COIN_HAS_AMD
-AM_CPPFLAGS += -I`$(CYGPATH_W) $(AMDINCDIR)`
-endif
-
-# This line is necessary to allow VPATH compilation
-DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)`
+# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
+# is built within Clp
+AM_CPPFLAGS += -DCOIN_HAS_CLP
 
 ########################################################################
 #                Headers that need to be installed                     #
@@ -199,7 +186,7 @@ DEFAULT_INCLUDES = -I. -I`$(CYGPATH_W) $(srcdir)`
 
 # Here list all the header files that are required by a user of the library,
 # and that therefore should be installed in 'include/coin'
-includecoindir = $(includedir)/coin
+includecoindir = $(pkgincludedir)
 includecoin_HEADERS = \
 	Clp_C_Interface.h \
 	ClpCholeskyBase.hpp \
@@ -245,26 +232,23 @@ includecoin_HEADERS = \
 	Idiot.hpp \
 	ClpCholeskyPardiso.hpp \
 	ClpPESimplex.hpp \
-        ClpPEPrimalColumnDantzig.hpp \
-        ClpPEPrimalColumnSteepest.hpp \
-        ClpPEDualRowDantzig.hpp \
-        ClpPEDualRowSteepest.hpp
+	ClpPEPrimalColumnDantzig.hpp \
+	ClpPEPrimalColumnSteepest.hpp \
+	ClpPEDualRowDantzig.hpp \
+	ClpPEDualRowSteepest.hpp
 
 if COIN_HAS_ABC
 includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
 endif
 
 
-# if AMD, CHOLMOD, or GLPK is available, then install ClpCholeskyUfl.hpp (for advanced users)
+# if AMD or CHOLMOD is available, then install ClpCholeskyUfl.hpp (for advanced users)
 if COIN_HAS_AMD
 includecoin_HEADERS += ClpCholeskyUfl.hpp
 else
 if COIN_HAS_CHOLMOD
 includecoin_HEADERS += ClpCholeskyUfl.hpp
 else
-if COIN_HAS_GLPK
-includecoin_HEADERS += ClpCholeskyUfl.hpp
-endif
 endif
 endif
 
@@ -276,19 +260,9 @@ if COIN_HAS_WSMP
 includecoin_HEADERS += ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp
 endif
 
-# needed by Clp
+# needed by Cbc
 includecoin_HEADERS += CbcOrClpParam.cpp
 
-########################################################################
-#                     Installing manifest (MSVC++)                     #
-########################################################################
-
-if COIN_CXX_IS_CL
-install-exec-hook:
-	test -s clp.exe.manifest && \
-	mt -manifest clp.exe.manifest -outputresource:clp.exe;\
-	cp clp.exe $(bindir)/clp.exe
-endif
 
 #######################################################################
 # Create the Config.h file that has all public defines and install it #
