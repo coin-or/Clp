@@ -67,11 +67,14 @@ environment:
 
 install:
   - for /f "delims=" %%i in ('C:\msys64\usr\bin\bash -lc "if [ $APPVEYOR_REPO_BRANCH = 'master' ]; then echo 'master'; else echo $APPVEYOR_REPO_BRANCH | cut -d "/" -f 2; fi"') do set VERSION=%%i
-  # FIXME how are those supposed to work if ARCH has some -md or -mdd in it nowadays?
-  - IF %ARCH%==win64-msvc14 (CALL "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64)
-  - IF %ARCH%==win64-msvc14 (CALL C:\"Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64)
-  - IF %ARCH%==win64-msvc15 (CALL C:\"Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat")
-  - IF %ARCH%==win64-msvc16 (CALL C:\"Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat")
+  - IF %ARCH%==win64-msvc14-md (CALL "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64)
+  - IF %ARCH%==win64-msvc14-md (CALL C:\"Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64)
+  - IF %ARCH%==win64-msvc15-md (CALL C:\"Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat")
+  - IF %ARCH%==win64-msvc16-md (CALL C:\"Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat")
+  - IF %ARCH%==win64-msvc14-mdd (CALL "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64)
+  - IF %ARCH%==win64-msvc14-mdd (CALL C:\"Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64)
+  - IF %ARCH%==win64-msvc15-mdd (CALL C:\"Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat")
+  - IF %ARCH%==win64-msvc16-mdd (CALL C:\"Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat")
   - IF %ARCH%==x86_64-w64-mingw32 (CALL C:\msys64\usr\bin\bash -lc "pacman -S mingw-w64-x86_64-lapack --noconfirm")
   #- IF %ARCH%==i686-w64-mingw32 (CALL C:\msys64\usr\bin\bash -lc "pacman -S mingw-w64-i686-lapack --noconfirm")  
   - C:\msys64\usr\bin\bash -lc ""
@@ -94,8 +97,8 @@ after_build:
   - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\dist\lib
   - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\dist\share
   - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\%APPVEYOR_PROJECT_NAME%\README.md
-  - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\%APPVEYOR_PROJECT_NAME%\LICENSE
-  - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\%APPVEYOR_PROJECT_NAME%\INSTALL
+  - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\%APPVEYOR_PROJECT_NAME%\%APPVEYOR_PROJECT_NAME%\LICENSE
+  - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\%APPVEYOR_PROJECT_NAME%\%APPVEYOR_PROJECT_NAME%\INSTALL
   - 7z a %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip C:\projects\%APPVEYOR_PROJECT_NAME%\%APPVEYOR_PROJECT_NAME%\AUTHORS
   - curl -T %APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip -utkralphs:%BINTRAY_API% -H "X-Bintray-Publish:1" -H "X-Bintray-Override:1" https://api.bintray.com/content/coin-or/download/%APPVEYOR_PROJECT_NAME%/%VERSION%/%APPVEYOR_PROJECT_NAME%-%VERSION%-%ARCH%.zip
 
