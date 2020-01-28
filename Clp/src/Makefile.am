@@ -154,10 +154,6 @@ endif
 libClp_la_LIBADD = $(CLPLIB_LFLAGS)
 libClpSolver_la_LIBADD = libClp.la
 
-# This is for libtool
-libClp_la_LDFLAGS = $(LT_LDFLAGS)
-libClpSolver_la_LDFLAGS = $(LT_LDFLAGS)
-
 ########################################################################
 #                            clp program                               #
 ########################################################################
@@ -172,8 +168,6 @@ clp_SOURCES = ClpMain.cpp
 # List all additionally required libraries
 clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 
-clp_LDFLAGS = $(LT_LDFLAGS)
-
 ########################################################################
 #                            Additional flags                          #
 ########################################################################
@@ -181,6 +175,9 @@ clp_LDFLAGS = $(LT_LDFLAGS)
 # CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
 # is built within Clp
 AM_CPPFLAGS += -DCOIN_HAS_CLP
+
+# Use additional libtool flags
+LDFLAGS += $(LT_LDFLAGS)
 
 ########################################################################
 #                Headers that need to be installed                     #

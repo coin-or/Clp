@@ -893,6 +893,7 @@ ADD_CXXFLAGS
 LT_SYS_LIBRARY_PATH
 CPP
 CXXCPP
+LT_LDFLAGS
 PKG_CONFIG'
 
 
@@ -1637,6 +1638,8 @@ Some influential environment variables:
               User-defined run-time library search path.
   CPP         C preprocessor
   CXXCPP      C++ preprocessor
+  LT_LDFLAGS  Flags passed to libtool when building libraries or executables
+              that are installed
   PKG_CONFIG  path to pkg-config utility
 
 Use these variables to override the choices made by `configure' or to help
@@ -16641,7 +16644,7 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
       ;;
   esac
 
-  # Set up LT_LDFLAGS.
+  # Set up LT_LDFLAGS, user can initialize and we augment below
 
 
   # Use the libtool library info, if defined, otherwise use the project version info,
