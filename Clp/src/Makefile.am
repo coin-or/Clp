@@ -172,6 +172,8 @@ clp_SOURCES = ClpMain.cpp
 # List all additionally required libraries
 clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 
+clp_LDFLAGS = $(LT_LDFLAGS)
+
 ########################################################################
 #                            Additional flags                          #
 ########################################################################

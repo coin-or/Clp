@@ -289,6 +289,9 @@ libClpSolver_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 am_clp_OBJECTS = ClpMain.$(OBJEXT)
 clp_OBJECTS = $(am_clp_OBJECTS)
 clp_DEPENDENCIES = libClpSolver.la libClp.la $(am__DEPENDENCIES_1)
+clp_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(clp_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -731,6 +734,7 @@ clp_SOURCES = ClpMain.cpp
 
 # List all additionally required libraries
 clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
+clp_LDFLAGS = $(LT_LDFLAGS)
 
 ########################################################################
 #                Headers that need to be installed                     #
@@ -913,7 +917,7 @@ libClpSolver.la: $(libClpSolver_la_OBJECTS) $(libClpSolver_la_DEPENDENCIES) $(EX
 
 clp$(EXEEXT): $(clp_OBJECTS) $(clp_DEPENDENCIES) $(EXTRA_clp_DEPENDENCIES) 
 	@rm -f clp$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(clp_OBJECTS) $(clp_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(clp_LINK) $(clp_OBJECTS) $(clp_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
