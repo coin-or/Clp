@@ -13,8 +13,12 @@
 
 /* accidentally used a bool for Clp_modifyCoefficient, so need to include stdbool.h
  * Clp_modifyCoefficient signature will change to use int with Clp 1.18
+ * stdbool.h is available with C99
+ * __STDC_VERSION__ isn't available when compiling C++ - look at C++ version instead
  */
+#if (defined(__cplusplus) && __cplusplus >= 199901L) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
 #include <stdbool.h>
+#endif
 
 #if defined(CLP_EXTERN_C)
 typedef struct {
@@ -152,8 +156,10 @@ COINLIBAPI void COINLINKAGE Clp_chgObjCoefficients(Clp_Simplex *model, const dou
  * 
  * \note Clp 1.18 will change the type of @param keepZero to int.
  */
+#if (defined(__cplusplus) && __cplusplus >= 199901L) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
 COINLIBAPI void COINLINKAGE Clp_modifyCoefficient(Clp_Simplex *model, int row, int column, double newElement,
   bool keepZero);
+#endif
 /** Drops names - makes lengthnames 0 and names empty */
 COINLIBAPI void COINLINKAGE Clp_dropNames(Clp_Simplex *model);
 /** Copies in names */

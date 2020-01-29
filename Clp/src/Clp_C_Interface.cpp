@@ -375,12 +375,14 @@ Clp_chgObjCoefficients(Clp_Simplex *model, const double *objIn)
   model->model_->chgObjCoefficients(objIn);
 }
 /* Change matrix coefficients */
+#if (defined(__cplusplus) && __cplusplus >= 199901L) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
 COINLIBAPI void COINLINKAGE
 Clp_modifyCoefficient(Clp_Simplex *model, int row, int column, double newElement,
   bool keepZero)
 {
   model->model_->modifyCoefficient(row, column, newElement, keepZero);
 }
+#endif
 /* Drops names - makes lengthnames 0 and names empty */
 COINLIBAPI void COINLINKAGE
 Clp_dropNames(Clp_Simplex *model)
