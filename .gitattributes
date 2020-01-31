@@ -3,9 +3,9 @@
 .ci/.travis.pre -text
 .ci/appveyor.post -text
 .ci/appveyor.pre -text
+.coin-or/Dependencies -text
 .coin-or/projDesc.xml -text
 /.travis.yml -text
-/Dependencies -text
 /LICENSE -text
 MSVisualStudio/v10/Clp.sln -text
 MSVisualStudio/v10/ClpExamplesMinimum/ClpExamplesMinimum.vcxproj -text
