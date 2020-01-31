@@ -10,8 +10,7 @@
 #                       Names and other basic things                        #
 #############################################################################
 
-AC_INIT([Clp],[trunk],[clp@list.coin-or.org],[coin-or-clp],
-        [https://projects.coin-or.org/Clp])
+AC_INIT([Clp],[trunk],[https://github.com/coin-or/Clp/issues/new],[coin-or-clp],[https://github.com/coin-or/Clp])
 
 AC_COPYRIGHT([
 Copyright 2006 International Business Machines and others.
