@@ -1,7 +1,7 @@
 This is the Clp project. For information on the purpose of
 this project please visit https://github.com/coin-or/Clp
 
-The information below should be migrated into ../README.md or the User's Guide.
+The information below should be migrated into README.md or the User's Guide.
 
 Running clp gives you some hints.  It can do a unit test (clp -unitTest) and solve netlib 
 problems (-netlib or -netlibp using primal).  It can also solve problems and set tolerances etc.  Just do 
