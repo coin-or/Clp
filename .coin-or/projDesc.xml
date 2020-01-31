@@ -36,20 +36,20 @@
     </developmentStatus>
     <testedPlatforms>
       <platform>
-        <operatingSystem>Microsoft Windows</operatingSystem>
-        <compiler>Visual Studio, cl</compiler>
-      </platform>
-      <platform>
-        <operatingSystem>Microsoft Windows / Cygwin / Msys / MinGW</operatingSystem>
-        <compiler>gcc, cl</compiler>
-      </platform>
-      <platform>
         <operatingSystem>Linux</operatingSystem>
         <compiler>gcc</compiler>
       </platform>
       <platform>
-        <operatingSystem>MacOS X</operatingSystem>
+        <operatingSystem>Mac OS X</operatingSystem>
         <compiler>gcc</compiler>
+      </platform>
+      <platform>
+        <operatingSystem>Microsoft Windows</operatingSystem>
+        <compiler>Visual Studio, cl</compiler>
+      </platform>
+      <platform>
+        <operatingSystem>Microsoft Windows with MSys2</operatingSystem>
+        <compiler>gcc, cl, icl</compiler>
       </platform>
     </testedPlatforms>
     <projectCategories>
@@ -60,7 +60,7 @@
   </projectBasics>
   <leftMenuLinks>
     <documentation>https://coin-or.github.io/Clp</documentation>
-    <sourceCodeDownload>http://www.coin-or.org/download/source/Clp</sourceCodeDownload>
+    <sourceCodeDownload>https://github.com/coin-or/Clp</sourceCodeDownload>
     <binaryDownload></binaryDownload>
     <mailingList>http://list.coin-or.org/mailman/listinfo/clp</mailingList>
   </leftMenuLinks>
