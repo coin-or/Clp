@@ -1385,6 +1385,15 @@ void ClpModel::resize(int newNumberRows, int newNumberColumns)
     maximumColumns_ = CoinMax(maximumColumns_, numberColumns_);
   }
 }
+// Makes sure matrix dimensions are at least model dimensions
+void ClpModel::synchronizeMatrix()
+{
+  if (matrix_) {
+    int numberRows = CoinMax(numberRows_,matrix_->getNumRows());
+    int numberColumns = CoinMax(numberColumns_,matrix_->getNumCols());
+    matrix_->setDimensions(numberRows,numberColumns);
+  }
+}
 // Deletes rows
 void ClpModel::deleteRows(int number, const int *which)
 {
@@ -1811,6 +1820,7 @@ void ClpModel::addRows(int number, const double *rowLower,
       matrix_->appendMatrix(number, 0, rowStarts, columns, elements);
     }
   }
+  synchronizeMatrix();
 }
 // Add rows
 void ClpModel::addRows(int number, const double *rowLower,
@@ -1843,6 +1853,7 @@ void ClpModel::addRows(int number, const double *rowLower,
     delete[] newIndex;
     delete[] newElements;
   }
+  synchronizeMatrix();
 }
 #ifndef CLP_NO_VECTOR
 void ClpModel::addRows(int number, const double *rowLower,
@@ -1896,6 +1907,7 @@ void ClpModel::addRows(int number, const double *rowLower,
   if (lengthNames_) {
     rowNames_.resize(numberRows_);
   }
+  synchronizeMatrix();
 }
 #endif
 #ifndef SLIM_CLP
@@ -2073,6 +2085,7 @@ int ClpModel::addRows(const CoinBuild &buildObject, bool tryPlusMinusOne, bool c
     // make sure matrix correct size
     matrix_->setDimensions(numberRows_, numberColumns_);
   }
+  synchronizeMatrix();
   return numberErrors;
 }
 #endif
@@ -2195,6 +2208,7 @@ int ClpModel::addRows(CoinModel &modelObject, bool tryPlusMinusOne, bool checkDu
           << numberErrors
           << CoinMessageEol;
     }
+    synchronizeMatrix();
     return numberErrors;
   } else {
     // not suitable for addRows
@@ -2286,6 +2300,7 @@ void ClpModel::addColumns(int number, const double *columnLower,
     // Do even if elements NULL (to resize)
     matrix_->appendMatrix(number, 1, columnStarts, rows, elements);
   }
+  synchronizeMatrix();
 }
 // Add columns
 void ClpModel::addColumns(int number, const double *columnLower,
@@ -2319,6 +2334,7 @@ void ClpModel::addColumns(int number, const double *columnLower,
     delete[] newIndex;
     delete[] newElements;
   }
+  synchronizeMatrix();
 }
 #ifndef CLP_NO_VECTOR
 void ClpModel::addColumns(int number, const double *columnLower,
@@ -2383,6 +2399,7 @@ void ClpModel::addColumns(int number, const double *columnLower,
   if (lengthNames_) {
     columnNames_.resize(numberColumns_);
   }
+  synchronizeMatrix();
 }
 #endif
 #ifndef SLIM_CLP
@@ -2517,6 +2534,7 @@ int ClpModel::addColumns(const CoinBuild &buildObject, bool tryPlusMinusOne, boo
     delete[] lower;
     delete[] upper;
   }
+  synchronizeMatrix();
   return 0;
 }
 #endif
@@ -2632,6 +2650,7 @@ int ClpModel::addColumns(CoinModel &modelObject, bool tryPlusMinusOne, bool chec
           << numberErrors
           << CoinMessageEol;
     }
+    synchronizeMatrix();
     return numberErrors;
   } else {
     // not suitable for addColumns
