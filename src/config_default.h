@@ -4,8 +4,7 @@
 
 /* this needs to come before the include of config_clp_default.h */
 #ifndef CLP_EXPORT
-#ifdef _WIN32
-/* assuming we build a CoinUtils DLL */
+#if defined(_WIN32) && defined(DLL_EXPORT)
 #define CLP_EXPORT __declspec(dllexport)
 #else
 #define CLP_EXPORT

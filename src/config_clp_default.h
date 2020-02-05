@@ -17,8 +17,7 @@
 #define CLP_VERSION_RELEASE 9999
 
 #ifndef CLP_EXPORT
-#ifdef _WIN32
-/* assuming we link against a CoinUtils DLL */
+#if defined(_WIN32) && defined(DLL_EXPORT)
 #define CLP_EXPORT __declspec(dllimport)
 #else
 #define CLP_EXPORT
