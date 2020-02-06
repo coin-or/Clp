@@ -1,6 +1,7 @@
 set(NAME "OSICLP")
 
 configure_file(config_osiclp.h.cmake.in config_osiclp.h)
+configure_file(config_osiclp.h.cmake.in OsiClpConfig.h)
 
 set(_SRCS OsiClpSolverInterface.cpp)
 set(_HDRS OsiClpSolverInterface.hpp)
@@ -24,7 +25,7 @@ target_link_libraries(OsiClp PUBLIC
   Coin::Osi
   Coin::Clp)
 set_target_properties(OsiClp PROPERTIES
-  PUBLIC_HEADER "${_HDRS};${CMAKE_CURRENT_BINARY_DIR}/config_osiclp.h"
+  PUBLIC_HEADER "${_HDRS};${CMAKE_CURRENT_BINARY_DIR}/config_osiclp.h;${CMAKE_CURRENT_BINARY_DIR}/OsiClpConfig.h"
   VERSION ${PROJECT_VERSION}
   SOVERSION ${PROJECT_VERSION_MAJOR})
 add_library(Coin::OsiClp ALIAS OsiClp)
