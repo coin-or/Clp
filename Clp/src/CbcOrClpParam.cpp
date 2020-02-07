@@ -2230,7 +2230,7 @@ correct tolerance (remembering to switch off presolve for this final short clean
     p.append("both");
     p.append("before");
     p.setLonghelp(
-      "This heuristic is very very compute intensive. It tries to find a Dantzig Wolfe structure and use that."
+      "This heuristic is very very compute intensive. It tries to find a Dantzig Wolfe structure and use that. "
       HEURISTICS_LONGHELP);
     parameters.push_back(p);
   }
