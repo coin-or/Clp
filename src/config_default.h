@@ -3,11 +3,11 @@
 #include "configall_system.h"
 
 /* this needs to come before the include of config_clp_default.h */
-#ifndef CLP_EXPORT
+#ifndef CLPLIB_EXPORT
 #if defined(_WIN32) && defined(DLL_EXPORT)
-#define CLP_EXPORT __declspec(dllexport)
+#define CLPLIB_EXPORT __declspec(dllexport)
 #else
-#define CLP_EXPORT
+#define CLPLIB_EXPORT
 #endif
 #endif
 

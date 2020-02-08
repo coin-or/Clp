@@ -16,11 +16,11 @@
 /* Release Version number of project */
 #define CLP_VERSION_RELEASE 9999
 
-#ifndef CLP_EXPORT
+#ifndef CLPLIB_EXPORT
 #if defined(_WIN32) && defined(DLL_EXPORT)
-#define CLP_EXPORT __declspec(dllimport)
+#define CLPLIB_EXPORT __declspec(dllimport)
 #else
-#define CLP_EXPORT
+#define CLPLIB_EXPORT
 #endif
 #endif
 
