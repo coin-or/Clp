@@ -3559,9 +3559,8 @@ void moveAndZero(clpTempInfo *info, int type, void *extra)
 #include <intrin.h>
 #elif defined(__ARM_FEATURE_SIMD32) || defined(__ARM_NEON)
 #include <arm_neon.h>
-#else
-//#include <immintrin.h> // deemed unnecessary in #126; if that was wrong, then try to do as suggested in #127
-//#include <fmaintrin.h>
+#elif defined(__i386__) || defined(__x86_64__)
+#include <immintrin.h>
 #endif
 int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
   const CoinIndexedVector *columnArray,

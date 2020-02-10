@@ -1519,7 +1519,8 @@ void ClpSimplex::cleanStatus()
         }
       } else
         numberBasic++;
-    } else {
+    } else if (columnLowerWork_[iColumn]>-1.0e30 ||
+	       columnUpperWork_[iColumn]<1.0e30) {
       setColumnStatus(iColumn, superBasic);
       // but put to bound if close
       if (fabs(columnActivityWork_[iColumn] - columnLowerWork_[iColumn])
@@ -1532,6 +1533,9 @@ void ClpSimplex::cleanStatus()
         columnActivityWork_[iColumn] = columnUpperWork_[iColumn];
         setColumnStatus(iColumn, atUpperBound);
       }
+    } else {
+      // free
+      setColumnStatus(iColumn, isFree);
     }
   }
 }

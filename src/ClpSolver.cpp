@@ -48,6 +48,9 @@ extern glp_prob *cbc_glp_prob;
 #include <cilk/cilk.h>
 #include <cilk/cilk_api.h>
 #endif
+#if PRICE_USE_OPENMP
+#include "omp.h"
+#endif
 #include "AbcCommon.hpp"
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
@@ -778,6 +781,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               __cilkrts_set_param("nworkers", temp);
               printf("setting cilk workers to %d\n", action);
             }
+#elif PRICE_USE_OPENMP
+	    omp_set_num_threads(action);
 #endif
             break;
           case CLP_PARAM_STR_INTPRINT:
@@ -1615,7 +1620,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               if (preSolve) {
                 ClpPresolve pinfo;
                 int presolveOptions2 = presolveOptions & ~0x40000000;
-                if ((presolveOptions2 & 0xffff) != 0)
+                if ((presolveOptions2 & 0xfffff) != 0)
                   pinfo.setPresolveActions(presolveOptions2);
                 pinfo.setSubstitution(substitution);
                 if ((printOptions & 1) != 0)
@@ -2879,8 +2884,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         case CLP_PARAM_ACTION_GUESS:
           if (goodModels[iModel]) {
             delete[] alternativeEnvironment;
+#ifndef ABC_INHERIT
             ClpSimplexOther *model2 = static_cast< ClpSimplexOther * >(models + iModel);
             alternativeEnvironment = model2->guess(0);
+#else
+	    alternativeEnvironment = NULL;
+#endif
             if (alternativeEnvironment)
               CbcOrClpEnvironmentIndex = 0;
             else
