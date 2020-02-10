@@ -15,9 +15,10 @@
 #define COINLIBAPI CLPLIB_EXPORT
 
 #if defined(CLP_EXTERN_C)
-typedef struct {
+struct Clp_Solve_s {
   ClpSolve options;
-} Clp_Solve;
+};
+typedef struct Clp_Solve_s Clp_Solve;
 #else
 typedef void Clp_Solve;
 #endif
