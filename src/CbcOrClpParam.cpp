@@ -3826,8 +3826,22 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
   {
     CbcOrClpParam p("sec!onds", "maximum seconds",
       -1.0, COIN_DBL_MAX, CBC_PARAM_DBL_TIMELIMIT_BAB);
+  // Meaning 0 - start at very beginning
+  // 1 start at beginning of preprocessing
+  // 2 start at beginning of branch and bound
+#ifndef CBC_USE_INITIAL_TIME
+#define CBC_USE_INITIAL_TIME 1
+#endif
+#if CBC_USE_INITIAL_TIME==0
     p.setLonghelp(
-      "After this many seconds coin solver will act as if maximum nodes had been reached.");
+      "After this many seconds in Branch and Bound coin solver will act as if maximum nodes had been reached (time in initial solve and preprocessing is included).");
+#elif CBC_USE_INITIAL_TIME==1
+    p.setLonghelp(
+      "After this many seconds in Branch and Bound coin solver will act as if maximum nodes had been reached (time in initial solve not included).");
+#else
+    p.setLonghelp(
+      "After this many seconds in Branch and Bound coin solver will act as if maximum nodes had been reached (time in initial solve and preprocessing not included).");
+#endif
     parameters.push_back(p);
   }
 #endif
@@ -4086,7 +4100,8 @@ cccc is bit set \n 0 - 1 Heavy probing \n 1 - 2 Make variables integer if possib
 7 - 128 Try and create cliques\n 8 - 256 If all +1 try hard for dominated rows\n \
 10 - 1024 Use a larger feasibility tolerance in presolve\n \
 11 - 2048 Try probing before creating cliques\n \
-12 - 4096 Switch off duplicate column checking for integers \n \n \
+12 - 4096 Switch off duplicate column checking for integers \n \
+13 - 8192 Allow scaled duplicate column checking \n \n \
      Now aa 99 has special meaning i.e. just one simple presolve.");
     parameters.push_back(p);
   }
@@ -4131,19 +4146,6 @@ It is possible you can get same effect by using example driver4.cpp.");
     parameters.push_back(p);
   }
 #endif
-#ifdef COIN_AVX2
-  {
-    CbcOrClpParam p("vector!Mode", "Try and use vector instructions",
-      0, 11, CLP_PARAM_INT_VECTOR_MODE);
-    p.setLonghelp(
-      "At present only for Intel architectures - but could be extended.  \
-Uses avx2 or avx512 instructions. Uses different storage for matrix - can be \
-of benefit without instruction set on some problems.  \
-Being lazy I have used 10 to switch on a pool matrix (11 may come later)");
-    p.setIntValue(0);
-    parameters.push_back(p);
-  }
-#endif
 #ifdef COIN_HAS_CBC
   {
     CbcOrClpParam p("Vnd!VariableNeighborhoodSearch", "Whether to try Variable Neighborhood Search",
@@ -4157,12 +4159,25 @@ Being lazy I have used 10 to switch on a pool matrix (11 may come later)");
   }
 #endif
   {
+#ifndef COIN_AVX2
     CbcOrClpParam p("vector", "Whether to use vector? Form of matrix in simplex",
       "off", CLP_PARAM_STR_VECTOR, 7, 0);
     p.append("on");
     p.setLonghelp(
       "If this is on ClpPackedMatrix uses extra column copy in odd format.");
     parameters.push_back(p);
+#else
+    CbcOrClpParam p("vector", "Try and use vector instructions in simplex",
+      "off", CLP_PARAM_STR_VECTOR, 7, 0);
+    p.append("on");
+    //p.append("pool");
+    p.setLonghelp(
+      "At present only for Intel architectures - but could be extended.  \
+Uses avx2 or avx512 instructions. Uses different storage for matrix - can be \
+of benefit without instruction set on some problems.  \
+I may add pool to switch on a pool matrix");
+    parameters.push_back(p);
+#endif
   }
   {
     CbcOrClpParam p("verbose", "Switches on longer help on single ?",
