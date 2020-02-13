@@ -1793,6 +1793,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       // See if candidate for idiot
       nPasses = 0;
       Idiot info(*model2);
+      info.setMinIntervalStatusUpdate(model2->getMinIntervalProgressUpdate());
       info.setStrategy(idiotOptions | info.getStrategy());
       // Get average number of elements per column
       double ratio = static_cast< double >(numberElements) / static_cast< double >(numberColumns);
@@ -1971,6 +1972,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     if (doIdiot) {
       int nPasses = 0;
       Idiot info(*model2);
+      info.setMinIntervalStatusUpdate(model2->getMinIntervalProgressUpdate());
       info.setStrategy(idiotOptions | info.getStrategy());
       // Get average number of elements per column
       double ratio = static_cast< double >(numberElements) / static_cast< double >(numberColumns);
@@ -2231,6 +2233,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
               dualModel2->numberRows(), dualModel2->numberColumns());
             dualModel2->setOptimizationDirection(1.0);
             Idiot infoDual(info);
+	    info.setMinIntervalStatusUpdate(dualModel2->getMinIntervalProgressUpdate());
             infoDual.setModel(dualModel2);
 #if 0
 			info.setStrategy(512 | info.getStrategy());
