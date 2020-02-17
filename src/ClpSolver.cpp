@@ -1027,6 +1027,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             solveOptions.setSolveType(method);
             solveOptions.setSpecialOption(5, printOptions & 1);
             if (doVector) {
+	      models[iModel].setVectorMode(doVector);
               ClpMatrixBase *matrix = models[iModel].clpMatrix();
               if (dynamic_cast< ClpPackedMatrix * >(matrix)) {
                 ClpPackedMatrix *clpMatrix = dynamic_cast< ClpPackedMatrix * >(matrix);

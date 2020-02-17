@@ -4170,7 +4170,7 @@ It is possible you can get same effect by using example driver4.cpp.");
     CbcOrClpParam p("vector", "Try and use vector instructions in simplex",
       "off", CLP_PARAM_STR_VECTOR, 7, 0);
     p.append("on");
-    //p.append("pool");
+    p.append("ones");
     p.setLonghelp(
       "At present only for Intel architectures - but could be extended.  \
 Uses avx2 or avx512 instructions. Uses different storage for matrix - can be \

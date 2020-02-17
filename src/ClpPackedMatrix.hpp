@@ -327,6 +327,11 @@ public:
   {
     flags_ |= 16;
   }
+  /// Say we want special column copy with +1s
+  inline void makeOnesSpecialColumnCopy()
+  {
+    flags_ |= (16 | 32);
+  }
   /// Say we don't want special column copy
   void releaseSpecialColumnCopy();
   /// Are there zeros?
@@ -599,7 +604,7 @@ typedef struct {
   int firstAtUpper_;
   int firstBasic_; // or fixed
   int numberElements_; // number elements per column
-  int numberOnes_; // later
+  int numberOnes_;
 } blockStruct;
 class CLPLIB_EXPORT ClpPackedMatrix3 {
 
@@ -677,7 +682,12 @@ protected:
   int numberColumns_;
   /// Number of columns including gaps
   int numberColumnsWithGaps_;
-#if ABOCA_LITE
+#if PRICE_USE_OPENMP
+#define PRICE_USE_CHUNKS 10*PRICE_USE_OPENMP
+#elif ABOCA_LITE
+#define PRICE_USE_CHUNKS ABOCA_LITE
+#endif
+#if PRICE_USE_CHUNKS
   /// Number of chunks
   int numberChunks_;
 #endif
@@ -695,17 +705,20 @@ protected:
   double *element_;
   /// Temporary work area (aligned)
   CoinDoubleArrayWithLength *temporary_;
-#if ABOCA_LITE
+#if PRICE_USE_CHUNKS
   /// Chunk ends (could have more than cpus)
-  int endChunk_[2 * ABOCA_LITE + 1];
+  int endChunk_[2 * PRICE_USE_CHUNKS + 1];
 #endif
   /// Blocks (ordinary start at 0 and go to first block)
   blockStruct *block_;
   /// If active
   int ifActive_;
+  /** Set if blocks sorted so +1s first and each block has equal number
+      of +1s and others */
+  int plusOnes_;
   //@}
 };
-#elif INCLUDE_MATRIX3_PRICING
+#elif INCLUDE_MATRIX3_PRICING==1
 int iColumn = *column;
 column++;
 if (fabs(value) > zeroTolerance) {
@@ -727,52 +740,76 @@ if (fabs(value) > zeroTolerance) {
   }
   // out basic or fixed
   weights[iColumn] = thisWeight;
-  value = reducedCost[iColumn] - value;
-  reducedCost[iColumn] = value;
-  unsigned char thisStatus = status[iColumn] & 7;
-  assert(thisStatus != 0 && thisStatus != 4);
-  if (thisStatus == 3) {
-    //} else if ((thisStatus&1)!=0) {
-    // basic or fixed
-    //value=0.0;
-  } else {
-    assert(thisStatus == 2);
-    value = -value;
-  }
-  if (value < dualTolerance) {
-    value *= value;
-    if (value > bestRatio * weights[iColumn]) {
-      bestSequence = iColumn;
-      bestRatio = value / weights[iColumn];
+  if (!skipStuff) {
+    value = reducedCost[iColumn] - value;
+    reducedCost[iColumn] = value;
+    unsigned char thisStatus = status[iColumn] & 7;
+    assert(thisStatus != 0 && thisStatus != 4);
+    if (thisStatus == 3) {
+      //} else if ((thisStatus&1)!=0) {
+      // basic or fixed
+      //value=0.0;
+    } else {
+      assert(thisStatus == 2);
+      value = -value;
+    }
+    if (value < dualTolerance) {
+      value *= value;
+      if (value > bestRatio * weights[iColumn]) {
+	bestSequence = iColumn;
+	bestRatio = value / weights[iColumn];
 #if NO_CHANGE_MULTIPLIER != 1
-      bestRatio2 = bestRatio * NO_CHANGE_MULTIPLIER;
+	bestRatio2 = bestRatio * NO_CHANGE_MULTIPLIER;
 #endif
+      }
     }
   }
 } else {
-  // interesting - was faster without this?!
-  value = reducedCost[iColumn];
-  unsigned char thisStatus = status[iColumn] & 7;
-  assert(thisStatus != 0 && thisStatus != 4);
-  if (thisStatus == 3) {
-  } else if ((thisStatus & 1) != 0) {
-    // basic or fixed
-    value = 0.0;
-  } else {
-    value = -value;
-  }
-  if (value < dualTolerance) {
-    value *= value;
-    if (value > bestRatio2 * weights[iColumn]) {
-      bestSequence = iColumn;
-      bestRatio2 = value / weights[iColumn];
+  if (!skipStuff) {
+    // interesting - was faster without this?!
+    value = reducedCost[iColumn];
+    unsigned char thisStatus = status[iColumn] & 7;
+    assert(thisStatus != 0 && thisStatus != 4);
+    if (thisStatus == 3) {
+    } else if ((thisStatus & 1) != 0) {
+      // basic or fixed
+      value = 0.0;
+    } else {
+      value = -value;
+    }
+    if (value < dualTolerance) {
+      value *= value;
+      if (value > bestRatio2 * weights[iColumn]) {
+	bestSequence = iColumn;
+	bestRatio2 = value / weights[iColumn];
 #if NO_CHANGE_MULTIPLIER != 1
-      bestRatio = bestRatio2 * INVERSE_MULTIPLIER;
+	bestRatio = bestRatio2 * INVERSE_MULTIPLIER;
 #endif
+      }
     }
   }
 }
+#elif INCLUDE_MATRIX3_PRICING==2
+int iColumn = *column;
+column++;
+{
+  double thisWeight = weights[iColumn];
+  double pivot = value * scaleFactor;
+  double pivotSquared = pivot * pivot;
+  thisWeight += pivotSquared * devex + pivot * modification;
+  if (thisWeight < DEVEX_TRY_NORM) {
+    if (referenceIn < 0.0) {
+      // steepest
+      thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+    } else {
+      // exact
+      thisWeight = referenceIn * pivotSquared;
+      if (reference(iColumn))
+        thisWeight += 1.0;
+      thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+    }
+  }
+  // out basic or fixed
+  weights[iColumn] = thisWeight;
+}
 #endif
-
-/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/

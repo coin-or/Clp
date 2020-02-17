@@ -1014,6 +1014,8 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
       // maybe allow integer columns to be checked
       if ((presolveActions_ & 512) != 0)
         prob->setPresolveOptions(prob->presolveOptions() | 1);
+      if ((presolveActions_ & 131072) != 0)
+        prob->setPresolveOptions(prob->presolveOptions() | 0x80000);
       possibleSkip;
       paction_ = dupcol_action::presolve(prob, paction_);
       printProgress('C', 0);

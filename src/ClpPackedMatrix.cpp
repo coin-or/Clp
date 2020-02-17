@@ -26,6 +26,9 @@
 #ifdef INTEL_MKL
 #include "mkl_spblas.h"
 #endif
+#if PRICE_USE_OPENMP
+#include "omp.h"
+#endif
 //#define DO_CHECK_FLAGS 1
 //=============================================================================
 #ifdef COIN_PREFETCH
@@ -2443,7 +2446,7 @@ transposeTimes2UnscaledBit(clpTempInfo &info)
         double pivot = value * scaleFactor;
         double pivotSquared = pivot * pivot;
         thisWeight += pivotSquared * devex + pivot * modification;
-        debug3(iColumn, thisWeight, pivotSquared, devex, pivot, modification, oldWeight);
+        //debug3(iColumn, thisWeight, pivotSquared, devex, pivot, modification, oldWeight);
         if (thisWeight < DEVEX_TRY_NORM) {
           if (referenceIn < 0.0) {
             // steepest
@@ -2740,7 +2743,7 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
               double pivot = value * scaleFactor;
               double pivotSquared = pivot * pivot;
               thisWeight += pivotSquared * devex + pivot * modification;
-              debug3(iColumn, thisWeight, pivotSquared, devex, pivot, modification, oldWeight);
+              //debug3(iColumn, thisWeight, pivotSquared, devex, pivot, modification, oldWeight);
               if (thisWeight < DEVEX_TRY_NORM) {
                 if (referenceIn < 0.0) {
                   // steepest
@@ -2847,6 +2850,14 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
         int iRow = indexWeight[i];
         piWeight[iRow] *= rowScale[iRow];
       }
+#define ALLOW_KILLDJS
+#ifdef ALLOW_KILLDJS
+      if (columnCopy_&&killDjs) {
+	assert (!infeas);
+	killDjs=false;
+	//scaleFactor=0.0;
+      }
+#endif
       if (!columnCopy_ || killDjs) {
         if (infeas)
           returnCode = 1;
@@ -3077,7 +3088,9 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
       } else {
         // use special column copy
         // reset back
+#ifndef ALLOW_KILLDJS
         assert(!killDjs);
+#endif
         //if (killDjs)
         //   scaleFactor = 0.0;
         if (infeas)
@@ -5798,14 +5811,14 @@ void ClpPackedMatrix::specialRowCopy(ClpSimplex *model, const ClpMatrixBase *row
 void ClpPackedMatrix::specialColumnCopy(ClpSimplex *model)
 {
   delete columnCopy_;
-  if (model->vectorMode() == 1) {
+  if (model->vectorMode()) {
     flags_ |= 16;
     // go to exact devex (unless full steepest)
     ClpPrimalColumnSteepest *pricing = dynamic_cast< ClpPrimalColumnSteepest * >(model->primalColumnPivot());
     if (pricing && pricing->mode() > 1)
       pricing->setMode(0);
   }
-  if ((flags_ & 16) != 0 && model->numberRows() > 200 && model->numberColumns() > 500) {
+  if ((flags_ & 16) != 0 && model->numberRows() > 100 && model->numberColumns() > 500) {
     columnCopy_ = new ClpPackedMatrix3(model, matrix_);
     flags_ |= 8;
   } else {
@@ -6732,7 +6745,7 @@ ClpPackedMatrix3::ClpPackedMatrix3()
   , numberColumns_(0)
   , numberColumnsWithGaps_(0)
   ,
-#if ABOCA_LITE
+#if PRICE_USE_CHUNKS
   numberChunks_(0)
   ,
 #endif
@@ -6745,14 +6758,15 @@ ClpPackedMatrix3::ClpPackedMatrix3()
   , temporary_(NULL)
   , block_(NULL)
   , ifActive_(0)
+  , plusOnes_(0)
 {
 }
 #ifdef _MSC_VER
 #include <intrin.h>
-#elif defined(__ARM_FEATURE_SIMD32) || defined(__ARM_NEON)
+#elif defined(__arm__)
 #include <arm_neon.h>
 #else
-//#include <immintrin.h> // deemed unnecessary in #126; if that was wrong, then try to do as suggested in #127
+#include <immintrin.h>
 //#include <fmaintrin.h>
 #endif
 /* Constructor from copy. */
@@ -6761,7 +6775,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
   , numberColumns_(0)
   , numberColumnsWithGaps_(0)
   ,
-#if ABOCA_LITE
+#if PRICE_USE_CHUNKS
   numberChunks_(0)
   ,
 #endif
@@ -6774,12 +6788,13 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
   , temporary_(NULL)
   , block_(NULL)
   , ifActive_(0)
+  , plusOnes_(0)
 {
   //#undef COIN_AVX2
   //#define COIN_AVX2 8
   //#define NO_AVX_HARDWARE
 #ifndef COIN_AVX2
-#define COIN_AVX2 4
+#define COIN_AVX2 1
 #else
 #if COIN_AVX2 == 4
 #ifndef NO_AVX_HARDWARE
@@ -6806,18 +6821,48 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
 #endif
 #define COIN_ALIGN 8 * COIN_AVX2 // later
 #define COIN_ALIGN_DOUBLE COIN_AVX2
-#define COIN_AVX2_CHUNK 128 // do this many at a time
+#define COIN_AVX2_CHUNK 64 // do this many at a time
 #define MINBLOCK 6
 #define MAXBLOCK 100
+#define GOODBLOCKSIZE 128
 #define MAXUNROLL 10
+#define MAX_ONES 32 // must be power of 2
+  int maxBlock = MAXBLOCK;
 #define roundUp(xx) ((xx + COIN_ALIGN_DOUBLE - 1) & (~(COIN_ALIGN_DOUBLE - 1)))
 #define roundDown(xx) (xx & (~(COIN_ALIGN_DOUBLE - 1)))
   numberColumns_ = model->getNumCols();
   int numberColumns = columnCopy->getNumCols();
   assert(numberColumns_ >= numberColumns);
   int numberRows = columnCopy->getNumRows();
-  int *counts = new int[numberRows + 1];
-  CoinZeroN(counts, numberRows + 1);
+  // see if we want +1s
+  int maxCheck = maxBlock;
+  if (model->vectorMode() == 2) {
+    if (!model->columnScale()) {
+      plusOnes_=1;
+      maxCheck = MAX_ONES*MAX_ONES;
+    } else {
+      model->messageHandler()->message(CLP_GENERAL, *model->messagesPointer())
+	<< "Scaling overrides vector +1s"
+	<< CoinMessageEol;
+    }
+  }
+  int *counts = new int[3*maxCheck + 2 + numberRows + numberColumns];
+  CoinZeroN(counts, 2*maxCheck + 2);
+  int *counts2 = counts+maxCheck+1;
+  int *nElsLookup = counts2 + maxCheck+1;
+  int *blockNumber = nElsLookup + maxCheck;
+  for (int i=0;i<numberColumns;i++)
+    blockNumber[i]=-2;
+  if (!plusOnes_) {
+    for (int i=0;i<maxCheck;i++)
+      nElsLookup[i]=i;
+  } else {
+    for (int i=0;i<MAX_ONES;i++) {
+      for (int j=0;j<MAX_ONES;j++) {
+	nElsLookup[i*MAX_ONES+j]=i+j;
+      }
+    }
+  }
   CoinBigIndex nels = 0;
   int iColumn;
   // get matrix data pointers
@@ -6828,60 +6873,129 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
   unsigned char *status = model->statusArray();
   const double *lower = model->columnLower();
   const double *upper = model->columnUpper();
-  int nFree = 0; // or superbasic
-  int nFreeEls = 0;
+  int nOdd = 0;
+  CoinBigIndex nInOdd = 0;
   for (iColumn = 0; iColumn < numberColumns; iColumn++) {
     CoinBigIndex start = columnStart[iColumn];
     int n = columnLength[iColumn];
+    int nOnes = 0;
     CoinBigIndex end = start + n;
     int kZero = 0;
     for (CoinBigIndex j = start; j < end; j++) {
       if (!elementByColumn[j])
         kZero++;
+      else if (elementByColumn[j]==1.0)
+	nOnes ++;
     }
     n -= kZero;
     nels += n;
     if ((lower[iColumn] == -COIN_DBL_MAX && upper[iColumn] == COIN_DBL_MAX) || (status[iColumn] & 3) == 0) {
-      nFree++;
-      nFreeEls += n;
+      nOdd++;
+      nInOdd += n;
       n = 0;
       if ((status[iColumn] & 3) != 0) {
         status[iColumn] &= ~7;
         status[iColumn] |= 4;
       }
     }
-    counts[n]++;
+    if (n==0 || n>=maxBlock) {
+      nOdd++;
+      nInOdd += n;
+      blockNumber[iColumn]=-1;
+    } else if (!plusOnes_) {
+      counts[n]++;
+    } else {
+      int nOther = n-nOnes;
+      if (nOther<MAX_ONES&nOnes<MAX_ONES) {
+	counts[(n-nOnes)*MAX_ONES+nOnes]++;
+      } else {
+	nOdd++;
+	nInOdd += n;
+	blockNumber[iColumn]=-1;
+      }
+    }
   }
-  counts[0] += numberColumns_ - numberColumns;
-  int nZeroColumns = counts[0]; // also free
-  counts[0] = -1;
-  int nOdd = nZeroColumns;
-  CoinBigIndex nInOdd = nFreeEls;
-  maxBlockSize_ = 0;
+  nOdd += numberColumns_ - numberColumns;
   int i;
-  for (i = 1; i <= numberRows; i++) {
+  int largestBlock=0;
+  int makeOdd = CoinMin(GOODBLOCKSIZE,COIN_AVX2);
+  for (i = 1; i < maxCheck; i++) {
     int n = counts[i];
     if (n) {
-      if (n < MINBLOCK || i > MAXBLOCK) {
-        nOdd += n;
-        counts[i] = -1;
-        nInOdd += n * i;
+      if (n < MINBLOCK) {
+	nOdd += n;
+	counts[i] = -1;
+	counts2[i]=0;
+	int nEls = nElsLookup[i];
+	nInOdd += n * nEls;
       } else {
-        numberBlocks_++;
-        maxBlockSize_ = CoinMax(maxBlockSize_, n);
-        ;
+	largestBlock = CoinMax(largestBlock, n);
+	int nMakeOdd = n%makeOdd;
+	counts2[i]=n-nMakeOdd;
+	nOdd += nMakeOdd;
+	int nEls = nElsLookup[i];
+	nInOdd += nMakeOdd * nEls;
+	while (n>GOODBLOCKSIZE) {
+	  numberBlocks_++;
+	  n -= GOODBLOCKSIZE;
+	}
+	numberBlocks_++;
       }
     } else {
       counts[i] = -1;
+      counts2[i]=0;
     }
   }
+  // mark bad ones
+  for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+    if (blockNumber[iColumn]==-2) {
+      CoinBigIndex start = columnStart[iColumn];
+      int n = columnLength[iColumn];
+      CoinBigIndex end = start + n;
+      int kZero = 0;
+      int nOnes = 0;
+      for (CoinBigIndex j = start; j < end; j++) {
+	if (!elementByColumn[j])
+	  kZero++;
+	else if (elementByColumn[j]==1.0)
+	  nOnes ++;
+      }
+      n -= kZero;
+      if (plusOnes_) {
+	int nOther = n-nOnes;
+	n = (n-nOnes)*MAX_ONES+nOnes;
+      }
+      int k=counts2[n];
+      if (k<=0) {
+	blockNumber[iColumn]=-1;
+      }
+      counts2[n]--;
+    }
+  }
+  // redo counts2
+  for (i = 1; i <= maxCheck; i++) {
+    int n = counts[i];
+    if (n>0) {
+      int nMakeOdd = n%makeOdd;
+      counts2[i]=n-nMakeOdd;
+    }
+  }
+  maxBlockSize_ = CoinMin(largestBlock,GOODBLOCKSIZE);
+  //#define OUT_BLOCK_ROWS
+#ifndef OUT_BLOCK_ROWS
+  // add in some rows
+  int nOddSlacks = numberRows % COIN_AVX2;
+  int nNormalRows = numberRows - nOddSlacks;
+  nInOdd += nOddSlacks;
+  nels += nOddSlacks;
+#endif
   // align on boundaries
   nels = roundUp(nInOdd);
   numberColumnsWithGaps_ = nOdd;
-  for (int i = 0; i <= CoinMin(MAXBLOCK, numberRows); i++) {
+  for (int i = 0; i < maxCheck; i++) {
     if (counts[i] > 0) {
-      int n = roundUp(counts[i]);
-      nels += n * i;
+      int n = roundUp(counts2[i]);
+      nels += n * nElsLookup[i];
       numberColumnsWithGaps_ += n;
     }
   }
@@ -6890,28 +7004,32 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
   start_ = new CoinBigIndex[nOdd + 1];
   // also allow for rows!
   int numberColumnsWithGaps = roundUp(numberColumnsWithGaps_);
-  numberColumnsWithGaps_ = roundUp(numberColumnsWithGaps + numberRows);
+  numberColumnsWithGaps_ =
+    roundUp(numberColumnsWithGaps + numberRows);
   column_ = new int[2 * numberColumnsWithGaps_];
   memset(row_, 0, nels * sizeof(int));
   memset(element_, 0, nels * sizeof(double));
   int *lookup = column_ + numberColumnsWithGaps_;
-  for (int i = 0; i < numberColumnsWithGaps; i++) {
+  for (int i = 0; i < numberColumnsWithGaps_; i++) {
     column_[i] = -1;
     lookup[i] = -1;
   }
-  for (int i = 0; i < numberRows; i++) {
+#ifndef OUT_BLOCK_ROWS
+  // maybe only slacks
+  for (int i = 0; i < nNormalRows; i++) {
     column_[i + numberColumnsWithGaps] = i + numberColumns;
     lookup[i + numberColumns] = i;
   }
-  for (int i = numberRows + numberColumnsWithGaps;
-       i < numberColumnsWithGaps_; i++) {
-    column_[i] = -1;
-    lookup[i] = -1;
-  }
+#endif
   // even if no blocks do a dummy one
   numberBlocks_ = CoinMax(numberBlocks_, 1);
+#ifndef OUT_BLOCK_ROWS
   block_ = new blockStruct[numberBlocks_ + 1]; // +1 for slacks
   memset(block_, 0, (numberBlocks_ + 1) * sizeof(blockStruct));
+#else
+  block_ = new blockStruct[numberBlocks_];
+  memset(block_, 0, numberBlocks_ * sizeof(blockStruct));
+#endif
   // Fill in what we can
   int nTotal = nOdd;
   // in case no blocks
@@ -6920,63 +7038,117 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
   double *elements2 = reinterpret_cast< double * >(clp_align(element_ + nInOdd));
   nels = elements2 - element_;
   int nBlock = 0;
-  for (i = 0; i <= CoinMin(MAXBLOCK, numberRows); i++) {
-    if (counts[i] > 0) {
-      blockStruct *block = block_ + nBlock;
-      int n = roundUp(counts[i]);
+  for (i = 0; i < maxCheck; i++) {
+    int nCol = counts[i];
+    if(nCol>0)
       counts[i] = nBlock; // backward pointer
+    while (nCol>=COIN_AVX2) {
+      blockStruct *block = block_ + nBlock;
+      int n = CoinMin(nCol,GOODBLOCKSIZE);
+      n -= n % COIN_AVX2;
+      nCol -= GOODBLOCKSIZE;
       nBlock++;
       block->startIndices_ = nTotal;
       block->startElements_ = nels;
-      block->numberElements_ = i;
+      int nEls = nElsLookup[i];
+      block->numberElements_ = nEls;
       // up counts
       nTotal += n;
-      nels += n * i;
+      nels += n * nEls;
     }
   }
   numberElements_ = nels;
   nBlock = CoinMax(nBlock, 1);
+  numberBlocks_ = nBlock;
+#ifndef OUT_BLOCK_ROWS
   // slacks
   block_[nBlock].numberElements_ = 0;
-  block_[nBlock].numberInBlock_ = numberRows;
+  block_[nBlock].numberInBlock_ = nNormalRows;
   block_[nBlock].startIndices_ = numberColumnsWithGaps;
+#endif
   // fill
   start_[0] = 0;
   nOdd = 0;
   nInOdd = 0;
   const double *columnScale = model->columnScale();
+  int rowsOne[MAX_ONES];
+  int rowsOther[MAX_ONES];
+  double elsOther[MAX_ONES];
   for (iColumn = 0; iColumn < numberColumns; iColumn++) {
     CoinBigIndex start = columnStart[iColumn];
     int n = columnLength[iColumn];
     CoinBigIndex end = start + n;
     int kZero = 0;
+    int nOnes = 0;
     for (CoinBigIndex j = start; j < end; j++) {
       if (!elementByColumn[j])
         kZero++;
+      else if (elementByColumn[j]==1.0)
+	nOnes ++;
     }
     n -= kZero;
+    int plusN = n;
+    if (plusOnes_) {
+      int nOther = n-nOnes;
+      plusN = (n-nOnes)*MAX_ONES+nOnes;
+    }
     if ((status[iColumn] & 3) == 0)
       n = 0;
     {
-      int iBlock = counts[n];
-      if (iBlock >= 0) {
+      int iBlock = counts[plusN];
+      if (iBlock >= 0 && blockNumber[iColumn]==-2) {
         blockStruct *block = block_ + iBlock;
         int k = block->numberInBlock_;
+	if (k==GOODBLOCKSIZE) {
+	  // get new block
+	  iBlock++;
+	  counts[plusN]=iBlock;
+	  block = block_ + iBlock;
+	  k = block->numberInBlock_;
+	}
         block->numberInBlock_++;
         column_[block->startIndices_ + k] = iColumn;
         lookup[iColumn] = k;
         CoinBigIndex put = block->startElements_
           + roundDown(k) * n + (k & (COIN_AVX2 - 1));
-        for (CoinBigIndex j = start; j < end; j++) {
-          double value = elementByColumn[j];
-          if (value) {
-            if (columnScale)
-              value *= columnScale[iColumn];
-            element_[put] = value;
-            row_[put] = row[j];
-            put += COIN_AVX2;
-          }
-        }
+	if (!plusOnes_) {
+	  for (CoinBigIndex j = start; j < end; j++) {
+	    double value = elementByColumn[j];
+	    if (value) {
+	      if (columnScale)
+		value *= columnScale[iColumn];
+	      element_[put] = value;
+	      row_[put] = row[j];
+	      put += COIN_AVX2;
+	    }
+	  }
+	} else {
+	  // sort
+	  int nOne=0;
+	  int nOther=0;
+	  for (CoinBigIndex j = start; j < end; j++) {
+	    double value = elementByColumn[j];
+	    if (value) {
+	      if (value!=1.0) {
+		elsOther[nOther] = value;
+		rowsOther[nOther++] = row[j];
+	      } else {
+		rowsOne[nOne++] = row[j];
+	      }
+	    }
+	  }
+	  block->numberOnes_=nOne;
+	  for (int j = 0; j < nOne; j++) {
+	    element_[put] = 1.0;
+	    row_[put] = rowsOne[j];
+	    put += COIN_AVX2;
+	  }
+	  for (int j = 0; j < nOther; j++) {
+	    element_[put] = elsOther[j];
+	    row_[put] = rowsOther[j];
+	    put += COIN_AVX2;
+	  }
+	}
       } else {
         // odd ones
         for (CoinBigIndex j = start; j < end; j++) {
@@ -6995,15 +7167,40 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
       }
     }
   }
+#ifndef NDEBUG
+  if (plusOnes_) {
+    for (int iBlock = 0; iBlock < numberBlocks_ + 1; iBlock++) {
+      blockStruct *block = block_ + iBlock;
+      int numberInBlock = block->numberInBlock_;
+      int nel = block->numberElements_;
+      double *element = element_ + block->startElements_;
+      int nOneCheck=block->numberOnes_;
+      for (int jColumn=0;jColumn<numberInBlock;jColumn+=COIN_AVX2) {
+	CoinBigIndex offset = nel*jColumn;;
+	int end = CoinMin(jColumn+COIN_AVX2,numberInBlock);
+	for (int iColumn=jColumn;iColumn<end;iColumn++) {
+	  double *elementA = element + offset;
+	  int nOne=0;
+	  for (int i = 0; i < nel * COIN_AVX2; i += COIN_AVX2) {
+	    if (elementA[i]==1.0)
+	      nOne++;
+	  }
+	  assert(nOne==nOneCheck);
+	  elementA++;
+	}
+      }
+    }
+  }
+#endif
   // This much temporary space
-#if ABOCA_LITE
-  temporary_ = new CoinDoubleArrayWithLength(2 * COIN_AVX2_CHUNK * 2 * ABOCA_LITE,
+#if PRICE_USE_CHUNKS
+  temporary_ = new CoinDoubleArrayWithLength(2 * COIN_AVX2_CHUNK * 2 * PRICE_USE_CHUNKS,
     -2 - COIN_ALIGN_DOUBLE);
 #else
   temporary_ = new CoinDoubleArrayWithLength(2 * COIN_AVX2_CHUNK,
     -2 - COIN_ALIGN_DOUBLE);
 #endif
-#if ABOCA_LITE
+#if PRICE_USE_CHUNKS
   // balance work - maybe with 2*cpu chunks
 #define COLUMN_WEIGHT 5
 #define BLOCK_MULT 2
@@ -7017,7 +7214,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
         block_[iBlock].numberElements_, totalWork,
         (COLUMN_WEIGHT + block_[iBlock].numberElements_) * block_[iBlock].numberInBlock_);
   }
-  double eachWork = totalWork / (BLOCK_MULT * ABOCA_LITE);
+  double eachWork = totalWork / (BLOCK_MULT * PRICE_USE_CHUNKS);
   double thisWork = 0.0;
   numberChunks_ = 0;
   endChunk_[0] = 0;
@@ -7026,19 +7223,19 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
     if (thisWork >= eachWork) {
       totalWork -= thisWork;
       thisWork = 0.0;
-      eachWork = totalWork / (BLOCK_MULT * ABOCA_LITE - numberChunks_ - 1);
+      eachWork = totalWork / (BLOCK_MULT * PRICE_USE_CHUNKS - numberChunks_ - 1);
       numberChunks_++;
       endChunk_[numberChunks_] = iBlock + 1;
-      if (numberChunks_ == BLOCK_MULT * ABOCA_LITE)
+      if (numberChunks_ == BLOCK_MULT * PRICE_USE_CHUNKS)
         break;
     }
   }
-  if (numberChunks_ == BLOCK_MULT * ABOCA_LITE)
+  if (numberChunks_ == BLOCK_MULT * PRICE_USE_CHUNKS)
     endChunk_[numberChunks_] = numberBlocks_;
   else if (endChunk_[numberChunks_] < numberBlocks_)
     endChunk_[++numberChunks_] = numberBlocks_;
   //printf("%d chunks for %d blocks\n",numberChunks_,numberBlocks_);
-  assert(numberChunks_ <= 2 * ABOCA_LITE);
+  assert(numberChunks_ <= 2 * PRICE_USE_CHUNKS);
 #endif
   delete[] counts;
 }
@@ -7058,7 +7255,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(const ClpPackedMatrix3 &rhs)
   , numberColumns_(rhs.numberColumns_)
   , numberColumnsWithGaps_(rhs.numberColumnsWithGaps_)
   ,
-#if ABOCA_LITE
+#if PRICE_USE_CHUNKS
   numberChunks_(rhs.numberChunks_)
   ,
 #endif
@@ -7071,6 +7268,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(const ClpPackedMatrix3 &rhs)
   , temporary_(NULL)
   , block_(NULL)
   , ifActive_(rhs.ifActive_)
+  , plusOnes_(rhs.plusOnes_)
 {
   if (rhs.numberBlocks_) {
     block_ = CoinCopyOfArray(rhs.block_, numberBlocks_);
@@ -7080,14 +7278,14 @@ ClpPackedMatrix3::ClpPackedMatrix3(const ClpPackedMatrix3 &rhs)
     row_ = CoinCopyOfArray(rhs.row_, numberElements_);
     element_ = CoinCopyOfArray(rhs.element_, numberElements_ + 8);
     // This much temporary space
-#if ABOCA_LITE
-    temporary_ = new CoinDoubleArrayWithLength(2 * COIN_AVX2_CHUNK * 2 * ABOCA_LITE,
+#if PRICE_USE_CHUNKS
+    temporary_ = new CoinDoubleArrayWithLength(2 * COIN_AVX2_CHUNK * 2 * PRICE_USE_CHUNKS,
       -2 - COIN_ALIGN_DOUBLE);
 #else
     temporary_ = new CoinDoubleArrayWithLength(2 * COIN_AVX2_CHUNK,
       -2 - COIN_ALIGN_DOUBLE);
 #endif
-#if ABOCA_LITE
+#if PRICE_USE_CHUNKS
     memcpy(endChunk_, rhs.endChunk_, sizeof(endChunk_));
 #endif
   }
@@ -7106,13 +7304,14 @@ ClpPackedMatrix3::operator=(const ClpPackedMatrix3 &rhs)
     numberBlocks_ = rhs.numberBlocks_;
     numberColumns_ = rhs.numberColumns_;
     numberColumnsWithGaps_ = rhs.numberColumnsWithGaps_;
-#if ABOCA_LITE
+#if PRICE_USE_CHUNKS
     numberChunks_ = rhs.numberChunks_;
     memcpy(endChunk_, rhs.endChunk_, sizeof(endChunk_));
 #endif
     numberElements_ = rhs.numberElements_;
     maxBlockSize_ = rhs.maxBlockSize_;
     ifActive_ = rhs.ifActive_;
+    plusOnes_ = rhs.plusOnes_;
     if (rhs.numberBlocks_) {
       block_ = CoinCopyOfArray(rhs.block_, numberBlocks_);
       column_ = CoinCopyOfArray(rhs.column_, 2 * numberColumnsWithGaps_);
@@ -7121,8 +7320,8 @@ ClpPackedMatrix3::operator=(const ClpPackedMatrix3 &rhs)
       row_ = CoinCopyOfArray(rhs.row_, numberElements_);
       element_ = CoinCopyOfArray(rhs.element_, numberElements_ + 8);
       // This much temporary space
-#if ABOCA_LITE
-      temporary_ = new CoinDoubleArrayWithLength(2 * COIN_AVX2_CHUNK * 2 * ABOCA_LITE,
+#if PRICE_USE_CHUNKS
+      temporary_ = new CoinDoubleArrayWithLength(2 * COIN_AVX2_CHUNK * 2 * PRICE_USE_CHUNKS,
         -2 - COIN_ALIGN_DOUBLE);
 #else
       temporary_ = new CoinDoubleArrayWithLength(2 * COIN_AVX2_CHUNK,
@@ -7394,8 +7593,10 @@ void ClpPackedMatrix3::swapOne(const ClpSimplex *model, const ClpPackedMatrix *m
       }
     }
     // find block - could do binary search
-    iBlock = CoinMin(n, numberBlocks_) - 1;
+    iBlock = numberBlocks_ - 1;
     while (block_[iBlock].numberElements_ != n)
+      iBlock--;
+    while (column_[block_[iBlock].startIndices_+kA] != iColumn)
       iBlock--;
   }
   blockStruct *block = block_ + iBlock;
@@ -7544,6 +7745,10 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
       //index[numberNonZero++]=jColumn;
     }
   }
+  // Do as for times2 for openmp - i.e. part function
+  //#if PRICE_USE_OPENMP
+  // Think
+  //#else
   for (int iBlock = 0; iBlock < numberBlocks_; iBlock++) {
     // C) Can do two at a time (if so put odd one into start_)
     // D) can use switch
@@ -7563,7 +7768,7 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
     for (int jBlock = 0; jBlock < nBlock; jBlock++) {
       __m256d arrayX = _mm256_setzero_pd();
       for (int j = 0; j < nel; j++) {
-        __m128i rows = _mm_loadu_si128((const __m128i *)row);
+        __m128i rows = _mm_loadu_si128(reinterpret_cast<const __m128i *>(row));
         __m256d elements = _mm256_load_pd(element);
         __m256d pis = _mm256_i32gather_pd(pi, rows, 8);
         arrayX = _mm256_fmadd_pd(pis, elements, arrayX);
@@ -7580,8 +7785,8 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
         __m512d elements = _mm512_load_pd(element);
         __m512d pis = _mm512_i32gather_pd(rows, pi, 8);
         arrayX = _mm512_fmadd_pd(pis, elements, arrayX);
-        row += 4;
-        element += 4;
+        row += 8;
+        element += 8;
       }
       _mm512_store_pd(newValues, arrayX);
 #endif
@@ -7784,39 +7989,292 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
     int nBlock = numberPrice >> COIN_AVX2_SHIFT;
     numberPrice -= roundDown(numberPrice);
 #if defined(HASWELL) || defined(SKYLAKE)
-    double *COIN_RESTRICT newValues = roundUpDouble((array + numberNonZero));
-#ifdef HASWELL
-    assert(COIN_AVX2 == 4);
-    for (int jBlock = 0; jBlock < nBlock; jBlock++) {
-      __m256d arrayX = _mm256_setzero_pd();
-      for (int j = 0; j < nel; j++) {
-        __m128i rows = _mm_loadu_si128((const __m128i *)row);
-        __m256d elements = _mm256_load_pd(element);
-        __m256d pis = _mm256_i32gather_pd(pi, rows, 8);
-        arrayX = _mm256_fmadd_pd(pis, elements, arrayX);
-        row += 4;
-        element += 4;
-      }
-      _mm256_store_pd(newValues, arrayX);
+#ifdef HASWELL 
+  assert(COIN_AVX2 == 4);
+#define _setzero(dbl_reg) __m256d dbl_reg = _mm256_setzero_pd()
+#define _loadi(int_reg,int_array) __m128i int_reg = \
+    _mm_loadu_si128(reinterpret_cast<const __m128i *>(int_array))
+#define _loadd(dbl_reg,dbl_array) __m256d dbl_reg = _mm256_load_pd(dbl_array)
+#define _gather(dbl_reg,dbl_array,int_reg) __m256d dbl_reg = \
+	_mm256_i32gather_pd(dbl_array,int_reg,8)
+#define _reloadi(int_reg,int_array) int_reg = \
+    _mm_loadu_si128(reinterpret_cast<const __m128i *>(int_array))
+#define _reloadd(dbl_reg,dbl_array) dbl_reg = _mm256_load_pd(dbl_array)
+#define _regather(dbl_reg,dbl_array,int_reg) dbl_reg = \
+	_mm256_i32gather_pd(dbl_array,int_reg,8)
+#define _fmadd(dbl_reg,dbl_reg1,dbl_reg2) dbl_reg = \
+	_mm256_fmadd_pd(dbl_reg1,dbl_reg2,dbl_reg)
+#define _fadd(dbl_reg,dbl_reg1) dbl_reg = \
+	_mm256_add_pd(dbl_reg,dbl_reg1)
+#define _negate(dbl_reg) dbl_reg = _mm256_sub_pd(zero,dbl_reg)
+#define _store(dbl_array,dbl_reg) _mm256_store_pd(dbl_array,dbl_reg)
 #else
-    assert(COIN_AVX2 == 8);
-    for (int jBlock = 0; jBlock < nBlock; jBlock++) {
-      __m512d arrayX = _mm512_setzero_pd();
-      for (int j = 0; j < nel; j++) {
-        __m256i rows = _mm256_loadu_si256((const __m256i *)row);
-        __m512d elements = _mm512_load_pd(element);
-        __m512d pis = _mm512_i32gather_pd(rows, pi, 8);
-        arrayX = _mm512_fmadd_pd(pis, elements, arrayX);
-        row += 4;
-        element += 4;
-      }
-      _mm512_store_pd(newValues, arrayX);
+  assert(COIN_AVX2 == 8);
+#define _setzero(dbl_reg) __m512d dbl_reg = _mm512_setzero_pd()
+#define _loadi(int_reg,int_array) __m256i int_reg = \
+	_mm_loadu_si256((const __m256i *)int_array)
+#define _loadd(dbl_reg,dbl_array) __m512d dbl_reg = _mm512_load_pd(dbl_array)
+#define _gather(dbl_reg,dbl_array,int_reg) __m512d dbl_reg = \
+	_mm512_i32gather_pd(dbl_array,int_reg,8)
+#define _fmadd(dbl_reg,dbl_reg1,dbl_reg2) dbl_reg = \
+	_mm512_fmadd_pd(dbl_reg1,dbl_reg2,dbl_reg)
+#define _fadd(dbl_reg,dbl_reg1) dbl_reg = \
+	_mm512_add_pd(dbl_reg,dbl_reg1)
+#define _negate(dbl_reg) dbl_reg = _mm512_sub_pd(zero,dbl_reg)
+#define _store(dbl_array,dbl_reg) _mm512_store_pd(dbl_array,dbl_reg)
 #endif
+    double *COIN_RESTRICT newValues = roundUpDouble((array + numberNonZero));
+#if 0      
+    for (int jBlock = 0; jBlock < nBlock; jBlock++) {
+      _setzero(arrayX);
+      for (int j = 0; j < nel; j++) {
+	_loadi(rows,row);
+	_loadd(elements,element);
+	_gather(pis,pi,rows);
+	_fmadd(arrayX,pis,elements);
+        row += COIN_AVX2;
+        element += COIN_AVX2;
+      }
+      _store(newValues,arrayX);
       newValues += COIN_AVX2;
-      //row += (nel-1)*COIN_AVX2;
-      //element += (nel-1)*COIN_AVX2;
       assert(row == row_ + block->startElements_ + nel * COIN_AVX2 * (jBlock + 1));
     }
+#else
+    int numberOnes = block->numberOnes_;
+    if (!numberOnes) {
+      int ntwos=nel >>1;
+      if ((nel&1)==0) {
+	for (int jBlock = 0; jBlock < nBlock; jBlock++) {
+	  _setzero(arrayX);
+	  _setzero(arrayX2);
+	  for (int j = 0; j < ntwos; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _fadd(arrayX,arrayX2);
+	  _store(newValues,arrayX);
+	  newValues += COIN_AVX2;
+	  assert(row == row_ + block->startElements_ + nel * COIN_AVX2 * (jBlock + 1));
+	}
+      } else {
+	for (int jBlock = 0; jBlock < nBlock; jBlock++) {
+	  _setzero(arrayX);
+	  _setzero(arrayX2);
+	  for (int j = 0; j < ntwos; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _fadd(arrayX,arrayX2);
+	  _loadi(rows,row);
+	  _loadd(elements,element);
+	  _gather(pis,pi,rows);
+	  _fmadd(arrayX,pis,elements);
+	  row += COIN_AVX2;
+	  element += COIN_AVX2;
+	  _store(newValues,arrayX);
+	  newValues += COIN_AVX2;
+	  assert(row == row_ + block->startElements_ + nel * COIN_AVX2 * (jBlock + 1));
+	}
+      }
+    } else {
+      // some ones
+      int numberOther = nel-numberOnes;
+      int ntwoOnes=numberOnes >>1;
+      int ntwoOthers=numberOther >>1;
+      int ntwos=nel >>1;//temp
+      if ((numberOnes&1)==0 && (numberOther&1)==0) {
+	for (int jBlock = 0; jBlock < nBlock; jBlock++) {
+	  _setzero(arrayX);
+	  _setzero(arrayX2);
+	  for (int j = 0; j < ntwoOnes; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    //const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    //_loadd(elements,element);
+	    //_loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fadd(arrayX,pis);
+	    _fadd(arrayX2,pis2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  for (int j = 0; j < ntwoOthers; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _fadd(arrayX,arrayX2);
+	  _store(newValues,arrayX);
+	  newValues += COIN_AVX2;
+	  assert(row == row_ + block->startElements_ + nel * COIN_AVX2 * (jBlock + 1));
+	}
+      } else if ((numberOnes&1)!=0 && (numberOther&1)==0) {
+	for (int jBlock = 0; jBlock < nBlock; jBlock++) {
+	  _setzero(arrayX);
+	  _setzero(arrayX2);
+	  for (int j = 0; j < ntwoOnes; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    //_loadd(elements,element);
+	    //_loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fadd(arrayX,pis);
+	    _fadd(arrayX2,pis2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _loadi(rows,row);
+	  //_loadd(elements,element);
+	  _gather(pis,pi,rows);
+	  _fadd(arrayX,pis);
+	  row += COIN_AVX2;
+	  element += COIN_AVX2;
+	  for (int j = 0; j < ntwoOthers; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _fadd(arrayX,arrayX2);
+	  _store(newValues,arrayX);
+	  newValues += COIN_AVX2;
+	  assert(row == row_ + block->startElements_ + nel * COIN_AVX2 * (jBlock + 1));
+	}
+      } else if ((numberOnes&1)==0 && (numberOther&1)!=0) {
+	for (int jBlock = 0; jBlock < nBlock; jBlock++) {
+	  _setzero(arrayX);
+	  _setzero(arrayX2);
+	  for (int j = 0; j < ntwoOnes; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    //_loadd(elements,element);
+	    //_loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fadd(arrayX,pis);
+	    _fadd(arrayX2,pis2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  for (int j = 0; j < ntwoOthers; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _fadd(arrayX,arrayX2);
+	  _loadi(rows,row);
+	  _loadd(elements,element);
+	  _gather(pis,pi,rows);
+	  _fmadd(arrayX,pis,elements);
+	  row += COIN_AVX2;
+	  element += COIN_AVX2;
+	  _store(newValues,arrayX);
+	  newValues += COIN_AVX2;
+	  assert(row == row_ + block->startElements_ + nel * COIN_AVX2 * (jBlock + 1));
+	}
+      } else {
+	for (int jBlock = 0; jBlock < nBlock; jBlock++) {
+	  _setzero(arrayX);
+	  _setzero(arrayX2);
+	  for (int j = 0; j < ntwoOnes; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    //_loadd(elements,element);
+	    //_loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fadd(arrayX,pis);
+	    _fadd(arrayX2,pis2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _loadi(rows,row);
+	  //_loadd(elements,element);
+	  _gather(pis,pi,rows);
+	  _fadd(arrayX,pis);
+	  row += COIN_AVX2;
+	  element += COIN_AVX2;
+	  for (int j = 0; j < ntwoOthers; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _fadd(arrayX,arrayX2);
+	  _reloadi(rows,row);
+	  _loadd(elements,element);
+	  _regather(pis,pi,rows);
+	  _fmadd(arrayX,pis,elements);
+	  _store(newValues,arrayX);
+	  newValues += COIN_AVX2;
+	  assert(row == row_ + block->startElements_ + nel * COIN_AVX2 * (jBlock + 1));
+	}
+      }
+    }
+#endif
 #else
     double *COIN_RESTRICT newValues = array + numberNonZero;
     for (int jBlock = 0; jBlock < nBlock; jBlock++) {
@@ -7859,7 +8317,7 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
       *newValues = value;
       newValues++;
     }
-#ifdef HASWELL
+#if COIN_AVX2
     newValues = roundUpDouble((array + numberNonZero));
 #else
     newValues = array + numberNonZero;
@@ -7939,6 +8397,7 @@ transposeTimes3Bit2Odd(clpTempInfo &info)
   const int *column = info.which;
   const double *element = info.element;
   double scaleFactor = info.theta;
+  bool skipStuff = info.infeas==NULL;
   const double *pi = info.cost;
   const double *piWeight = info.lower;
   double referenceIn = info.upperTheta;
@@ -7990,61 +8449,63 @@ transposeTimes3Bit2Odd(clpTempInfo &info)
           }
         }
         weights[iColumn] = thisWeight;
-        value = reducedCost[iColumn] - value;
-        reducedCost[iColumn] = value;
-        unsigned char thisStatus = status[iColumn] & 7;
-        if (thisStatus == 3) {
-        } else if ((thisStatus & 1) != 0) {
-          // basic or fixed
-          value = 0.0;
-        } else if (thisStatus == 2) {
-          value = -value;
-        } else {
-          // free or superbasic
-          if (fabs(value) > -FREE_ACCEPT * dualTolerance) {
-            // we are going to bias towards free (but only if reasonable)
-            value = -fabs(value) * FREE_BIAS;
-          } else {
-            value = 0.0;
-          }
-        }
-        if (value < dualTolerance) {
-          value *= value;
-          if (value > bestRatio * weights[iColumn]) {
-            bestSequence = iColumn;
-            bestRatio = value / weights[iColumn];
+	if (!skipStuff) {
+	  value = reducedCost[iColumn] - value;
+	  reducedCost[iColumn] = value;
+	  unsigned char thisStatus = status[iColumn] & 7;
+	  if (thisStatus == 3) {
+	  } else if ((thisStatus & 1) != 0) {
+	    // basic or fixed
+	    value = 0.0;
+	  } else if (thisStatus == 2) {
+	    value = -value;
+	  } else {
+	    // free or superbasic
+	    if (fabs(value) > -FREE_ACCEPT * dualTolerance) {
+	      // we are going to bias towards free (but only if reasonable)
+	      value = -fabs(value) * FREE_BIAS;
+	    } else {
+	      value = 0.0;
+	    }
+	  }
+	  if (value < dualTolerance) {
+	    value *= value;
+	    if (value > bestRatio * weights[iColumn]) {
+	      bestSequence = iColumn;
+	      bestRatio = value / weights[iColumn];
 #if NO_CHANGE_MULTIPLIER != 1
-            bestRatio2 = bestRatio * NO_CHANGE_MULTIPLIER;
+	      bestRatio2 = bestRatio * NO_CHANGE_MULTIPLIER;
 #endif
-          }
-        }
-      } else {
-        value = reducedCost[iColumn];
-        unsigned char thisStatus = status[iColumn] & 7;
-        if (thisStatus == 3) {
-        } else if ((thisStatus & 1) != 0) {
-          // basic or fixed
-          value = 0.0;
-        } else if (thisStatus == 2) {
-          value = -value;
-        } else {
-          // free or superbasic
-          if (fabs(value) > -FREE_ACCEPT * dualTolerance) {
-            // we are going to bias towards free (but only if reasonable)
-            value = -fabs(value) * FREE_BIAS;
-          } else {
-            value = 0.0;
-          }
-        }
-        if (value < dualTolerance) {
-          value *= value;
-          if (value > bestRatio2 * weights[iColumn]) {
-            bestSequence = iColumn;
-            bestRatio2 = value / weights[iColumn];
+	    }
+	  }
+	} else {
+	  value = reducedCost[iColumn];
+	  unsigned char thisStatus = status[iColumn] & 7;
+	  if (thisStatus == 3) {
+	  } else if ((thisStatus & 1) != 0) {
+	    // basic or fixed
+	    value = 0.0;
+	  } else if (thisStatus == 2) {
+	    value = -value;
+	  } else {
+	    // free or superbasic
+	    if (fabs(value) > -FREE_ACCEPT * dualTolerance) {
+	      // we are going to bias towards free (but only if reasonable)
+	      value = -fabs(value) * FREE_BIAS;
+	    } else {
+	      value = 0.0;
+	    }
+	  }
+	  if (value < dualTolerance) {
+	    value *= value;
+	    if (value > bestRatio2 * weights[iColumn]) {
+	      bestSequence = iColumn;
+	      bestRatio2 = value / weights[iColumn];
 #if NO_CHANGE_MULTIPLIER != 1
-            bestRatio = bestRatio2 * INVERSE_MULTIPLIER;
+	      bestRatio = bestRatio2 * INVERSE_MULTIPLIER;
 #endif
-          }
+	    }
+	  }
         }
       }
     }
@@ -8061,15 +8522,16 @@ transposeTimes3Bit2(clpTempInfo &info)
   double *COIN_RESTRICT weights = info.solution;
   double *COIN_RESTRICT work = info.work;
   double *COIN_RESTRICT work2 = work + COIN_AVX2_CHUNK;
-  const unsigned int *reference = reinterpret_cast< const unsigned int * >(info.upper);
-  const blockStruct *blocks = reinterpret_cast< const blockStruct * >(info.pivotVariable);
-  const unsigned char *status = info.status;
-  const int *rowBlock = info.row;
-  const int *columnBlock = info.which;
-  const double *elementBlock = info.element;
+  bool skipStuff = info.infeas==NULL;
+  const unsigned int *COIN_RESTRICT reference = reinterpret_cast< const unsigned int * >(info.upper);
+  const blockStruct *COIN_RESTRICT blocks = reinterpret_cast< const blockStruct * >(info.pivotVariable);
+  const unsigned char *COIN_RESTRICT status = info.status;
+  const int *COIN_RESTRICT rowBlock = info.row;
+  const int *COIN_RESTRICT columnBlock = info.which;
+  const double *COIN_RESTRICT elementBlock = info.element;
   double scaleFactor = info.theta;
-  const double *pi = info.cost;
-  const double *piWeight = info.lower;
+  const double *COIN_RESTRICT pi = info.cost;
+  const double *COIN_RESTRICT piWeight = info.lower;
   double referenceIn = info.upperTheta;
   double devex = info.changeObj;
   assert(scaleFactor);
@@ -8084,102 +8546,376 @@ transposeTimes3Bit2(clpTempInfo &info)
   //double * COIN_RESTRICT tempArray =
   //const_cast<double *>(elementBlock+info.numberColumns);
   //double * COIN_RESTRICT tempArray2 = tempArray + roundUp(maxBlockSize);
+#if COIN_AVX2 > 1
   for (int iBlock = firstBlock; iBlock < lastBlock; iBlock++) {
-    const blockStruct *block = blocks + iBlock;
+    const blockStruct *COIN_RESTRICT block = blocks + iBlock;
     int numberPrice = block->firstBasic_;
     int nel = block->numberElements_;
-    const int *row = rowBlock + block->startElements_;
-    const double *element = elementBlock + block->startElements_;
-    const int *column = columnBlock + block->startIndices_;
-#if COIN_AVX2 > 1
+    const int *COIN_RESTRICT row = rowBlock + block->startElements_;
+    const double *COIN_RESTRICT element = elementBlock + block->startElements_;
+    const int *COIN_RESTRICT column = columnBlock + block->startIndices_;
     int numberDo = roundDown(numberPrice);
-#if defined(HASWELL) || defined(SKYLAKE)
-#ifdef HASWELL
-    assert(COIN_AVX2 == 4);
-    __m256d zero = _mm256_setzero_pd();
-    for (int kColumn = 0; kColumn < numberDo; kColumn += COIN_AVX2_CHUNK) {
-      int endBlock = CoinMin(COIN_AVX2_CHUNK, numberDo - kColumn);
-      for (int i = 0; i < endBlock; i += COIN_AVX2) {
-        __m256d arrayX = _mm256_setzero_pd();
-        __m256d tempX = _mm256_setzero_pd();
-        for (int j = 0; j < nel; j++) {
-          __m128i rows = _mm_loadu_si128((const __m128i *)row);
-          __m256d elements = _mm256_load_pd(element);
-          __m256d pis = _mm256_i32gather_pd(pi, rows, 8);
-          __m256d piWeights = _mm256_i32gather_pd(piWeight, rows, 8);
-          // should be better way using sub
-          arrayX = _mm256_fmadd_pd(pis, elements, arrayX);
-          tempX = _mm256_fmadd_pd(piWeights, elements, tempX);
-          row += 4;
-          element += 4;
-        }
-        arrayX = _mm256_sub_pd(zero, arrayX);
-        _mm256_store_pd(work + i, tempX);
-        _mm256_store_pd(work2 + i, arrayX);
-      }
-#else
-    assert(COIN_AVX2 == 8);
-    __m512d zero = _mm512_setzero_pd();
-    for (int kColumn = 0; kColumn < numberDo; kColumn += COIN_AVX2_CHUNK) {
-      int endBlock = CoinMin(COIN_AVX2_CHUNK, numberDo - kColumn);
-      for (int i = 0; i < endBlock; i += COIN_AVX2) {
-        __m512d arrayX = _mm512_setzero_pd();
-        __m512d tempX = _mm512_setzero_pd();
-        for (int j = 0; j < nel; j++) {
-          __m256i rows = _mm256_loadu_si256((const __m256i *)row);
-          __m512d elements = _mm512_load_pd(element);
-          __m512d pis = _mm512_i32gather_pd(rows, pi, 8);
-          __m512d piWeights = _mm512_i32gather_pd(rows, piWeight, 8);
-          // should be better way using sub
-          arrayX = _mm512_fmadd_pd(pis, elements, arrayX);
-          tempX = _mm512_fmadd_pd(piWeights, elements, tempX);
-          row += 4;
-          element += 4;
-        }
-        arrayX = _mm512_sub_pd(zero, arrayX);
-        _mm512_store_pd(work + i, tempX);
-        _mm512_store_pd(work2 + i, arrayX);
-      }
-#endif
-      for (int i = 0; i < endBlock; i++) {
-        double value = work2[i];
-        double modification = work[i];
-        // common coding
+    _setzero(zero);
+    int numberOnes = block->numberOnes_;
+    if (!numberOnes ) {
+      int ntwos=nel >>1;
+      if ((nel&1)==0) {
+	for (int kColumn = 0; kColumn < numberDo; kColumn += COIN_AVX2) {
+	  //coin_prefetch_const(row+256);
+	  //coin_prefetch_const(element+256);
+	  _setzero(arrayX);
+	  _setzero(tempX);
+	  _setzero(arrayX2);
+	  _setzero(tempX2);
+	  for (int j = 0; j < ntwos; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    _fmadd(tempX,piWeights,elements);
+	    _fmadd(tempX2,piWeights2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _fadd(arrayX,arrayX2);
+	  _fadd(tempX,tempX2);
+	  _negate(arrayX);
+	  _store(work, tempX);
+	  _store(work2, arrayX);
+	  for (int i = 0; i < COIN_AVX2; i++) {
+	    double value = work2[i];
+	    double modification = work[i];
+	    // common coding
 #include "ClpPackedMatrix.hpp"
+	  }
+	}
+      } else {
+	for (int kColumn = 0; kColumn < numberDo; kColumn += COIN_AVX2) {
+	  _setzero(arrayX);
+	  _setzero(tempX);
+	  _setzero(arrayX2);
+	  _setzero(tempX2);
+	  for (int j = 0; j < ntwos; j++) {
+	    const int * row2 = row+COIN_AVX2;
+	    const double * element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    _fmadd(tempX,piWeights,elements);
+	    _fmadd(tempX2,piWeights2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _loadi(rows,row);
+	  _loadd(elements,element);
+	  _gather(pis,pi,rows);
+	  _gather(piWeights,piWeight,rows);
+	  // should be better way using sub
+	  _fmadd(arrayX,pis,elements);
+	  _fmadd(tempX,piWeights,elements);
+	  _fadd(arrayX,arrayX2);
+	  _fadd(tempX,tempX2);
+	  row += COIN_AVX2;
+	  element += COIN_AVX2;
+	  _negate(arrayX);
+	  _store(work, tempX);
+	  _store(work2, arrayX);
+	  for (int i = 0; i < COIN_AVX2; i++) {
+	    double value = work2[i];
+	    double modification = work[i];
+	    // common coding
+#include "ClpPackedMatrix.hpp"
+	  }
+	}
+      }
+    } else {
+      // some ones
+      int numberOther = nel-numberOnes;
+      int ntwoOnes=numberOnes >>1;
+      int ntwoOthers=numberOther >>1;
+      if ((numberOnes&1)==0 && (numberOther&1)==0) {
+	for (int kColumn = 0; kColumn < numberDo; kColumn += COIN_AVX2) {
+	  //coin_prefetch_const(row+256);
+	  //coin_prefetch_const(element+256);
+	  _setzero(arrayX);
+	  _setzero(tempX);
+	  _setzero(arrayX2);
+	  _setzero(tempX2);
+	  for (int j = 0; j < ntwoOnes; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    //_loadd(elements,element);
+	    //_loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fadd(arrayX,pis);
+	    _fadd(arrayX2,pis2);
+	    _fadd(tempX,piWeights);
+	    _fadd(tempX2,piWeights2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  for (int j = 0; j < ntwoOthers; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    _fmadd(tempX,piWeights,elements);
+	    _fmadd(tempX2,piWeights2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _fadd(arrayX,arrayX2);
+	  _fadd(tempX,tempX2);
+	  _negate(arrayX);
+	  _store(work, tempX);
+	  _store(work2, arrayX);
+	  for (int i = 0; i < COIN_AVX2; i++) {
+	    double value = work2[i];
+	    double modification = work[i];
+	    // common coding
+#include "ClpPackedMatrix.hpp"
+	  }
+	}
+      } else if ((numberOnes&1)!=0 && (numberOther&1)==0) {
+	for (int kColumn = 0; kColumn < numberDo; kColumn += COIN_AVX2) {
+	  _setzero(arrayX);
+	  _setzero(tempX);
+	  _setzero(arrayX2);
+	  _setzero(tempX2);
+	  for (int j = 0; j < ntwoOnes; j++) {
+	    const int * row2 = row+COIN_AVX2;
+	    const double * element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    //_loadd(elements,element);
+	    //_loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fadd(arrayX,pis);
+	    _fadd(arrayX2,pis2);
+	    _fadd(tempX,piWeights);
+	    _fadd(tempX2,piWeights2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _loadi(rows,row);
+	  //_loadd(elements,element);
+	  _gather(pis,pi,rows);
+	  _gather(piWeights,piWeight,rows);
+	  // should be better way using sub
+	  _fadd(arrayX,pis);
+	  _fadd(tempX,piWeights);
+	  row += COIN_AVX2;
+	  element += COIN_AVX2;
+	  for (int j = 0; j < ntwoOthers; j++) {
+	    const int * row2 = row+COIN_AVX2;
+	    const double * element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    _fmadd(tempX,piWeights,elements);
+	    _fmadd(tempX2,piWeights2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _fadd(arrayX,arrayX2);
+	  _fadd(tempX,tempX2);
+	  _negate(arrayX);
+	  _store(work, tempX);
+	  _store(work2, arrayX);
+	  for (int i = 0; i < COIN_AVX2; i++) {
+	    double value = work2[i];
+	    double modification = work[i];
+	    // common coding
+#include "ClpPackedMatrix.hpp"
+	  }
+	}
+      } else if ((numberOnes&1)==0 && (numberOther&1)!=0) {
+	for (int kColumn = 0; kColumn < numberDo; kColumn += COIN_AVX2) {
+	  _setzero(arrayX);
+	  _setzero(tempX);
+	  _setzero(arrayX2);
+	  _setzero(tempX2);
+	  for (int j = 0; j < ntwoOnes; j++) {
+	    const int * row2 = row+COIN_AVX2;
+	    const double * element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    //_loadd(elements,element);
+	    //_loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fadd(arrayX,pis);
+	    _fadd(arrayX2,pis2);
+	    _fadd(tempX,piWeights);
+	    _fadd(tempX2,piWeights2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  for (int j = 0; j < ntwoOthers; j++) {
+	    const int * row2 = row+COIN_AVX2;
+	    const double * element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    _fmadd(tempX,piWeights,elements);
+	    _fmadd(tempX2,piWeights2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _loadi(rows,row);
+	  _loadd(elements,element);
+	  _gather(pis,pi,rows);
+	  _gather(piWeights,piWeight,rows);
+	  // should be better way using sub
+	  _fmadd(arrayX,pis,elements);
+	  _fmadd(tempX,piWeights,elements);
+	  _fadd(arrayX,arrayX2);
+	  _fadd(tempX,tempX2);
+	  row += COIN_AVX2;
+	  element += COIN_AVX2;
+	  _negate(arrayX);
+	  _store(work, tempX);
+	  _store(work2, arrayX);
+	  for (int i = 0; i < COIN_AVX2; i++) {
+	    double value = work2[i];
+	    double modification = work[i];
+	    // common coding
+#include "ClpPackedMatrix.hpp"
+	  }
+	}
+      } else {
+	for (int kColumn = 0; kColumn < numberDo; kColumn += COIN_AVX2) {
+	  //coin_prefetch_const(row+256);
+	  //coin_prefetch_const(element+256);
+	  _setzero(arrayX);
+	  _setzero(tempX);
+	  _setzero(arrayX2);
+	  _setzero(tempX2);
+	  for (int j = 0; j < ntwoOnes; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    //_loadd(elements,element);
+	    //_loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fadd(arrayX,pis);
+	    _fadd(arrayX2,pis2);
+	    _fadd(tempX,piWeights);
+	    _fadd(tempX2,piWeights2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _loadi(rows,row);
+	  //_loadd(elements,element);
+	  _gather(pis,pi,rows);
+	  _gather(piWeights,piWeight,rows);
+	  // should be better way using sub
+	  _fadd(arrayX,pis);
+	  _fadd(tempX,piWeights);
+	  row += COIN_AVX2;
+	  element += COIN_AVX2;
+	  for (int j = 0; j < ntwoOthers; j++) {
+	    const int *COIN_RESTRICT row2 = row+COIN_AVX2;
+	    const double *COIN_RESTRICT element2 = element+COIN_AVX2;
+	    _loadi(rows,row);
+	    _loadi(rows2,row2);
+	    _loadd(elements,element);
+	    _loadd(elements2,element2);
+	    _gather(pis,pi,rows);
+	    _gather(pis2,pi,rows2);
+	    _gather(piWeights,piWeight,rows);
+	    _gather(piWeights2,piWeight,rows2);
+	    // should be better way using sub
+	    _fmadd(arrayX,pis,elements);
+	    _fmadd(arrayX2,pis2,elements2);
+	    _fmadd(tempX,piWeights,elements);
+	    _fmadd(tempX2,piWeights2,elements2);
+	    row += 2*COIN_AVX2;
+	    element += 2*COIN_AVX2;
+	  }
+	  _reloadi(rows,row);
+	  _loadd(elements,element);
+	  _regather(pis,pi,rows);
+	  _regather(piWeights,piWeight,rows);
+	  // should be better way using sub
+	  _fmadd(arrayX,pis,elements);
+	  _fmadd(tempX,piWeights,elements);
+	  row += COIN_AVX2;
+	  element += COIN_AVX2;
+	  _fadd(arrayX,arrayX2);
+	  _fadd(tempX,tempX2);
+	  _negate(arrayX);
+	  _store(work, tempX);
+	  _store(work2, arrayX);
+	  for (int i = 0; i < COIN_AVX2; i++) {
+	    double value = work2[i];
+	    double modification = work[i];
+	    // common coding
+#include "ClpPackedMatrix.hpp"
+	  }
+	}
       }
     }
-#else
-    for (int kColumn = 0; kColumn < numberDo; kColumn += COIN_AVX2_CHUNK) {
-      int n = 0;
-      int nBlock = CoinMin(COIN_AVX2_CHUNK, numberPrice - kColumn) >> COIN_AVX2_SHIFT;
-      //int nBlock = numberPrice>>COIN_AVX2_SHIFT;
-      for (int jBlock = 0; jBlock < nBlock; jBlock++) {
-        for (int j = 0; j < COIN_AVX2; j++) {
-          double value = 0.0;
-          double modification = 0.0;
-          for (int i = 0; i < nel; i++) {
-            //assert (element+i*COIN_AVX2<tempArray);
-            int iRow = row[i * COIN_AVX2];
-            value -= pi[iRow] * element[i * COIN_AVX2];
-            modification += piWeight[iRow] * element[i * COIN_AVX2];
-          }
-          work[n] = modification;
-          work2[n++] = value;
-          row++;
-          element++;
-        }
-        row += (nel - 1) * COIN_AVX2;
-        element += (nel - 1) * COIN_AVX2;
-        //assert (row == rowBlock + block->startElements_ + nel*COIN_AVX2*(jBlock+1));
-      }
-      for (int j = 0; j < n; j++) {
-        double value = work2[j];
-        double modification = work[j];
-        // common coding
-#include "ClpPackedMatrix.hpp"
-      }
-    }
-#endif
     // last lot
     for (int j = numberDo; j < numberPrice; j++) {
       double value = 0.0;
@@ -8189,12 +8925,21 @@ transposeTimes3Bit2(clpTempInfo &info)
         value -= pi[iRow] * element[i * COIN_AVX2];
         modification += piWeight[iRow] * element[i * COIN_AVX2];
       }
-// common coding
+      // common coding
 #include "ClpPackedMatrix.hpp"
       row++;
       element++;
     }
+  }
 #else // COIN_AVX2 == 1
+  for (int iBlock = firstBlock; iBlock < lastBlock; iBlock++) {
+    const blockStruct *COIN_RESTRICT block = blocks + iBlock;
+    int numberPrice = block->firstBasic_;
+    int nel = block->numberElements_;
+    const int *COIN_RESTRICT row = rowBlock + block->startElements_;
+    const double *COIN_RESTRICT element = elementBlock + block->startElements_;
+    const int *COIN_RESTRICT column = columnBlock + block->startIndices_;
+    int numberDo = roundDown(numberPrice);
     for (int j = 0; j < numberPrice; j++) {
       double value = 0.0;
       double modification = 0.0;
@@ -8210,8 +8955,8 @@ transposeTimes3Bit2(clpTempInfo &info)
       element += nel;
     }
     int n = numberPrice;
-#endif
   }
+#endif
   info.numberAdded = bestSequence;
   info.bestPossible = bestRatio;
 }
@@ -8282,6 +9027,14 @@ transposeTimes3BitSlacks(clpTempInfo &info)
   info.numberAdded = bestSequence;
   info.bestPossible = bestRatio;
 }
+static void
+partTransposeTimes3(int iThread,int numberThreads,
+		    int numberBlocks,clpTempInfo * info)
+{
+  for (int iBlock = iThread; iBlock < numberBlocks; iBlock+=numberThreads) {
+    transposeTimes3Bit2(info[iBlock]);
+  }
+}
 // Updates two arrays for steepest
 void ClpPackedMatrix3::transposeTimes2(const ClpSimplex *model,
   const double *COIN_RESTRICT pi,
@@ -8307,10 +9060,12 @@ void ClpPackedMatrix3::transposeTimes2(const ClpSimplex *model,
   // allow tolerance at least slightly bigger than standard
   dualTolerance = dualTolerance + error;
   int numberOdd = block_->startIndices_;
+#if 1 //ndef ALLOW_KILLDJS
   assert(scaleFactor);
-#if ABOCA_LITE
+#endif
+#if PRICE_USE_CHUNKS
   //int nChunks=numberChunks_;
-#define ODD_INFO 2 * ABOCA_LITE
+#define ODD_INFO 2 * PRICE_USE_CHUNKS
 #else
 #define ODD_INFO 1
   //int nChunks=1;
@@ -8344,7 +9099,7 @@ void ClpPackedMatrix3::transposeTimes2(const ClpSimplex *model,
   info[ODD_INFO].numberToDo = numberOdd;
   //
   double *temporary = temporary_->array();
-#if ABOCA_LITE
+#if PRICE_USE_CHUNKS
   for (int iBlock = 0; iBlock < numberChunks_; iBlock++) {
     info[iBlock].startColumn = endChunk_[iBlock];
     info[iBlock].numberToDo = endChunk_[iBlock + 1];
@@ -8363,22 +9118,38 @@ void ClpPackedMatrix3::transposeTimes2(const ClpSimplex *model,
     for (int iBlock = 0; iBlock < numberChunks_; iBlock++) {
       cilk_spawn transposeTimes3Bit2(info[iBlock]);
     }
-    transposeTimes3BitSlacks(info[ODD_INFO + 1]);
+    if (infeas)
+      transposeTimes3BitSlacks(info[ODD_INFO + 1]);
     cilk_sync;
   } else {
-#endif
     transposeTimes3Bit2Odd(info[ODD_INFO]);
-#if ABOCA_LITE
     for (int iBlock = 0; iBlock < numberChunks_; iBlock++) {
       transposeTimes3Bit2(info[iBlock]);
     }
-#else
-  transposeTimes3Bit2(info[0]);
-#endif
-    transposeTimes3BitSlacks(info[ODD_INFO + 1]);
-#if ABOCA_LITE
+    if (infeas)
+      transposeTimes3BitSlacks(info[ODD_INFO + 1]);
   }
+#elif PRICE_USE_OPENMP
+  transposeTimes3Bit2Odd(info[ODD_INFO]);
+  int numberThreads;
+  int iThread,iBlock;
+#pragma omp parallel default(shared) private(iThread,numberThreads)
+  {
+    numberThreads = omp_get_num_threads();
+    iThread = omp_get_thread_num();
+    partTransposeTimes3(iThread,numberThreads,numberChunks_,
+			info);
+  }
+  if (infeas)
+    transposeTimes3BitSlacks(info[ODD_INFO + 1]);
+#else
+  transposeTimes3Bit2Odd(info[ODD_INFO]);
+  transposeTimes3Bit2(info[0]);
+  if (infeas)
+    transposeTimes3BitSlacks(info[ODD_INFO + 1]);
 #endif
+  if (!infeas)
+    return;
   int sequenceIn = -1;
   double best = 0.0;
   for (int iBlock = 0; iBlock < ODD_INFO + 2; iBlock++) {
@@ -8892,7 +9663,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
 		 }
 #endif
 #ifdef NEED_AVX
-		 __m128i columns = _mm_load_si128((const __m128i *)which);
+		 __m128i columns = _mm_load_si128(reinterpret_cast<const __m128i *>(which));
 		 // what do we get - this must be wrong
 		 // probably only 1 and 2 - can we be clever
 		 // fix
