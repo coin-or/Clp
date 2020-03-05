@@ -18178,7 +18178,7 @@ cat >>confdefs.h <<_ACEOF
 #define CLP_HAS_ABC $use_aboca
 _ACEOF
 
-      $use_aboca=yes
+      use_aboca=yes
       ;;
     no)
       ;;
