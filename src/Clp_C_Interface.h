@@ -460,6 +460,8 @@ COINLIBAPI const double *COINLINKAGE Clp_getColLower(Clp_Simplex *model);
 COINLIBAPI const double *COINLINKAGE Clp_getColUpper(Clp_Simplex *model);
 /** Objective value */
 COINLIBAPI double COINLINKAGE Clp_getObjValue(Clp_Simplex *model);
+/** Set random seed*/
+COINLIBAPI void COINLINKAGE Clp_setRandomSeed(Clp_Simplex *model, int seed);
 /** Print model for debugging purposes */
 COINLIBAPI void COINLINKAGE Clp_printModel(Clp_Simplex *model, const char *prefix);
 /* Small element value - elements less than this set to zero,
