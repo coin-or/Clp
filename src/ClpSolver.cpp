@@ -1003,8 +1003,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               method = ClpSolve::usePrimalorSprint;
             } else if (type == CLP_PARAM_ACTION_EITHERSIMPLEX) {
               method = ClpSolve::automatic;
-              if (doCrash > 3) {
-                solveOptions.setSpecialOption(6, 1, doCrash - 3);
+              if (doCrash > 6) {
+                solveOptions.setSpecialOption(6, 1, doCrash - 6);
                 doCrash = 0;
               }
               if (doIdiot > 0)
@@ -1036,7 +1036,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             }
             if (method == ClpSolve::useDual) {
               // dual
-              if (doCrash && doCrash < 4)
+              if (doCrash && doCrash < 7)
                 solveOptions.setSpecialOption(0, 1, doCrash); // crash
               else if (doIdiot)
                 solveOptions.setSpecialOption(0, 2, doIdiot); // possible idiot
@@ -1044,14 +1044,14 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               // primal
               // if slp turn everything off
               if (slpValue > 0) {
-                doCrash = false;
+                doCrash = 0;
                 doSprint = 0;
                 doIdiot = -1;
                 solveOptions.setSpecialOption(1, 10, slpValue); // slp
                 method = ClpSolve::usePrimal;
               }
-              if (doCrash > 3) {
-                solveOptions.setSpecialOption(6, 1, doCrash - 3);
+              if (doCrash > 6) {
+                solveOptions.setSpecialOption(6, 1, doCrash - 6);
                 doCrash = 0;
               }
               if (doCrash > 0) {

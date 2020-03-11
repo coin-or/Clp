@@ -8096,6 +8096,8 @@ void ClpSimplex::checkUnscaledSolution()
    1 Simple pivoting e.g. gub
    2 Mini iterations
    3 Just throw all free variables in basis
+   4 Move zero cost variables to make more primal feasible
+   5 Put singletons in basis to make more primal feasible
 */
 int ClpSimplex::crash(double gap, int pivot)
 {
@@ -8173,6 +8175,152 @@ int ClpSimplex::crash(double gap, int pivot)
         printf("%d free variables put in basis\n", nFree);
         return 0;
       }
+    } else if (pivot==4 || pivot==5) {
+      // Get column copy
+      CoinPackedMatrix *columnCopy = matrix();
+      const int * row = columnCopy->getIndices();
+      const CoinBigIndex * columnStart = columnCopy->getVectorStarts();
+      const int * columnLength = columnCopy->getVectorLengths();
+      const double * element = columnCopy->getElements();
+      for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
+	// assume natural place is closest to zero
+	double lowerBound = columnLower_[iColumn];
+	double upperBound = columnUpper_[iColumn];
+	if (lowerBound > -1.0e20 || upperBound < 1.0e20) {
+	  if (fabs(upperBound) < fabs(lowerBound)) {
+	    setColumnStatus(iColumn, atUpperBound);
+	    columnActivity_[iColumn] = upperBound;
+	  } else {
+	    setColumnStatus(iColumn, atLowerBound);
+	    columnActivity_[iColumn] = lowerBound;
+	  }
+	} else {
+	  setColumnStatus(iColumn, isFree);
+	  columnActivity_[iColumn] = 0.0;
+	}
+      }
+      memset(rowActivity_,0,numberRows_*sizeof(double));
+      columnCopy->times(columnActivity_,rowActivity_);
+      bool justSingletons = (pivot==5);
+      double sumInfeas = 0.0;
+      for (int iRow=0;iRow<numberRows_;iRow++) {
+	if (rowActivity_[iRow]>rowUpper_[iRow])
+	  sumInfeas += rowActivity_[iRow]-rowUpper_[iRow];
+	else if (rowActivity_[iRow]<rowLower_[iRow])
+	  sumInfeas -= rowActivity_[iRow]-rowLower_[iRow];
+      }
+      const double * obj = objective();
+      int nMove = 0;
+      int nFlip = 0;
+      for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+	if ((!justSingletons&&obj[iColumn])||
+	    (justSingletons&&columnLength[iColumn]!=1))
+	  continue;
+	// going up
+	double maxUp = CoinMin(1.0e30,columnUpper_[iColumn]-columnActivity_[iColumn]);;
+	double goodUp = 0.0;
+	// going down
+	double maxDown = CoinMin(1.0e30,columnActivity_[iColumn]-columnLower_[iColumn]);;
+	double goodDown = 0.0;
+	for (CoinBigIndex j=columnStart[iColumn];
+	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	  double value = element[j];
+	  int iRow = row[j];
+	  double low = rowLower_[iRow];
+	  double high = rowUpper_[iRow];
+	  double sol = rowActivity_[iRow];
+	  if (value>0.0) {
+	    if (sol<low) {
+	      maxUp = CoinMin(maxUp,(low-sol)/value);
+	      goodUp += value;
+	      goodDown -= value;
+	    } else if (sol>high) {
+	      goodUp -= value;
+	      maxDown = CoinMin(maxDown,(high-sol)/-value);
+	      goodDown += value;
+	    } else {
+	      maxUp = CoinMin(maxUp,high-sol);
+	      maxDown = CoinMin(maxDown,sol-low);
+	    }
+	  } else {
+	    if (sol>high) {
+	      maxUp = CoinMin(maxUp,(high-sol)/value);
+	      goodUp -= value;
+	      goodDown += value;
+	    } else if (sol<low) {
+	      goodUp += value;
+	      maxDown = CoinMin(maxDown,(low-sol)/-value);
+	      goodDown -= value;
+	    } else {
+	      maxUp = CoinMin(maxUp,sol-low);
+	      maxDown = CoinMin(maxDown,high-sol);
+	    }
+	  }
+	}
+	// we want to increase objective and decrease infeasibility
+	double change = 0.0;
+	if (justSingletons) {
+	  if (maxDown>1.0e-6&&goodDown>1.0e-8) {
+	    // we want to go down
+	    //printf ("go down by %g on %d - improvement %g\n",
+	    //	  maxDown,iColumn,goodDown);
+	    change = -maxDown;
+	  } else if (maxUp>1.0e-6&&goodUp>1.0e-8) {
+	    // we want to go up
+	    //printf ("go up by %g on %d - improvement %g\n",
+	    //	  maxUp,iColumn,goodUp);
+	    change = maxUp;
+	  }
+	} else if (!justSingletons) {
+	  if (maxUp>1.0e-6&&goodUp>1.0e-8) {
+	    //printf ("go up by %g on %d - improvement %g\n",
+	    //	  maxUp,iColumn,goodUp);
+	    change = maxUp;
+	  } else if (maxDown>1.0e-6&&goodDown>1.0e-8) {
+	    //printf ("go down by %g on %d - improvement %g\n",
+	    //	  maxDown,iColumn,goodDown);
+	    change = -maxDown;
+	  }
+	}
+	if (fabs(change)>1.0e-7) {
+	  columnActivity_[iColumn] += change;
+	  for (CoinBigIndex j=columnStart[iColumn];
+	       j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	    double value = element[j];
+	    int iRow = row[j];
+	    rowActivity_[iRow] += change*value;
+	  }
+	  if (fabs(change-(columnUpper_[iColumn]-columnLower_[iColumn]))<1.0e-7) {
+	    nFlip++;
+	    if (getColumnStatus(iColumn)==ClpSimplex::atLowerBound)
+	      setColumnStatus(iColumn,ClpSimplex::atUpperBound);
+	    else
+	      setColumnStatus(iColumn,ClpSimplex::atLowerBound);
+	  } else {
+	    nMove++;
+	    if (!justSingletons) {
+	      setColumnStatus(iColumn,ClpSimplex::superBasic);
+	    } else {
+	      int iRow = row[columnStart[iColumn]];
+	      if (getRowStatus(iRow)==ClpSimplex::basic) {
+		setColumnStatus(iColumn,ClpSimplex::basic);
+		if (fabs(rowActivity_[iRow]-rowUpper_[iRow])<
+		    fabs(rowActivity_[iRow]-rowLower_[iRow]))
+		  setRowStatus(iRow,ClpSimplex::atUpperBound);
+		else
+		  setRowStatus(iRow,ClpSimplex::atLowerBound);
+	      } else {
+		setColumnStatus(iColumn,ClpSimplex::superBasic);
+	      }
+	    }
+	  }
+	}
+      }
+      handler_->message(CLP_CRASH, messages_)
+	<< nMove+nFlip
+	<< nMove
+	<< CoinMessageEol;
+      return 0;
     }
     // all slack
     double *dj = new double[numberColumns_];
