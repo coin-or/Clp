@@ -1835,6 +1835,9 @@ Cbc/examples/driver4.cpp.");
     p.append("on");
     p.append("so!low_halim");
     p.append("lots");
+    p.append("free");
+    p.append("zero");
+    p.append("single!ton");
 #ifdef CLP_INHERIT_MODE
     p.append("dual");
     p.append("dw");
@@ -2171,7 +2174,7 @@ Doing this may also set cutoff, which can help with preprocessing.");
   {
     CbcOrClpParam p("dualB!ound", "Initially algorithm acts as if no \
 gap between bounds exceeds this value",
-      1.0e-20, 1.0e12, CLP_PARAM_DBL_DUALBOUND);
+      1.0e-20, 1.0e20, CLP_PARAM_DBL_DUALBOUND);
     p.setLonghelp(
       "The dual algorithm in Clp is a single phase algorithm as opposed to a two phase\
  algorithm where you first get feasible then optimal.  If a problem has both upper and\
@@ -2498,6 +2501,7 @@ a few nodes of branch and bound are done on the reduced problem.");
     p.append("forceandglobal");
     p.append("forceLongOn");
     p.append("long");
+    p.append("shorter");
     p.setLonghelp(
       "The original cuts - beware of imitations!  Having gone out of favor, \
 they are now more fashionable as LP solvers are more robust and they interact well \
