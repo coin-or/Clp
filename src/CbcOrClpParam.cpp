@@ -3113,7 +3113,7 @@ specialized network code.");
   Alternatively, one may choose tree-depth as the criterion. This requires the minimal amount of memory, but may take a long time to find the best solution.\
   Additionally, one may specify whether up or down branches must \
 be selected first (the up-down choice will carry on after a first solution has been bound). \
-The default choice 'hybrid' does breadth first on small depth nodes and then switches to 'fewest'.");
+The choice 'hybrid' does breadth first on small depth nodes and then switches to 'fewest'.");
     parameters.push_back(p);
   }
   {
