@@ -12832,6 +12832,12 @@ void ClpSimplex::copyEnabledStuff(const ClpSimplex *rhs)
     if (rhs->columnArray_[i])
       columnArray_[i] = new CoinIndexedVector(*rhs->columnArray_[i]);
   }
+  delete nonLinearCost_;
+  nonLinearCost_ = NULL;
+  delete dualRowPivot_;
+  dualRowPivot_ = NULL;
+  delete primalColumnPivot_;
+  primalColumnPivot_ = NULL;
   if (rhs->nonLinearCost_)
     nonLinearCost_ = new ClpNonLinearCost(*rhs->nonLinearCost_);
   if (rhs->dualRowPivot_)
@@ -12839,6 +12845,3 @@ void ClpSimplex::copyEnabledStuff(const ClpSimplex *rhs)
   if (rhs->primalColumnPivot_)
     primalColumnPivot_ = rhs->primalColumnPivot_->clone();
 }
-
-/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/
