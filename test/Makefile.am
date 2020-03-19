@@ -6,8 +6,6 @@
 
 # Author:  Andreas Waechter           IBM    2006-04-13
 
-AUTOMAKE_OPTIONS = foreign
-
 include $(top_srcdir)/BuildTools/Makemain.inc
 
 ########################################################################
@@ -61,4 +59,3 @@ test: ../src/clp$(EXEEXT) $(testdepend)
 # output files of a program
 
 CLEANFILES = *.mps.gz *.out.gz *.lp
-

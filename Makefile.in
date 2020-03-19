@@ -374,7 +374,6 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-AUTOMAKE_OPTIONS = foreign
 pkgdocdir = $(docdir)
 
 # doxydocdir is the top-level directory for doxygen documentation. It holds
@@ -401,65 +400,6 @@ DOXYTAG_EDIT = sed -e 's|@baredocdir_nosub@|$(datarootdir)/doc|g'
 SUBDIRS = src $(am__append_1) $(am__append_3)
 pkgconfiglibdir = $(libdir)/pkgconfig
 pkgconfiglib_DATA = clp.pc $(am__append_2)
-
-########################################################################
-#             Additional files to be included in tarball               #
-########################################################################
-
-# Here we need include all files that are not mentioned in other Makefiles
-EXTRA_DIST = \
-	doc/authors.xml \
-	doc/basicmodelclasses.xml \
-	doc/clpexe.xml \
-	doc/clpuserguide.xml \
-	doc/doxygen.xml \
-	doc/faqcontent.xml \
-	doc/faq.xml \
-	doc/intro.xml \
-	doc/legal.xml \
-	doc/messages.xml \
-	doc/moresamples.xml \
-	doc/notsobasic.xml \
-	doc/revhist.xml \
-	doc/Howto/docbook4clp.xml \
-	examples/addBits.cpp \
-	examples/addColumns.cpp \
-	examples/addRows.cpp \
-	examples/decompose.cpp \
-	examples/defaults.cpp \
-	examples/driver2.cpp \
-	examples/driverC.c \
-	examples/driver.cpp \
-	examples/dualCuts.cpp \
-	examples/ekk.cpp \
-	examples/ekk_interface.cpp \
-	examples/hello.cpp \
-	examples/hello.mps \
-	examples/input.130 \
-	examples/INSTALL \
-	examples/makeDual.cpp \
-	examples/Makefile.in \
-	examples/minimum.cpp \
-	examples/network.cpp \
-	examples/piece.cpp \
-	examples/rowColumn.cpp \
-	examples/sprint2.cpp \
-	examples/sprint.cpp \
-	examples/testBarrier.cpp \
-	examples/testBasis.cpp \
-	examples/testGub2.cpp \
-	examples/testGub.cpp \
-	examples/testQP.cpp \
-	examples/useVolume.cpp
-
-
-########################################################################
-#                         Maintainer Stuff                             #
-########################################################################
-CLEANFILES = 
-
-# Files that are generated and should be cleaned with make distclean
-DISTCLEANFILES = 
 all: all-recursive
 
 .SUFFIXES:
@@ -671,12 +611,10 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
-	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -689,7 +627,7 @@ distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -f Makefile
 distclean-am: clean-am distclean-generic distclean-libtool \
-	distclean-local distclean-tags
+	distclean-tags
 
 dvi: dvi-recursive
 
@@ -756,18 +694,17 @@ uninstall-am: uninstall-local uninstall-pkgconfiglibDATA
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
 	am--refresh check check-am clean clean-cscope clean-generic \
 	clean-libtool clean-local cscope cscopelist-am ctags ctags-am \
-	distclean distclean-generic distclean-libtool distclean-local \
-	distclean-tags dvi dvi-am html html-am info info-am install \
-	install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-exec-local \
-	install-html install-html-am install-info install-info-am \
-	install-man install-pdf install-pdf-am \
-	install-pkgconfiglibDATA install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	installdirs-am maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
-	ps ps-am tags tags-am uninstall uninstall-am uninstall-local \
-	uninstall-pkgconfiglibDATA
+	distclean distclean-generic distclean-libtool distclean-tags \
+	dvi dvi-am html html-am info info-am install install-am \
+	install-data install-data-am install-dvi install-dvi-am \
+	install-exec install-exec-am install-exec-local install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-pkgconfiglibDATA install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs installdirs-am maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic \
+	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-am uninstall \
+	uninstall-am uninstall-local uninstall-pkgconfiglibDATA
 
 .PRECIOUS: Makefile
 
@@ -890,9 +827,6 @@ unitTest: test
 
 clean-local: clean-doxygen-docs
 	if test -r test/Makefile; then cd test; $(MAKE) clean; fi
-
-distclean-local:
-	if test -r test/Makefile; then cd test; $(MAKE) distclean; fi
 
 install-exec-local: install-doc
 

@@ -47,6 +47,7 @@ MSVisualStudio/v9alt/libClp.vcproj -text
 MSVisualStudio/v9alt/libOsiClp.vcproj -text
 MSVisualStudio/v9alt/osiclp.vsprops -text
 /appveyor.yml -text
+/ar-lib -text
 /clp.pc.in -text
 /compile -text
 /config.guess -text

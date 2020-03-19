@@ -6,8 +6,6 @@
 
 # Author:  Andreas Waechter           IBM    2006-04-13
 
-AUTOMAKE_OPTIONS = foreign
-
 include $(top_srcdir)/BuildTools/Makemain.inc
 
 ########################################################################
@@ -177,7 +175,7 @@ clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 AM_CPPFLAGS += -DCOIN_HAS_CLP
 
 # Use additional libtool flags
-LDFLAGS += $(LT_LDFLAGS)
+AM_LDFLAGS = $(LT_LDFLAGS)
 
 ########################################################################
 #                Headers that need to be installed                     #
