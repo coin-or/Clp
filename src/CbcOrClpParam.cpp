@@ -1722,19 +1722,6 @@ possibilities.");
     parameters.push_back(p);
   }
 #ifdef COIN_HAS_CBC
- {
-    CbcOrClpParam p("clique!Cuts", "Whether to use Clique cuts",
-      "off", CBC_PARAM_STR_CLIQUECUTS);
-    p.append("on");
-    p.append("root");
-    p.append("ifmove");
-    p.append("forceOn");
-    p.append("onglobal");
-    p.setLonghelp(CUTS_LONGHELP
-     " Reference: https://github.com/coin-or/Cgl/wiki/CglClique");
-
-    parameters.push_back(p);
-  }
   {
     CbcOrClpParam p("combine!Solutions", "Whether to use combine solution heuristic",
       "off", CBC_PARAM_STR_COMBINE);
@@ -2556,56 +2543,65 @@ setting some parameters which may help you to think of possibilities.");
     parameters.push_back(p);
   }
   {
-    CbcOrClpParam p("merge!Cliques", "Whether to perform merging of cliques (before\
-      initial solve or after preprocessing)", "off", CBC_PARAM_STR_CLIQUEMERGING);
-    p.append("before");
-    p.append("after");
-    p.setLonghelp("This switches the merge cliques strategy to preprocess and produce a stronger formulation");
-    parameters.push_back(p);
-  }
-  {
-    CbcOrClpParam p("bkclique!Cuts", "Whether to use Bron-Kerbosch Clique cuts",
-                      "off", CBC_PARAM_STR_BKCLIQUECUTS);
+    CbcOrClpParam p("clique!Cuts", "Whether to use Clique cuts",
+      "off", CBC_PARAM_STR_CLIQUECUTS);
     p.append("on");
     p.append("root");
     p.append("ifmove");
     p.append("forceOn");
     p.append("onglobal");
-    p.setLonghelp("This switches on Bron-Kerbosch clique cuts (either at root or in entire tree) \
-                    See branchAndCut for information on options.");
-   parameters.push_back(p);
-  }
-  {
-    CbcOrClpParam p("oddholewc!Cuts", "Whether to use odd wheel cuts",
-                      "off", CBC_PARAM_STR_ODDHOLEWCCUTS);
-    p.append("on");
-    p.append("root");
-    p.append("ifmove");
-    p.append("forceOn");
-    p.append("onglobal");
-    p.setLonghelp("This switches on odd wheel inequalities (either at root or in entire tree) \
-                  See branchAndCut for information on options.");
+    p.setLonghelp("This switches on clique cuts (either at root or in entire tree). \
+                  An improved version of the Bron-Kerbosch algorithm is used to separate cliques.");
     parameters.push_back(p);
   }
   {
-    CbcOrClpParam p("maxitbk", "Maximum number of iterations of Bron-Kerbosch \
-                      algorithm in Bron-Kerbosch Clique Separation routine",
-                        1, 2147483647, CBC_PARAM_INT_MAXITBK);
+    CbcOrClpParam p("bkpivot!ing", "Pivoting strategy used in Bron-Kerbosch algorithm",
+                        0, 6, CBC_PARAM_INT_BKPIVOTINGSTRATEGY);
+    p.setIntValue(3);
     parameters.push_back(p);
   }
   {
-    CbcOrClpParam p("maxitbkext!ension", "Maximum number of iterations of Bron-Kerbosch \
-                      algorithm in extension module of Bron-Kerbosch Clique Separation routine",
-                        1, 2147483647, CBC_PARAM_INT_MAXITBKEXT);
+    CbcOrClpParam p("bkmaxcalls", "Maximum number of recursive calls made by Bron-Kerbosch algorithm",
+                        1, 2147483647, CBC_PARAM_INT_BKMAXCALLS);
+    p.setIntValue(1000);
     parameters.push_back(p);
   }
   {
-    CbcOrClpParam p("clqext!method", "Maximum number of iterations of Bron-Kerbosch \
-                      algorithm in Bron-Kerbosch Clique Separation routine",
-                        0, 4, CBC_PARAM_INT_CLQEXTMETHOD);
+    CbcOrClpParam p("bkclqext!method", "Strategy used to extend violated cliques found by \
+      BK Clique Cut Separation routine", 0, 5, CBC_PARAM_INT_BKCLQEXTMETHOD);
     p.setLonghelp("Sets the method used in the extension module \
-        of Aggressive Clique Separation routine. 0=no extension; 1=random extension; \
-        2=max degree extension; 3=greedy extension; 4=exact extension.");
+        of BK Clique Cut Separation routine: 0=no extension; 1=random; \
+        2=degree; 3=modified degree; 4=reduced cost; \
+        5=reduced cost + modified degree");
+    p.setIntValue(4);
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("oddwheel!Cuts", "Whether to use odd wheel cuts",
+                      "off", CBC_PARAM_STR_ODDWHEELCUTS);
+    p.append("on");
+    p.append("root");
+    p.append("ifmove");
+    p.append("forceOn");
+    p.append("onglobal");
+    p.setLonghelp("This switches on odd-wheel inequalities (either at root or in entire tree).");
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("oddwext!method", "Strategy used to search for wheel centers for the cuts found by \
+      Odd Wheel Cut Separation routine", 0, 2, CBC_PARAM_INT_ODDWEXTMETHOD);
+    p.setLonghelp("Sets the method used in the extension module \
+        of Odd Wheel Cut Separation routine: 0=no extension; 1=one variable; 2=clique");
+    p.setIntValue(2);
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("clqstr!engthen", "Whether to perform Clique Strengthening preprocessing routine. \
+      Options represent strategies used to extend cliques.", 0, 5, CBC_PARAM_INT_CLQSTRENGTHENING);
+    p.setLonghelp("Sets the method used in the Clique Strengthening routine: \
+      0=off; 1=random; 2=degree; 3=modified degree; 4=reduced cost; \
+        5=reduced cost + modified degree");
+    p.setIntValue(0);
     parameters.push_back(p);
   }
   {
