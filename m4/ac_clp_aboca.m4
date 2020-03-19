@@ -26,7 +26,7 @@ AC_DEFUN([AC_CLP_ABOCA],
     1 | 2 | 3 | 4)
       AC_DEFINE_UNQUOTED([CLP_HAS_ABC],[$use_aboca],
         [Define to 1, 2, 3, or 4 if Aboca should be built.])
-      $use_aboca=yes
+      use_aboca=yes
       ;;
     no)
       ;;

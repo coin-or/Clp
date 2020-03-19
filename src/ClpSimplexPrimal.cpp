@@ -527,6 +527,12 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
         if (ifValuesPass) {
           // end of values pass
           ifValuesPass = 0;
+	  // redo special column copy
+	  {
+	    ClpPackedMatrix *clpMatrix = dynamic_cast< ClpPackedMatrix * >(matrix_);
+	    if (clpMatrix && vectorMode())
+	      clpMatrix->specialColumnCopy(this);
+	  }
           int status = eventHandler_->event(ClpEventHandler::endOfValuesPass);
           if (status >= 0) {
             problemStatus_ = 5;
@@ -742,7 +748,7 @@ int ClpSimplexPrimal::whileIterating(int valuesOption)
 #endif
 #ifdef CLP_DEBUG
       {
-        int checkSequence = -2077;
+        int checkSequence = -2007;
         if (checkSequence >= 0 && checkSequence < numberRows_ + numberColumns_ && !ifValuesPass) {
           rowArray_[2]->checkClear();
           rowArray_[3]->checkClear();

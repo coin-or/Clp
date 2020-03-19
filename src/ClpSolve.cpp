@@ -1867,6 +1867,14 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         case 4:
           model2->crash(0.0, 3);
           break;
+          // Move zero cost variables to minimize primal infeasibility
+        case 5:
+          model2->crash(0.0, 4);
+          break;
+          // Put singletons in basis to minimize primal infeasibility
+        case 6:
+          model2->crash(0.0, 5);
+          break;
         }
 #ifdef ABC_INHERIT
       } else if (doCrash >= 0) {
@@ -2387,6 +2395,14 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       case 4:
         model2->crash(0.0, 3);
         break;
+	// Move zero cost variables to minimize primal infeasibility
+      case 5:
+	model2->crash(0.0, 4);
+	break;
+	// Put singletons in basis to minimize primal infeasibility
+      case 6:
+	model2->crash(0.0, 5);
+	break;
       }
     }
 #ifndef SLIM_CLP
@@ -2408,7 +2424,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
           clpMatrix->releaseSpecialColumnCopy();
         } else {
 #ifndef ABC_INHERIT
-          model2->primal(primalStartup);
+	  model2->primal(primalStartup);
 #else
           model2->dealWithAbc(1, primalStartup, interrupt);
 #endif
@@ -3900,7 +3916,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     delete objective_;
     objective_ = savedObjective;
   }
-  if (options.getSpecialOption(1) == 2 && options.getExtraInfo(1) > 1000000) {
+  if (options.getSpecialOption(1) == 2 && options.getExtraInfo(1) > 1000000
+      && options.getExtraInfo(1) < 2000000) {
     ClpObjective *savedObjective = objective_;
     // make up zero objective
     double *obj = new double[numberColumns_];
