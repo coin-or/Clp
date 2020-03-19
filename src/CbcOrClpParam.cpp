@@ -2601,7 +2601,7 @@ setting some parameters which may help you to think of possibilities.");
     p.setLonghelp("Sets the method used in the Clique Strengthening routine: \
       0=off; 1=random; 2=degree; 3=modified degree; 4=reduced cost; \
         5=reduced cost + modified degree");
-    p.setIntValue(0);
+    p.setIntValue(4);
     parameters.push_back(p);
   }
   {
