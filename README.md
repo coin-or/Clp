@@ -121,7 +121,7 @@ Help:
  
 Documentation:
  * [Doxygen-generated html documentation](http://www.coin-or.org/Doxygen/Clp)
- * Source code [examples](Clp/examples)
+ * Source code [examples](https://github.com/coin-or/Clp/tree/master/examples)
  * [User's Guide](https://coin-or.github.io/Clp) (from 2004)
 
 Interfaces:
