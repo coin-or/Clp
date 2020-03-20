@@ -4,7 +4,7 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#if defined(USE_CBCCONFIG) || defined(CBCSOLVERLIB_BUILD)
+#ifdef CBCSOLVERLIB_BUILD
 #ifndef CBCSOLVERLIB_EXPORT
 #include "CbcSolverConfig.h"
 #endif
