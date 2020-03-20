@@ -25,7 +25,7 @@ libOsiClp_la_LIBADD = $(OSICLPLIB_LFLAGS) ../libClp.la
 libOsiClp_la_LDFLAGS = $(LT_LDFLAGS)
 
 # Here list all include flags, relative to this "srcdir" directory.
-AM_CPPFLAGS = -I$(srcdir)/.. $(OSICLPLIB_CFLAGS) -DOSICLP_BUILD
+AM_CPPFLAGS = -I$(srcdir)/.. $(OSICLPLIB_CFLAGS)
 
 ########################################################################
 #                Headers that need to be installed                     #

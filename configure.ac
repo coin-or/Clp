@@ -60,11 +60,11 @@ AC_COIN_CHECK_MATH_HDRS
 #                              COIN-OR components                           #
 #############################################################################
 
-AC_COIN_CHK_PKG(CoinUtils,[ClpLib])
+AC_COIN_CHK_PKG(CoinUtils,[ClpLib OsiClpUnitTest])
 if test $coin_has_coinutils != yes ; then
   AC_MSG_ERROR([Required package CoinUtils not available.])
 fi
-AC_COIN_CHK_PKG(Osi,[OsiClpLib])
+AC_COIN_CHK_PKG(Osi,[OsiClpLib OsiClpUnitTest])
 AC_COIN_CHK_PKG(OsiTests,[OsiClpUnitTest],[osi-unittests])
 AC_COIN_CHK_PKG(Sample,,[coindatasample],[],dataonly)
 AC_COIN_CHK_PKG(Netlib,,[coindatanetlib],[],dataonly)

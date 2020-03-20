@@ -25,7 +25,7 @@
 #define __CLPCONFIG_H__
 
 #ifdef HAVE_CONFIG_H
-#ifdef CLP_BUILD
+#ifdef CLPLIB_BUILD
 #include "config.h"
 
 /* overwrite CLPLIB_EXPORT from config.h when building Clp
@@ -47,7 +47,7 @@
 
 #else /* HAVE_CONFIG_H */
 
-#ifdef CLP_BUILD
+#ifdef CLPLIB_BUILD
 #include "config_default.h"
 #else
 #include "config_clp_default.h"

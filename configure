@@ -683,9 +683,6 @@ COIN_HAS_SAMPLE_FALSE
 COIN_HAS_SAMPLE_TRUE
 COIN_HAS_OSITESTS_FALSE
 COIN_HAS_OSITESTS_TRUE
-OSICLPUNITTEST_PCFILES
-OSICLPUNITTEST_CFLAGS
-OSICLPUNITTEST_LFLAGS
 COIN_HAS_OSI_FALSE
 COIN_HAS_OSI_TRUE
 OSICLPLIB_PCFILES
@@ -693,6 +690,9 @@ OSICLPLIB_CFLAGS
 OSICLPLIB_LFLAGS
 COIN_HAS_COINUTILS_FALSE
 COIN_HAS_COINUTILS_TRUE
+OSICLPUNITTEST_PCFILES
+OSICLPUNITTEST_CFLAGS
+OSICLPUNITTEST_LFLAGS
 CLPLIB_PCFILES
 CLPLIB_CFLAGS
 CLPLIB_LFLAGS
@@ -17096,6 +17096,9 @@ $as_echo_n "checking for package CoinUtils... " >&6; }
 
 
 
+
+
+
 # Check to see if the user has set an override to skip this primary.
 
   coin_has_coinutils=noInfo
@@ -17334,6 +17337,9 @@ $as_echo "#define COIN_HAS_COINUTILS 1" >>confdefs.h
     if test -n "$coinutils_pcfiles" ; then CLPLIB_PCFILES="$coinutils_pcfiles $CLPLIB_PCFILES" ; fi
        CLPLIB_LFLAGS="$coinutils_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$coinutils_cflags $CLPLIB_CFLAGS"
+      if test -n "$coinutils_pcfiles" ; then OSICLPUNITTEST_PCFILES="$coinutils_pcfiles $OSICLPUNITTEST_PCFILES" ; fi
+       OSICLPUNITTEST_LFLAGS="$coinutils_lflags $OSICLPUNITTEST_LFLAGS"
+       OSICLPUNITTEST_CFLAGS="$coinutils_cflags $OSICLPUNITTEST_CFLAGS"
 
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
@@ -17351,6 +17357,9 @@ fi
 $as_echo_n "checking for package Osi... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
+
+
+
 
 
 
@@ -17595,6 +17604,9 @@ $as_echo "#define COIN_HAS_OSI 1" >>confdefs.h
     if test -n "$osi_pcfiles" ; then OSICLPLIB_PCFILES="$osi_pcfiles $OSICLPLIB_PCFILES" ; fi
        OSICLPLIB_LFLAGS="$osi_lflags $OSICLPLIB_LFLAGS"
        OSICLPLIB_CFLAGS="$osi_cflags $OSICLPLIB_CFLAGS"
+      if test -n "$osi_pcfiles" ; then OSICLPUNITTEST_PCFILES="$osi_pcfiles $OSICLPUNITTEST_PCFILES" ; fi
+       OSICLPUNITTEST_LFLAGS="$osi_lflags $OSICLPUNITTEST_LFLAGS"
+       OSICLPUNITTEST_CFLAGS="$osi_cflags $OSICLPUNITTEST_CFLAGS"
 
 
 # Finally, set up PRIM_DATA, unless the user specified nodata.
@@ -20036,6 +20048,9 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+      # add -DXYZ_BUILD to CFLAGS
+      CLPLIB_CFLAGS="${CLPLIB_CFLAGS} -DCLPLIB_BUILD"
+
 # Define BUILDTOOLS_DEBUG to enable debugging output
 
       if test "$BUILDTOOLS_DEBUG" = 1 ; then
@@ -20082,6 +20097,9 @@ cat >>confdefs.h <<_ACEOF
 #define OSICLPLIB_EXPORT $libexport_attribute
 _ACEOF
 
+
+      # add -DXYZ_BUILD to CFLAGS
+      OSICLPLIB_CFLAGS="${OSICLPLIB_CFLAGS} -DOSICLPLIB_BUILD"
 
 # Define BUILDTOOLS_DEBUG to enable debugging output
 
@@ -20130,6 +20148,9 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+      # add -DXYZ_BUILD to CFLAGS
+      OSICLPUNITTEST_CFLAGS="${OSICLPUNITTEST_CFLAGS} -DOSICLPUNITTEST_BUILD"
+
 # Define BUILDTOOLS_DEBUG to enable debugging output
 
       if test "$BUILDTOOLS_DEBUG" = 1 ; then
@@ -20156,10 +20177,11 @@ $as_echo "$as_me: OSICLPUNITTEST_CFLAGS: \"${OSICLPUNITTEST_CFLAGS}\"" >&6;}
 
 
 # Add the .pc file and augment LFLAGS and CFLAGS.
+# From the CFLAGS of ClpLib, remove the -DClpLib_BUILD, though.
 
     if test -n "$OSICLPLIB_PCFILES" ; then OSICLPLIB_PCFILES="$OSICLPLIB_PCFILES clp" ; fi
        OSICLPLIB_LFLAGS="$OSICLPLIB_LFLAGS $CLPLIB_LFLAGS"
-       OSICLPLIB_CFLAGS="$OSICLPLIB_CFLAGS $CLPLIB_CFLAGS"
+       OSICLPLIB_CFLAGS="$OSICLPLIB_CFLAGS `echo $CLPLIB_CFLAGS | sed -e s/-DCLPLIB_BUILD//`"
 
 # Define BUILDTOOLS_DEBUG to enable debugging output
 

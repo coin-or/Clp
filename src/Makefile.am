@@ -14,7 +14,7 @@ include $(top_srcdir)/BuildTools/Makemain.inc
 
 # Let the code know we're building the Clp library.
 
-AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCLP_BUILD
+AM_CPPFLAGS = $(CLPLIB_CFLAGS)
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory

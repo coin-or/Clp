@@ -25,7 +25,7 @@
 #define __OSICLPCONFIG_H__
 
 #ifdef HAVE_CONFIG_H
-#ifdef OSICLP_BUILD
+#ifdef OSICLPLIB_BUILD
 
 #ifdef DLL_EXPORT
 # define OSICLPLIB_EXPORT __declspec(dllexport)
@@ -43,7 +43,7 @@
 
 #ifndef OSICLPLIB_EXPORT
 # if defined(_WIN32) && defined(DLL_EXPORT)
-#  ifdef OSICLP_BUILD
+#  ifdef OSICLPLIB_BUILD
 #   define OSICLPLIB_EXPORT __declspec(dllexport)
 #  else
 #   define OSICLPLIB_EXPORT __declspec(dllimport)

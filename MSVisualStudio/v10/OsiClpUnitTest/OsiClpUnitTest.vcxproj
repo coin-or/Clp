@@ -89,7 +89,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..\..\..\Clp\src;..\..\..\..\Clp\src\OsiClp;..\..\..\..\Osi\src;..\..\..\..\Osi\src\Osi;..\..\..\..\Osi\src\OsiCommonTest;..\..\..\..\CoinUtils\src;..\..\..\..\BuildTools\headers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>OSI_BUILD;WIN32;_DEBUG;_CONSOLE;COIN_MSVS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OSICLPLIB_BUILD;WIN32;_DEBUG;_CONSOLE;COIN_MSVS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -141,7 +141,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\..\..\..\Clp\src;..\..\..\..\Clp\src\OsiClp;..\..\..\..\Osi\src;..\..\..\..\Osi\src\Osi;..\..\..\..\Osi\src\OsiCommonTest;..\..\..\..\CoinUtils\src;..\..\..\..\BuildTools\headers;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>OSI_BUILD;WIN32;NDEBUG;_CONSOLE;COIN_MSVS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>OSICLPLIB_BUILD;WIN32;NDEBUG;_CONSOLE;COIN_MSVS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>

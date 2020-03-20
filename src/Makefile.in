@@ -654,7 +654,7 @@ DOXYTAG_EDIT = sed -e 's|@baredocdir_nosub@|$(datarootdir)/doc|g'
 
 # CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
 # is built within Clp
-AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCLP_BUILD -DCOIN_HAS_CLP
+AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCOIN_HAS_CLP
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
