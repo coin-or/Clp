@@ -21,6 +21,8 @@ osiUnitTest_SOURCES = osiUnitTest.cpp OsiClpSolverInterfaceTest.cpp
 osiUnitTest_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
 	$(CLPLIB_LFLAGS) $(OSICLPLIB_LFLAGS) $(OSICLPUNITTEST_LFLAGS)
 
+AM_LDFLAGS = $(LT_LDFLAGS)
+
 AM_CPPFLAGS = -I$(srcdir)/../src -I$(srcdir)/../src/OsiClp $(OSICLPUNITTEST_CFLAGS)
 
 testdepend = osiUnitTest$(EXEEXT)

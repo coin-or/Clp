@@ -381,6 +381,7 @@ DOXYTAG_EDIT = sed -e 's|@baredocdir_nosub@|$(datarootdir)/doc|g'
 @COIN_HAS_OSITESTS_TRUE@osiUnitTest_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
 @COIN_HAS_OSITESTS_TRUE@	$(CLPLIB_LFLAGS) $(OSICLPLIB_LFLAGS) $(OSICLPUNITTEST_LFLAGS)
 
+@COIN_HAS_OSITESTS_TRUE@AM_LDFLAGS = $(LT_LDFLAGS)
 @COIN_HAS_OSITESTS_TRUE@AM_CPPFLAGS = -I$(srcdir)/../src -I$(srcdir)/../src/OsiClp $(OSICLPUNITTEST_CFLAGS)
 @COIN_HAS_OSITESTS_TRUE@testdepend = osiUnitTest$(EXEEXT)
 

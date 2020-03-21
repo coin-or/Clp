@@ -20048,7 +20048,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-      # add -DXYZ_BUILD to CFLAGS
+      # add -DXYZ_BUILD to XYZ_CFLAGS
       CLPLIB_CFLAGS="${CLPLIB_CFLAGS} -DCLPLIB_BUILD"
 
 # Define BUILDTOOLS_DEBUG to enable debugging output
@@ -20098,7 +20098,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-      # add -DXYZ_BUILD to CFLAGS
+      # add -DXYZ_BUILD to XYZ_CFLAGS
       OSICLPLIB_CFLAGS="${OSICLPLIB_CFLAGS} -DOSICLPLIB_BUILD"
 
 # Define BUILDTOOLS_DEBUG to enable debugging output
@@ -20148,7 +20148,7 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-      # add -DXYZ_BUILD to CFLAGS
+      # add -DXYZ_BUILD to XYZ_CFLAGS
       OSICLPUNITTEST_CFLAGS="${OSICLPUNITTEST_CFLAGS} -DOSICLPUNITTEST_BUILD"
 
 # Define BUILDTOOLS_DEBUG to enable debugging output
