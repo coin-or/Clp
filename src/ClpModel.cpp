@@ -3689,7 +3689,6 @@ int ClpModel::emptyProblem(int *infeasNumber, double *infeasSum, bool printMessa
               columnActivity_[i] = columnUpper_[i];
               status_[i] = 2;
               numberDualInfeasibilities++;
-              ;
               sumDualInfeasibilities += fabs(objValue);
               badColumn = i;
               badValue = -1.0;
@@ -3704,7 +3703,6 @@ int ClpModel::emptyProblem(int *infeasNumber, double *infeasSum, bool printMessa
               columnActivity_[i] = columnLower_[i];
               status_[i] = 3;
               numberDualInfeasibilities++;
-              ;
               sumDualInfeasibilities += fabs(objValue);
               badColumn = i;
               badValue = 1.0;
@@ -3716,7 +3714,8 @@ int ClpModel::emptyProblem(int *infeasNumber, double *infeasSum, bool printMessa
           columnActivity_[i] = 0.0;
           if (objValue) {
             numberDualInfeasibilities++;
-            ;
+            badColumn = i;
+	    badValue = (objValue > 0.0) ? -1.0 : 1.0;
             sumDualInfeasibilities += fabs(objValue);
             returnCode |= 2;
           }
