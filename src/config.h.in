@@ -6,8 +6,35 @@
 /* Define to 1, 2, 3, or 4 if Aboca should be built. */
 #undef CLP_HAS_ABC
 
-/* Define to 1 if the MUMPS package is available. */
+/* Define to 1 if the AMD package is available */
+#undef CLP_HAS_AMD
+
+/* Define to 1 if the CHOLMOD package is available */
+#undef CLP_HAS_CHOLMOD
+
+/* Define to 1 if CoinUtils is available. */
+#undef CLP_HAS_COINUTILS
+
+/* Define to 1 if the MUMPS package is available */
 #undef CLP_HAS_MUMPS
+
+/* Define to 1 if Netlib is available. */
+#undef CLP_HAS_NETLIB
+
+/* Define to 1 if Osi is available. */
+#undef CLP_HAS_OSI
+
+/* Define to 1 if OsiTests is available. */
+#undef CLP_HAS_OSITESTS
+
+/* Define to 1 if readline is available */
+#undef CLP_HAS_READLINE
+
+/* Define to 1 if Sample is available. */
+#undef CLP_HAS_SAMPLE
+
+/* Define to 1 if WSMP is available */
+#undef CLP_HAS_WSMP
 
 /* Version number of project */
 #undef CLP_VERSION
@@ -20,36 +47,6 @@
 
 /* Release version number of project. */
 #undef CLP_VERSION_RELEASE
-
-/* Define to 1 if the AMD package is available */
-#undef COIN_HAS_AMD
-
-/* Define to 1 if the CHOLMOD package is available */
-#undef COIN_HAS_CHOLMOD
-
-/* Define to 1 if CoinUtils is available. */
-#undef COIN_HAS_COINUTILS
-
-/* Define to 1 if the MUMPS package is available */
-#undef COIN_HAS_MUMPS
-
-/* Define to 1 if Netlib is available. */
-#undef COIN_HAS_NETLIB
-
-/* Define to 1 if Osi is available. */
-#undef COIN_HAS_OSI
-
-/* Define to 1 if OsiTests is available. */
-#undef COIN_HAS_OSITESTS
-
-/* Define to 1 if readline is available */
-#undef COIN_HAS_READLINE
-
-/* Define to 1 if Sample is available. */
-#undef COIN_HAS_SAMPLE
-
-/* Define to 1 if WSMP is available */
-#undef COIN_HAS_WSMP
 
 /* Define to 1 if your C++ compiler doesn't accept -c and -o together. */
 #undef CXX_NO_MINUS_C_MINUS_O

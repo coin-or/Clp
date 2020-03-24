@@ -8,8 +8,8 @@
 #include "CoinPragma.hpp"
 #include "ClpConfig.h"
 
-// check already here if COIN_HAS_GLPK is defined, since we do not want to get confused by a COIN_HAS_GLPK in config_coinutils.h
-#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
+// check already here if CLP_HAS_GLPK is defined, since we do not want to get confused by a CLP_HAS_GLPK in config_coinutils.h
+#if defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD) || defined(CLP_HAS_GLPK)
 #define UFL_BARRIER
 #endif
 
@@ -61,7 +61,7 @@ int debugInt[24];
 #include "ClpPresolve.hpp"
 #ifndef SLIM_CLP
 #include "Idiot.hpp"
-#ifdef COIN_HAS_WSMP
+#ifdef CLP_HAS_WSMP
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #endif
@@ -74,7 +74,7 @@ int debugInt[24];
 #ifdef PARDISO_BARRIER
 #include "ClpCholeskyPardiso.hpp"
 #endif
-#ifdef COIN_HAS_MUMPS
+#ifdef CLP_HAS_MUMPS
 #include "ClpCholeskyMumps.hpp"
 #endif
 #ifdef COIN_HAS_VOL
@@ -3206,7 +3206,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         barrier.setCholesky(cholesky);
       }
       break;
-#ifdef COIN_HAS_WSMP
+#ifdef CLP_HAS_WSMP
     case 2: {
       if (!doKKT) {
         ClpCholeskyWssmp *cholesky = new ClpCholeskyWssmp(CoinMax(100, model2->numberRows() / 10));

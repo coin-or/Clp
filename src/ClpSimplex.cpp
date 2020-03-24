@@ -6273,10 +6273,10 @@ int ClpSimplex::reducedGradient(int phase)
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #endif
-#if 0 //defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD)
+#if 0 //defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD)
 #include "ClpCholeskyUfl.hpp"
 #endif
-#if defined(COIN_HAS_MUMPS)
+#if defined(CLP_HAS_MUMPS)
 #include "ClpCholeskyMumps.hpp"
 #endif
 #if TAUCS_BARRIER
@@ -6315,7 +6315,7 @@ int ClpSimplex::barrier(bool crossover)
     ClpCholeskyWssmpKKT *cholesky = new ClpCholeskyWssmpKKT(CoinMax(100, model2->numberRows() / 10));
     barrier.setCholesky(cholesky);
   }
-#elif 0 //defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD)
+#elif 0 //defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD)
   if (!doKKT) {
     ClpCholeskyUfl *cholesky = new ClpCholeskyUfl();
     barrier.setCholesky(cholesky);
@@ -6329,7 +6329,7 @@ int ClpSimplex::barrier(bool crossover)
   assert(!doKKT);
   ClpCholeskyTaucs *cholesky = new ClpCholeskyTaucs();
   barrier.setCholesky(cholesky);
-#elif defined(COIN_HAS_MUMPS)
+#elif defined(CLP_HAS_MUMPS)
   if (!doKKT) {
     ClpCholeskyMumps *cholesky = new ClpCholeskyMumps();
     barrier.setCholesky(cholesky);

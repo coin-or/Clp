@@ -23,7 +23,7 @@
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
 #endif
-#ifdef COIN_HAS_READLINE
+#ifdef CLP_HAS_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
@@ -38,7 +38,7 @@ static char coin_prompt[] = "Clp:";
 #define CBC_THREAD
 #endif
 #endif
-#if defined(COIN_HAS_WSMP) && !defined(USE_EKKWSSMP)
+#if defined(CLP_HAS_WSMP) && !defined(USE_EKKWSSMP)
 #ifndef CBC_THREAD
 #define CBC_THREAD
 #endif
@@ -1269,7 +1269,7 @@ CoinReadNextField()
   std::string field;
   if (!where) {
     // need new line
-#ifdef COIN_HAS_READLINE
+#ifdef CLP_HAS_READLINE
     if (CbcOrClpReadCommand == stdin) {
       // Get a line from the user.
       where = readline(coin_prompt);
@@ -1686,14 +1686,14 @@ have more rounds of cuts - see passC!uts and passT!ree.");
 
     p.append("dense");
     //#ifdef FOREIGN_BARRIER
-#ifdef COIN_HAS_WSMP
+#ifdef CLP_HAS_WSMP
     p.append("fudge!Long");
     p.append("wssmp");
 #else
     p.append("fudge!Long_dummy");
     p.append("wssmp_dummy");
 #endif
-#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
+#if defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD) || defined(CLP_HAS_GLPK)
     p.append("Uni!versityOfFlorida");
 #else
     p.append("Uni!versityOfFlorida_dummy");

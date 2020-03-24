@@ -25,7 +25,7 @@ AC_CONFIG_SRCDIR(src/ClpSimplex.cpp)
 
 # Do some initialization work (version numbers, change prefix default, ...)
 
-AC_COIN_INITIALIZE(Clp)
+AC_COIN_INITIALIZE
 
 #############################################################################
 #                         Standard build tool stuff                         #
@@ -102,9 +102,6 @@ AC_COIN_CHK_PKG(MUMPS,[ClpLib],[coinmumps])
 if test $coin_has_mumps = no ; then
   AC_COIN_CHK_LIB(MUMPS,[ClpLib],[-ldmumps],[-I/usr/include/MUMPS],[],[dmumps_c])
 fi
-if test $coin_has_mumps = yes ; then
-  AC_DEFINE(CLP_HAS_MUMPS,[1],[Define to 1 if the MUMPS package is available.])
-fi
 
 # WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
 
@@ -117,7 +114,7 @@ if test "$have_wsmp" = "yes"; then
   AC_COIN_TRY_LINK([wssmp],[$wsmp_lflags],[],
     [AC_COIN_DEFINENAMEMANGLING([WSMP],[$wssmp_namemangling])
      CLPLIB_LFLAGS="$wsmp_lflags $CLPLIB_LFLAGS"
-     AC_DEFINE(COIN_HAS_WSMP,1,[Define to 1 if WSMP is available])
+     AC_DEFINE(CLP_HAS_WSMP,1,[Define to 1 if WSMP is available])
     ],
     [AC_MSG_ERROR([Symbol wssmp not found with WSMP flags $wsmp_lflags.])])
 fi

@@ -30,7 +30,7 @@ int boundary_sort3 = 10000;
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
 #include "CoinModel.hpp"
-#ifdef COIN_HAS_GLPK
+#ifdef CLP_HAS_GLPK
 #include "glpk.h"
 extern glp_tran *cbc_glp_tran;
 extern glp_prob *cbc_glp_prob;
@@ -90,7 +90,7 @@ static std::string mpsFile = "";
 extern double debugDouble[10];
 extern int debugInt[24];
 #endif
-#if defined(COIN_HAS_WSMP) || defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(CLP_HAS_MUMPS)
+#if defined(CLP_HAS_WSMP) || defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(CLP_HAS_MUMPS)
 #define FOREIGN_BARRIER
 #endif
 
@@ -2338,7 +2338,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 int numberRows = models[iModel].getNumRows();
                 int numberColumns = models[iModel].getNumCols();
                 int numberGlpkRows = numberRows + 1;
-#ifdef COIN_HAS_GLPK
+#ifdef CLP_HAS_GLPK
                 if (cbc_glp_prob) {
                   // from gmpl
                   numberGlpkRows = glp_get_num_rows(cbc_glp_prob);
@@ -2384,7 +2384,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                     primalColumnSolution[i], dualColumnSolution[i]);
                 }
                 fclose(fp);
-#ifdef COIN_HAS_GLPK
+#ifdef CLP_HAS_GLPK
                 if (cbc_glp_prob) {
                   glp_read_sol(cbc_glp_prob, fileName.c_str());
                   glp_mpl_postsolve(cbc_glp_tran,
@@ -2934,7 +2934,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
     }
   }
   delete[] goodModels;
-#ifdef COIN_HAS_GLPK
+#ifdef CLP_HAS_GLPK
   if (cbc_glp_prob) {
     // free up as much as possible
     glp_free(cbc_glp_prob);

@@ -6,8 +6,8 @@
 #include "ClpConfig.h"
 
 extern "C" {
-#ifndef COIN_HAS_CHOLMOD
-#ifndef COIN_HAS_AMD
+#ifndef CLP_HAS_CHOLMOD
+#ifndef CLP_HAS_AMD
 #error "Need to have AMD or CHOLMOD to compile ClpCholeskyUfl."
 #else
 #include "amd.h"
@@ -37,7 +37,7 @@ ClpCholeskyUfl::ClpCholeskyUfl(int denseThreshold)
   L_ = NULL;
   c_ = NULL;
 
-#ifdef COIN_HAS_CHOLMOD
+#ifdef CLP_HAS_CHOLMOD
   c_ = (cholmod_common *)malloc(sizeof(cholmod_common));
   cholmod_start(c_);
   // Can't use supernodal as may not be positive definite
@@ -59,7 +59,7 @@ ClpCholeskyUfl::ClpCholeskyUfl(const ClpCholeskyUfl &rhs)
 //-------------------------------------------------------------------
 ClpCholeskyUfl::~ClpCholeskyUfl()
 {
-#ifdef COIN_HAS_CHOLMOD
+#ifdef CLP_HAS_CHOLMOD
   cholmod_free_factor(&L_, c_);
   cholmod_finish(c_);
   free(c_);
@@ -87,7 +87,7 @@ ClpCholeskyBase *ClpCholeskyUfl::clone() const
   return new ClpCholeskyUfl(*this);
 }
 
-#ifndef COIN_HAS_CHOLMOD
+#ifndef CLP_HAS_CHOLMOD
 /* Orders rows and saves pointer to matrix.and model */
 int ClpCholeskyUfl::order(ClpInterior *model)
 {
@@ -274,14 +274,14 @@ int ClpCholeskyUfl::order(ClpInterior *model)
    returns non-zero if not enough memory */
 int ClpCholeskyUfl::symbolic()
 {
-#ifdef COIN_HAS_CHOLMOD
+#ifdef CLP_HAS_CHOLMOD
   return 0;
 #else
   return ClpCholeskyBase::symbolic();
 #endif
 }
 
-#ifdef COIN_HAS_CHOLMOD
+#ifdef CLP_HAS_CHOLMOD
 /* Factorize - filling in rowsDropped and returning number dropped */
 int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
 {
@@ -453,7 +453,7 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
 }
 #endif
 
-#ifdef COIN_HAS_CHOLMOD
+#ifdef CLP_HAS_CHOLMOD
 /* Uses factorization to solve. */
 void ClpCholeskyUfl::solve(double *region)
 {

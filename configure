@@ -3267,8 +3267,6 @@ _ACEOF
 
 
 
-
-
 # A useful makefile conditional that is always false
 
    if false; then
@@ -17332,7 +17330,7 @@ fi
 
   if test $coin_has_coinutils = yes ; then
 
-$as_echo "#define COIN_HAS_COINUTILS 1" >>confdefs.h
+$as_echo "#define CLP_HAS_COINUTILS 1" >>confdefs.h
 
     if test -n "$coinutils_pcfiles" ; then CLPLIB_PCFILES="$coinutils_pcfiles $CLPLIB_PCFILES" ; fi
        CLPLIB_LFLAGS="$coinutils_lflags $CLPLIB_LFLAGS"
@@ -17599,7 +17597,7 @@ fi
 
   if test $coin_has_osi = yes ; then
 
-$as_echo "#define COIN_HAS_OSI 1" >>confdefs.h
+$as_echo "#define CLP_HAS_OSI 1" >>confdefs.h
 
     if test -n "$osi_pcfiles" ; then OSICLPLIB_PCFILES="$osi_pcfiles $OSICLPLIB_PCFILES" ; fi
        OSICLPLIB_LFLAGS="$osi_lflags $OSICLPLIB_LFLAGS"
@@ -17856,7 +17854,7 @@ fi
 
   if test $coin_has_ositests = yes ; then
 
-$as_echo "#define COIN_HAS_OSITESTS 1" >>confdefs.h
+$as_echo "#define CLP_HAS_OSITESTS 1" >>confdefs.h
 
     if test -n "$ositests_pcfiles" ; then OSICLPUNITTEST_PCFILES="$ositests_pcfiles $OSICLPUNITTEST_PCFILES" ; fi
        OSICLPUNITTEST_LFLAGS="$ositests_lflags $OSICLPUNITTEST_LFLAGS"
@@ -18089,7 +18087,7 @@ fi
 
   if test $coin_has_sample = yes ; then
 
-$as_echo "#define COIN_HAS_SAMPLE 1" >>confdefs.h
+$as_echo "#define CLP_HAS_SAMPLE 1" >>confdefs.h
 
 
 
@@ -18320,7 +18318,7 @@ fi
 
   if test $coin_has_netlib = yes ; then
 
-$as_echo "#define COIN_HAS_NETLIB 1" >>confdefs.h
+$as_echo "#define CLP_HAS_NETLIB 1" >>confdefs.h
 
 
 
@@ -18630,7 +18628,7 @@ fi
 
   if test $coin_has_amd = yes ; then
 
-$as_echo "#define COIN_HAS_AMD 1" >>confdefs.h
+$as_echo "#define CLP_HAS_AMD 1" >>confdefs.h
 
     CLPLIB_LFLAGS="$amd_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$amd_cflags $CLPLIB_CFLAGS"
@@ -18893,7 +18891,7 @@ fi
 
   if test $coin_has_cholmod = yes ; then
 
-$as_echo "#define COIN_HAS_CHOLMOD 1" >>confdefs.h
+$as_echo "#define CLP_HAS_CHOLMOD 1" >>confdefs.h
 
     CLPLIB_LFLAGS="$cholmod_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$cholmod_cflags $CLPLIB_CFLAGS"
@@ -19152,7 +19150,7 @@ fi
 
   if test $coin_has_mumps = yes ; then
 
-$as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
+$as_echo "#define CLP_HAS_MUMPS 1" >>confdefs.h
 
     if test -n "$mumps_pcfiles" ; then CLPLIB_PCFILES="$mumps_pcfiles $CLPLIB_PCFILES" ; fi
        CLPLIB_LFLAGS="$mumps_lflags $CLPLIB_LFLAGS"
@@ -19412,7 +19410,7 @@ fi
 
   if test $coin_has_mumps = yes ; then
 
-$as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
+$as_echo "#define CLP_HAS_MUMPS 1" >>confdefs.h
 
     CLPLIB_LFLAGS="$mumps_lflags $CLPLIB_LFLAGS"
        CLPLIB_CFLAGS="$mumps_cflags $CLPLIB_CFLAGS"
@@ -19422,11 +19420,6 @@ $as_echo "#define COIN_HAS_MUMPS 1" >>confdefs.h
 
 
   fi
-
-fi
-if test $coin_has_mumps = yes ; then
-
-$as_echo "#define CLP_HAS_MUMPS 1" >>confdefs.h
 
 fi
 
@@ -19554,7 +19547,7 @@ $as_echo "$as_me: WARNING: Unsupported or unknown name-mangling scheme: $wssmp_n
 
      CLPLIB_LFLAGS="$wsmp_lflags $CLPLIB_LFLAGS"
 
-$as_echo "#define COIN_HAS_WSMP 1" >>confdefs.h
+$as_echo "#define CLP_HAS_WSMP 1" >>confdefs.h
 
 
     else as_fn_error $? "Symbol wssmp not found with WSMP flags $wsmp_lflags." "$LINENO" 5
@@ -19710,10 +19703,10 @@ fi
 
     fi
     if test $coin_has_readline = yes ; then
-      CLPLIB_LFLAGS="-lreadline $CLPLIB_LFLAGS"
+      CLPLIB_LFLAGS="$LIBS $CLPLIB_LFLAGS"
 
 
-$as_echo "#define COIN_HAS_READLINE 1" >>confdefs.h
+$as_echo "#define CLP_HAS_READLINE 1" >>confdefs.h
 
     fi
     LIBS="$coin_save_LIBS"
