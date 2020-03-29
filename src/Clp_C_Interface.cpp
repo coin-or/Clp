@@ -499,6 +499,15 @@ Clp_setNumberIterations(Clp_Simplex *model, int numberIterations)
 {
   model->model_->setNumberIterations(numberIterations);
 }
+
+
+COINLIBAPI void COINLINKAGE
+Clp_setRandomSeed(Clp_Simplex *model, double seed)
+{
+model->model_->setRandomSeed(seed);
+}
+
+
 /* Maximum number of iterations */
 COINLIBAPI int COINLINKAGE
 Clp_maximumIterations(Clp_Simplex *model)
