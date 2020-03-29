@@ -17,7 +17,7 @@ class CoinIndexedVector;
     
 */
 
-class AbcDualRowSteepest : public AbcDualRowPivot {
+class CLPLIB_EXPORT AbcDualRowSteepest : public AbcDualRowPivot {
 
 public:
   ///@name Algorithmic methods

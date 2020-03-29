@@ -23,7 +23,7 @@ class CoinFactorization;
 /** This just implements AbcFactorization when an AbcMatrix object
     is passed. 
 */
-class AbcSimplexFactorization {
+class CLPLIB_EXPORT AbcSimplexFactorization {
 
 public:
   /**@name factorization */

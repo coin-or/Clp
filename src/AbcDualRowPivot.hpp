@@ -20,7 +20,7 @@ class CoinIndexedVector;
     
 */
 
-class AbcDualRowPivot {
+class CLPLIB_EXPORT AbcDualRowPivot {
 
 public:
   ///@name Algorithmic methods

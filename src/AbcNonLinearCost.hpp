@@ -9,8 +9,8 @@
 #include "CoinPragma.hpp"
 #include "AbcCommon.hpp"
 
-class CLPLIB_EXPORT AbcSimplex;
-class COINUTILSLIB_EXPORT CoinIndexedVector;
+class AbcSimplex;
+class CoinIndexedVector;
 
 /** Trivial class to deal with non linear costs
     

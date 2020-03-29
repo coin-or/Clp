@@ -16,7 +16,7 @@
     
 */
 
-class AbcDualRowDantzig : public AbcDualRowPivot {
+class CLPLIB_EXPORT AbcDualRowDantzig : public AbcDualRowPivot {
 
 public:
   ///@name Algorithmic methods
