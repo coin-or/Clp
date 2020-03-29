@@ -1995,7 +1995,6 @@ void ClpSimplexUnitTest(const std::string &mpsDir);
 // For Devex stuff
 #define DEVEX_TRY_NORM 1.0e-4
 #define DEVEX_ADD_ONE 1.0
-#if defined(ABC_INHERIT) || defined(THREADS_IN_ANALYZE)
 // Use pthreads
 #include <pthread.h>
 typedef struct {
@@ -2066,7 +2065,6 @@ public:
   int numberThreads_;
 };
 void *clp_parallelManager(void *stuff);
-#endif
 typedef struct {
   double upperTheta;
   double bestPossible;
@@ -2117,8 +2115,6 @@ inline void setAbcState(int state)
   abcState_ = state;
 }
 #endif
-#else
-#define abcState 0
 #endif
 #endif
 #ifdef CLP_USER_DRIVEN

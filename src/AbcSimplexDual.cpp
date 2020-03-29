@@ -3033,7 +3033,9 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
   if (!sumOfRelaxedPrimalInfeasibilities_ && sumDualInfeasibilities_ && type && saveType < 9
     && ignoreStuff != 2) {
     // say been feasible
+#ifdef ABC_INHERIT
     abcState_ |= CLP_ABC_BEEN_FEASIBLE;
+#endif
     int numberFake = numberAtFakeBound();
     if (!numberFake) {
       makeNonFreeVariablesDualFeasible();
@@ -3147,7 +3149,9 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
   if (abcProgress_.lastIterationNumber(0) == numberIterations_) {
     if (abcDualRowPivot_->looksOptimal()) {
       // say been feasible
+#ifdef ABC_INHERIT
       abcState_ |= CLP_ABC_BEEN_FEASIBLE;
+#endif
       numberPrimalInfeasibilities_ = 0;
       sumPrimalInfeasibilities_ = 0.0;
     }
@@ -3200,7 +3204,9 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
     if (!problemStatus_) {
       // declaring victory
       // say been feasible
+#ifdef ABC_INHERIT
       abcState_ |= CLP_ABC_BEEN_FEASIBLE;
+#endif
       numberPrimalInfeasibilities_ = 0;
       sumPrimalInfeasibilities_ = 0.0;
     } else {
@@ -3250,7 +3256,9 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
      free variables then it is better to go to primal */
   if (!numberPrimalInfeasibilities_ && !numberDualInfeasibilitiesWithoutFree_ && numberDualInfeasibilities_) {
     // say been feasible
+#ifdef ABC_INHERIT
     abcState_ |= CLP_ABC_BEEN_FEASIBLE;
+#endif
     if (type && ignoreStuff != 2)
       problemStatus_ = 10;
     else
@@ -3260,7 +3268,9 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
   // give code benefit of doubt
   if (sumOfRelaxedDualInfeasibilities_ == 0.0 && sumOfRelaxedPrimalInfeasibilities_ == 0.0 && ignoreStuff != 2) {
     // say been feasible
+#ifdef ABC_INHERIT
     abcState_ |= CLP_ABC_BEEN_FEASIBLE;
+#endif
     // say optimal (with these bounds etc)
     numberDualInfeasibilities_ = 0;
     sumDualInfeasibilities_ = 0.0;
@@ -3437,7 +3447,12 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
         } else {
           unflagVariables = false;
           //secondaryStatus_ = 1; // and say probably infeasible
-          if ((moreSpecialOptions_ & 256) == 0 || (abcState_ & CLP_ABC_BEEN_FEASIBLE) != 0) {
+#ifdef ABC_INHERIT
+          if ((moreSpecialOptions_ & 256) == 0 || (abcState_ & CLP_ABC_BEEN_FEASIBLE) != 0)
+#else
+	    if ((moreSpecialOptions_ & 256) == 0)
+#endif
+	    {
             // try primal
             problemStatus_ = 10;
           } else {

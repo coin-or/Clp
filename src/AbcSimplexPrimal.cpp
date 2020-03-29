@@ -1135,7 +1135,9 @@ void AbcSimplexPrimal::statusOfProblemInPrimal(int type)
       numberPrimalInfeasibilities_ = 0;
       sumPrimalInfeasibilities_ = 0.0;
       // say been feasible
+#ifdef ABC_INHERIT
       abcState_ |= CLP_ABC_BEEN_FEASIBLE;
+#endif
     } else {
       problemStatus_ = loop; //exit if in loop
       problemStatus_ = 10; // instead - try other algorithm
@@ -1209,7 +1211,9 @@ void AbcSimplexPrimal::statusOfProblemInPrimal(int type)
   double trueInfeasibility = abcNonLinearCost_->sumInfeasibilities();
   if (!abcNonLinearCost_->numberInfeasibilities() && infeasibilityCost_ == 1.0e10 && !ifValuesPass && true) {
     // say been feasible
+#ifdef ABC_INHERIT
     abcState_ |= CLP_ABC_BEEN_FEASIBLE;
+#endif
     // relax if default
     infeasibilityCost_ = CoinMin(CoinMax(100.0 * sumDualInfeasibilities_, 1.0e8), 1.00000001e10);
     // reset looping criterion
@@ -1288,7 +1292,9 @@ void AbcSimplexPrimal::statusOfProblemInPrimal(int type)
   // give code benefit of doubt
   if (sumOfRelaxedDualInfeasibilities_ == 0.0 && sumOfRelaxedPrimalInfeasibilities_ == 0.0) {
     // say been feasible
+#ifdef ABC_INHERIT
     abcState_ |= CLP_ABC_BEEN_FEASIBLE;
+#endif
     // say optimal (with these bounds etc)
     numberDualInfeasibilities_ = 0;
     sumDualInfeasibilities_ = 0.0;
@@ -1589,7 +1595,11 @@ void AbcSimplexPrimal::statusOfProblemInPrimal(int type)
       numberPrimalInfeasibilities_ = abcNonLinearCost_->numberInfeasibilities();
       sumPrimalInfeasibilities_ = abcNonLinearCost_->sumInfeasibilities();
       // say infeasible
+#ifdef ABC_INHERIT
       if (numberPrimalInfeasibilities_ && (abcState_ & CLP_ABC_BEEN_FEASIBLE) == 0)
+#else
+	if (numberPrimalInfeasibilities_)
+#endif
         problemStatus_ = 1;
     }
   }
