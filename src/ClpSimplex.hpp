@@ -1995,8 +1995,12 @@ void ClpSimplexUnitTest(const std::string &mpsDir);
 // For Devex stuff
 #define DEVEX_TRY_NORM 1.0e-4
 #define DEVEX_ADD_ONE 1.0
+#if defined(ABC_INHERIT) || defined(THREADS_IN_ANALYZE)
+// Use pthreads
+#define CLP_USE_PTHREADS
 // Use pthreads
 #include <pthread.h>
+#endif
 typedef struct {
   double result;
   //const CoinIndexedVector * constVector; // can get rid of
@@ -2026,6 +2030,7 @@ public:
 #ifndef NUMBER_THREADS
 #define NUMBER_THREADS 8
 #endif
+#ifdef CLP_USE_PTHREADS
   // For waking up thread
   inline pthread_mutex_t *mutexPointer(int which, int thread = 0)
   {
@@ -2036,6 +2041,7 @@ public:
   {
     return &barrier_;
   }
+#endif
 #endif
   inline int whichLocked(int thread = 0) const
   {
@@ -2054,12 +2060,16 @@ public:
   //void startThreads(int numberThreads);
   //void stopThreads();
   // For waking up thread
+#ifdef CLP_USE_PTHREADS
   pthread_mutex_t mutex_[3 * (NUMBER_THREADS + 1)];
 #ifdef PTHREAD_BARRIER_SERIAL_THREAD
   pthread_barrier_t barrier_;
 #endif
+#endif
   CoinThreadInfo threadInfo_[NUMBER_THREADS + 1];
+#ifdef CLP_USE_PTHREADS
   pthread_t abcThread_[NUMBER_THREADS + 1];
+#endif
   int locked_[NUMBER_THREADS + 1];
   int stopStart_;
   int numberThreads_;
@@ -2115,6 +2125,8 @@ inline void setAbcState(int state)
   abcState_ = state;
 }
 #endif
+#else
+#define abcState 0
 #endif
 #endif
 #ifdef CLP_USER_DRIVEN
