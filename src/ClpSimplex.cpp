@@ -12845,3 +12845,167 @@ void ClpSimplex::copyEnabledStuff(const ClpSimplex *rhs)
   if (rhs->primalColumnPivot_)
     primalColumnPivot_ = rhs->primalColumnPivot_->clone();
 }
+#if defined(ABC_INHERIT) || defined(THREADS_IN_ANALYZE)
+CoinPthreadStuff::CoinPthreadStuff(int numberThreads,
+  void *parallelManager(void *stuff))
+{
+  numberThreads_ = numberThreads;
+  if (numberThreads > 8)
+    numberThreads = 1;
+  // For waking up thread
+  memset(mutex_, 0, sizeof(mutex_));
+  for (int iThread = 0; iThread < numberThreads; iThread++) {
+    for (int i = 0; i < 3; i++) {
+      pthread_mutex_init(&mutex_[i + 3 * iThread], NULL);
+      if (i < 2)
+        pthread_mutex_lock(&mutex_[i + 3 * iThread]);
+    }
+    threadInfo_[iThread].status = 100;
+  }
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
+  //pthread_barrierattr_t attr;
+  pthread_barrier_init(&barrier_, /*&attr*/ NULL, numberThreads + 1);
+#endif
+  for (int iThread = 0; iThread < numberThreads; iThread++) {
+    pthread_create(&abcThread_[iThread], NULL, parallelManager, reinterpret_cast< void * >(this));
+  }
+#ifdef PTHREAD_BARRIER_SERIAL_THREAD
+  pthread_barrier_wait(&barrier_);
+  pthread_barrier_destroy(&barrier_);
+#endif
+  for (int iThread = 0; iThread < numberThreads; iThread++) {
+    threadInfo_[iThread].status = -1;
+    threadInfo_[iThread].stuff[3] = 1; // idle
+    locked_[iThread] = 0;
+  }
+}
+CoinPthreadStuff::~CoinPthreadStuff()
+{
+  for (int iThread = 0; iThread < numberThreads_; iThread++) {
+    startParallelTask(1000, iThread);
+  }
+  for (int iThread = 0; iThread < numberThreads_; iThread++) {
+    pthread_join(abcThread_[iThread], NULL);
+    for (int i = 0; i < 3; i++) {
+      pthread_mutex_destroy(&mutex_[i + 3 * iThread]);
+    }
+  }
+}
+// so thread can find out which one it is
+int CoinPthreadStuff::whichThread() const
+{
+  pthread_t thisThread = pthread_self();
+  int whichThread;
+  for (whichThread = 0; whichThread < numberThreads_; whichThread++) {
+    if (pthread_equal(thisThread, abcThread_[whichThread]))
+      break;
+  }
+  assert(whichThread < NUMBER_THREADS + 1);
+  return whichThread;
+}
+void CoinPthreadStuff::startParallelTask(int type, int iThread, void *info)
+{
+  /*
+    first time 0,1 owned by main 2 by child
+    at end of cycle should be 1,2 by main 0 by child then 2,0 by main 1 by child
+  */
+  threadInfo_[iThread].status = type;
+  threadInfo_[iThread].extraInfo = info;
+  threadInfo_[iThread].stuff[3] = 0; // say not idle
+#ifdef DETAIL_THREAD
+  printf("main doing thread %d about to unlock mutex %d\n", iThread, locked_[iThread]);
+#endif
+  pthread_mutex_unlock(&mutex_[locked_[iThread] + 3 * iThread]);
+}
+void CoinPthreadStuff::sayIdle(int iThread)
+{
+  threadInfo_[iThread].status = -1;
+  threadInfo_[iThread].stuff[3] = -1;
+}
+int CoinPthreadStuff::waitParallelTask(int type, int &iThread, bool allowIdle)
+{
+  bool finished = false;
+  if (allowIdle) {
+    for (iThread = 0; iThread < numberThreads_; iThread++) {
+      if (threadInfo_[iThread].status < 0 && threadInfo_[iThread].stuff[3]) {
+        finished = true;
+        break;
+      }
+    }
+    if (finished)
+      return 0;
+  }
+  while (!finished) {
+    for (iThread = 0; iThread < numberThreads_; iThread++) {
+      if (threadInfo_[iThread].status < 0 && !threadInfo_[iThread].stuff[3]) {
+        finished = true;
+        break;
+      }
+    }
+    if (!finished) {
+#ifdef _WIN32
+      // wait 1 millisecond
+      Sleep(1);
+#else
+      // wait 0.1 millisecond
+      usleep(100);
+#endif
+    }
+  }
+  int locked = locked_[iThread] + 2;
+  if (locked >= 3)
+    locked -= 3;
+#ifdef DETAIL_THREAD
+  printf("Main do thread %d about to lock mutex %d\n", iThread, locked);
+#endif
+  pthread_mutex_lock(&mutex_[locked + iThread * 3]);
+  locked_[iThread]++;
+  if (locked_[iThread] == 3)
+    locked_[iThread] = 0;
+  threadInfo_[iThread].stuff[3] = 1; // say idle
+  return threadInfo_[iThread].stuff[0];
+}
+void CoinPthreadStuff::waitAllTasks()
+{
+  int nWait = 0;
+  for (int iThread = 0; iThread < numberThreads_; iThread++) {
+    int idle = threadInfo_[iThread].stuff[3];
+    if (!idle)
+      nWait++;
+  }
+#ifdef DETAIL_THREAD
+  printf("Waiting for %d tasks to finish\n", nWait);
+#endif
+  for (int iThread = 0; iThread < nWait; iThread++) {
+    int jThread;
+    waitParallelTask(0, jThread, false);
+#ifdef DETAIL_THREAD
+    printf("finished with thread %d\n", jThread);
+#endif
+  }
+}
+#else
+// dummy
+CoinPthreadStuff::CoinPthreadStuff(int numberThreads,
+  void *parallelManager(void *stuff))
+{
+}
+CoinPthreadStuff::~CoinPthreadStuff()
+{
+}
+int CoinPthreadStuff::whichThread() const
+{
+}
+void CoinPthreadStuff::startParallelTask(int type, int iThread, void *info)
+{
+}
+void CoinPthreadStuff::sayIdle(int iThread)
+{
+}
+int CoinPthreadStuff::waitParallelTask(int type, int &iThread, bool allowIdle)
+{
+}
+void CoinPthreadStuff::waitAllTasks()
+{
+}
+#endif
