@@ -9,9 +9,8 @@
 #include <cstring>
 #include <cfloat>
 
-#include "CoinHelperFunctions.hpp"
 #include "Clp_C_Interface.h"
-#include "ClpConfig.h"
+#include "CoinHelperFunctions.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpInterior.hpp"
 #ifndef SLIM_CLP
