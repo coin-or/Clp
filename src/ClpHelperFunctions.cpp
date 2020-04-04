@@ -14,7 +14,7 @@
 #include <cstdlib>
 #include <cmath>
 #include "CoinHelperFunctions.hpp"
-#include "CoinTypes.hpp"
+#include "CoinTypes.h"
 
 double
 maximumAbsElement(const double *region, int size)

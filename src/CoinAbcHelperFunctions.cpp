@@ -8,7 +8,7 @@
 #include <cmath>
 #include "CoinHelperFunctions.hpp"
 #include "CoinAbcHelperFunctions.hpp"
-#include "CoinTypes.hpp"
+#include "CoinTypes.h"
 #include "CoinFinite.hpp"
 #include "CoinAbcCommon.hpp"
 //#define AVX2 1

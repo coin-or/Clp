@@ -14,7 +14,7 @@
 class ClpMatrixBase;
 class CoinIndexedVector;
 class ClpSimplex;
-#include "CoinTypes.hpp"
+#include "CoinTypes.h"
 #include "ClpConfig.h"
 #ifndef COIN_FAST_CODE
 #define COIN_FAST_CODE

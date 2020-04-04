@@ -19,7 +19,7 @@
 #include "ClpPackedMatrix.hpp"
 #include "CoinMessageHandler.hpp"
 #include "CoinHelperFunctions.hpp"
-#include "CoinTypes.hpp"
+#include "CoinTypes.h"
 #include "CoinFinite.hpp"
 #include "ClpParameters.hpp"
 #include "ClpObjective.hpp"

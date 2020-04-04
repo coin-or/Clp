@@ -7,7 +7,7 @@
 #define ClpMatrixBase_H
 
 #include "CoinPragma.hpp"
-#include "CoinTypes.hpp"
+#include "CoinTypes.h"
 #include "CoinPackedMatrix.hpp"
 #include "ClpConfig.h"
 
