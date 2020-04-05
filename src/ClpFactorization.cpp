@@ -1136,7 +1136,7 @@ void ClpFactorization::getWeights(int *weights) const
 #endif
 }
 #else
-#if COIN_BIG_INDEX == 0
+#if COINUTILS_BIGINDEX_IS_INT
 // This one allows multiple factorizations
 #if CLP_MULTIPLE_FACTORIZATIONS == 1
 typedef CoinDenseFactorization CoinOtherFactorization;
@@ -1199,7 +1199,7 @@ ClpFactorization::ClpFactorization(const ClpFactorization &rhs,
 #ifdef CLP_REUSE_ETAS
   model_ = rhs.model_;
 #endif
-#if COIN_BIG_INDEX == 0
+#if COINUTILS_BIGINDEX_IS_INT
   if (denseIfSmaller > 0 && denseIfSmaller <= goDenseThreshold_) {
     CoinDenseFactorization *denseR = dynamic_cast< CoinDenseFactorization * >(rhs.coinFactorizationB_);
     if (!denseR)
@@ -1229,7 +1229,7 @@ ClpFactorization::ClpFactorization(const ClpFactorization &rhs,
     coinFactorizationB_ = rhs.coinFactorizationB_->clone();
   else
     coinFactorizationB_ = NULL;
-#if COIN_BIG_INDEX == 0
+#if COINUTILS_BIGINDEX_IS_INT
   if (goDense) {
     delete coinFactorizationB_;
     if (goDense == 1)
@@ -1349,7 +1349,7 @@ ClpFactorization::operator=(const ClpFactorization &rhs)
       delete coinFactorizationA_;
       coinFactorizationA_ = NULL;
     }
-#if COIN_BIG_INDEX == 0
+#if COINUTILS_BIGINDEX_IS_INT
     if (rhs.coinFactorizationB_) {
       if (coinFactorizationB_) {
         CoinDenseFactorization *denseR = dynamic_cast< CoinDenseFactorization * >(rhs.coinFactorizationB_);
@@ -1393,7 +1393,7 @@ void ClpFactorization::goDenseOrSmall(int numberRows)
       coinFactorizationA_ = NULL;
       coinFactorizationB_ = new CoinDenseFactorization();
       //printf("going dense\n");
-#if COIN_BIG_INDEX == 0
+#if COINUTILS_BIGINDEX_IS_INT
     } else if (numberRows <= goSmallThreshold_) {
       delete coinFactorizationA_;
       delete coinFactorizationB_;
@@ -1426,7 +1426,7 @@ void ClpFactorization::forceOtherFactorization(int which)
       coinFactorizationB_ = new CoinDenseFactorization();
       goDenseThreshold_ = COIN_INT_MAX;
       break;
-#if COIN_BIG_INDEX == 0
+#if COINUTILS_BIGINDEX_IS_INT
     case 2:
       coinFactorizationB_ = new CoinSimpFactorization();
       goSmallThreshold_ = COIN_INT_MAX;
@@ -2589,7 +2589,7 @@ int ClpFactorization::replaceColumn(const ClpSimplex *model,
     int nOld = 0;
     int nNew = 0;
     int seq;
-#if COIN_BIG_INDEX == 0 && CLP_POOL_MATRIX == 0
+#if COINUTILS_BIGINDEX_IS_INT && CLP_POOL_MATRIX == 0
     const CoinPackedMatrix *matrix = model->matrix();
     const int *columnLength = matrix->getVectorLengths();
 #else

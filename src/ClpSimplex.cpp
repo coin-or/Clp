@@ -7562,11 +7562,15 @@ void ClpSimplex::loadProblem(const int numcols, const int numrows,
     rowObjective);
   createStatus();
 }
+
 #ifndef SLIM_NOIO
-#if COIN_BIG_INDEX == 0
 // This loads a model from a coinModel object - returns number of errors
 int ClpSimplex::loadProblem(CoinModel &modelObject, bool /*keepSolution*/)
 {
+  if(sizeof(int) != sizeof(CoinBigIndex)) {
+    fprintf(stderr, "loadProblem from CoinModel not available with CoinBigIndex != int\n");
+    abort();
+  }
   unsigned char *status = NULL;
   double *psol = NULL;
   double *dsol = NULL;
@@ -7603,15 +7607,8 @@ int ClpSimplex::loadProblem(CoinModel &modelObject, bool /*keepSolution*/)
   optimizationDirection_ = modelObject.optimizationDirection();
   return returnCode;
 }
-#else
-int ClpSimplex::loadProblem(CoinModel &modelObject, bool /*keepSolution*/)
-{
-  fprintf(stderr, "loadProblem from CoinModel not available with COIN_BIG_INDEX\n");
-  abort();
-  return 0;
-}
 #endif
-#endif
+
 void ClpSimplex::loadProblem(const int numcols, const int numrows,
   const CoinBigIndex *start, const int *index,
   const double *value, const int *length,

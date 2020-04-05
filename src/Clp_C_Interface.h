@@ -26,20 +26,12 @@ struct Clp_Solve_s;
 typedef struct Clp_Solve_s Clp_Solve;
 
 /** typedef for user call back.
- The cvec are constructed so don't need to be const*/
-#if COIN_BIG_INDEX == 0
+ *
+ * The cvec are constructed so don't need to be const
+ */
 typedef void(CLP_LINKAGE_CB *clp_callback)(Clp_Simplex *model, int msgno, int ndouble,
-  const double *dvec, int nint, const int *ivec,
+  const double *dvec, int nint, const CoinBigIndex *ivec,
   int nchar, char **cvec);
-#elif COIN_BIG_INDEX == 1
-typedef void(CLP_LINKAGE_CB *clp_callback)(Clp_Simplex *model, int msgno, int ndouble,
-  const double *dvec, int nint, const long *ivec,
-  int nchar, char **cvec);
-#else
-typedef void(CLP_LINKAGE_CB *clp_callback)(Clp_Simplex *model, int msgno, int ndouble,
-  const double *dvec, int nint, const long long *ivec,
-  int nchar, char **cvec);
-#endif
 
 /** This is a first "C" interface to Clp.
     It has similarities to the OSL V3 interface

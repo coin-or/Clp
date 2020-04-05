@@ -3330,12 +3330,10 @@ int ClpPackedMatrix::countBasis(const int *whichColumn,
     int iColumn = whichColumn[i];
     numberElements += columnLength[iColumn];
   }
-#if COIN_BIG_INDEX
   if (numberElements > COIN_INT_MAX) {
     printf("Factorization too large\n");
     abort();
   }
-#endif
   return static_cast< int >(numberElements);
 }
 void ClpPackedMatrix::fillBasis(ClpSimplex *model,
@@ -3443,10 +3441,10 @@ void ClpPackedMatrix::fillBasis(ClpSimplex *model,
       }
     }
   }
-#if COIN_BIG_INDEX
-  if (numberElements > COIN_INT_MAX)
+  if (numberElements > COIN_INT_MAX) {
+    printf("Factorization too large\n");
     abort();
-#endif
+  }
 }
 #if 0
 int
@@ -5012,15 +5010,12 @@ bool ClpPackedMatrix::allElementsInRange(ClpModel *model,
         double value = fabs(elementByColumn[j]);
         int iRow = row[j];
         if (iRow < 0 || iRow >= numberRows) {
-#ifndef COIN_BIG_INDEX
-          printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-#elif COIN_BIG_INDEX == 0
-          printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-#elif COIN_BIG_INDEX == 1
-          printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-#else
-          printf("Out of range %d %lld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-#endif
+          if(sizeof(CoinBigIndex) == sizeof(int))
+            printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+          else if(sizeof(CoinBigIndex) == sizeof(long))
+            printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+          else if(sizeof(CoinBigIndex) == sizeof(long long))
+            printf("Out of range %d %lld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
           return false;
         }
         if (mark[iRow] == -1) {
@@ -5063,15 +5058,12 @@ bool ClpPackedMatrix::allElementsInRange(ClpModel *model,
         double value = fabs(elementByColumn[j]);
         int iRow = row[j];
         if (iRow < 0 || iRow >= numberRows) {
-#ifndef COIN_BIG_INDEX
-          printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-#elif COIN_BIG_INDEX == 0
-          printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-#elif COIN_BIG_INDEX == 1
-          printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-#else
-          printf("Out of range %d %lld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-#endif
+          if(sizeof(CoinBigIndex) == sizeof(int))
+            printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+          else if(sizeof(CoinBigIndex) == sizeof(long))
+            printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+          else if(sizeof(CoinBigIndex) == sizeof(long long))
+            printf("Out of range %d %lld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
           return false;
         }
         if (!value)

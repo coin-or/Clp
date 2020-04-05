@@ -2346,7 +2346,7 @@ void ClpSimplexUnitTest(const std::string &dirSample)
     }
   }
 #endif
-#if COIN_BIG_INDEX == 0
+#if COINUTILS_BIGINDEX_IS_INT
   // test network
 #define QUADRATIC
   if (1) {

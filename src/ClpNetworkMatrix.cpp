@@ -534,12 +534,10 @@ int ClpNetworkMatrix::countBasis(const int *whichColumn,
         numberElements++;
     }
   }
-#if COIN_BIG_INDEX
   if (numberElements > COIN_INT_MAX) {
     printf("Factorization too large\n");
     abort();
   }
-#endif
   return static_cast< int >(numberElements);
 }
 void ClpNetworkMatrix::fillBasis(ClpSimplex * /*model*/,
@@ -587,10 +585,10 @@ void ClpNetworkMatrix::fillBasis(ClpSimplex * /*model*/,
       columnCount[i] = static_cast< int >(numberElements) - start[i];
     }
   }
-#if COIN_BIG_INDEX
-  if (numberElements > COIN_INT_MAX)
+  if (numberElements > COIN_INT_MAX) {
+    printf("Factorization too large\n");
     abort();
-#endif
+  }
 }
 /* Unpacks a column into an CoinIndexedvector
  */

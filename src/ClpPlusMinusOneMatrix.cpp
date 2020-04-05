@@ -1147,12 +1147,10 @@ int ClpPlusMinusOneMatrix::countBasis(const int *whichColumn,
     int iColumn = whichColumn[i];
     numberElements += startPositive_[iColumn + 1] - startPositive_[iColumn];
   }
-#if COIN_BIG_INDEX
   if (numberElements > COIN_INT_MAX) {
     printf("Factorization too large\n");
     abort();
   }
-#endif
   return static_cast< int >(numberElements);
 }
 void ClpPlusMinusOneMatrix::fillBasis(ClpSimplex *,
@@ -1183,10 +1181,10 @@ void ClpPlusMinusOneMatrix::fillBasis(ClpSimplex *,
     start[i + 1] = static_cast< int >(numberElements);
     columnCount[i] = static_cast< int >(numberElements - start[i]);
   }
-#if COIN_BIG_INDEX
-  if (numberElements > COIN_INT_MAX)
+  if (numberElements > COIN_INT_MAX) {
+    printf("Factorization too large\n");
     abort();
-#endif
+  }
 }
 /* Unpacks a column into an CoinIndexedvector
  */
@@ -2933,12 +2931,10 @@ int ClpPoolMatrix::countBasis(const int *whichColumn,
     int iColumn = whichColumn[i];
     numberElements += columnStart_[iColumn + 1] - columnStart_[iColumn];
   }
-#if COIN_BIG_INDEX
   if (numberElements > COIN_INT_MAX) {
     printf("Factorization too large\n");
     abort();
   }
-#endif
   return static_cast< int >(numberElements);
 }
 void ClpPoolMatrix::fillBasis(ClpSimplex *,
@@ -2962,10 +2958,10 @@ void ClpPoolMatrix::fillBasis(ClpSimplex *,
     start[i + 1] = static_cast< int >(numberElements);
     columnCount[i] = static_cast< int >(numberElements - start[i]);
   }
-#if COIN_BIG_INDEX
-  if (numberElements > COIN_INT_MAX)
+  if (numberElements > COIN_INT_MAX) {
+    printf("Factorization too large\n");
     abort();
-#endif
+  }
 }
 /* Unpacks a column into an CoinIndexedvector
  */
