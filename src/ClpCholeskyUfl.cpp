@@ -144,7 +144,7 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   const int *rowLength = rowCopy_->getVectorLengths();
   const int *column = rowCopy_->getIndices();
   // We need two arrays for counts
-  int *which = new int[numberRows_];
+  CoinBigIndex *which = new CoinBigIndex[numberRows_];
   int *used = new int[numberRows_ + 1];
   CoinZeroN(used, numberRows_);
   int iRow;
@@ -180,7 +180,7 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   delete[] which;
   // Now we have size - create arrays and fill in
   try {
-    choleskyRow_ = new int[sizeFactor_];
+    choleskyRow_ = new CoinBigIndex[sizeFactor_];
   } catch (...) {
     // no memory
     delete[] choleskyStart_;
@@ -235,8 +235,8 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   }
   choleskyStart_[numberRows_] = sizeFactor_;
   delete[] used;
-  permuteInverse_ = new int[numberRows_];
-  permute_ = new int[numberRows_];
+  permuteInverse_ = new CoinBigIndex[numberRows_];
+  permute_ = new CoinBigIndex[numberRows_];
   cholmod_sparse A;
   A.nrow = numberRows_;
   A.ncol = numberRows_;
@@ -318,7 +318,7 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
   delta2 *= delta2;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     double *put = sparseFactor_ + choleskyStart_[iRow];
-    int *which = choleskyRow_ + choleskyStart_[iRow];
+    CoinBigIndex *which = choleskyRow_ + choleskyStart_[iRow];
     int number = choleskyStart_[iRow + 1] - choleskyStart_[iRow];
     if (!rowLength[iRow])
       rowsDropped_[iRow] = 1;

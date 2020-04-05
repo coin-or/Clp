@@ -300,7 +300,7 @@ int ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool d
     memset(rowsDropped_, 0, numberRows_);
     numberRowsDropped_ = 0;
     // Space for starts
-    choleskyStart_ = new int[numberRows_ + 1];
+    choleskyStart_ = new CoinBigIndex[numberRows_ + 1];
     const CoinBigIndex *columnStart = model_->clpMatrix()->getVectorStarts();
     const int *columnLength = model_->clpMatrix()->getVectorLengths();
     const int *row = model_->clpMatrix()->getIndices();
@@ -308,7 +308,7 @@ int ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool d
     const int *rowLength = rowCopy_->getVectorLengths();
     const int *column = rowCopy_->getIndices();
     // We need two arrays for counts
-    int *which = new int[numberRows_];
+    CoinBigIndex *which = new CoinBigIndex[numberRows_];
     int *used = new int[numberRows_ + 1];
     CoinZeroN(used, numberRows_);
     int iRow;
@@ -416,7 +416,7 @@ int ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool d
     delete[] which;
     // Now we have size - create arrays and fill in
     try {
-      choleskyRow_ = new int[sizeFactor_];
+      choleskyRow_ = new CoinBigIndex[sizeFactor_];
     } catch (...) {
       // no memory
       delete[] choleskyStart_;
@@ -500,14 +500,14 @@ int ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool d
     if (quadratic)
       numberElements += quadratic->getNumElements();
     // Space for starts
-    choleskyStart_ = new int[numberRows_ + 1];
+    choleskyStart_ = new CoinBigIndex[numberRows_ + 1];
     const CoinBigIndex *columnStart = model_->clpMatrix()->getVectorStarts();
     const int *columnLength = model_->clpMatrix()->getVectorLengths();
     const int *row = model_->clpMatrix()->getIndices();
     //const double * element = model_->clpMatrix()->getElements();
     // Now we have size - create arrays and fill in
     try {
-      choleskyRow_ = new int[numberElements];
+      choleskyRow_ = new CoinBigIndex[numberElements];
     } catch (...) {
       // no memory
       delete[] choleskyStart_;
@@ -674,7 +674,7 @@ int ClpCholeskyBase::order(ClpInterior *model)
   CoinZeroN(used, numberRows_);
   int iRow;
   sizeFactor_ = 0;
-  permute_ = new int[numberRows_];
+  permute_ = new CoinBigIndex[numberRows_];
   for (iRow = 0; iRow < numberRows_; iRow++)
     permute_[iRow] = iRow;
   if (!doKKT_) {
@@ -771,7 +771,7 @@ int ClpCholeskyBase::order(ClpInterior *model)
   delete[] which;
   delete[] used;
   delete[] count;
-  permuteInverse_ = new int[numberRows_];
+  permuteInverse_ = new CoinBigIndex[numberRows_];
   for (iRow = 0; iRow < numberRows_; iRow++) {
     //permute_[iRow]=iRow; // force no permute
     //permute_[iRow]=numberRows_-1-iRow; // force odd permute
@@ -1089,7 +1089,7 @@ int ClpCholeskyBase::orderAMD()
 #include <math.h>
 #include <stdlib.h>
 
-typedef int WSI;
+typedef CoinBigIndex WSI;
 
 #define NORDTHRESH 7
 #define MAXIW 2147000000
@@ -1860,15 +1860,15 @@ void amlfdr(WSI *n, WSI xadj[], WSI adjncy[], WSI dgree[], WSI *adjln,
 // Orders rows
 int ClpCholeskyBase::orderAMD()
 {
-  permuteInverse_ = new int[numberRows_];
-  permute_ = new int[numberRows_];
+  permuteInverse_ = new CoinBigIndex[numberRows_];
+  permute_ = new CoinBigIndex[numberRows_];
   // Do ordering
   int returnCode = 0;
   // get full matrix
   int space = 2 * sizeFactor_ + 10000 + 4 * numberRows_;
-  int *temp = new int[space];
+  CoinBigIndex *temp = new CoinBigIndex[space];
   int *count = new int[numberRows_];
-  int *tempStart = new int[numberRows_ + 1];
+  CoinBigIndex *tempStart = new CoinBigIndex[numberRows_ + 1];
   memset(count, 0, numberRows_ * sizeof(int));
   for (int iRow = 0; iRow < numberRows_; iRow++) {
     count[iRow] += static_cast< int >(choleskyStart_[iRow + 1] - choleskyStart_[iRow] - 1);
@@ -1912,14 +1912,14 @@ int ClpCholeskyBase::orderAMD()
   int speed = integerParameters_[0];
   if (speed < 1 || speed > 2)
     speed = 3;
-  int *use = new int[((speed < 3) ? 7 : 6) * numberRows_];
-  int *dgree = use;
-  int *varbl = dgree + numberRows_;
-  int *snxt = varbl + numberRows_;
-  int *head = snxt + numberRows_;
-  int *lsize = head + numberRows_;
-  int *flag = lsize + numberRows_;
-  int *erscore;
+  CoinBigIndex *use = new CoinBigIndex[((speed < 3) ? 7 : 6) * numberRows_];
+  CoinBigIndex *dgree = use;
+  CoinBigIndex *varbl = dgree + numberRows_;
+  CoinBigIndex *snxt = varbl + numberRows_;
+  CoinBigIndex *head = snxt + numberRows_;
+  CoinBigIndex *lsize = head + numberRows_;
+  CoinBigIndex *flag = lsize + numberRows_;
+  CoinBigIndex *erscore;
   for (int i = 0; i < numberRows_; i++) {
     dgree[i] = choleskyStart_[i + 1] - choleskyStart_[i];
     head[i] = dgree[i];
@@ -1977,7 +1977,7 @@ int ClpCholeskyBase::symbolic()
   if (quadraticObj)
     quadratic = quadraticObj->quadraticObjective();
   // We need an array for counts
-  int *used = new int[numberRows_ + 1];
+  CoinBigIndex *used = new CoinBigIndex[numberRows_ + 1];
   // If KKT then re-order so negative first
   if (doKKT_) {
     int nn = 0;
@@ -2007,7 +2007,7 @@ int ClpCholeskyBase::symbolic()
     delete[] Astart;
     return -1;
   }
-  choleskyStart_ = new int[numberRows_ + 1];
+  choleskyStart_ = new CoinBigIndex[numberRows_ + 1];
   link_ = new int[numberRows_];
   workInteger_ = new int[numberRows_];
   indexStart_ = new int[numberRows_];
@@ -2206,7 +2206,7 @@ int ClpCholeskyBase::symbolic()
   // Now fill in indices
   try {
     // too big
-    choleskyRow_ = new int[sizeFactor_];
+    choleskyRow_ = new CoinBigIndex[sizeFactor_];
   } catch (...) {
     // no memory
     noMemory = true;
@@ -2400,9 +2400,9 @@ int ClpCholeskyBase::symbolic()
     }
     symbolic2(Astart, Arow);
     if (sizeIndex_ < sizeFactor_) {
-      int *indices = NULL;
+      CoinBigIndex *indices = NULL;
       try {
-        indices = new int[sizeIndex_];
+        indices = new CoinBigIndex[sizeIndex_];
       } catch (...) {
         // no memory
         noMemory = true;
@@ -2779,7 +2779,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
     CoinWorkDouble largest2 = 1.0e-20;
     for (iRow = 0; iRow < numberRows_; iRow++) {
       longDouble *put = sparseFactor_ + choleskyStart_[iRow];
-      int *which = choleskyRow_ + indexStart_[iRow];
+      CoinBigIndex *which = choleskyRow_ + indexStart_[iRow];
       int iOriginalRow = permute_[iRow];
       int number = choleskyStart_[iRow + 1] - choleskyStart_[iRow];
       if (!rowLength[iOriginalRow])
@@ -2994,7 +2994,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
       if (!quadratic) {
         for (iRow = 0; iRow < numberRows_; iRow++) {
           longDouble *put = sparseFactor_ + choleskyStart_[iRow];
-          int *which = choleskyRow_ + indexStart_[iRow];
+          CoinBigIndex *which = choleskyRow_ + indexStart_[iRow];
           int iOriginalRow = permute_[iRow];
           if (iOriginalRow < numberColumns) {
             iColumn = iOriginalRow;
@@ -3062,7 +3062,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
         const double *quadraticElement = quadratic->getElements();
         for (iRow = 0; iRow < numberRows_; iRow++) {
           longDouble *put = sparseFactor_ + choleskyStart_[iRow];
-          int *which = choleskyRow_ + indexStart_[iRow];
+          CoinBigIndex *which = choleskyRow_ + indexStart_[iRow];
           int iOriginalRow = permute_[iRow];
           if (iOriginalRow < numberColumns) {
             CoinBigIndex j;
@@ -3140,7 +3140,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
       if (!quadratic) {
         for (iColumn = 0; iColumn < numberColumns; iColumn++) {
           longDouble *put = sparseFactor_ + choleskyStart_[iColumn];
-          int *which = choleskyRow_ + indexStart_[iColumn];
+          CoinBigIndex *which = choleskyRow_ + indexStart_[iColumn];
           CoinWorkDouble value = diagonal[iColumn];
           if (CoinAbs(value) > 1.0e-100) {
             value = 1.0 / value;
@@ -3173,7 +3173,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
         const double *quadraticElement = quadratic->getElements();
         for (iColumn = 0; iColumn < numberColumns; iColumn++) {
           longDouble *put = sparseFactor_ + choleskyStart_[iColumn];
-          int *which = choleskyRow_ + indexStart_[iColumn];
+          CoinBigIndex *which = choleskyRow_ + indexStart_[iColumn];
           int number = choleskyStart_[iColumn + 1] - choleskyStart_[iColumn];
           CoinWorkDouble value = diagonal[iColumn];
           CoinBigIndex j;
@@ -3214,7 +3214,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
       // slacks
       for (iColumn = numberColumns; iColumn < numberTotal; iColumn++) {
         longDouble *put = sparseFactor_ + choleskyStart_[iColumn];
-        int *which = choleskyRow_ + indexStart_[iColumn];
+        CoinBigIndex *which = choleskyRow_ + indexStart_[iColumn];
         CoinWorkDouble value = diagonal[iColumn];
         if (CoinAbs(value) > 1.0e-100) {
           value = 1.0 / value;

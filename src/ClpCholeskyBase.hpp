@@ -270,17 +270,17 @@ protected:
   /// rowsDropped
   char *rowsDropped_;
   /// permute inverse.
-  int *permuteInverse_;
+  CoinBigIndex *permuteInverse_;
   /// main permute.
-  int *permute_;
+  CoinBigIndex *permute_;
   /// numberRowsDropped.  Number of rows gone
   int numberRowsDropped_;
   /// sparseFactor.
   longDouble *sparseFactor_;
   /// choleskyStart - element starts
-  int *choleskyStart_;
+  CoinBigIndex *choleskyStart_;
   /// choleskyRow (can be shorter than sparsefactor)
-  int *choleskyRow_;
+  CoinBigIndex *choleskyRow_;
   /// Index starts
   int *indexStart_;
   /// Diagonal

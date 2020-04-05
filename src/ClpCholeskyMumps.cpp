@@ -140,7 +140,7 @@ int ClpCholeskyMumps::order(ClpInterior *model)
   const int *rowLength = rowCopy_->getVectorLengths();
   const int *column = rowCopy_->getIndices();
   // We need two arrays for counts
-  int *which = new int[numberRows_];
+  CoinBigIndex *which = new CoinBigIndex[numberRows_];
   int *used = new int[numberRows_ + 1];
   CoinZeroN(used, numberRows_);
   int iRow;
@@ -177,14 +177,14 @@ int ClpCholeskyMumps::order(ClpInterior *model)
   // NOT COMPRESSED FOR NOW ??? - Space for starts
   mumps_->ICNTL(5) = 0; // say NOT compressed format
   try {
-    choleskyStart_ = new int[numberRows_ + 1 + sizeFactor_];
+    choleskyStart_ = new CoinBigIndex[numberRows_ + 1 + sizeFactor_];
   } catch (...) {
     // no memory
     return -1;
   }
   // Now we have size - create arrays and fill in
   try {
-    choleskyRow_ = new int[sizeFactor_];
+    choleskyRow_ = new CoinBigIndex[sizeFactor_];
   } catch (...) {
     // no memory
     delete[] choleskyStart_;
@@ -239,8 +239,8 @@ int ClpCholeskyMumps::order(ClpInterior *model)
   }
   choleskyStart_[numberRows_] = sizeFactor_;
   delete[] used;
-  permuteInverse_ = new int[numberRows_];
-  permute_ = new int[numberRows_];
+  permuteInverse_ = new CoinBigIndex[numberRows_];
+  permute_ = new CoinBigIndex[numberRows_];
   // To Fortran and fake
   for (iRow = 0; iRow < numberRows_ + 1; iRow++) {
     int k = choleskyStart_[iRow];
@@ -251,6 +251,7 @@ int ClpCholeskyMumps::order(ClpInterior *model)
       choleskyStart_[k] = iRow + 1;
     choleskyStart_[iRow]++;
   }
+#if COINUTILS_BIGINDEX_IS_INT
   mumps_->nz = sizeFactor_;
   mumps_->irn = choleskyStart_ + numberRows_ + 1;
   mumps_->jcn = choleskyRow_;
@@ -288,6 +289,11 @@ int ClpCholeskyMumps::order(ClpInterior *model)
     permute_[iRow] = iRow;
   }
   return 0;
+#else
+  // FIXME make available
+  printf("MUMPS not available with CoinBigIndex != int\n");
+  return 1;
+#endif
 }
 /* Does Symbolic factorization given permutation.
    This is called immediately after order.  If user provides this then
@@ -332,7 +338,7 @@ int ClpCholeskyMumps::factorize(const double *diagonal, int *rowsDropped)
   delta2 *= delta2;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     double *put = sparseFactor_ + choleskyStart_[iRow] - 1; // Fortran
-    int *which = choleskyRow_ + choleskyStart_[iRow] - 1; // Fortran
+    CoinBigIndex *which = choleskyRow_ + choleskyStart_[iRow] - 1; // Fortran
     int number = choleskyStart_[iRow + 1] - choleskyStart_[iRow];
     if (!rowLength[iRow])
       rowsDropped_[iRow] = 1;
