@@ -12,6 +12,13 @@ matrix:
             - gfortran
             - liblapack-dev
     - os: linux
+      addons:
+        apt:
+          packages:
+            - gfortran
+            - liblapack-dev
+      env: COINBREW_BUILD_FLAGS=--enable-coinutils-bigindex
+    - os: linux
       dist: bionic
       addons:
         apt:
@@ -46,9 +53,10 @@ before_script:
   - bash ./coinbrew fetch $PROJECT_URL:$TRAVIS_BRANCH --no-prompt --skip-update
 
 script:
-  - bash ./coinbrew build $PROJECT --no-prompt --verbosity 2 --test --enable-relocatable
+  - bash ./coinbrew build $PROJECT --no-prompt --verbosity 2 --test --enable-relocatable $COINBREW_BUILD_FLAGS
 
 after_script:
+  - if [ -n "$COINBREW_BUILD_FLAGS ]; then exit 0 ; fi
   - if [ $TRAVIS_BRANCH = "master" ]; then export VERSION=master; else export VERSION=`echo $TRAVIS_BRANCH | cut -d "/" -f 2`; fi
   - export TGZ_FILE=$PROJECT-$VERSION-$PLATFORM.tgz
   - echo $TGZ_FILE
