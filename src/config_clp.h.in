@@ -9,8 +9,17 @@
 /* Define to 1, 2, 3, or 4 if Aboca should be built. */
 #undef CLP_HAS_ABC
 
+/* Define to 1 if the AMD package is available */
+#undef CLP_HAS_AMD
+
+/* Define to 1 if the CHOLMOD package is available */
+#undef CLP_HAS_CHOLMOD
+
 /* Define to 1 if the MUMPS package is available. */
 #undef CLP_HAS_MUMPS
+
+/* Define to 1 if WSMP is available */
+#undef CLP_HAS_WSMP
 
 /* Version number of project */
 #undef CLP_VERSION
