@@ -4,13 +4,14 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
+#include "ClpConfig.h"
+
 #ifdef CBCSOLVERLIB_BUILD
 #ifndef CBCSOLVERLIB_EXPORT
 #include "CbcSolverConfig.h"
 #endif
 #define CBCORCLPPARAM_EXPORT CBCSOLVERLIB_EXPORT
 #else
-#include "ClpConfig.h"
 #define CBCORCLPPARAM_EXPORT CLPLIB_EXPORT
 #endif
 
