@@ -6,6 +6,7 @@
 #include "CoinPragma.hpp"
 #include "CoinTime.hpp"
 #include "CbcOrClpParam.hpp"
+#include "CoinHelperFunctions.hpp"
 
 #include <string>
 #include <iostream>
@@ -18,35 +19,40 @@
 #endif
 #include "CbcModel.hpp"
 #endif
-#include "CoinHelperFunctions.hpp"
+
 #ifdef COIN_HAS_CLP
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
 #endif
+
 #ifdef CLP_HAS_READLINE
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
+
 #ifdef COIN_HAS_CBC
 // from CoinSolve
 static char coin_prompt[] = "Coin:";
 #else
 static char coin_prompt[] = "Clp:";
 #endif
+
 #ifdef CLP_CILK
 #ifndef CBC_THREAD
 #define CBC_THREAD
 #endif
 #endif
+
 #if defined(CLP_HAS_WSMP) && !defined(USE_EKKWSSMP)
 #ifndef CBC_THREAD
 #define CBC_THREAD
 #endif
 #endif
-#include "ClpConfig.h"
+
 #ifdef CLP_HAS_ABC
 #include "AbcCommon.hpp"
 #endif
+
 static bool doPrinting = true;
 static std::string afterEquals = "";
 static char printArray[250];
