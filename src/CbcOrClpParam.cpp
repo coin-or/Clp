@@ -2793,6 +2793,7 @@ The length options for gomory cuts are used.");
     p.append("root");
     p.append("ifmove");
     p.append("forceOn");
+    p.append("iflongon");
     p.setLonghelp(
       "These cuts may be expensive to compute. "
       CUTS_LONGHELP
