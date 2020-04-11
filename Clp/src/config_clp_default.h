@@ -5,7 +5,7 @@
 /***************************************************************************/
 
 /* Version number of project */
-#define CLP_VERSION "1.17"
+#define CLP_VERSION "1.17.6"
 
 /* Major Version number of project */
 #define CLP_VERSION_MAJOR 1
@@ -14,7 +14,7 @@
 #define CLP_VERSION_MINOR 17
 
 /* Release Version number of project */
-#define CLP_VERSION_RELEASE 9999
+#define CLP_VERSION_RELEASE 6
 
 /* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
 */
