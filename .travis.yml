@@ -56,7 +56,7 @@ before_script:
   - bash ./coinbrew fetch $PROJECT_URL:$TRAVIS_BRANCH --no-prompt --skip-update
 
 script:
-  - bash ./coinbrew build $PROJECT --no-prompt --verbosity 4 --test --enable-relocatable $COINBREW_BUILD_FLAGS
+  - bash ./coinbrew build $PROJECT --no-prompt --verbosity 3 --test --enable-relocatable $COINBREW_BUILD_FLAGS
 
 after_script:
   - if [ -n "$COINBREW_BUILD_FLAGS ]; then exit 0 ; fi
