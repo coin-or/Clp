@@ -18382,8 +18382,8 @@ fi
 
 # amd.h
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package AMD" >&5
-$as_echo_n "checking for package AMD... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package AMD with function amd_defaults" >&5
+$as_echo_n "checking for package AMD with function amd_defaults... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
 
@@ -18447,7 +18447,7 @@ fi
 # --with-prim is always present. If the client specified dataonly, its value
 # is assigned to prim_data.
 
-  withval=$with_amd
+  withval="$with_amd"
   if test -n "$withval" ; then
     case "$withval" in
       no )
@@ -18461,7 +18461,7 @@ fi
         ;;
       * )
         coin_has_amd=yes
-        amd_lflags=$withval
+        amd_lflags="$withval"
         ;;
     esac
   fi
@@ -18471,7 +18471,7 @@ fi
 # options for lflags and cflags.
 
   if test "$coin_has_amd" != skipping ; then
-       withval=$with_amd_lflags
+       withval="$with_amd_lflags"
        if test -n "$withval" ; then
          case "$withval" in
            build | no | yes )
@@ -18479,12 +18479,12 @@ fi
              ;;
            * )
              coin_has_amd=yes
-             amd_lflags=$withval
+             amd_lflags="$withval"
              ;;
          esac
        fi
 
-       withval=$with_amd_cflags
+       withval="$with_amd_cflags"
        if test -n "$withval" ; then
          case "$withval" in
            build | no | yes )
@@ -18555,14 +18555,18 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_amd\" in COIN_FIND_PRIM
        LIBS="$amd_lflags "
        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
 #ifdef __cplusplus
-             extern "C"
-           #endif
-           void amd_defaults();
+extern "C"
+#endif
+char amd_defaults ();
 int
 main ()
 {
-amd_defaults()
+return amd_defaults ();
   ;
   return 0;
 }
@@ -18645,8 +18649,8 @@ $as_echo "#define CLP_HAS_AMD 1" >>confdefs.h
 # cholmod.h
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package CHOLMOD" >&5
-$as_echo_n "checking for package CHOLMOD... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package CHOLMOD with function cholmod_start" >&5
+$as_echo_n "checking for package CHOLMOD with function cholmod_start... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
 
@@ -18710,7 +18714,7 @@ fi
 # --with-prim is always present. If the client specified dataonly, its value
 # is assigned to prim_data.
 
-  withval=$with_cholmod
+  withval="$with_cholmod"
   if test -n "$withval" ; then
     case "$withval" in
       no )
@@ -18724,7 +18728,7 @@ fi
         ;;
       * )
         coin_has_cholmod=yes
-        cholmod_lflags=$withval
+        cholmod_lflags="$withval"
         ;;
     esac
   fi
@@ -18734,7 +18738,7 @@ fi
 # options for lflags and cflags.
 
   if test "$coin_has_cholmod" != skipping ; then
-       withval=$with_cholmod_lflags
+       withval="$with_cholmod_lflags"
        if test -n "$withval" ; then
          case "$withval" in
            build | no | yes )
@@ -18742,12 +18746,12 @@ fi
              ;;
            * )
              coin_has_cholmod=yes
-             cholmod_lflags=$withval
+             cholmod_lflags="$withval"
              ;;
          esac
        fi
 
-       withval=$with_cholmod_cflags
+       withval="$with_cholmod_cflags"
        if test -n "$withval" ; then
          case "$withval" in
            build | no | yes )
@@ -18818,14 +18822,18 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_cholmod\" in COIN_FIND_
        LIBS="$cholmod_lflags "
        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
 #ifdef __cplusplus
-             extern "C"
-           #endif
-           void cholmod_start();
+extern "C"
+#endif
+char cholmod_start ();
 int
 main ()
 {
-cholmod_start()
+return cholmod_start ();
   ;
   return 0;
 }
@@ -19164,8 +19172,8 @@ $as_echo "#define CLP_HAS_MUMPS 1" >>confdefs.h
 
 if test $coin_has_mumps = no ; then
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package MUMPS" >&5
-$as_echo_n "checking for package MUMPS... " >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for package MUMPS with function dmumps_c" >&5
+$as_echo_n "checking for package MUMPS with function dmumps_c... " >&6; }
 
 # Make sure the necessary variables exist for each client package.
 
@@ -19229,7 +19237,7 @@ fi
 # --with-prim is always present. If the client specified dataonly, its value
 # is assigned to prim_data.
 
-  withval=$with_mumps
+  withval="$with_mumps"
   if test -n "$withval" ; then
     case "$withval" in
       no )
@@ -19243,7 +19251,7 @@ fi
         ;;
       * )
         coin_has_mumps=yes
-        mumps_lflags=$withval
+        mumps_lflags="$withval"
         ;;
     esac
   fi
@@ -19253,7 +19261,7 @@ fi
 # options for lflags and cflags.
 
   if test "$coin_has_mumps" != skipping ; then
-       withval=$with_mumps_lflags
+       withval="$with_mumps_lflags"
        if test -n "$withval" ; then
          case "$withval" in
            build | no | yes )
@@ -19261,12 +19269,12 @@ fi
              ;;
            * )
              coin_has_mumps=yes
-             mumps_lflags=$withval
+             mumps_lflags="$withval"
              ;;
          esac
        fi
 
-       withval=$with_mumps_cflags
+       withval="$with_mumps_cflags"
        if test -n "$withval" ; then
          case "$withval" in
            build | no | yes )
@@ -19337,14 +19345,18 @@ $as_echo "$as_me: WARNING: Unexpected status \"$coin_has_mumps\" in COIN_FIND_PR
        LIBS="$mumps_lflags "
        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
 #ifdef __cplusplus
-             extern "C"
-           #endif
-           void dmumps_c();
+extern "C"
+#endif
+char dmumps_c ();
 int
 main ()
 {
-dmumps_c()
+return dmumps_c ();
   ;
   return 0;
 }
