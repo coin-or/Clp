@@ -8,8 +8,8 @@ Name: Clp
 Description: COIN-OR Linear Programming Solver
 URL: https://github.com/coin-or/Clp
 Version: @PACKAGE_VERSION@
-Libs: -L${libdir} -lClp
-Libs.private: @CLPLIB_LFLAGS_NOPC@
 Cflags: -I${includedir}
-Requires:
-Requires.private: @CLPLIB_PCFILES@
+@COIN_STATIC_BUILD_FALSE@Libs: -L${libdir} -lClp
+@COIN_STATIC_BUILD_FALSE@Requires.private: @CLPLIB_PCFILES@
+@COIN_STATIC_BUILD_TRUE@Libs: -L${libdir} -lClp @CLPLIB_LFLAGS_NOPC@
+@COIN_STATIC_BUILD_TRUE@Requires: @CLPLIB_PCFILES@
