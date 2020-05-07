@@ -105,6 +105,7 @@ class AbcSimplex;
 
 class CLPLIB_EXPORT ClpSimplex : public ClpModel {
   friend CLPLIB_EXPORT void ClpSimplexUnitTest(const std::string &mpsDir);
+  friend int ClpSimplex_loadNonLinear(ClpSimplex& cs, void *amplInfo, int &numberConstraints, ClpConstraint **&constraints);
 
 public:
   /** enums for status of various sorts.
