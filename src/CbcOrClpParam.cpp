@@ -2603,12 +2603,17 @@ setting some parameters which may help you to think of possibilities.");
   }
   {
     CbcOrClpParam p("clqstr!engthen", "Whether to perform Clique Strengthening preprocessing routine. \
-      Options represent strategies used to extend cliques.", 0, 5, CBC_PARAM_INT_CLQSTRENGTHENING);
+      Options represent strategies used to extend cliques.", -2, 5, CBC_PARAM_INT_CLQSTRENGTHENING);
     p.setLonghelp("Sets the method used in the Clique Strengthening routine: \
       0=off; 1=random; 2=degree; 3=modified degree; 4=reduced cost; \
-        5=reduced cost + modified degree");
+        5=reduced cost + modified degree;-1=off all related cuts");
     p.setIntValue(4);
     parameters.push_back(p);
+    /* JJHF - I added -1,-2 - as subtle way to ....
+       -1 - switch all cuts using strengthening off as very slow on some 
+       problems (cumbersome to switch off otherwise).
+       -2 - back to old clique cuts - it seems a bit unfair to obliterate
+       that work */
   }
   {
     CbcOrClpParam p("help", "Print out version, non-standard options and some help",
@@ -3143,10 +3148,12 @@ This is a first try and will hopefully become more sophisticated.");
   {
     CbcOrClpParam p("Orbit!alBranching", "Whether to try orbital branching",
       "off", CBC_PARAM_STR_ORBITAL);
-    p.append("on");
+    p.append("slow!ish");
     p.append("strong");
     p.append("force");
     p.append("simple");
+    p.append("on");
+    p.append("more!printing");
     p.setLonghelp(
       "This switches on Orbital branching. \
 Value 'on' just adds orbital, 'strong' tries extra fixing in strong branching.");
