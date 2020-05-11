@@ -3795,6 +3795,22 @@ OsiClpSolverInterface::getMutableMatrixByCol() const
     return NULL;
 }
 
+// Get pointer to mutable row-wise copy of matrix (returns NULL if not meaningful)
+CoinPackedMatrix *
+OsiClpSolverInterface::getMutableMatrixByRow() const
+{
+  //if (matrixByRow_ == NULL || matrixByRow_->getNumElements() != modelPtr_->clpMatrix()->getNumElements()) {
+    delete matrixByRow_;
+    matrixByRow_ = new CoinPackedMatrix();
+    matrixByRow_->setExtraGap(0.0);
+    matrixByRow_->setExtraMajor(0.0);
+    matrixByRow_->reverseOrderedCopyOf(*modelPtr_->matrix());
+    //matrixByRow_->removeGaps();
+    //}
+  assert(matrixByRow_->getNumElements() == modelPtr_->clpMatrix()->getNumElements());
+  return matrixByRow_;
+}
+
 //------------------------------------------------------------------
 std::vector< double * > OsiClpSolverInterface::getDualRays(int /*maxNumRays*/,
   bool fullRay) const

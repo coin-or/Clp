@@ -3072,8 +3072,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
           if (columnLength[i] == 1 && !markX[i])
             sort[numberSort++] = i;
         }
-        if (n < numberSort)
-          printf("%d slacks added\n", numberSort - n);
+        //if (n < numberSort)
+	//printf("%d slacks added\n", numberSort - n);
         delete[] markX;
       }
     }

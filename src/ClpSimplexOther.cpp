@@ -161,11 +161,13 @@ void ClpSimplexOther::dualRanging(int numberCheck, const int *which,
             costIncrease = fabs(djValue / alphaIncrease);
             /* Not sure this is good idea as I don't think correct e.g.
                                  suppose a continuous variable has dj slightly greater. */
-            if (false && sequenceIncrease < numberColumns_ && integerType_[sequenceIncrease]) {
+#ifdef CBC_RANGING
+            if (sequenceIncrease < numberColumns_ && integerType_[sequenceIncrease]) {
               // can improve
               double movement = (columnScale_ == NULL) ? 1.0 : rhsScale_ * inverseColumnScale_[sequenceIncrease];
               costIncrease = CoinMax(fabs(djValue * movement), costIncrease);
             }
+#endif
           } else {
             costIncrease = 0.0;
           }
