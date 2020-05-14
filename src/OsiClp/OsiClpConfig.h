@@ -2,7 +2,6 @@
  * All Rights Reserved.
  * This code is published under the Eclipse Public License.
  *
- * $Id: OsiClpConfig.h 2568 2020-01-08 08:57:16Z stefan $
  *
  * Include file for the configuration of OsiClp.
  *

@@ -1,4 +1,3 @@
-/* $Id: iis.cpp 2278 2017-10-02 09:51:14Z forrest $ */
 /*
   Copyright (C) 2003, International Business Machines Corporation and others.
   All Rights Reserved.
