@@ -1,4 +1,3 @@
-/* $Id$ */
 /*! \legal
   Copyright (C) 2002, International Business Machines
   Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
