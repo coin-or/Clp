@@ -1,4 +1,3 @@
-/* $Id$ */
 // Copyright (C) 2002, International Business Machines
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
@@ -1046,8 +1045,10 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
           // throw out something
           if (sequenceIn_ >= 0 && getStatus(sequenceIn_) != basic) {
             setFlagged(sequenceIn_);
+	    saveStatus_[sequenceIn_] = status_[sequenceIn_];
           } else if (sequenceOut_ >= 0 && getStatus(sequenceOut_) != basic) {
             setFlagged(sequenceOut_);
+	    saveStatus_[sequenceOut_] = status_[sequenceOut_];
           }
         }
         type = 2; // so will restore weights
