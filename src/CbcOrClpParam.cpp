@@ -2555,8 +2555,23 @@ setting some parameters which may help you to think of possibilities.");
     p.append("ifmove");
     p.append("forceOn");
     p.append("onglobal");
-    p.setLonghelp("This switches on clique cuts (either at root or in entire tree). \
-                  An improved version of the Bron-Kerbosch algorithm is used to separate cliques.");
+    p.setLonghelp(
+        "This switches on clique cuts (either at root or in entire tree). \
+An improved version of the Bron-Kerbosch algorithm is used to separate cliques.");
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("cgraph",
+        "Whether to use the conflict graph-based preprocessing and cut separation routines.",
+        "on", CBC_PARAM_STR_USECGRAPH);
+    p.append("off");
+    p.append("clq");
+    p.setLonghelp(
+        "This switches the conflict graph-based preprocessing and cut separation routines \
+(CglBKClique, CglOddWheel and CliqueStrengthening) on or off. Values:\
+\n\toff: turns these routines off;\
+\n\ton: turns these routines on;\
+\n\tclq: turns these routines off and enables the cut separator of CglClique.");
     parameters.push_back(p);
   }
   {
@@ -2572,12 +2587,12 @@ setting some parameters which may help you to think of possibilities.");
     parameters.push_back(p);
   }
   {
-    CbcOrClpParam p("bkclqext!method", "Strategy used to extend violated cliques found by \
-      BK Clique Cut Separation routine", 0, 5, CBC_PARAM_INT_BKCLQEXTMETHOD);
-    p.setLonghelp("Sets the method used in the extension module \
-        of BK Clique Cut Separation routine: 0=no extension; 1=random; \
-        2=degree; 3=modified degree; 4=reduced cost; \
-        5=reduced cost + modified degree");
+    CbcOrClpParam p("bkclqext!method",
+        "Strategy used to extend violated cliques found by BK Clique Cut Separation routine",
+        0, 5, CBC_PARAM_INT_BKCLQEXTMETHOD);
+    p.setLonghelp(
+        "Sets the method used in the extension module of BK Clique Cut Separation routine: \
+0=no extension; 1=random; 2=degree; 3=modified degree; 4=reduced cost(inversely proportional); 5=reduced cost(inversely proportional) + modified degree");
     p.setIntValue(4);
     parameters.push_back(p);
   }
@@ -2593,26 +2608,26 @@ setting some parameters which may help you to think of possibilities.");
     parameters.push_back(p);
   }
   {
-    CbcOrClpParam p("oddwext!method", "Strategy used to search for wheel centers for the cuts found by \
-      Odd Wheel Cut Separation routine", 0, 2, CBC_PARAM_INT_ODDWEXTMETHOD);
-    p.setLonghelp("Sets the method used in the extension module \
-        of Odd Wheel Cut Separation routine: 0=no extension; 1=one variable; 2=clique");
+    CbcOrClpParam p(
+        "oddwext!method", "Strategy used to search for wheel centers for the cuts found by \
+Odd Wheel Cut Separation routine", 0, 2, CBC_PARAM_INT_ODDWEXTMETHOD);
+    p.setLonghelp(
+        "Sets the method used in the extension module of Odd Wheel Cut Separation routine: \
+0=no extension; 1=one variable; 2=clique");
     p.setIntValue(2);
     parameters.push_back(p);
   }
   {
-    CbcOrClpParam p("clqstr!engthen", "Whether to perform Clique Strengthening preprocessing routine. \
-      Options represent strategies used to extend cliques.", -2, 5, CBC_PARAM_INT_CLQSTRENGTHENING);
-    p.setLonghelp("Sets the method used in the Clique Strengthening routine: \
-      0=off; 1=random; 2=degree; 3=modified degree; 4=reduced cost; \
-        5=reduced cost + modified degree;-1=off all related cuts");
-    p.setIntValue(4);
+    CbcOrClpParam p("clqstr!engthen", "Whether to perform Clique Strengthening preprocessing routine",
+                    "after", CBC_PARAM_STR_CLQSTRENGTHENING);
+    p.setLonghelp(
+        "Sets the method used in the Clique Strengthening Preprocessing routine:\
+\n\toff: do not perform clique strengthening;\
+\n\tbefore: perform clique strengthening before initialSolve;\
+\n\tafter: perform clique strengthening after initialSolve.");
+    p.append("off");
+    p.append("before");
     parameters.push_back(p);
-    /* JJHF - I added -1,-2 - as subtle way to ....
-       -1 - switch all cuts using strengthening off as very slow on some 
-       problems (cumbersome to switch off otherwise).
-       -2 - back to old clique cuts - it seems a bit unfair to obliterate
-       that work */
   }
   {
     CbcOrClpParam p("help", "Print out version, non-standard options and some help",
