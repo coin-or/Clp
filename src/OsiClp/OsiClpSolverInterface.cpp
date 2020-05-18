@@ -2083,6 +2083,8 @@ void OsiClpSolverInterface::markHotStart()
           //modelPtr_->setMoreSpecialOptions(modelPtr_->moreSpecialOptions()&(~32));
           modelPtr_->objective_ = savedObjective;
         }
+	// clear any ranging stuff
+	whichRange_ = NULL;
         return;
       } else {
         // update model
@@ -10694,6 +10696,3 @@ bool OsiClpHasNDEBUG()
   return false;
 #endif
 }
-
-/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/

@@ -1316,6 +1316,11 @@ public:
   {
     whichRange_ = array;
   }
+  /// Get range array
+  inline int * rangeArray() const
+  {
+    return whichRange_;
+  }
   /// Pass in sos stuff from AMPl
   void setSOSData(int numberSOS, const char *type,
     const int *start, const int *indices, const double *weights = NULL);
@@ -1601,6 +1606,3 @@ OSICLPLIB_EXPORT
 bool OsiClpHasNDEBUG();
 //#############################################################################
 #endif
-
-/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/
