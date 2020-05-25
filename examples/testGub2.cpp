@@ -104,7 +104,7 @@ int main(int argc, const char *argv[])
           bool gubRow = true;
           int first = numberColumns + 1;
           int last = -1;
-          for (int j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
+          for (CoinBigIndex j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
                if (element[j] != 1.0) {
                     gubRow = false;
                     break;
@@ -123,7 +123,7 @@ int main(int argc, const char *argv[])
                which[--putNonGub] = iRow;
                rowIsGub[iRow] = 0;
           } else {
-               for (int j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
+               for (CoinBigIndex j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
                     int iColumn = column[j];
                     mark[iColumn] = iRow;
                }
@@ -228,7 +228,7 @@ int main(int argc, const char *argv[])
                          lowerColumn2[numberColumns] = columnLower[k];
                     if (columnUpper[k] < 1.0e20)
                          upperColumn2[numberColumns] = columnUpper[k];
-                    for (int j = columnStart[k]; j < columnStart[k] + columnLength[k]; j++) {
+                    for (CoinBigIndex j = columnStart[k]; j < columnStart[k] + columnLength[k]; j++) {
                          int iRow = rowIsGub[row[j]];
                          if (iRow >= 0) {
                               row2[numberElements] = iRow;
