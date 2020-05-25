@@ -121,7 +121,7 @@ ClpDynamicMatrix::ClpDynamicMatrix(const ClpDynamicMatrix &rhs)
 
 /* This is the real constructor*/
 ClpDynamicMatrix::ClpDynamicMatrix(ClpSimplex *model, int numberSets,
-  int numberGubColumns, const int *starts,
+  int numberGubColumns, const CoinBigIndex *starts,
   const double *lower, const double *upper,
   const CoinBigIndex *startColumn, const int *row,
   const double *element, const double *cost,

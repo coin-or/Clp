@@ -135,7 +135,7 @@ public:
          will be sanitized so can be deleted (to avoid a very small memory leak)
       */
   ClpDynamicMatrix(ClpSimplex *model, int numberSets,
-    int numberColumns, const int *starts,
+    int numberColumns, const CoinBigIndex *starts,
     const double *lower, const double *upper,
     const CoinBigIndex *startColumn, const int *row,
     const double *element, const double *cost,

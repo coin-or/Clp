@@ -6034,7 +6034,7 @@ ClpSimplexOther::gubVersion(int *whichRows, int *whichColumns,
         }
       }
     }
-    int *gubStart = new int[numberGub + 1];
+    CoinBigIndex *gubStart = new CoinBigIndex[numberGub + 1];
     numberGub = 0;
     gubStart[0] = 0;
     for (int i = 0; i < numberRows; i++) {

@@ -44,7 +44,7 @@ int main(int argc, const char *argv[])
      }
      // find gub
      int numberRows = model.numberRows();
-     int * gubStart = new int[numberRows+1];
+     CoinBigIndex * gubStart = new CoinBigIndex[numberRows+1];
      int * gubEnd = new int[numberRows];
      int * which = new int[numberRows];
      int * whichGub = new int[numberRows];
@@ -181,7 +181,7 @@ int main(int argc, const char *argv[])
           delete [] temp2;
           delete [] which;
           numberElements -= numberGubColumns;
-          int * start2 = new int[numberGubColumns+1];
+          CoinBigIndex * start2 = new CoinBigIndex[numberGubColumns+1];
           int * row2 = new int[numberElements];
           double * element2 = new double[numberElements];
           double * cost2 = new double [numberGubColumns];
