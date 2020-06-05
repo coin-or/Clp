@@ -682,6 +682,8 @@ public:
   }
   void setRowScale(double *scale);
   void setColumnScale(double *scale);
+  /// get rid of scaling etc
+  void cleanScalingEtc();
   /// Scaling of objective
   inline double objectiveScale() const
   {

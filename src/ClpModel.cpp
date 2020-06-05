@@ -4547,6 +4547,14 @@ void ClpModel::generateCpp(FILE *fp)
   fprintf(fp, "%d  clpModel->setLogLevel(%d);\n", iValue1 == iValue2 ? 4 : 3, iValue1);
   fprintf(fp, "%d  clpModel->setLogLevel(save_logLevel);\n", iValue1 == iValue2 ? 7 : 6);
 }
-
-/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/
+// get rid of scaling etc
+void
+ClpModel::cleanScalingEtc()
+{
+  delete scaledMatrix_;
+  delete [] rowScale_;
+  delete [] columnScale_;
+  scaledMatrix_ = NULL;
+  rowScale_ = NULL;
+  columnScale_ = NULL;
+}
