@@ -704,51 +704,34 @@ int ClpSimplexPrimal::whileIterating(int valuesOption)
 #endif
     } else {
       // in values pass
-      int gotResult = 0;
-      while (!gotResult) {
-	int sequenceIn = nextSuperBasic(superBasicType, columnArray_[0]);
-	if (valuesOption > 1)
-	  superBasicType = 2;
-	if (sequenceIn < 0) {
-	  // end of values pass - initialize weights etc
-	  handler_->message(CLP_END_VALUES_PASS, messages_)
-	    << numberIterations_;
-	  primalColumnPivot_->saveWeights(this, 5);
-	  problemStatus_ = -2; // factorize now
-	  pivotRow_ = -1; // say no weights update
-	  returnCode = -4;
-	  // Clean up
-	  int i;
-	  for (i = 0; i < numberRows_ + numberColumns_; i++) {
-	    if (getColumnStatus(i) == atLowerBound || getColumnStatus(i) == isFixed)
-	      solution_[i] = lower_[i];
-	    else if (getColumnStatus(i) == atUpperBound)
-	      solution_[i] = upper_[i];
-	  }
-	  gotResult = 2;
-	  break;
-	} else {
-	  // normal
-	  //check if odd
-	  gotResult = 1;
-	  sequenceIn_ = sequenceIn;
-	  valueIn_ = solution_[sequenceIn_];
-	  lowerIn_ = lower_[sequenceIn_];
-	  upperIn_ = upper_[sequenceIn_];
-	  dualIn_ = dj_[sequenceIn_];
-	  if (valueIn_<lowerIn_+primalTolerance_) {
-	    setColumnStatus(sequenceIn_,atLowerBound);
-	    if (dualIn_>-dualTolerance_)
-	      gotResult = 0;
-	  } else if (valueIn_>upperIn_-primalTolerance_) {
-	    setColumnStatus(sequenceIn_,atUpperBound);
-	    if (dualIn_<dualTolerance_)
-	      gotResult = 0;
-	  }
-	}
+      int sequenceIn = nextSuperBasic(superBasicType, columnArray_[0]);
+      if (valuesOption > 1)
+        superBasicType = 2;
+      if (sequenceIn < 0) {
+        // end of values pass - initialize weights etc
+        handler_->message(CLP_END_VALUES_PASS, messages_)
+          << numberIterations_;
+        primalColumnPivot_->saveWeights(this, 5);
+        problemStatus_ = -2; // factorize now
+        pivotRow_ = -1; // say no weights update
+        returnCode = -4;
+        // Clean up
+        int i;
+        for (i = 0; i < numberRows_ + numberColumns_; i++) {
+          if (getColumnStatus(i) == atLowerBound || getColumnStatus(i) == isFixed)
+            solution_[i] = lower_[i];
+          else if (getColumnStatus(i) == atUpperBound)
+            solution_[i] = upper_[i];
+        }
+        break;
+      } else {
+        // normal
+        sequenceIn_ = sequenceIn;
+        valueIn_ = solution_[sequenceIn_];
+        lowerIn_ = lower_[sequenceIn_];
+        upperIn_ = upper_[sequenceIn_];
+        dualIn_ = dj_[sequenceIn_];
       }
-      if (gotResult==2)
-	break;
     }
     pivotRow_ = -1;
     sequenceOut_ = -1;
@@ -3694,8 +3677,6 @@ int ClpSimplexPrimal::nextSuperBasic(int superBasicType,
       for (; iColumn < numberRows_ + numberColumns_; iColumn++) {
         if (!flagged(iColumn)) {
           if (getStatus(iColumn) == superBasic) {
-	    if ((moreSpecialOptions_&33554432) != 0)
-	      break;
             if (fabs(solution_[iColumn] - lower_[iColumn]) <= primalTolerance_) {
               solution_[iColumn] = lower_[iColumn];
               setStatus(iColumn, atLowerBound);

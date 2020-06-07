@@ -1454,8 +1454,6 @@ public:
 	 4194304 bit - tolerances have been changed by code
 	 8388608 bit - tolerances are dynamic (at first)
 	 16777216 bit - if factorization kept can still declare optimal at once
-	 33554432 bit - use specially marked columns in values pass
-
      */
   inline void setMoreSpecialOptions(int value)
   {
@@ -1524,17 +1522,15 @@ public:
   /// To say row active in primal pivot row choice
   inline void setActive(int iRow)
   {
-    assert (iRow<numberRows_);
-    status_[iRow+numberColumns_] = static_cast< unsigned char >(status_[iRow+numberColumns_] | 128);
+    status_[iRow] = static_cast< unsigned char >(status_[iRow] | 128);
   }
   inline void clearActive(int iRow)
   {
-    assert (iRow<numberRows_);
-    status_[iRow+numberColumns_] = static_cast< unsigned char >(status_[iRow+numberColumns_] & ~128);
+    status_[iRow] = static_cast< unsigned char >(status_[iRow] & ~128);
   }
   inline bool active(int iRow) const
   {
-    return ((status_[iRow+numberColumns_] & 128) != 0);
+    return ((status_[iRow] & 128) != 0);
   }
   /// To say perturbed
   inline void setPerturbed(int iSequence)

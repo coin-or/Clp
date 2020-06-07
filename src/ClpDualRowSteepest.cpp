@@ -274,13 +274,8 @@ int ClpDualRowSteepest::pivotRow()
   }
   if (model_->numberIterations() < model_->lastBadIteration() + 200) {
     // we can't really trust infeasibilities if there is dual error
-    double dualError = model_->largestDualError();
-    double primalError = model_->largestPrimalError();
-    if (dualError > primalError) {
-      if (primalError>1.0e-8)
-	tolerance *= CoinMin(dualError / primalError, 1000.0);
-      else
-	tolerance *= 1000.0;
+    if (model_->largestDualError() > model_->largestPrimalError()) {
+      tolerance *= CoinMin(model_->largestDualError() / model_->largestPrimalError(), 1000.0);
       toleranceChanged = true;
     }
   }
