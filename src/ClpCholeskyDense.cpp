@@ -127,11 +127,15 @@ int ClpCholeskyDense::space(int numberRows) const
   int numberBlocks = (numberRows + BLOCK - 1) >> BLOCKSHIFT;
   /* allow one stripe extra*/
   numberBlocks = numberBlocks + ((numberBlocks * (numberBlocks + 1)) / 2);
-  int sizeFactor = numberBlocks * BLOCKSQ;
+  double sizeFactor = numberBlocks;
+  sizeFactor *= BLOCKSQ;
 #ifdef CHOL_COMPARE
   sizeFactor += 95000;
 #endif
-  return sizeFactor;
+  if (sizeFactor<COIN_INT_MAX)
+    return static_cast<int>(sizeFactor);
+  else
+    return -1;
 }
 /* Orders rows and saves pointer to matrix.and model */
 int ClpCholeskyDense::order(ClpInterior *model)

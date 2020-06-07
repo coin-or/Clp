@@ -2397,7 +2397,9 @@ int ClpCholeskyBase::symbolic()
       }
       Astart[numberRows_] = sizeFactor_;
     }
-    symbolic2(Astart, Arow);
+    int returnCode = symbolic2(Astart, Arow);
+    if (returnCode)
+      noMemory = true;
     if (sizeIndex_ < sizeFactor_) {
       CoinBigIndex *indices = NULL;
       try {
@@ -2438,6 +2440,8 @@ int ClpCholeskyBase::symbolic()
     noMemory = true;
   }
   if (noMemory) {
+    if (model_->messageHandler()->logLevel() > 0)
+      std::cout << "Not enough memory - using simplex" << std::endl;
     delete[] choleskyRow_;
     choleskyRow_ = NULL;
     delete[] choleskyStart_;
@@ -2499,7 +2503,7 @@ int ClpCholeskyBase::symbolic1(const int *Astart, const int *Arow)
   return sizeFactor_;
   ;
 }
-void ClpCholeskyBase::symbolic2(const int *Astart, const int *Arow)
+int ClpCholeskyBase::symbolic2(const int *Astart, const int *Arow)
 {
   int *mergeLink = clique_;
   int *marker = reinterpret_cast< int * >(workInteger_);
@@ -2659,6 +2663,11 @@ void ClpCholeskyBase::symbolic2(const int *Astart, const int *Arow)
     // allow for blocked dense
     ClpCholeskyDense dense;
     sizeFactor_ = choleskyStart_[iRow] + dense.space(nDense);
+    if (sizeFactor_ < choleskyStart_[iRow] ) {
+      /* int won't work - can't be bothered to go to CoinBigIndex
+	 as would take too long to solve?? */
+      return -1;
+    }
     firstDense_ = iRow;
     if (doKKT_) {
       // redo permute so negative ones first
@@ -2712,8 +2721,7 @@ void ClpCholeskyBase::symbolic2(const int *Astart, const int *Arow)
       sizeClique--;
     }
   }
-  //for (iRow=0;iRow<numberRows_;iRow++)
-  //clique_[iRow]=0;
+  return 0;
 }
 /* Factorize - filling in rowsDropped and returning number dropped */
 int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)

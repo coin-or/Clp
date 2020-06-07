@@ -340,7 +340,7 @@ int ClpSimplexDual::startupSolve(int ifValuesPass, double *saveDuals, int startF
           << numberDualInfeasibilitiesWithoutFree_;
         handler_->message() << CoinMessageEol;
       }
-      if (inCbcOrOther) {
+      if (inCbcOrOther && (moreSpecialOptions_&8192)==0) {
         if (numberPrimalInfeasibilities_) {
           usePrimal = perturb();
           if (perturbation_ >= 101) {
@@ -5648,7 +5648,7 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
           createRim4(false);
           progress_.modifyObjective(-COIN_DBL_MAX);
         }
-        if ((numberChangedBounds <= 0 || dualBound_ > 1.0e20 || (largestPrimalError_ > 1.0 && dualBound_ > 1.0e17)) && (numberPivots < 4 || sumPrimalInfeasibilities_ > 1.0e-6)) {
+        if ((numberChangedBounds <= 0 || dualBound_ > 1.0e20 || (largestPrimalError_ > 1.0 && dualBound_ > 1.0e17)) && (numberPivots < 2 || sumPrimalInfeasibilities_ > 1.0e2)) {
           problemStatus_ = 1; // infeasible
           if (perturbation_ == 101) {
             perturbation_ = 102; // stop any perturbations

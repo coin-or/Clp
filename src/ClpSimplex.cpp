@@ -1854,10 +1854,10 @@ int ClpSimplex::internalFactorize(int solveType)
                 columnActivityWork_[iColumn] = lower;
               } else {
                 if (fabs(lower) <= fabs(upper)) {
-                  setColumnStatus(iColumn, atLowerBound);
+		  setColumnStatus(iColumn, atLowerBound);
                   columnActivityWork_[iColumn] = lower;
                 } else {
-                  setColumnStatus(iColumn, atUpperBound);
+		  setColumnStatus(iColumn, atUpperBound);
                   columnActivityWork_[iColumn] = upper;
                 }
               }
@@ -5587,6 +5587,8 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
   if ((moreSpecialOptions_ & 524288) != 0 && (!nonLinearCost_ || !nonLinearCost_->numberInfeasibilities()) && fabs(dblParam_[ClpDualObjectiveLimit]) > 1.0e30) {
     problemStatus_ = 0;
   }
+  if (problemStatus_==10)
+    //printf("zzDual %d iterations - status %d\n",numberIterations_,problemStatus_);
   if (problemStatus_ == 10) {
     //printf("Cleaning up with primal\n");
 #ifdef COIN_DEVELOP
@@ -9157,6 +9159,18 @@ int ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     problemStatus_ = -1;
     // see if we are re-using factorization
     if (!useFactorization) {
+      // temp
+      //if (ifValuesPass && algorithm_ > 0)
+      //moreSpecialOptions_ |= 33554432;
+      if (ifValuesPass && (moreSpecialOptions_&33554432) != 0) {
+	// mark status
+	for (int i=0;i<numberColumns_+numberRows_;i++) {
+	  if ((status_[i]&7)==1)
+	    status_[i] |= 128;
+	  else
+	    status_[i] &= ~128;
+	}
+      }
       while (numberThrownOut) {
         int status = internalFactorize(ifValuesPass ? 10 : 0);
         if (status < 0)
@@ -9228,6 +9242,23 @@ int ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
           matrix_->rhsOffset(this, true); // redo rhs offset
         }
         totalNumberThrownOut += numberThrownOut;
+      }
+      if (ifValuesPass && (moreSpecialOptions_&33554432) != 0) {
+	// unmark status
+	int numberThrownOut = 0;
+	for (int i=0;i<numberColumns_+numberRows_;i++) {
+	  if ((status_[i]&128)!=0) {
+	    status_[i] &= ~128;
+	    if ((status_[i]&7) != 1 && i <numberColumns_) {
+	      // thrown out
+	      numberThrownOut++;
+	      assert (i<numberColumns_);
+	      setColumnStatus(i,superBasic);
+	    }
+	  }
+	}
+	//if (numberThrownOut)
+	//printf("zz %d thrown out\n",numberThrownOut);
       }
     } else {
       // using previous factorization - we assume fine

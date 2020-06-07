@@ -110,6 +110,14 @@ void OsiClpSolverInterface::initialSolve()
       }
     }
   }
+  int saveMoreOptions = modelPtr_->moreSpecialOptions();
+  {
+    bool takeHint;
+    OsiHintStrength strength;
+    getHintParam(OsiDoDualInInitial, takeHint, strength);
+    if ((modelPtr_->specialOptions()&0x01000000)!=0 && takeHint)
+      modelPtr_->setMoreSpecialOptions(saveMoreOptions|8192); // stay in dual
+  }
   // Check (in branch and bound)
   if ((specialOptions_ & 1024) == 0) {
     solver = new ClpSimplex(true);
@@ -785,6 +793,7 @@ disaster:
     modelPtr_->setProblemStatus(4);
   }
   modelPtr_->whatsChanged_ |= 0x30000;
+  modelPtr_->setMoreSpecialOptions(saveMoreOptions);
 #if 0
   // delete scaled matrix and rowcopy for safety
   delete modelPtr_->scaledMatrix_;
@@ -797,6 +806,16 @@ disaster:
 #endif
   delete pinfo;
 }
+  //#define SAVE_BASIS_ETC -1
+//#define SAVE_BASIS_ETC2 -1
+#ifdef SAVE_BASIS_ETC
+  static int mpsNumber = 0;
+  int oldMpsNumber=mpsNumber;
+#endif
+#ifdef SAVE_BASIS_ETC2
+  static int mpsNumber = 0;
+  int oldMpsNumber=mpsNumber;
+#endif
 //-----------------------------------------------------------------------------
 void OsiClpSolverInterface::resolve()
 {
@@ -885,6 +904,9 @@ void OsiClpSolverInterface::resolve()
   // If using Clp initialSolve and primal - just do here
   gotHint = (getHintParam(OsiDoDualInResolve, takeHint, strength));
   assert(gotHint);
+  int saveMoreOptions = modelPtr_->moreSpecialOptions();
+  if ((modelPtr_->specialOptions()&0x01000000)!=0 && takeHint)
+    modelPtr_->setMoreSpecialOptions(saveMoreOptions|8192); // stay in dual
   if (strength != OsiHintIgnore && !takeHint && solveOptions_.getSpecialOption(6)) {
     ClpSolve options = solveOptions_;
     // presolve
@@ -1120,6 +1142,18 @@ void OsiClpSolverInterface::resolve()
 #ifdef CBC_STATISTICS
         osi_dual++;
 #endif
+#ifdef SAVE_BASIS_ETC
+	mpsNumber++;
+	if (mpsNumber<SAVE_BASIS_ETC) {
+	  char name[20];
+	  sprintf(name, "resolve%2.2d.mps", mpsNumber);
+	  printf("saving %s - %d row, %d columns\n",
+		 name, getNumRows(), getNumCols());
+	  modelPtr_->writeMps(name, 0, 1);
+	  sprintf(name, "resolve_before%2.2d.bas", mpsNumber);
+	  modelPtr_->writeBasis(name, true, 0);
+	}
+#endif
         modelPtr_->dual(0, startFinishOptions);
         totalIterations += modelPtr_->numberIterations();
         if (specialScale) {
@@ -1129,6 +1163,18 @@ void OsiClpSolverInterface::resolve()
       } else {
 #ifdef CBC_STATISTICS
         osi_crunch++;
+#endif
+#ifdef SAVE_BASIS_ETC2
+	mpsNumber++;
+	if (mpsNumber<SAVE_BASIS_ETC2) {
+	  char name[40];
+	  sprintf(name, "resolve%2.2d.mps", mpsNumber);
+	  printf("saving %s - %d row, %d columns\n",
+		 name, getNumRows(), getNumCols());
+	  modelPtr_->writeMps(name, 0, 1);
+	  sprintf(name, "resolve_before%2.2d.bas", mpsNumber);
+	  modelPtr_->writeBasis(name, true, 0);
+	}
 #endif
         crunch();
         totalIterations += modelPtr_->numberIterations();
@@ -1322,6 +1368,16 @@ disaster:
   if (!modelPtr_->columnUpperWork_)
     modelPtr_->whatsChanged_ &= ~0xffff;
   modelPtr_->whatsChanged_ |= 0x30000;
+  modelPtr_->setMoreSpecialOptions(saveMoreOptions);
+#ifdef SAVE_BASIS_ETC
+  if (mpsNumber<20&&mpsNumber>oldMpsNumber) {
+    char name[20];
+    sprintf(name, "resolve_after%2.2d.bas", mpsNumber);
+    printf("saving %s - %d row, %d columns\n",
+	   name, getNumRows(), getNumCols());
+    modelPtr_->writeBasis(name, true, 0);
+  }
+#endif
 }
 #include "ClpSimplexOther.hpp"
 // Resolve an LP relaxation after problem modification (try GUB)
@@ -2050,7 +2106,7 @@ void OsiClpSolverInterface::markHotStart()
       if (small->numberIterations() > 0 && small->logLevel() > 2)
         printf("**** iterated small %d\n", small->numberIterations());
       //small->setLogLevel(0);
-      // Could be infeasible if forced one way (and other way stopped on iterations)
+      // Could be infeasible if forced one way (and other way stopped on iterations) 
       // could also be stopped on iterations
       if (small->status()) {
 #ifndef KEEP_SMALL
@@ -5356,6 +5412,7 @@ void OsiClpSolverInterface::freeCachedResults() const
     }
     if (modelPtr_->clpMatrix()) {
       modelPtr_->clpMatrix()->refresh(modelPtr_); // make sure all clean
+      modelPtr_->setClpScaledMatrix(NULL);
 #ifndef NDEBUG
       ClpPackedMatrix *clpMatrix = dynamic_cast< ClpPackedMatrix * >(modelPtr_->clpMatrix());
       if (clpMatrix) {
@@ -5391,8 +5448,7 @@ void OsiClpSolverInterface::freeCachedResults1() const
   matrixByRow_ = NULL;
   //ws_ = NULL;
   if (modelPtr_ && modelPtr_->clpMatrix()) {
-    delete modelPtr_->scaledMatrix_;
-    modelPtr_->scaledMatrix_ = NULL;
+    modelPtr_->setClpScaledMatrix(NULL);
     modelPtr_->clpMatrix()->refresh(modelPtr_); // make sure all clean
 #ifndef NDEBUG
     ClpPackedMatrix *clpMatrix = dynamic_cast< ClpPackedMatrix * >(modelPtr_->clpMatrix());
@@ -7669,6 +7725,18 @@ void OsiClpSolverInterface::crunch()
     else
       small->primal(); // No objective - use primal!
 #else
+#ifdef SAVE_BASIS_ETC2
+    mpsNumber++;
+    if (mpsNumber<SAVE_BASIS_ETC2) {
+      char name[20];
+      sprintf(name, "crunch%2.2d.mps", mpsNumber);
+      printf("saving %s - %d row, %d columns\n",
+	     name, getNumRows(), getNumCols());
+      modelPtr_->writeMps(name, 0, 1);
+      sprintf(name, "crunch%2.2d.bas", mpsNumber);
+      modelPtr_->writeBasis(name, true, 0);
+    }
+#endif
     small->moreSpecialOptions_ = modelPtr_->moreSpecialOptions_;
     small->dual(0, 7);
 #endif

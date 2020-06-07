@@ -229,9 +229,10 @@ protected:
       */
   int symbolic1(const int *Astart, const int *Arow);
   /** Symbolic2  - Fills in indices
-         Uses lower triangular so can do cliques etc
-      */
-  void symbolic2(const int *Astart, const int *Arow);
+      Uses lower triangular so can do cliques etc
+      Returns non-zero if will need too much memory
+  */
+  int symbolic2(const int *Astart, const int *Arow);
   /** Factorize - filling in rowsDropped and returning number dropped
          in integerParam.
       */

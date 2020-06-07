@@ -4126,6 +4126,7 @@ If bb and bb>0 then this is number of minor passes (if unset or 0 then 10) \n \
 cccc is bit set \n 0 - 1 Heavy probing \n 1 - 2 Make variables integer if possible (if obj value)\n \
 2 - 4 As above but even if zero objective value\n \
 7 - 128 Try and create cliques\n 8 - 256 If all +1 try hard for dominated rows\n \
+9 - 512 Even heavier probing \n \
 10 - 1024 Use a larger feasibility tolerance in presolve\n \
 11 - 2048 Try probing before creating cliques\n \
 12 - 4096 Switch off duplicate column checking for integers \n \
