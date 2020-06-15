@@ -884,12 +884,11 @@ CbcOrClpParam::setDoubleParameterWithMessage(CbcModel &model, double value, int 
       break;
     case CBC_PARAM_DBL_TIMELIMIT_BAB:
       oldValue = model.getDblParam(CbcModel::CbcMaximumSeconds);
-      {
-        //OsiClpSolverInterface * clpSolver = dynamic_cast< OsiClpSolverInterface*> (model.solver());
-        //ClpSimplex * lpSolver = clpSolver->getModelPtr();
-        //lpSolver->setMaximumSeconds(value);
-        model.setDblParam(CbcModel::CbcMaximumSeconds, value);
-      }
+      model.setDblParam(CbcModel::CbcMaximumSeconds, value);
+      break;
+    case CBC_PARAM_DBL_MAXSECONDSNIFS:
+      oldValue = model.getDblParam(CbcModel::CbcMaximumSecondsNotImprovingFeasSol);
+      model.setDblParam(CbcModel::CbcMaximumSecondsNotImprovingFeasSol, value);
       break;
     case CLP_PARAM_DBL_DUALTOLERANCE:
     case CLP_PARAM_DBL_PRIMALTOLERANCE:
@@ -930,6 +929,10 @@ CbcOrClpParam::doubleParameter(CbcModel &model) const
   case CBC_PARAM_DBL_TIMELIMIT_BAB:
     value = model.getDblParam(CbcModel::CbcMaximumSeconds);
     break;
+  case CBC_PARAM_DBL_MAXSECONDSNIFS:
+    value = model.getDblParam(CbcModel::CbcMaximumSecondsNotImprovingFeasSol);
+    break;
+
   case CLP_PARAM_DBL_DUALTOLERANCE:
   case CLP_PARAM_DBL_PRIMALTOLERANCE:
     value = doubleParameter(model.solver());
@@ -975,6 +978,11 @@ CbcOrClpParam::setIntParameterWithMessage(CbcModel &model, int value, int &retur
       oldValue = model.getIntParam(CbcModel::CbcMaxNumNode);
       model.setIntParam(CbcModel::CbcMaxNumNode, value);
       break;
+    case CBC_PARAM_INT_MAXNODESNOTIMPROVINGFS:
+      oldValue = model.getIntParam(CbcModel::CbcMaxNodesNotImprovingFeasSol);
+      model.setIntParam(CbcModel::CbcMaxNodesNotImprovingFeasSol, value);
+      break;
+
     case CBC_PARAM_INT_MAXSOLS:
       oldValue = model.getIntParam(CbcModel::CbcMaxNumSol);
       model.setIntParam(CbcModel::CbcMaxNumSol, value);
@@ -1036,6 +1044,9 @@ int CbcOrClpParam::intParameter(CbcModel &model) const
     break;
   case CBC_PARAM_INT_MAXNODES:
     value = model.getIntParam(CbcModel::CbcMaxNumNode);
+    break;
+  case CBC_PARAM_INT_MAXNODESNOTIMPROVINGFS:
+    value = model.getIntParam(CbcModel::CbcMaxNodesNotImprovingFeasSol);
     break;
   case CBC_PARAM_INT_MAXSOLS:
     value = model.getIntParam(CbcModel::CbcMaxNumSol);
@@ -2883,6 +2894,14 @@ but then the results may not be repeatable.");
     parameters.push_back(p);
   }
   {
+    CbcOrClpParam p("maxNI!FS", "Maximum number of nodes to be processed without improving the incumbent solution.",
+      COIN_INT_MAX, COIN_INT_MAX, CBC_PARAM_INT_MAXNODESNOTIMPROVINGFS);
+    p.setLonghelp(
+      "This criterion specifies that when a feasible solution is found, the search should continue\
+only if better feasible solutions were produced in the last nodes.");
+    parameters.push_back(p);
+  }
+  {
     CbcOrClpParam p("maxSaved!Solutions", "Maximum number of solutions to save",
       0, COIN_INT_MAX, CBC_PARAM_INT_MAXSAVEDSOLS);
     p.setLonghelp(
@@ -3870,6 +3889,15 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
     p.setLonghelp(
       "After this many seconds in Branch and Bound coin solver will act as if maximum nodes had been reached (time in initial solve and preprocessing not included).");
 #endif
+    parameters.push_back(p);
+  }
+  {
+    CbcOrClpParam p("secni!fs", "maximum seconds without improving the incumbent solution",
+      1e+08, COIN_DBL_MAX, CBC_PARAM_DBL_MAXSECONDSNIFS);
+    p.setLonghelp(
+      "With this stopping criterion, after a feasible solution is found, the search should continue only if the incumbent solution was update in the last seconds \
+(specified here). A discussion on why this criterion can be useful is included here: \
+https://yetanothermathprogrammingconsultant.blogspot.com/2019/11/mip-solver-stopping-criteria.html .");
     parameters.push_back(p);
   }
 #endif
