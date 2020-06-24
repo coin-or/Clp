@@ -3452,7 +3452,7 @@ dualColumn00(clpTempInfo &info)
   double acceptablePivot = info.acceptablePivot;
   double dualTolerance = info.tolerance;
   int numberToDo = info.numberToDo;
-  double tentativeTheta = 1.0e15;
+  double tentativeTheta = 1.0e25;
   int numberRemaining = 0;
   double multiplier[] = { -1.0, 1.0 };
   double dualT = -dualTolerance;
@@ -3576,7 +3576,7 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
   const int *which;
   const double *reducedCost;
   // We can also see if infeasible or pivoting on free
-  double tentativeTheta = 1.0e15;
+  double tentativeTheta = 1.0e25;
   double upperTheta = 1.0e31;
   double freePivot = acceptablePivot;
   int numberRemaining = 0;
@@ -4654,7 +4654,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector *rowArray,
       int number;
       const int *which;
       const double *reducedCost;
-      double tentativeTheta = 1.0e15;
+      double tentativeTheta = 1.0e25;
       //double upperTheta = 1.0e31;
       bestPossible = 0.0;
       //double multiplier[] = { -1.0, 1.0 };
