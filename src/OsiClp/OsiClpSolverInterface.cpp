@@ -49,6 +49,10 @@ static int hiResolveTry = 9999999;
 //#############################################################################
 void OsiClpSolverInterface::initialSolve()
 {
+#define USE_PREPROCESSING_FLAGS 2
+#if USE_PREPROCESSING_FLAGS
+  resolve();
+#endif
 #define KEEP_SMALL
 #ifdef KEEP_SMALL
   if (smallModel_) {
@@ -58,6 +62,8 @@ void OsiClpSolverInterface::initialSolve()
     smallModel_ = NULL;
   }
 #endif
+  // reset random
+  modelPtr_->randomNumberGenerator()->setSeed(123456789);
   if ((specialOptions_ & 2097152) != 0 || (specialOptions_ & 4194304) != 0) {
     bool takeHint;
     OsiHintStrength strength;
@@ -838,6 +844,8 @@ void OsiClpSolverInterface::resolve()
     }
   }
 #endif
+  // reset random
+  modelPtr_->randomNumberGenerator()->setSeed(123456789);
   if ((stuff_.solverOptions_ & 65536) != 0) {
     modelPtr_->fastDual2(&stuff_);
     return;
@@ -871,6 +879,61 @@ void OsiClpSolverInterface::resolve()
       return;
     }
   }
+#if USE_PREPROCESSING_FLAGS
+  int saveSpecialOptions = specialOptions_;
+  bool takeHintPre[2];
+  OsiHintStrength strengthPre[2];
+  getHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
+  getHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
+  if (preProcessingMode()) {
+    if (preProcessingMode()==1)
+      setHintParam(OsiDoPresolveInResolve, false, OsiHintTry);
+    specialOptions_ |= 2048; // no crunch
+#if USE_PREPROCESSING_FLAGS == 1
+    // Is basis correct?
+    int numberRows = modelPtr_->numberRows();
+    double * rowActivity = modelPtr_->primalRowSolution();
+    double * rowActivitySave = CoinCopyOfArray(rowActivity,numberRows);
+    int numberColumns = modelPtr_->numberColumns();
+    double * columnActivity = modelPtr_->primalColumnSolution();
+    double * columnActivitySave = CoinCopyOfArray(columnActivity,numberColumns);
+    int nTotal = numberRows+numberColumns;
+    setBasis(basis_, modelPtr_);
+    unsigned char * status = modelPtr_->statusArray();
+    //unsigned char * statusSave = CoinCopyOfArray(status,nTotal);
+    int numberSlacks = 0;
+    for (int i=numberColumns;i<nTotal;i++) {
+      if ((status[i]&7)==1)
+	numberSlacks++;
+    }
+    int saveMaxIts = modelPtr_->maximumIterations();
+    modelPtr_->setMaximumIterations(0);
+    //modelPtr_->setLogLevel(3); //temp
+    modelPtr_->dual(0);
+    modelPtr_->setMaximumIterations(saveMaxIts);
+    // if any thrown out
+    int numberSlacks2 = 0;
+    for (int i=numberColumns;i<nTotal;i++) {
+      if ((status[i]&7)==1)
+	numberSlacks2++;
+    }
+    if (numberSlacks2>numberSlacks) {
+      // go to primal
+      basis_ = getBasis(modelPtr_);
+      memcpy(rowActivity,rowActivitySave,numberRows*sizeof(double));
+      memcpy(columnActivity,columnActivitySave,numberColumns*sizeof(double));
+      setHintParam(OsiDoDualInResolve, false, OsiHintTry);
+    } else {
+      // think ?
+    }
+    delete [] rowActivitySave;
+    delete [] columnActivitySave;
+#else
+    // always primal
+    setHintParam(OsiDoDualInResolve, false, OsiHintTry);
+#endif
+  }
+#endif
   int totalIterations = 0;
   bool abortSearch = false;
   ClpObjective *savedObjective = NULL;
@@ -1369,6 +1432,11 @@ disaster:
     modelPtr_->whatsChanged_ &= ~0xffff;
   modelPtr_->whatsChanged_ |= 0x30000;
   modelPtr_->setMoreSpecialOptions(saveMoreOptions);
+#ifdef USE_PREPROCESSING_FLAGS
+  specialOptions_ = specialOptions_;
+  setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
+  setHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
+#endif
 #ifdef SAVE_BASIS_ETC
   if (mpsNumber<20&&mpsNumber>oldMpsNumber) {
     char name[20];

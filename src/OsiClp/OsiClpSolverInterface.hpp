@@ -1197,6 +1197,17 @@ public:
     Safe as const because #modelPtr_ is mutable.
   */
   void setSpecialOptionsMutable(unsigned int value) const;
+  /** Cbc preprocessing mode
+      0 - not, 1 - pre, 2 -post .
+      CglPreProcess does not know about Clp!
+      This is so Clp can ignore some hints if it thinks wise.
+  */
+  inline void setPreProcessingMode(int value)
+  { specialOptions_ &= ~(33554432|67108864);
+    specialOptions_ |= value*33554432; }
+  /// Get preprocessing mode
+  inline int preProcessingMode() const
+  { return (specialOptions_ &(33554432|67108864))>>25;}
 
   //@}
 
@@ -1490,6 +1501,8 @@ protected:
       1048576 Don't recompute ray after crunch
       2097152 
       8388608 Odd integers e.g. semi-continuous
+      33554432 In cbc preprocessing
+      67108864 In cbc postprocessing
   */
   mutable unsigned int specialOptions_;
   /// Copy of model when option 131072 set
