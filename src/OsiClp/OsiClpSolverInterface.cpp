@@ -51,7 +51,10 @@ void OsiClpSolverInterface::initialSolve()
 {
 #define USE_PREPROCESSING_FLAGS 2
 #if USE_PREPROCESSING_FLAGS
-  resolve();
+  if (preProcessingMode()) {
+    resolve();
+    return;
+  }
 #endif
 #define KEEP_SMALL
 #ifdef KEEP_SMALL
