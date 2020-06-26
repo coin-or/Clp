@@ -31,7 +31,7 @@
 ########################################################################
 
 # Set these up to provide some uniformity in naming while also conforming
-# to Gnu directory standards. For reasons known only to the autoconf
+# to GNU directory standards. For reasons known only to the autoconf
 # developers, autoconf leaves datadir = $(datarootdir) but forces docdir
 # to $(datarootdir)/doc/$(PACKAGE_TARNAME).
 
@@ -624,6 +624,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 pkgdocdir = $(docdir)
 
+# The directory where to install .pc files is also always the same.
+pkgconfiglibdir = $(libdir)/pkgconfig
+
 # doxydocdir is the top-level directory for doxygen documentation. It holds
 # the tag file and possibly the PDF or Postscript version. doxyhtmldir is
 # typically a subdirectory containing all the files doxygen creates for
@@ -634,7 +637,7 @@ doxyhtmldir = $(doxydocdir)/html
 ########################################################################
 #                    Documentation installation                        #
 ########################################################################
-DocFiles = README AUTHORS LICENSE
+DocFiles = README README.md AUTHORS AUTHORS.md LICENSE LICENSE.md
 COIN_HAS_DOXYGEN = @COIN_HAS_DOXYGEN_TRUE@TRUE
 COIN_HAS_LATEX = @COIN_HAS_LATEX_TRUE@TRUE
 
@@ -646,15 +649,7 @@ DOXYTAG_EDIT = sed -e 's|@baredocdir_nosub@|$(datarootdir)/doc|g'
 #                               libClp                                 #
 ########################################################################
 
-# Let the code know we're building the Clp library.
-
-########################################################################
-#                            Additional flags                          #
-########################################################################
-
-# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
-# is built within Clp
-AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCOIN_HAS_CLP
+# Let the code know we're building the Clp libraries.
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
@@ -720,6 +715,14 @@ clp_SOURCES = ClpMain.cpp
 # List all additionally required libraries
 clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 
+########################################################################
+#                            Additional flags                          #
+########################################################################
+
+# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
+# is built within Clp
+AM_CPPFLAGS = $(CLPLIB_CFLAGS) -DCOIN_HAS_CLP
+
 # Use additional libtool flags
 AM_LDFLAGS = $(LT_LDFLAGS)
 
@@ -728,7 +731,7 @@ AM_LDFLAGS = $(LT_LDFLAGS)
 ########################################################################
 
 # Here list all the header files that are required by a user of the library,
-# and that therefore should be installed in 'include/coin'
+# and that therefore should be installed in 'include/coin-or'
 includecoindir = $(pkgincludedir)
 
 # needed by Cbc
@@ -1524,33 +1527,6 @@ uninstall-doc:
 	  rm -f "$(DESTDIR)$(pkgdocdir)/$$file"; \
 	done
 	rmdir $(DESTDIR)$(pkgdocdir) || true
-
-########################################################################
-#                         Maintainer Stuff                             #
-########################################################################
-
-# Make sure acinclude is using most recent coin.m4
-@MAINTAINER_MODE_TRUE@$(srcdir)/acinclude.m4: $(BUILDTOOLSDIR)/coin.m4
-@MAINTAINER_MODE_TRUE@	cat $(LIBTOOLM4) $< > $@
-
-# Make sure the autotools scripts are up to date
-@MAINTAINER_MODE_TRUE@$(AUX_DIR)/install-sh: $(BUILDTOOLSDIR)/install-sh
-@MAINTAINER_MODE_TRUE@	cp $< $@
-
-@MAINTAINER_MODE_TRUE@$(AUX_DIR)/missing: $(BUILDTOOLSDIR)/missing
-@MAINTAINER_MODE_TRUE@	cp $< $@
-
-@MAINTAINER_MODE_TRUE@$(AUX_DIR)/config.guess: $(BUILDTOOLSDIR)/config.guess
-@MAINTAINER_MODE_TRUE@	cp $< $@
-
-@MAINTAINER_MODE_TRUE@$(AUX_DIR)/config.sub: $(BUILDTOOLSDIR)/config.sub
-@MAINTAINER_MODE_TRUE@	cp $< $@
-
-@MAINTAINER_MODE_TRUE@$(AUX_DIR)/depcomp: $(BUILDTOOLSDIR)/depcomp
-@MAINTAINER_MODE_TRUE@	cp $< $@
-
-@MAINTAINER_MODE_TRUE@$(AUX_DIR)/ltmain.sh: $(BUILDTOOLSDIR)/ltmain.sh
-@MAINTAINER_MODE_TRUE@	cp $< $@
 
 .PHONY: install-doc uninstall-doc \
 	doxygen-docs pdf-doxygen-docs clean-doxygen-docs \

@@ -17080,9 +17080,10 @@ fi
 
 
   COIN_PKG_CONFIG_PATH="${expanded_libdir}/pkgconfig:${COIN_PKG_CONFIG_PATH}"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: $PKG_CONFIG path is \"$COIN_PKG_CONFIG_PATH\"" >&5
+  if test -n "$PKG_CONFIG"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: $PKG_CONFIG path is \"$COIN_PKG_CONFIG_PATH\"" >&5
 $as_echo "$as_me: $PKG_CONFIG path is \"$COIN_PKG_CONFIG_PATH\"" >&6;}
-
+  fi
 
 
 
@@ -17306,6 +17307,11 @@ $as_echo "$as_me: coinutils_pcfiles is \"$coinutils_pcfiles\"" >&6;}
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_coinutils" >&5
 $as_echo "$coin_has_coinutils" >&6; }
+
+      if test "$PKG_CONFIG$coin_has_coinutils" = no ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Check for CoinUtils via pkg-config was skipped as no pkg-config available. If CoinUtils was meant to be found, then consider installing pkg-config or provide appropriate --with-coinutils-lflags, --with-coinutils-cflags, etc." >&5
+$as_echo "$as_me: WARNING: Check for CoinUtils via pkg-config was skipped as no pkg-config available. If CoinUtils was meant to be found, then consider installing pkg-config or provide appropriate --with-coinutils-lflags, --with-coinutils-cflags, etc." >&2;}
+      fi
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_coinutils due to COIN_SKIP_PROJECTS" >&5
 $as_echo "$coin_has_coinutils due to COIN_SKIP_PROJECTS" >&6; }
@@ -17573,6 +17579,11 @@ $as_echo "$as_me: osi_pcfiles is \"$osi_pcfiles\"" >&6;}
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_osi" >&5
 $as_echo "$coin_has_osi" >&6; }
+
+      if test "$PKG_CONFIG$coin_has_osi" = no ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Check for Osi via pkg-config was skipped as no pkg-config available. If Osi was meant to be found, then consider installing pkg-config or provide appropriate --with-osi-lflags, --with-osi-cflags, etc." >&5
+$as_echo "$as_me: WARNING: Check for Osi via pkg-config was skipped as no pkg-config available. If Osi was meant to be found, then consider installing pkg-config or provide appropriate --with-osi-lflags, --with-osi-cflags, etc." >&2;}
+      fi
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_osi due to COIN_SKIP_PROJECTS" >&5
 $as_echo "$coin_has_osi due to COIN_SKIP_PROJECTS" >&6; }
@@ -17830,6 +17841,11 @@ $as_echo "$as_me: ositests_pcfiles is \"$ositests_pcfiles\"" >&6;}
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_ositests" >&5
 $as_echo "$coin_has_ositests" >&6; }
+
+      if test "$PKG_CONFIG$coin_has_ositests" = no ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Check for OsiTests via pkg-config was skipped as no pkg-config available. If OsiTests was meant to be found, then consider installing pkg-config or provide appropriate --with-ositests-lflags, --with-ositests-cflags, etc." >&5
+$as_echo "$as_me: WARNING: Check for OsiTests via pkg-config was skipped as no pkg-config available. If OsiTests was meant to be found, then consider installing pkg-config or provide appropriate --with-ositests-lflags, --with-ositests-cflags, etc." >&2;}
+      fi
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_ositests due to COIN_SKIP_PROJECTS" >&5
 $as_echo "$coin_has_ositests due to COIN_SKIP_PROJECTS" >&6; }
@@ -18063,6 +18079,11 @@ $as_echo "$as_me: sample_pcfiles is \"$sample_pcfiles\"" >&6;}
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_sample" >&5
 $as_echo "$coin_has_sample" >&6; }
+
+      if test "$PKG_CONFIG$coin_has_sample" = no ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Check for Sample via pkg-config was skipped as no pkg-config available. If Sample was meant to be found, then consider installing pkg-config or provide appropriate --with-sample-lflags, --with-sample-cflags, etc." >&5
+$as_echo "$as_me: WARNING: Check for Sample via pkg-config was skipped as no pkg-config available. If Sample was meant to be found, then consider installing pkg-config or provide appropriate --with-sample-lflags, --with-sample-cflags, etc." >&2;}
+      fi
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_sample due to COIN_SKIP_PROJECTS" >&5
 $as_echo "$coin_has_sample due to COIN_SKIP_PROJECTS" >&6; }
@@ -18294,6 +18315,11 @@ $as_echo "$as_me: netlib_pcfiles is \"$netlib_pcfiles\"" >&6;}
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_netlib" >&5
 $as_echo "$coin_has_netlib" >&6; }
+
+      if test "$PKG_CONFIG$coin_has_netlib" = no ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Check for Netlib via pkg-config was skipped as no pkg-config available. If Netlib was meant to be found, then consider installing pkg-config or provide appropriate --with-netlib-lflags, --with-netlib-cflags, etc." >&5
+$as_echo "$as_me: WARNING: Check for Netlib via pkg-config was skipped as no pkg-config available. If Netlib was meant to be found, then consider installing pkg-config or provide appropriate --with-netlib-lflags, --with-netlib-cflags, etc." >&2;}
+      fi
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_netlib due to COIN_SKIP_PROJECTS" >&5
 $as_echo "$coin_has_netlib due to COIN_SKIP_PROJECTS" >&6; }
@@ -19134,6 +19160,11 @@ $as_echo "$as_me: mumps_pcfiles is \"$mumps_pcfiles\"" >&6;}
 
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_mumps" >&5
 $as_echo "$coin_has_mumps" >&6; }
+
+      if test "$PKG_CONFIG$coin_has_mumps" = no ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Check for MUMPS via pkg-config was skipped as no pkg-config available. If MUMPS was meant to be found, then consider installing pkg-config or provide appropriate --with-mumps-lflags, --with-mumps-cflags, etc." >&5
+$as_echo "$as_me: WARNING: Check for MUMPS via pkg-config was skipped as no pkg-config available. If MUMPS was meant to be found, then consider installing pkg-config or provide appropriate --with-mumps-lflags, --with-mumps-cflags, etc." >&2;}
+      fi
   else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: $coin_has_mumps due to COIN_SKIP_PROJECTS" >&5
 $as_echo "$coin_has_mumps due to COIN_SKIP_PROJECTS" >&6; }
