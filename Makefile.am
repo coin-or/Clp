@@ -13,7 +13,6 @@ include BuildTools/Makemain.inc
 
 SUBDIRS = src
 
-pkgconfiglibdir = $(libdir)/pkgconfig
 pkgconfiglib_DATA = clp.pc
 
 # Build OsiClp only if Osi is available.
