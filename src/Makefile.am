@@ -2,7 +2,6 @@
 # All Rights Reserved.
 # This file is distributed under the Eclipse Public License.
 
-
 # Author:  Andreas Waechter           IBM    2006-04-13
 
 include $(top_srcdir)/BuildTools/Makemain.inc
@@ -11,9 +10,7 @@ include $(top_srcdir)/BuildTools/Makemain.inc
 #                               libClp                                 #
 ########################################################################
 
-# Let the code know we're building the Clp library.
-
-AM_CPPFLAGS = $(CLPLIB_CFLAGS)
+# Let the code know we're building the Clp libraries.
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
@@ -169,6 +166,8 @@ clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 #                            Additional flags                          #
 ########################################################################
 
+AM_CPPFLAGS = $(CLPLIB_CFLAGS)
+
 # CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
 # is built within Clp
 AM_CPPFLAGS += -DCOIN_HAS_CLP
@@ -181,7 +180,7 @@ AM_LDFLAGS = $(LT_LDFLAGS)
 ########################################################################
 
 # Here list all the header files that are required by a user of the library,
-# and that therefore should be installed in 'include/coin'
+# and that therefore should be installed in 'include/coin-or'
 includecoindir = $(pkgincludedir)
 includecoin_HEADERS = \
 	Clp_C_Interface.h \
