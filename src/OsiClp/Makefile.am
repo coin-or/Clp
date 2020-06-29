@@ -1,7 +1,7 @@
 # Copyright (C) 2006 International Business Machines and others.
 # All Rights Reserved.
 # This file is distributed under the Eclipse Public License.
-
+#
 # Author:  Andreas Waechter           IBM    2006-04-13
 
 include $(top_srcdir)/BuildTools/Makemain.inc
@@ -31,7 +31,6 @@ AM_CPPFLAGS = -I$(srcdir)/.. $(OSICLPLIB_CFLAGS)
 
 # Here list all the header files that are required by a user of the library,
 # and that therefore should be installed in 'include/coin-or'
-
 includecoindir = $(pkgincludedir)
 includecoin_HEADERS = OsiClpSolverInterface.hpp
 

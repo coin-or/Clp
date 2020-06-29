@@ -17,23 +17,8 @@
 # Copyright (C) 2006 International Business Machines and others.
 # All Rights Reserved.
 # This file is distributed under the Eclipse Public License.
-
+#
 # Author:  Andreas Waechter           IBM    2006-04-13
-
-# Copyright (C) 2006, 2007 International Business Machines and others.
-# All Rights Reserved.
-# This file is distributed under the Eclipse Public License.
-
-# Author:  Andreas Waechter           IBM    2006-04-13
-
-########################################################################
-#        Variables for documentation and data directories              #
-########################################################################
-
-# Set these up to provide some uniformity in naming while also conforming
-# to GNU directory standards. For reasons known only to the autoconf
-# developers, autoconf leaves datadir = $(datarootdir) but forces docdir
-# to $(datarootdir)/doc/$(PACKAGE_TARNAME).
 
 VPATH = @srcdir@
 am__is_gnu_make = { \
@@ -111,11 +96,6 @@ host_triplet = @host@
 # Build OsiClp only if Osi is available.
 @COIN_HAS_OSI_TRUE@am__append_1 = src/OsiClp
 @COIN_HAS_OSI_TRUE@am__append_2 = osi-clp.pc
-
-# We don't want to compile the test subdirectory unless the test target
-# is specified.  But we need to list it as subdirectory to make sure that
-# it's included in the tarball.
-@ALWAYS_FALSE@am__append_3 = test
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ac_clp_aboca.m4 \
@@ -216,7 +196,7 @@ am__define_uniq_tagged_files = \
 ETAGS = etags
 CTAGS = ctags
 CSCOPE = cscope
-DIST_SUBDIRS = src src/OsiClp test
+DIST_SUBDIRS = src src/OsiClp
 pkgdatadir = $(datadir)/$(PACKAGE_TARNAME)
 pkgincludedir = $(includedir)/coin-or
 ACLOCAL = @ACLOCAL@
@@ -375,8 +355,6 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 pkgdocdir = $(docdir)
-
-# The directory where to install .pc files is also always the same.
 pkgconfiglibdir = $(libdir)/pkgconfig
 
 # doxydocdir is the top-level directory for doxygen documentation. It holds
@@ -385,22 +363,15 @@ pkgconfiglibdir = $(libdir)/pkgconfig
 # html documentation.
 doxydocdir = $(pkgdocdir)/doxydoc
 doxyhtmldir = $(doxydocdir)/html
-
-########################################################################
-#                    Documentation installation                        #
-########################################################################
 DocFiles = README README.md AUTHORS AUTHORS.md LICENSE LICENSE.md
 COIN_HAS_DOXYGEN = @COIN_HAS_DOXYGEN_TRUE@TRUE
 COIN_HAS_LATEX = @COIN_HAS_LATEX_TRUE@TRUE
-
-# Needless to say, it's important that baredocdir_nosub not be a target for
-# autoconf substitution.
 DOXYTAG_EDIT = sed -e 's|@baredocdir_nosub@|$(datarootdir)/doc|g'
 
 ########################################################################
 #            Subdirectories and installation of .pc files              #
 ########################################################################
-SUBDIRS = src $(am__append_1) $(am__append_3)
+SUBDIRS = src $(am__append_1)
 pkgconfiglib_DATA = clp.pc $(am__append_2)
 all: all-recursive
 

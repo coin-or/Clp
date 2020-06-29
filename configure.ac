@@ -1,15 +1,14 @@
 # Copyright (C) 2006 International Business Machines.
 # All Rights Reserved.
 # This file is distributed under the Eclipse Public License.
-
-
+#
 # Author:  Andreas Waechter            IBM    2006-04-13
 
 #############################################################################
 #                       Names and other basic things                        #
 #############################################################################
 
-AC_INIT([Clp],[trunk],[https://github.com/coin-or/Clp/issues/new],[coin-or-clp],[https://github.com/coin-or/Clp])
+AC_INIT([Clp],[devel],[https://github.com/coin-or/Clp/issues/new],[coin-or-clp],[https://github.com/coin-or/Clp])
 
 AC_COPYRIGHT([
 Copyright 2006 International Business Machines and others.
@@ -19,11 +18,9 @@ under the Eclipse Public License.])
 
 # List one file in the package so that the configure script can test
 # whether the package is actually there.
-
 AC_CONFIG_SRCDIR(src/ClpSimplex.cpp)
 
 # Do some initialization work (version numbers, change prefix default, ...)
-
 AC_COIN_INITIALIZE
 
 #############################################################################
@@ -31,15 +28,12 @@ AC_COIN_INITIALIZE
 #############################################################################
 
 # Get the name of the C++ compiler and appropriate compiler options.
-
 AC_COIN_PROG_CXX
 
 # This is a C++ package, set the language accordingly.
-
 AC_LANG_PUSH(C++)
 
 # Initialize libtool
-
 AC_COIN_PROG_LIBTOOL
 
 # set RPATH_FLAGS to the compiler link flags required to hardcode location
@@ -52,7 +46,6 @@ AC_COIN_RPATH_FLAGS([$expanded_libdir])
 #############################################################################
 
 # Check for cmath/math.h, cfloat/float.h, cieeefp/ieeefp.h
-
 AC_COIN_CHECK_MATH_HDRS
 
 #############################################################################
@@ -89,21 +82,18 @@ AC_COIN_CHK_LIB(AMD,[ClpLib],[-lamd],[-I/usr/include/suitesparse],[],
 # CHOLMOD from UFL
 # Requires AMD, but apparently not for a link check with dynamic libraries.
 # cholmod.h
-
 AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],[cholmod_start])
 
 # MUMPS. Check first for ThirdParty/MUMPS, on the assumption that if the user
 # bothered to build it, we should use it. If it's not present, try for a
 # system installation. If we find it, define CLP_HAS_MUMPS for export to code
 # using clp.
-
 AC_COIN_CHK_PKG(MUMPS,[ClpLib],[coinmumps])
 if test $coin_has_mumps = no ; then
   AC_COIN_CHK_LIB(MUMPS,[ClpLib],[-ldmumps],[-I/usr/include/MUMPS],[],[dmumps_c])
 fi
 
 # WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
-
 AC_ARG_WITH([wsmp],
             AC_HELP_STRING([--with-wsmp],[specify WSMP library]),
             [have_wsmp=yes; wsmp_lflags=$withval],
@@ -132,7 +122,6 @@ AC_COIN_CHK_GNU_READLINE([ClpLib])
 
 # In case this is a VPATH configuration we need to make sure that the
 # input files for the examples are available in the VPATH directory.
-
 AC_COIN_EXAMPLE_FILES([examples/hello.mps examples/input.130])
 AC_COIN_EXAMPLE_FILES([examples/g.tiny examples/gparm.tiny])
 

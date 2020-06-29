@@ -4,9 +4,9 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@/coin-or
 
-Name: Clp
+Name: @PACKAGE_NAME@
 Description: COIN-OR Linear Programming Solver
-URL: https://github.com/coin-or/Clp
+URL: @PACKAGE_URL@
 Version: @PACKAGE_VERSION@
 Cflags: -I${includedir}
 @COIN_STATIC_BUILD_FALSE@Libs: -L${libdir} -lClp
