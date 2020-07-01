@@ -45,8 +45,10 @@ if(APPLE)
 endif(APPLE)
 
 # ZLIB
-find_package(ZLIB)
-if(ZLIB_FOUND)
+if(NOT TARGET ZLIB::ZLIB)
+  find_package(ZLIB)
+endif()
+if(ZLIB_FOUND OR TARGET ZLIB::ZLIB)
   set(HAVE_ZLIB_H "1" CACHE INTERNAL "Use zlib")
   set(COIN_HAS_ZLIB "1" CACHE INTERNAL "Use zlib")
 endif()
@@ -61,9 +63,13 @@ else()
 endif()
 
 # CoinUtils
-find_package(CoinUtils REQUIRED CONFIG)
+if(NOT TARGET Coin::CoinUtils)
+  find_package(CoinUtils REQUIRED CONFIG)
+endif()
 # Osi
-find_package(Osi REQUIRED CONFIG)
+if(NOT TARGET Coin::Osi)
+  find_package(Osi REQUIRED CONFIG)
+endif()
 
 include(CheckEnv)
 include(CTest)
