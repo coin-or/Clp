@@ -201,7 +201,7 @@ int Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
             }
           }
           if (iCol >= 0 && colsol[iCol] > lower[iCol] + fixTolerance && colsol[iCol] < upper[iCol] - fixTolerance) {
-            whenUsed_[i] = iteration;
+            whenUsed_[iCol] = iteration;
             n++;
           }
         }
@@ -267,7 +267,7 @@ int Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
             }
           }
           if (iCol >= 0 && colsol[iCol] > lower[iCol] + fixTolerance && colsol[iCol] < upper[iCol] - fixTolerance) {
-            whenUsed_[i] = iteration;
+            whenUsed_[iCol] = iteration;
             n++;
           }
         }

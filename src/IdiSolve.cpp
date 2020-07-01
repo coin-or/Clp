@@ -285,8 +285,8 @@ Idiot::IdiSolve(
             COIN_DETAIL_PRINT(printf("Can't handle rows where both bounds >1.0e10 %d %g\n",
               i, smaller));
           nbad++;
-          if (rowupper[i] < 0.0 || rowlower[i] > 0.0)
-            abort();
+          //if (rowupper[i] < 0.0 || rowlower[i] > 0.0)
+	  //abort();
           if (fabs(rowupper[i]) > fabs(rowlower[i])) {
             rowlower[i] = -0.9e10;
             smaller = rowlower[i];

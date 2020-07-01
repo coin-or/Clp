@@ -48,6 +48,10 @@ public:
     double *costIncrease, int *sequenceIncrease,
     double *costDecrease, int *sequenceDecrease,
     double *valueIncrease = NULL, double *valueDecrease = NULL);
+  /// Just for Cbc
+  void dualCbcRanging(int numberCheck, const int *which,
+    double *costIncrease, double *costDecrease,
+    double *valueIncrease = NULL, double *valueDecrease = NULL);
   /** Primal ranging.
          This computes increase/decrease in value for each given variable and corresponding
          sequence numbers which would change basis.  Sequence numbers are 0..numberColumns
@@ -184,7 +188,7 @@ private:
   void checkDualRatios(CoinIndexedVector *rowArray,
     CoinIndexedVector *columnArray,
     double &costIncrease, int &sequenceIncrease, double &alphaIncrease,
-    double &costDecrease, int &sequenceDecrease, double &alphaDecrease);
+		       double &costDecrease, int &sequenceDecrease, double &alphaDecrease);
   /**
          Row array has pivot column
          This is used in primal ranging

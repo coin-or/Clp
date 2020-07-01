@@ -49,13 +49,6 @@ static int hiResolveTry = 9999999;
 //#############################################################################
 void OsiClpSolverInterface::initialSolve()
 {
-#define USE_PREPROCESSING_FLAGS 2
-#if USE_PREPROCESSING_FLAGS
-  if (preProcessingMode()) {
-    resolve();
-    return;
-  }
-#endif
 #define KEEP_SMALL
 #ifdef KEEP_SMALL
   if (smallModel_) {
@@ -65,8 +58,6 @@ void OsiClpSolverInterface::initialSolve()
     smallModel_ = NULL;
   }
 #endif
-  // reset random
-  modelPtr_->randomNumberGenerator()->setSeed(123456789);
   if ((specialOptions_ & 2097152) != 0 || (specialOptions_ & 4194304) != 0) {
     bool takeHint;
     OsiHintStrength strength;
@@ -847,8 +838,6 @@ void OsiClpSolverInterface::resolve()
     }
   }
 #endif
-  // reset random
-  modelPtr_->randomNumberGenerator()->setSeed(123456789);
   if ((stuff_.solverOptions_ & 65536) != 0) {
     modelPtr_->fastDual2(&stuff_);
     return;
@@ -882,61 +871,6 @@ void OsiClpSolverInterface::resolve()
       return;
     }
   }
-#if USE_PREPROCESSING_FLAGS
-  int saveSpecialOptions = specialOptions_;
-  bool takeHintPre[2];
-  OsiHintStrength strengthPre[2];
-  getHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
-  getHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
-  if (preProcessingMode()) {
-    if (preProcessingMode()==1)
-      setHintParam(OsiDoPresolveInResolve, false, OsiHintTry);
-    specialOptions_ |= 2048; // no crunch
-#if USE_PREPROCESSING_FLAGS == 1
-    // Is basis correct?
-    int numberRows = modelPtr_->numberRows();
-    double * rowActivity = modelPtr_->primalRowSolution();
-    double * rowActivitySave = CoinCopyOfArray(rowActivity,numberRows);
-    int numberColumns = modelPtr_->numberColumns();
-    double * columnActivity = modelPtr_->primalColumnSolution();
-    double * columnActivitySave = CoinCopyOfArray(columnActivity,numberColumns);
-    int nTotal = numberRows+numberColumns;
-    setBasis(basis_, modelPtr_);
-    unsigned char * status = modelPtr_->statusArray();
-    //unsigned char * statusSave = CoinCopyOfArray(status,nTotal);
-    int numberSlacks = 0;
-    for (int i=numberColumns;i<nTotal;i++) {
-      if ((status[i]&7)==1)
-	numberSlacks++;
-    }
-    int saveMaxIts = modelPtr_->maximumIterations();
-    modelPtr_->setMaximumIterations(0);
-    //modelPtr_->setLogLevel(3); //temp
-    modelPtr_->dual(0);
-    modelPtr_->setMaximumIterations(saveMaxIts);
-    // if any thrown out
-    int numberSlacks2 = 0;
-    for (int i=numberColumns;i<nTotal;i++) {
-      if ((status[i]&7)==1)
-	numberSlacks2++;
-    }
-    if (numberSlacks2>numberSlacks) {
-      // go to primal
-      basis_ = getBasis(modelPtr_);
-      memcpy(rowActivity,rowActivitySave,numberRows*sizeof(double));
-      memcpy(columnActivity,columnActivitySave,numberColumns*sizeof(double));
-      setHintParam(OsiDoDualInResolve, false, OsiHintTry);
-    } else {
-      // think ?
-    }
-    delete [] rowActivitySave;
-    delete [] columnActivitySave;
-#else
-    // always primal
-    setHintParam(OsiDoDualInResolve, false, OsiHintTry);
-#endif
-  }
-#endif
   int totalIterations = 0;
   bool abortSearch = false;
   ClpObjective *savedObjective = NULL;
@@ -1435,11 +1369,6 @@ disaster:
     modelPtr_->whatsChanged_ &= ~0xffff;
   modelPtr_->whatsChanged_ |= 0x30000;
   modelPtr_->setMoreSpecialOptions(saveMoreOptions);
-#ifdef USE_PREPROCESSING_FLAGS
-  specialOptions_ = specialOptions_;
-  setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
-  setHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
-#endif
 #ifdef SAVE_BASIS_ETC
   if (mpsNumber<20&&mpsNumber>oldMpsNumber) {
     char name[20];
@@ -2261,15 +2190,11 @@ void OsiClpSolverInterface::markHotStart()
       }
       double *downRange = new double[numberToDo];
       double *upRange = new double[numberToDo];
-      int *whichDown = new int[numberToDo];
-      int *whichUp = new int[numberToDo];
       smallModel_->setFactorization(*factorization_);
       smallModel_->gutsOfSolution(NULL, NULL, false);
       // Tell code we can increase costs in some cases
       smallModel_->setCurrentDualTolerance(0.0);
-      static_cast< ClpSimplexOther * >(smallModel_)->dualRanging(numberToDo, which, upRange, whichUp, downRange, whichDown);
-      delete[] whichDown;
-      delete[] whichUp;
+      static_cast< ClpSimplexOther * >(smallModel_)->dualCbcRanging(numberToDo, which, upRange, downRange);
       delete[] which;
       rowActivity_ = upRange;
       columnActivity_ = downRange;
@@ -2859,7 +2784,15 @@ void OsiClpSolverInterface::unmarkHotStart()
         modelPtr_->columnScale_ = NULL;
       }
     }
+#if 1
+    if (modelPtr_->factorization())
+      delete factorization_;
+    else
+      modelPtr_->swapFactorization(factorization_);
+#else
+    modelPtr_->swapFactorization(factorization_);
     delete factorization_;
+#endif
     delete[] spareArrays_;
     smallModel_ = NULL;
     spareArrays_ = NULL;
@@ -4046,9 +3979,9 @@ void OsiClpSolverInterface::setObjective(const double *array)
 */
 void OsiClpSolverInterface::setColLower(const double *array)
 {
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
-  modelPtr_->whatsChanged_ &= (0x1ffff & 128);
+  modelPtr_->whatsChanged_ &= 0x1ff7f;
   CoinMemcpyN(array, modelPtr_->numberColumns(),
     modelPtr_->columnLower());
 }
@@ -4060,7 +3993,7 @@ void OsiClpSolverInterface::setColUpper(const double *array)
 {
   // Say can't gurantee optimal basis etc
   lastAlgorithm_ = 999;
-  modelPtr_->whatsChanged_ &= (0x1ffff & 256);
+  modelPtr_->whatsChanged_ &= 0x1feff;
   CoinMemcpyN(array, modelPtr_->numberColumns(),
     modelPtr_->columnUpper());
 }
