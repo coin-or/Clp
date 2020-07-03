@@ -2245,6 +2245,15 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex *originalModel,
       ratio = sqrt((substitution_ - 3) + 5.0);
     else if (substitution_ == 2)
       ratio = 1.5;
+    // But limit ratio
+#if COIN_BIG_INDEX<2
+    if (substitution_ > 3) {
+      ratio = CoinMin(ratio,1.0e9/nelems_)-5.0;
+      ratio *= ratio;
+      substitution_ = static_cast<int>(ratio)+3;
+      ratio = sqrt((substitution_ - 3) + 5.0);
+    }
+#endif
     CoinPresolveMatrix* prob = create_CoinPresolveMatrix(ncols_,
       maxmin,
       presolvedModel_,
