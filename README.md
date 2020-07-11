@@ -1,5 +1,9 @@
 # CLP
 
+[![A COIN-OR Project](https://coin-or.github.io/coin-or-badge.png)](https://www.coin-or.org)
+
+[![Latest Release](https://img.shields.io/github/v/release/coin-or/Clp?sort=semver)](https://github.com/coin-or/Clp/releases)
+
 Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
 It is primarily meant to be used as a callable library, but a basic, stand-alone executable version is also available.
 It is designed to find solutions of mathematical optimization problems of the form
@@ -63,29 +67,32 @@ progress).
 
 ## BUILDING from source
 
-### Using CoinBrew
+The quick start assumes you are in a bash shell. 
 
-To build Clp from source, obtain the `coinbrew` script from
-https://coin-or.github.io/coinbrew/
-and run
+### Using `coinbrew`
 
+To build CoinUtils from source, obtain the `coinbrew` script, do
+```
+wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew
+chmod u+x coinbrew
+./coinbrew fetch Osi@master
+./coinbrew build Osi
+```
+For more detailed instructions on coinbrew, see https://coin-or.github.io/coinbrew.
+The `coinbrew` script will fetch the additional projects specified in the Dependencies section of [config.yml](.coin-or/config.yml).
 
-    /path/to/coinbrew fetch Clp
-    /path/to/coinbrew build Clp --prefix=/dir/to/install --test
-    /path/to/coinbrew install Clp
+### Without `coinbrew` (Expert users)
 
-The `coinbrew` script will fetch [these](.coin-or/Dependencies) additional projects.
+ * Download the source code, e.g., by cloning the git repo https://github.com/coin-or/Clp
+ * Download and install the source code for the dependencies listed in [config.yml](.coin-or/config.yml)
+ * Build the code as follows (make sure to set $PKG_CONFIG_PTH to install directory for dependencies).
 
-
-### Without CoinBrew (Expert users)
-
- 0. Install [these Dependencies](.coin-or/Dependencies)
- 1. Obtain the source code, e.g., from https://github.com/coin-or/Clp
- 2. Run `./configure -C` to generate makefiles
- 3. Run `make` to build the CoinUtils library
- 4. Run `make test` to build and run the CoinUtils unit test program
- 5. Run `make install` to install library and header files.
-
+```
+./configure -C
+make
+make test
+make install
+```
 ### With Microsoft Visual Studio
 
 For Microsoft Visual C++ users, there are project files for version 10
@@ -101,17 +108,62 @@ shell or CYGWIN. This is the recommended and best-supported way of building
 Clp in Windows from source. To do so, make sure the `cl` compiler is in your
 path and add `--enable-msvc to build command of `coinbrew`.  
 
+## Quick start
+
+Running clp gives you some hints.  It can do a unit test (`clp -unitTest`) and solve netlib 
+problems (`-netlib` or `-netlibp` using primal).  It can also solve problems and set tolerances
+etc.  Just do 
+```
+clp 
+``` 
+and then try `?` or setting various stuff.
+
+```
+clp filename                #read file, do presolve and dual algorithm
+clp filename -primalsimplex #use primal instead
+```
+On Linux, clp can do file completion and line editing if it can find the history, readline
+and termcap. packages.
+
+If you want to stress the code you can set various stuff, e.g., dantzig pricing
+ and then go into netlib testing.  I do not guarantee that it will solve all 
+netlib if you get too creative.  For instance using presolve makes netlib 
+solve faster - but pilot87 prefers a large infeasibility weight.  So
+```
+clp -presolve on -dualbound 1.0e10 -netlib
+```
+works well.
+
+There are examples in [examples](examples).  To create an executable - testit do
+```
+make DRIVER=minimum to use minimum.cpp
+```
+or whichever driver you want.  A list is in [Makefile](Makefile.in).
+Three useful samples are:
+
+ * `minimum.cpp` This is the simplest possible program to read an mps file.
+
+ * `defaults.cpp`.  This does not do much more, but it does it in much more 
+complicated way by specifically setting defaults so it does give more
+useful information.  It also prints a solution in a format "similar" to that
+of MPSX.
+
+ * `presolve.cpp`  This is a good driver for larger problems.
+
+Other ones can get complicated so start simple and work your way up.
+
 ## Doxygen Documentation
 
 If you have `Doxygen` available, you can build a HTML documentation by typing
 
- `make doxydoc` 
+`make doxygen-docs` 
 
-in the build directory.
-If Clp was build via `coinbrew`, then the build directory is `./build/Clp`.
-The doxygen documentation main file is found at `./doxydoc/html/index.html` in the build directory.
+in the build directory. If Clp was built via `coinbrew`, then the build
+directory will be `./build/Clp/master` by default. The doxygen documentation main file
+is found at `<build-dir>/doxydoc/html/index.html`.
 
-If `Doxygen` is not available, you can use also use [this link](http://www.coin-or.org/Doxygen/Clp).
+If you don't have `doxygen` installed locally, you can use also find the
+documentation [here](http://coin-or.github.io/Clp/Doxygen).
 
 ## Project Links
 
