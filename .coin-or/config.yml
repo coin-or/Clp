@@ -29,7 +29,7 @@ Description:
     Status: h3daf7woiig6n176
     Slug: clp-m0kud
   Bintray:
-    Package: Cbc
+    Package: Clp
   Language:
     - C++
   Categories: 
