@@ -1,0 +1,99 @@
+Description:
+  Slug: Clp
+  ShortName: Clp
+  LongName: COIN-OR LP Solver
+  ShortDescription: A solver for linear programs
+  LongDescription: |2
+    Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
+    It is primarily meant to be used as a callable library, but a basic, stand-alone executable
+    version is also available. It is designed to find solutions of mathematical optimization
+    problems of the form 
+
+    minimize   c\'x
+    such that  lhs &le; Ax &le; rhs
+    and        lb &le; x &le; ub
+
+    CLP includes primal and dual Simplex solvers.
+    Both dual and primal algorithms can use matrix storage methods provided by the user (0-1 and 
+    network matrices are already supported in addition to the default sparse matrix).
+    The dual algorithm has Dantzig and Steepest edge row pivot choices; new ones may be provided 
+    by the user. The same is true for the column pivot choice of the primal algorithm.
+    The primal can also use a non linear cost which should work for piecewise linear convex 
+    functions. CLP also includes a barrier method for solving LPs.
+  Manager: Julian Hall, jajhall@ed.ac.uk
+  Homepage: https://github.com/coin-or/Clp
+  License: Eclipse Public License 2.0
+  LicenseURL: http://www.opensource.org/licenses/eclipse-2.0
+  Zenodo: 173496299
+  Appveyor:
+    Status: h3daf7woiig6n176
+    Slug: clp-m0kud
+  Bintray:
+    Package: Cbc
+  Language:
+    - C++
+  Categories: 
+    - Optimization deterministic linear continuous
+
+Dependencies:
+  - Description: ThirdParty wrapper for building ASL
+    URL: https://github.com/coin-or-tools/ThirdParty-ASL
+    Version: 2.0
+    Required: Optional
+  - Description: ThirdParty wrapper for building Mumps
+    URL: https://github.com/coin-or-tools/ThirdParty-Mumps
+    Version: 2.1
+    Required: Optional
+  - Description: ThirdParty wrapper for building Glpk
+    URL: https://github.com/coin-or-tools/ThirdParty-Glpk
+    Version: master
+    Required: Optional
+  - Description: Netlib data files
+    URL: https://github.com/coin-or-tools/Data-Netlib
+    Version: master
+    Required: Required
+  - Description: Sample data files
+    URL: https://github.com/coin-or-tools/Data-Sample
+    Version: master
+    Required: Required
+  - Description: COIN-OR Utilities
+    URL: https://github.com/coin-or/CoinUtils
+    Version: master
+    Required: Required
+  - Description: Open Solver Interface
+    URL: https://github.com/coin-or/Osi
+    Version: master
+    Required: Required
+  - Description: Basic Linear Algebra Subroutines (BLAS)
+    URL: http://www.netlib.org/blas
+    Required: Recommended
+  - Description: Linear Algebra Package (LAPACK)
+    URL: http://www.netlib.org/lapack
+    Required: Recommended
+  - Description: GNU Readline
+    Required: Recommended
+  - Description: GNU History
+    Required: Recommended
+
+DevelopmentStatus: 
+  activityStatus: Active
+  maturityLevel: 5
+  testedPlatforms: 
+  - operatingSystem: Linux
+    compiler: gcc
+  - operatingSystem: Mac OS X
+    compiler:
+    - gcc
+    - clang
+  - operatingSystem: Microsoft Windows
+    compiler: cl
+  - operatingSystem: Microsoft Windows with MSys2
+    compiler:
+    - gcc
+    - cl
+    - icl
+  - operatingSystem: Microsoft Windows Subsystem for Linux
+    compiler:
+    - gcc
+    - cl
+    - icl
