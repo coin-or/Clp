@@ -40,15 +40,13 @@ The Clp website is https://github.com/coin-or/Clp.
 
 ## DOWNLOAD
 
-Binaries for most platforms are available for download from [Bintray](https://bintray.com/coin-or/download/Clp)
+Binaries for most platforms are available for download from [Bintray](https://bintray.com/coin-or/download/Clp).
 
-[ ![Download](https://api.bintray.com/packages/coin-or/download/Cbc/images/download.svg?version=1.17) ](https://bintray.com/coin-or/download/Clp/1.17/link)
-
- * *Linux*: On Debian/Ubuntu, Cbc is available in the package `coinor-clp` and can be installed with apt. On Fedora, Cbc is available in the package `coin-or-Clp`.
- * *Windows*: The easiest way to get Cbc on Windows is to download from *[Bintray](https://bintray.com/coin-or/download/Clp)*, although an old interactive installer for the [COIN-OR Optimization Suite](http://www.coin-or.org/download/binary/CoinAll) is also still available.
+ * *Linux*: On Debian/Ubuntu, Clp is available in the package `coinor-clp` and can be installed with apt. On Fedora, Clp is available in the package `coin-or-Clp`.
+ * *Windows*: The easiest way to get Cbc on Windows is to download from *[Bintray](https://bintray.com/coin-or/download/Clp)*.
  * *Mac OS X*: The easiest way to get Cbc on Mac OS X is through [Homebrew](https://brew.sh).
    * `brew tap coin-or-tools/coinor`
-   * `brew install clp`
+   * `brew install coin-or-tools/coinor/clp`
  * AMPL also provides stand-alone [Clp executables](http://ampl.com/products/solvers/open-source/#clp) that can be used with (or without) AMPL.
  * The [GAMS](http://www.gams.com) distribution includes Clp.
 
