@@ -1,0 +1,28 @@
+<map id="AbcDualRowSteepest" name="AbcDualRowSteepest">
+<area shape="rect" id="node2" href="$classAbcDualRowPivot.html" title="Dual Row Pivot Abstract Base Class. " alt="" coords="295,135,422,161"/>
+<area shape="rect" id="node3" href="$classAbcSimplex.html" title="AbcSimplex" alt="" coords="644,175,735,201"/>
+<area shape="rect" id="node26" href="$classAbcPrimalColumnPivot.html" title="Primal Column Pivot Abstract Base Class. " alt="" coords="960,107,1116,133"/>
+<area shape="rect" id="node29" href="$classAbcMatrix.html" title="AbcMatrix" alt="" coords="998,197,1078,224"/>
+<area shape="rect" id="node4" href="$classClpSimplex.html" title="This solves LPs using the simplex method. " alt="" coords="315,615,402,641"/>
+<area shape="rect" id="node8" href="$classClpEventHandler.html" title="Base class for Clp event handling. " alt="" coords="630,517,749,544"/>
+<area shape="rect" id="node19" href="$classClpPrimalColumnPivot.html" title="Primal Column Pivot Abstract Base Class. " alt="" coords="613,676,765,703"/>
+<area shape="rect" id="node21" href="$classClpDisasterHandler.html" title="Base class for Clp disaster handling. " alt="" coords="622,619,757,645"/>
+<area shape="rect" id="node23" href="$classClpDualRowPivot.html" title="Dual Row Pivot Abstract Base Class. " alt="" coords="628,825,751,852"/>
+<area shape="rect" id="node24" href="$classClpSimplexProgress.html" title="For saving extra information to see if looping. " alt="" coords="620,767,759,793"/>
+<area shape="rect" id="node5" href="$classClpModel.html" title="ClpModel" alt="" coords="1000,543,1076,569"/>
+<area shape="rect" id="node6" href="$classClpObjective.html" title="Objective Abstract Base Class. " alt="" coords="641,568,737,595"/>
+<area shape="rect" id="node7" href="$structClpTrustedData.html" title="For a structure to be used by trusted code. " alt="" coords="633,1020,745,1047"/>
+<area shape="rect" id="node9" href="$classClpPackedMatrix.html" title="ClpPackedMatrix" alt="" coords="629,969,749,996"/>
+<area shape="rect" id="node10" href="$classClpMatrixBase.html" title="Abstract base class for Clp Matrices. " alt="" coords="305,915,412,941"/>
+<area shape="rect" id="node11" href="$classClpPackedMatrix2.html" title="ClpPackedMatrix2" alt="" coords="295,1024,422,1051"/>
+<area shape="rect" id="node12" href="$classClpPackedMatrix3.html" title="ClpPackedMatrix3" alt="" coords="295,973,422,1000"/>
+<area shape="rect" id="node13" href="$structblockStruct.html" title="blockStruct" alt="" coords="25,973,113,1000"/>
+<area shape="rect" id="node14" title="STL class. " alt="" coords="319,317,398,344"/>
+<area shape="rect" id="node15" title="STL class. " alt="" coords="7,310,131,351"/>
+<area shape="rect" id="node17" title="STL class. " alt="" coords="303,423,415,449"/>
+<area shape="rect" id="node20" href="$classClpFactorization.html" title="This just implements CoinFactorization when an ClpMatrixBase object is passed. " alt="" coords="12,589,127,616"/>
+<area shape="rect" id="node22" href="$classClpNonLinearCost.html" title="ClpNonLinearCost" alt="" coords="5,640,133,667"/>
+<area shape="rect" id="node25" href="$classAbcNonLinearCost.html" title="AbcNonLinearCost" alt="" coords="293,220,425,247"/>
+<area shape="rect" id="node27" href="$classClpDataSave.html" title="This is a tiny class where data can be saved round calls. " alt="" coords="309,5,408,32"/>
+<area shape="rect" id="node28" href="$classAbcSimplexFactorization.html" title="This just implements AbcFactorization when an AbcMatrix object is passed. " alt="" coords="276,84,441,111"/>
+</map>

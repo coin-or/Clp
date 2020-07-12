@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classClpObjective.html" title="Objective Abstract Base Class. " alt="" coords="5,31,101,57"/>
+<area shape="rect" id="node2" href="$classClpLinearObjective.html" title="Linear Objective Class. " alt="" coords="159,5,291,32"/>
+<area shape="rect" id="node3" href="$classClpQuadraticObjective.html" title="Quadratic Objective Class. " alt="" coords="149,56,301,83"/>
+</map>

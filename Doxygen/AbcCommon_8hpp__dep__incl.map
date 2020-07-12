@@ -1,0 +1,21 @@
+<map id="src/AbcCommon.hpp" name="src/AbcCommon.hpp">
+<area shape="rect" id="node2" href="$AbcDualRowPivot_8hpp.html" title="src/AbcDualRowPivot.hpp" alt="" coords="227,80,400,107"/>
+<area shape="rect" id="node5" href="$AbcSimplex_8hpp.html" title="src/AbcSimplex.hpp" alt="" coords="435,155,573,181"/>
+<area shape="rect" id="node10" href="$CoinAbcCommon_8hpp.html" title="src/CoinAbcCommon.hpp" alt="" coords="713,80,882,107"/>
+<area shape="rect" id="node12" href="$CoinAbcBaseFactorization_8hpp.html" title="src/CoinAbcBaseFactorization.hpp" alt="" coords="675,229,896,256"/>
+<area shape="rect" id="node16" href="$AbcNonLinearCost_8hpp.html" title="src/AbcNonLinearCost.hpp" alt="" coords="907,80,1085,107"/>
+<area shape="rect" id="node17" href="$AbcPrimalColumnPivot_8hpp.html" title="src/AbcPrimalColumnPivot.hpp" alt="" coords="1199,80,1401,107"/>
+<area shape="rect" id="node20" href="$AbcWarmStart_8hpp.html" title="src/AbcWarmStart.hpp" alt="" coords="1426,80,1579,107"/>
+<area shape="rect" id="node3" href="$AbcDualRowDantzig_8hpp.html" title="src/AbcDualRowDantzig.hpp" alt="" coords="5,155,192,181"/>
+<area shape="rect" id="node4" href="$AbcDualRowSteepest_8hpp.html" title="src/AbcDualRowSteepest.hpp" alt="" coords="216,155,411,181"/>
+<area shape="rect" id="node6" href="$AbcMatrix_8hpp.html" title="src/AbcMatrix.hpp" alt="" coords="523,229,650,256"/>
+<area shape="rect" id="node7" href="$AbcSimplexFactorization_8hpp.html" title="src/AbcSimplexFactorization.hpp" alt="" coords="612,379,823,405"/>
+<area shape="rect" id="node8" href="$AbcSimplexDual_8hpp.html" title="src/AbcSimplexDual.hpp" alt="" coords="137,229,300,256"/>
+<area shape="rect" id="node9" href="$AbcSimplexPrimal_8hpp.html" title="src/AbcSimplexPrimal.hpp" alt="" coords="325,229,499,256"/>
+<area shape="rect" id="node11" href="$CoinAbcHelperFunctions_8hpp.html" title="src/CoinAbcHelperFunctions.hpp" alt="" coords="647,155,859,181"/>
+<area shape="rect" id="node14" href="$CoinAbcCommonFactorization_8hpp.html" title="src/CoinAbcCommonFactorization.hpp" alt="" coords="920,229,1163,256"/>
+<area shape="rect" id="node15" href="$CoinAbcDenseFactorization_8hpp.html" title="src/CoinAbcDenseFactorization.hpp" alt="" coords="934,155,1162,181"/>
+<area shape="rect" id="node13" href="$CoinAbcFactorization_8hpp.html" title="src/CoinAbcFactorization.hpp" alt="" coords="690,304,881,331"/>
+<area shape="rect" id="node18" href="$AbcPrimalColumnDantzig_8hpp.html" title="src/AbcPrimalColumnDantzig.hpp" alt="" coords="1238,155,1453,181"/>
+<area shape="rect" id="node19" href="$AbcPrimalColumnSteepest_8hpp.html" title="src/AbcPrimalColumnSteepest.hpp" alt="" coords="1477,155,1701,181"/>
+</map>

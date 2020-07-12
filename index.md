@@ -52,4 +52,5 @@ Content
 - [The CLP Executable](./clpexe)
 - [Messages](./messages)
 - [FAQ](./faq)
+- [Doxygen Documentation](Doxygen)
 - [Revision History](./revhist)

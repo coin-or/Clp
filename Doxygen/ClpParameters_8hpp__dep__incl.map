@@ -1,0 +1,29 @@
+<map id="src/ClpParameters.hpp" name="src/ClpParameters.hpp">
+<area shape="rect" id="node2" href="$ClpModel_8hpp.html" title="src/ClpModel.hpp" alt="" coords="1380,80,1503,107"/>
+<area shape="rect" id="node3" href="$AbcSimplex_8hpp.html" title="src/AbcSimplex.hpp" alt="" coords="322,229,459,256"/>
+<area shape="rect" id="node8" href="$ClpSimplex_8hpp.html" title="src/ClpSimplex.hpp" alt="" coords="1375,155,1508,181"/>
+<area shape="rect" id="node25" href="$ClpInterior_8hpp.html" title="src/ClpInterior.hpp" alt="" coords="2435,155,2562,181"/>
+<area shape="rect" id="node4" href="$AbcMatrix_8hpp.html" title="src/AbcMatrix.hpp" alt="" coords="414,304,541,331"/>
+<area shape="rect" id="node5" href="$AbcSimplexFactorization_8hpp.html" title="src/AbcSimplexFactorization.hpp" alt="" coords="128,379,339,405"/>
+<area shape="rect" id="node6" href="$AbcSimplexDual_8hpp.html" title="src/AbcSimplexDual.hpp" alt="" coords="28,304,191,331"/>
+<area shape="rect" id="node7" href="$AbcSimplexPrimal_8hpp.html" title="src/AbcSimplexPrimal.hpp" alt="" coords="215,304,390,331"/>
+<area shape="rect" id="node9" href="$AbcWarmStart_8hpp.html" title="src/AbcWarmStart.hpp" alt="" coords="631,229,785,256"/>
+<area shape="rect" id="node10" href="$ClpEventHandler_8hpp.html" title="src/ClpEventHandler.hpp" alt="" coords="1713,229,1879,256"/>
+<area shape="rect" id="node12" href="$OsiClpSolverInterface_8hpp.html" title="src/OsiClp/OsiClpSolverInterface.hpp" alt="" coords="1746,304,1985,331"/>
+<area shape="rect" id="node13" href="$ClpFactorization_8hpp.html" title="src/ClpFactorization.hpp" alt="" coords="1067,229,1229,256"/>
+<area shape="rect" id="node14" href="$ClpPEDualRowDantzig_8hpp.html" title="src/ClpPEDualRowDantzig.hpp" alt="" coords="1523,304,1722,331"/>
+<area shape="rect" id="node15" href="$ClpPEPrimalColumnDantzig_8hpp.html" title="src/ClpPEPrimalColumnDantzig.hpp" alt="" coords="777,304,1005,331"/>
+<area shape="rect" id="node17" href="$ClpSimplexDual_8hpp.html" title="src/ClpSimplexDual.hpp" alt="" coords="1479,229,1638,256"/>
+<area shape="rect" id="node18" href="$ClpPESimplex_8hpp.html" title="src/ClpPESimplex.hpp" alt="" coords="1253,229,1403,256"/>
+<area shape="rect" id="node20" href="$ClpSimplexPrimal_8hpp.html" title="src/ClpSimplexPrimal.hpp" alt="" coords="809,229,980,256"/>
+<area shape="rect" id="node22" href="$ClpPresolve_8hpp.html" title="src/ClpPresolve.hpp" alt="" coords="1903,229,2041,256"/>
+<area shape="rect" id="node23" href="$ClpSimplexOther_8hpp.html" title="src/ClpSimplexOther.hpp" alt="" coords="2065,229,2231,256"/>
+<area shape="rect" id="node24" href="$Idiot_8hpp.html" title="src/Idiot.hpp" alt="" coords="2255,229,2348,256"/>
+<area shape="rect" id="node11" href="$MyEventHandler_8hpp.html" title="src/MyEventHandler.hpp" alt="" coords="2009,304,2172,331"/>
+<area shape="rect" id="node16" href="$ClpPEPrimalColumnSteepest_8hpp.html" title="src/ClpPEPrimalColumnSteepest.hpp" alt="" coords="1029,304,1267,331"/>
+<area shape="rect" id="node19" href="$ClpPEDualRowSteepest_8hpp.html" title="src/ClpPEDualRowSteepest.hpp" alt="" coords="1291,304,1499,331"/>
+<area shape="rect" id="node21" href="$ClpSimplexNonlinear_8hpp.html" title="src/ClpSimplexNonlinear.hpp" alt="" coords="565,304,753,331"/>
+<area shape="rect" id="node26" href="$ClpLsqr_8hpp.html" title="src/ClpLsqr.hpp" alt="" coords="2373,229,2486,256"/>
+<area shape="rect" id="node27" href="$ClpPdco_8hpp.html" title="src/ClpPdco.hpp" alt="" coords="2511,229,2628,256"/>
+<area shape="rect" id="node28" href="$ClpPredictorCorrector_8hpp.html" title="src/ClpPredictorCorrector.hpp" alt="" coords="2652,229,2844,256"/>
+</map>

@@ -1,0 +1,22 @@
+<map id="src/AbcSimplexFactorization.hpp" name="src/AbcSimplexFactorization.hpp">
+<area shape="rect" id="node3" href="$CoinAbcCommon_8hpp.html" title="CoinAbcCommon.hpp" alt="" coords="516,304,663,331"/>
+<area shape="rect" id="node15" href="$CoinAbcFactorization_8hpp.html" title="CoinAbcFactorization.hpp" alt="" coords="259,80,429,107"/>
+<area shape="rect" id="node22" href="$AbcMatrix_8hpp.html" title="AbcMatrix.hpp" alt="" coords="453,80,557,107"/>
+<area shape="rect" id="node25" href="$AbcSimplex_8hpp.html" title="AbcSimplex.hpp" alt="" coords="1071,155,1185,181"/>
+<area shape="rect" id="node10" href="$AbcCommon_8hpp.html" title="AbcCommon.hpp" alt="" coords="145,379,266,405"/>
+<area shape="rect" id="node11" href="$ClpConfig_8h.html" title="ClpConfig.h" alt="" coords="994,453,1081,480"/>
+<area shape="rect" id="node12" href="$config__clp__default_8h.html" title="config_clp_default.h" alt="" coords="969,528,1105,555"/>
+<area shape="rect" id="node16" href="$CoinAbcCommonFactorization_8hpp.html" title="CoinAbcCommonFactorization.hpp" alt="" coords="517,155,739,181"/>
+<area shape="rect" id="node20" href="$CoinAbcBaseFactorization_8hpp.html" title="CoinAbcBaseFactorization.hpp" alt="" coords="245,155,443,181"/>
+<area shape="rect" id="node17" href="$CoinAbcDenseFactorization_8hpp.html" title="CoinAbcDenseFactorization.hpp" alt="" coords="658,229,865,256"/>
+<area shape="rect" id="node21" href="$CoinAbcHelperFunctions_8hpp.html" title="CoinAbcHelperFunctions.hpp" alt="" coords="259,229,450,256"/>
+<area shape="rect" id="node23" href="$ClpMatrixBase_8hpp.html" title="ClpMatrixBase.hpp" alt="" coords="1461,453,1592,480"/>
+<area shape="rect" id="node27" href="$ClpModel_8hpp.html" title="ClpModel.hpp" alt="" coords="1405,304,1505,331"/>
+<area shape="rect" id="node37" href="$ClpSolve_8hpp.html" title="ClpSolve.hpp" alt="" coords="1079,304,1177,331"/>
+<area shape="rect" id="node38" href="$ClpSimplex_8hpp.html" title="ClpSimplex.hpp" alt="" coords="1257,229,1367,256"/>
+<area shape="rect" id="node29" href="$ClpPackedMatrix_8hpp.html" title="ClpPackedMatrix.hpp" alt="" coords="1455,379,1599,405"/>
+<area shape="rect" id="node35" href="$ClpParameters_8hpp.html" title="ClpParameters.hpp" alt="" coords="1946,379,2078,405"/>
+<area shape="rect" id="node36" href="$ClpObjective_8hpp.html" title="ClpObjective.hpp" alt="" coords="2103,379,2223,405"/>
+<area shape="rect" id="node30" href="$ClpPrimalColumnSteepest_8hpp.html" title="ClpPrimalColumnSteepest.hpp" alt="" coords="2430,453,2629,480"/>
+<area shape="rect" id="node31" href="$ClpPrimalColumnPivot_8hpp.html" title="ClpPrimalColumnPivot.hpp" alt="" coords="2371,528,2547,555"/>
+</map>

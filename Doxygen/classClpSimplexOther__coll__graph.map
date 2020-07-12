@@ -1,0 +1,21 @@
+<map id="ClpSimplexOther" name="ClpSimplexOther">
+<area shape="rect" id="node2" href="$classClpSimplex.html" title="This solves LPs using the simplex method. " alt="" coords="296,655,383,681"/>
+<area shape="rect" id="node6" href="$classClpEventHandler.html" title="Base class for Clp event handling. " alt="" coords="591,489,710,516"/>
+<area shape="rect" id="node17" href="$classClpPrimalColumnPivot.html" title="Primal Column Pivot Abstract Base Class. " alt="" coords="575,553,727,580"/>
+<area shape="rect" id="node19" href="$classClpDisasterHandler.html" title="Base class for Clp disaster handling. " alt="" coords="583,621,718,648"/>
+<area shape="rect" id="node21" href="$classClpDualRowPivot.html" title="Dual Row Pivot Abstract Base Class. " alt="" coords="589,720,712,747"/>
+<area shape="rect" id="node22" href="$classClpSimplexProgress.html" title="For saving extra information to see if looping. " alt="" coords="581,809,720,836"/>
+<area shape="rect" id="node3" href="$classClpModel.html" title="ClpModel" alt="" coords="899,239,975,265"/>
+<area shape="rect" id="node4" href="$classClpObjective.html" title="Objective Abstract Base Class. " alt="" coords="603,12,699,39"/>
+<area shape="rect" id="node5" href="$structClpTrustedData.html" title="For a structure to be used by trusted code. " alt="" coords="595,63,707,89"/>
+<area shape="rect" id="node7" href="$classClpPackedMatrix.html" title="ClpPackedMatrix" alt="" coords="591,212,711,239"/>
+<area shape="rect" id="node8" href="$classClpMatrixBase.html" title="Abstract base class for Clp Matrices. " alt="" coords="286,136,393,163"/>
+<area shape="rect" id="node9" href="$classClpPackedMatrix2.html" title="ClpPackedMatrix2" alt="" coords="276,195,403,221"/>
+<area shape="rect" id="node10" href="$classClpPackedMatrix3.html" title="ClpPackedMatrix3" alt="" coords="276,245,403,272"/>
+<area shape="rect" id="node11" href="$structblockStruct.html" title="blockStruct" alt="" coords="25,245,113,272"/>
+<area shape="rect" id="node12" title="STL class. " alt="" coords="300,364,379,391"/>
+<area shape="rect" id="node13" title="STL class. " alt="" coords="7,357,131,398"/>
+<area shape="rect" id="node15" title="STL class. " alt="" coords="283,296,395,323"/>
+<area shape="rect" id="node18" href="$classClpFactorization.html" title="This just implements CoinFactorization when an ClpMatrixBase object is passed. " alt="" coords="12,629,127,656"/>
+<area shape="rect" id="node20" href="$classClpNonLinearCost.html" title="ClpNonLinearCost" alt="" coords="5,680,133,707"/>
+</map>

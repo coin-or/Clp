@@ -1,0 +1,18 @@
+<map id="src/ClpPEPrimalColumnDantzig.hpp" name="src/ClpPEPrimalColumnDantzig.hpp">
+<area shape="rect" id="node2" href="$ClpPrimalColumnDantzig_8hpp.html" title="ClpPrimalColumnDantzig.hpp" alt="" coords="5,379,195,405"/>
+<area shape="rect" id="node3" href="$ClpPrimalColumnPivot_8hpp.html" title="ClpPrimalColumnPivot.hpp" alt="" coords="141,453,317,480"/>
+<area shape="rect" id="node4" href="$ClpSimplex_8hpp.html" title="ClpSimplex.hpp" alt="" coords="1127,155,1238,181"/>
+<area shape="rect" id="node14" href="$ClpPackedMatrix_8hpp.html" title="ClpPackedMatrix.hpp" alt="" coords="375,304,519,331"/>
+<area shape="rect" id="node28" href="$ClpFactorization_8hpp.html" title="ClpFactorization.hpp" alt="" coords="1676,80,1815,107"/>
+<area shape="rect" id="node31" href="$ClpNonLinearCost_8hpp.html" title="ClpNonLinearCost.hpp" alt="" coords="317,80,469,107"/>
+<area shape="rect" id="node32" href="$ClpSimplexPrimal_8hpp.html" title="ClpSimplexPrimal.hpp" alt="" coords="947,80,1095,107"/>
+<area shape="rect" id="node33" href="$ClpPESimplex_8hpp.html" title="ClpPESimplex.hpp" alt="" coords="761,80,889,107"/>
+<area shape="rect" id="node7" href="$ClpModel_8hpp.html" title="ClpModel.hpp" alt="" coords="1133,229,1233,256"/>
+<area shape="rect" id="node8" href="$ClpConfig_8h.html" title="ClpConfig.h" alt="" coords="1893,304,1979,331"/>
+<area shape="rect" id="node16" href="$ClpMatrixBase_8hpp.html" title="ClpMatrixBase.hpp" alt="" coords="1409,379,1540,405"/>
+<area shape="rect" id="node26" href="$ClpSolve_8hpp.html" title="ClpSolve.hpp" alt="" coords="1703,229,1801,256"/>
+<area shape="rect" id="node24" href="$ClpParameters_8hpp.html" title="ClpParameters.hpp" alt="" coords="639,304,771,331"/>
+<area shape="rect" id="node25" href="$ClpObjective_8hpp.html" title="ClpObjective.hpp" alt="" coords="796,304,916,331"/>
+<area shape="rect" id="node9" href="$config__clp__default_8h.html" title="config_clp_default.h" alt="" coords="1844,379,1980,405"/>
+<area shape="rect" id="node19" href="$ClpPrimalColumnSteepest_8hpp.html" title="ClpPrimalColumnSteepest.hpp" alt="" coords="269,379,467,405"/>
+</map>
