@@ -2895,9 +2895,9 @@ but then the results may not be repeatable.");
   }
   {
     CbcOrClpParam p("maxNI!FS", "Maximum number of nodes to be processed without improving the incumbent solution.",
-      COIN_INT_MAX, COIN_INT_MAX, CBC_PARAM_INT_MAXNODESNOTIMPROVINGFS);
+      -1, COIN_INT_MAX, CBC_PARAM_INT_MAXNODESNOTIMPROVINGFS);
     p.setLonghelp(
-      "This criterion specifies that when a feasible solution is found, the search should continue\
+      "This criterion specifies that when a feasible solution is available, the search should continue\
 only if better feasible solutions were produced in the last nodes.");
     parameters.push_back(p);
   }
@@ -3893,10 +3893,10 @@ If name contains '_fix_read_' then does not write but reads and will fix all var
   }
   {
     CbcOrClpParam p("secni!fs", "maximum seconds without improving the incumbent solution",
-      1e+08, COIN_DBL_MAX, CBC_PARAM_DBL_MAXSECONDSNIFS);
+    -1.0, COIN_DBL_MAX, CBC_PARAM_DBL_MAXSECONDSNIFS);
     p.setLonghelp(
-      "With this stopping criterion, after a feasible solution is found, the search should continue only if the incumbent solution was update in the last seconds \
-(specified here). A discussion on why this criterion can be useful is included here: \
+      "With this stopping criterion, after a feasible solution is found, the search should continue only if the incumbent solution was updated recently, \
+the tolerance is specified here. A discussion on why this criterion can be useful is included here: \
 https://yetanothermathprogrammingconsultant.blogspot.com/2019/11/mip-solver-stopping-criteria.html .");
     parameters.push_back(p);
   }
