@@ -5,7 +5,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/coin-or/Clp?sort=semver)](https://github.com/coin-or/Clp/releases)
 
 _This file is auto-generated from [config.yml](.coin-or/config.yml) using the 
-[generate_readme](https://github.com/coin-or/coinbrew/tree/master/scripts/generate_readme).
+[generate_readme](.coin-or/generate_readme).
 To make changes, please edit [config.yml](.coin-or/config.yml) or the generation script._
 
 Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
@@ -24,13 +24,10 @@ The same is true for the column pivot choice of the primal algorithm.
 The primal can also use a non linear cost which should work for piecewise linear convex functions.
 CLP also includes a barrier method for solving LPs.
 
-Clp is written in C++ and is released as open source code under the [Eclipse Public License 2.0](http://www.opensource.org/licenses/eclipse-2.0).
+
+Clp is written in C++ and is released as open source under the [Eclipse Public License 2.0](http://www.opensource.org/licenses/eclipse-2.0).
 
 It is distributed under the auspices of the [COIN-OR Foundation](https://www.coin-or.org)
-
-The code is written primarily by John J. Forrest, now retired from IBM Research.
-
-The project is currently managed by John Forrest, Lou Hafer, Matthew Saltzman, Stefan Vigerske, and Ted Ralphs.
 
 The Clp website is https://github.com/coin-or/Clp.
 
@@ -126,21 +123,23 @@ and then try `?` or setting various stuff.
 clp filename                #read file, do presolve and dual algorithm
 clp filename -primalsimplex #use primal instead
 ```
-On Linux, clp can do file completion and line editing if it can find the history, readline
-and termcap. packages.
+On Linux, clp can do file completion and line editing if it can find the 
+history, readline, and termcap packages when building.
 
-If you want to stress the code you can set various stuff, e.g., dantzig pricing
- and then go into netlib testing.  I do not guarantee that it will solve all 
-netlib if you get too creative.  For instance using presolve makes netlib 
-solve faster - but pilot87 prefers a large infeasibility weight.  So
+If you want to stress the code, you can set various stuff, e.g., dantzig pricing
+and then go into netlib testing.  It is not guaranteed that it will solve all 
+netlib instances if you get too creative.  For instance using presolve makes 
+netlib solve faster - but pilot87 prefers a large infeasibility weight.  So
 ```
 clp -presolve on -dualbound 1.0e10 -netlib
 ```
 works well.
 
-There are examples in [examples](examples).  To create an executable - testit do
+There are examples in [examples](examples).  To create an executable, build 
+with `coinbrew` as above and then do
 ```
-make DRIVER=minimum to use minimum.cpp
+cd build/Cbc/master/examples
+make DRIVER=minimum #build the driver minimum.cpp
 ```
 or whichever driver you want.  A list is in [Makefile](Makefile.in).
 Three useful samples are:

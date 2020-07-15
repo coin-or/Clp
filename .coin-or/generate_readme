@@ -1,91 +1,12 @@
 #!/usr/bin/env bash
 
-function get_version_git {
-
-    current_rev=$(git rev-parse HEAD)
-    if [[ "$(git show-ref --tags | fgrep $current_rev)" == *releases* ]]; then
-	git show-ref --tags | fgrep $current_rev | fgrep releases | cut -d '/' -f 3-4
-    elif [[ "$(git show-ref --heads | fgrep $current_rev)" == *stable* ]]; then
-	git show-ref --heads | fgrep $current_rev | fgrep stable | cut -d '/' -f 3-4
-    elif [ "$(git show-ref --heads | fgrep $current_rev)" != "" ]; then
-	git show-ref --heads | fgrep $current_rev | cut -d '/' -f 3
-    else
-        echo $current_rev
-    fi
-
-}
-
-parse_yaml() {
-    local yaml_file=$1
-    local prefix=
-    local s
-    local w
-    local fs
-
-    s='[[:space:]]*'
-    w='[a-zA-Z0-9_.-]*'
-    fs="$(echo @|tr @ '\034')"
-
-    (
-        sed -e '/- [^\“]'"[^\']"'.*: /s|\([ ]*\)- \([[:space:]]*\)|\1-\'$'\n''  \1\2|g' |
-
-        sed -ne '/^--/s|--||g; s|\"|\\\"|g; s/[[:space:]]*$//g;' \
-            -e "/#.*[\"\']/!s| #.*||g; /^#/s|#.*||g;" \
-            -e "s|^\($s\)\($w\)$s:$s\"\(.*\)\"$s\$|\1$fs\2$fs\3|p" \
-            -e "s|^\($s\)\($w\)${s}[:-]$s\(.*\)$s\$|\1$fs\2$fs\3|p" |
-
-        awk -F"$fs" '{
-            indent = length($1)/2;
-            if (length($2) == 0) { conj[indent]="+";} else {conj[indent]="";}
-            vname[indent] = $2;
-            for (i in vname) {if (i > indent) {delete vname[i]}}
-                if (length($3) > 0) {
-                    vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
-                    printf("%s%s%s%s=(\"%s\")\n", "'"$prefix"'",vn, $2, conj[indent-1],$3);
-                }
-            }' |
-
-        sed -e 's/_=/+=/g' |
-
-        awk 'BEGIN {
-                FS="=";
-                OFS="="
-            }
-            /(-|\.).*=/ {
-                gsub("-|\\.", "_", $1)
-            }
-            { print }'
-    ) < "$yaml_file"
-}
-
-create_variables() {
-    local yaml_file="$1"
-    eval "$(parse_yaml "$yaml_file")"
-}
+source $COINBREW_HOME/scripts/generate_readme
 
 create_variables $1
 
-lower_case=$(echo $Description_Slug | tr '[:upper:]' '[:lower:]')
+make_header
 
-version=$(get_version_git)
-version_num=$(echo $version | cut -d '/' -f 2)
-
-if [ $version = master ]; then
-   echo "# $Description_ShortName"
-else
-   echo "# $Description_ShortName $version_num"
-fi
-   
-echo "
-[![A COIN-OR Project](https://coin-or.github.io/coin-or-badge.png)](https://www.coin-or.org)
-
-[![Latest Release](https://img.shields.io/github/v/release/coin-or/$Description_Slug?sort=semver)](https://github.com/coin-or/$Description_Slug/releases)
-
-_This file is auto-generated from [config.yml](.coin-or/config.yml) using the 
-[generate_readme](https://github.com/coin-or/coinbrew/tree/master/scripts/generate_readme).
-To make changes, please edit [config.yml](.coin-or/config.yml) or the generation script._
-
-Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
+echo "Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
 It is primarily meant to be used as a callable library, but a basic, stand-alone executable version is also available.
 It is designed to find solutions of mathematical optimization problems of the form
 
@@ -100,81 +21,11 @@ The dual algorithm has Dantzig and Steepest edge row pivot choices; new ones may
 The same is true for the column pivot choice of the primal algorithm.
 The primal can also use a non linear cost which should work for piecewise linear convex functions.
 CLP also includes a barrier method for solving LPs.
+"
 
-Clp is written in C++ and is released as open source code under the [Eclipse Public License 2.0](http://www.opensource.org/licenses/eclipse-2.0).
+make_build_info
 
-It is distributed under the auspices of the [COIN-OR Foundation](https://www.coin-or.org)
-
-The code is written primarily by John J. Forrest, now retired from IBM Research.
-
-The project is currently managed by John Forrest, Lou Hafer, Matthew Saltzman, Stefan Vigerske, and Ted Ralphs.
-
-The Clp website is https://github.com/coin-or/Clp.
-
-## CITEq
-
-[![DOI](https://zenodo.org/badge/$Description_Zenodo.svg)](https://zenodo.org/badge/latestdoi/$Description_Zenodo)
-
-## CURRENT BUILD STATUS
-
-[![Build Status](https://travis-ci.org/coin-or/$Description_Slug.svg?branch=$version)](https://travis-ci.org/coin-or/$Description_Slug)
-
-[![Build status](https://ci.appveyor.com/api/projects/status/$Description_Appveyor_Status/branch/$version?svg=true)](https://ci.appveyor.com/project/tkralphs/$Description_Appveyor_Slug/branch/$version)
-
-## DOWNLOAD
-
-Binaries for most platforms are available on [Bintray](https://bintray.com/coin-or/download/$Description_Bintray_Package). 
-
- * *Linux*: On Debian/Ubuntu, $Description_ShortName is available in the package \`coinor-$lower_case\` and can be installed with apt. On Fedora, $Description_ShortName is available in the package \`coin-or-$Description_Slug\`.
- * *Windows*: The easiest way to get $Description_ShortName on Windows is to download from *[Bintray](https://bintray.com/coin-or/download/$Description_Bintray_Package)*.
- * *Mac OS X*: The easiest way to get Cbc on Mac OS X is through [Homebrew](https://brew.sh).
-   * \`brew tap coin-or-tools/coinor\`
-   * \`brew install coin-or-tools/coinor/$lower_case\`
-
-Due to license incompatibilities, pre-compiled binaries lack some functionality.
-If binaries are not available for your platform for the latest version and you would like to request them to be built and posted, feel free to let us know on the mailing list.
-
-*Source code* can be obtained either by
-
- * Downloading a snapshot of the source code for the latest release version of $Description_ShortName from the
- [releases](https://github.com/coin-or/$Description_Slug/releases) page.
- * Cloning the repository from [Github](https://github.com/coin-or/$Description_Slug) or using the 
-\`coinbrew\` script (recommended).  
-
-Below is a quick start guide for building on common platforms. More detailed
-build instructions are
-[here](https://coin-or.github.io/user_introduction.html).
-
-## BUILDING from source
-
-The quick start assumes you are in a bash shell. 
-
-### Using \`coinbrew\`
-
-To build CoinUtils from source, obtain the \`coinbrew\` script, do
-\`\`\`
-wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew
-chmod u+x coinbrew
-./coinbrew fetch $Description_Slug@$version
-./coinbrew build $Description_Slug
-\`\`\`
-For more detailed instructions on coinbrew, see https://coin-or.github.io/coinbrew.
-The \`coinbrew\` script will fetch the additional projects specified in the Dependencies section of [config.yml](.coin-or/config.yml).
-
-### Without \`coinbrew\` (Expert users)
-
- * Download the source code, e.g., by cloning the git repo https://github.com/coin-or/$Description_Slug
- * Download and install the source code for the dependencies listed in [config.yml](.coin-or/config.yml)
- * Build the code as follows (make sure to set PKG_CONFIG_PTH to install directory for dependencies).
-
-\`\`\`
-./configure -C
-make
-make test
-make install
-\`\`\`
-
-### With Microsoft Visual Studio
+echo "### With Microsoft Visual Studio
 
 For Microsoft Visual C++ users, there are project files for version 10
 available in the \`MSVisualStudio\` directory. First, obtain the source code
@@ -203,21 +54,23 @@ and then try \`?\` or setting various stuff.
 clp filename                #read file, do presolve and dual algorithm
 clp filename -primalsimplex #use primal instead
 \`\`\`
-On Linux, clp can do file completion and line editing if it can find the history, readline
-and termcap. packages.
+On Linux, clp can do file completion and line editing if it can find the 
+history, readline, and termcap packages when building.
 
-If you want to stress the code you can set various stuff, e.g., dantzig pricing
- and then go into netlib testing.  I do not guarantee that it will solve all 
-netlib if you get too creative.  For instance using presolve makes netlib 
-solve faster - but pilot87 prefers a large infeasibility weight.  So
+If you want to stress the code, you can set various stuff, e.g., dantzig pricing
+and then go into netlib testing.  It is not guaranteed that it will solve all 
+netlib instances if you get too creative.  For instance using presolve makes 
+netlib solve faster - but pilot87 prefers a large infeasibility weight.  So
 \`\`\`
 clp -presolve on -dualbound 1.0e10 -netlib
 \`\`\`
 works well.
 
-There are examples in [examples](examples).  To create an executable - testit do
+There are examples in [examples](examples).  To create an executable, build 
+with \`coinbrew\` as above and then do
 \`\`\`
-make DRIVER=minimum to use minimum.cpp
+cd build/Cbc/$version_num/examples
+make DRIVER=minimum #build the driver minimum.cpp
 \`\`\`
 or whichever driver you want.  A list is in [Makefile](Makefile.in).
 Three useful samples are:
@@ -232,21 +85,11 @@ of MPSX.
  * \`presolve.cpp\`  This is a good driver for larger problems.
 
 Other ones can get complicated so start simple and work your way up.
+"
 
-## Doxygen Documentation
+make_doxygen_info
 
-If you have \`Doxygen\` available, you can build a HTML documentation by typing
-
-\`make doxygen-docs\` 
-
-in the build directory. If $Description_ShortName was built via \`coinbrew\`, then the build
-directory will be \`./build/$Description_Slug/$version_num\` by default. The doxygen documentation main file
-is found at \`<build-dir>/doxydoc/html/index.html\`.
-
-If you don't have \`doxygen\` installed locally, you can use also find the
-documentation [here](http://coin-or.github.io/$Description_Slug/Doxygen).
-
-## Project Links
+echo "## Project Links
 
 Help:
  * [mailing list](http://list.coin-or.org/mailman/listinfo/clp)
