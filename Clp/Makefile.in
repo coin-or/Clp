@@ -61,11 +61,10 @@ host_triplet = @host@
 # included in the tarball
 @ALWAYS_FALSE@am__append_2 = test
 @COIN_HAS_OSI_TRUE@am__append_3 = osi-clp.pc
-DIST_COMMON = README $(am__configure_deps) \
-	$(srcdir)/BuildTools/Makemain.inc $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in $(srcdir)/clp-uninstalled.pc.in \
-	$(srcdir)/clp.pc.in $(top_srcdir)/configure \
-	$(top_srcdir)/doxydoc/doxygen.conf.in \
+DIST_COMMON = $(am__configure_deps) $(srcdir)/BuildTools/Makemain.inc \
+	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
+	$(srcdir)/clp-uninstalled.pc.in $(srcdir)/clp.pc.in \
+	$(top_srcdir)/configure $(top_srcdir)/doxydoc/doxygen.conf.in \
 	$(top_srcdir)/examples/Makefile.in \
 	$(top_srcdir)/src/OsiClp/osi-clp-uninstalled.pc.in \
 	$(top_srcdir)/src/OsiClp/osi-clp.pc.in AUTHORS config.guess \
@@ -430,7 +429,7 @@ CLEANFILES =
 
 # Files that are generated and should be cleaned with make distclean
 DISTCLEANFILES = $(am__append_5) $(VPATH_DISTCLEANFILES)
-DocFiles = README AUTHORS LICENSE 
+DocFiles = README README.md AUTHORS AUTHORS.md LICENSE LICENSE.md 
 DocInstallDir = $(datadir)/coin/doc/$(PACKAGE_NAME)
 COIN_HAS_DOXYGEN = @COIN_HAS_DOXYGEN_TRUE@TRUE
 COIN_HAS_LATEX = @COIN_HAS_LATEX_TRUE@TRUE
@@ -1021,7 +1020,7 @@ uninstall-all-doxygen-docs:
 	  fi ; \
 	done ; 
 
-install-doc: $(DocFiles) 
+install-doc: 
 	test -z "$(DocInstallDir)" || $(mkdir_p) "$(DESTDIR)$(DocInstallDir)"
 	for file in $(DocFiles); do \
 	  if test -f "$$file"; then dir=; else dir="$(srcdir)/"; fi; \
