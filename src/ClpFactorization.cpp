@@ -1789,6 +1789,8 @@ scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
 //#define CHECK_CLEAN_BASIS
 #ifdef CHECK_CLEAN_BASIS
       int saveNumberElements = numberElements;
+#elif COIN_BIG_DOUBLE
+      int saveNumberElements = numberElements;
 #endif
 #endif
       // Not needed for dense
@@ -1800,12 +1802,16 @@ scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
         2 * numberElements);
       // Fill in counts so we can skip part of preProcess
       // This is NOT needed for dense but would be needed for later versions
-      CoinFactorizationDouble *elementU;
+#if COIN_BIG_DOUBLE == 0
+      double *elementU = coinFactorizationB_->elements();
+#else
+      CoinFactorizationDouble *elementU =
+	new CoinFactorizationDouble [saveNumberElements];
+#endif
       int *indexRowU;
       int *startColumnU;
       int *numberInRow;
       int *numberInColumn;
-      elementU = coinFactorizationB_->elements();
       indexRowU = coinFactorizationB_->indices();
       startColumnU = coinFactorizationB_->starts();
 #ifdef CHECK_CLEAN_BASIS
@@ -1868,6 +1874,11 @@ scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
         assert(elementU[i]);
         assert(indexRowU[i] >= 0 && indexRowU[i] < numberRows);
       }
+#endif
+#if COIN_BIG_DOUBLE
+      double * elsU = coinFactorizationB_->elements();
+      for (int i=0;i<saveNumberElements;i++)
+	elsU[i] = elementU[i];;
 #endif
       coinFactorizationB_->preProcess();
       coinFactorizationB_->factor();
