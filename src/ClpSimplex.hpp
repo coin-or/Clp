@@ -12,11 +12,18 @@
 
 #include <iostream>
 #include <cfloat>
+
+#include "CoinUtilsConfig.h"
 #include "ClpModel.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpSolve.hpp"
 #include "ClpConfig.h"
 #include "CoinIndexedVector.hpp"
+
+#ifdef COINUTILS_HAS_GLPK
+#include "glpk.h"
+#endif
+
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
@@ -266,9 +273,11 @@ public:
   int readMps(const char *filename,
     bool keepNames = false,
     bool ignoreErrors = false);
+  #ifdef COINUTILS_HAS_GLPK
   /// Read GMPL files from the given filenames
-  int readGMPL(const char *filename, const char *dataName,
-    bool keepNames = false);
+  int readGMPL(const char *filename, const char *dataName, bool keepNames = false,
+               glp_tran **coin_glp_tran = NULL, glp_prob **coin_glp_prob = NULL);
+  #endif
   /// Read file in LP format from file with name filename.
   /// See class CoinLpIO for description of this format.
   int readLp(const char *filename, const double epsilon = 1e-5);
