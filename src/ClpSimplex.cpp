@@ -4,14 +4,18 @@
 
 //#undef NDEBUG
 
-#include "ClpConfig.h"
-
-#include "CoinPragma.hpp"
 #include <math.h>
+#include <cfloat>
+#include <string>
+#include <stdio.h>
+#include <iostream>
+
+#include "ClpConfig.h"
 
 #if SLIM_CLP == 2
 #define SLIM_NOIO
 #endif
+#include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinFloatEqual.hpp"
 #include "ClpSimplex.hpp"
@@ -31,14 +35,10 @@
 #include "ClpHelperFunctions.hpp"
 #include "CoinModel.hpp"
 #include "CoinLpIO.hpp"
-#include <cfloat>
 #if CLP_HAS_ABC
 #include "CoinAbcCommon.hpp"
 #endif
 
-#include <string>
-#include <stdio.h>
-#include <iostream>
 //#############################################################################
 
 ClpSimplex::ClpSimplex(bool emptyMessages)
@@ -7726,14 +7726,17 @@ int ClpSimplex::readMps(const char *filename,
   return status;
 }
 
+#ifdef COINUTILS_HAS_GLPK
 // Read GMPL files from the given filenames
-int ClpSimplex::readGMPL(const char *filename, const char *dataName,
-  bool keepNames)
+int ClpSimplex::readGMPL(const char *filename, const char *dataName, bool keepNames,
+                         glp_tran **coin_glp_tran, glp_prob **coin_glp_prob)
 {
-  int status = ClpModel::readGMPL(filename, dataName, keepNames);
+  int status = ClpModel::readGMPL(filename, dataName, keepNames, coin_glp_tran,
+                                  coin_glp_prob);
   createStatus();
   return status;
 }
+#endif
 
 // Read file in LP format from file with name filename.
 int ClpSimplex::readLp(const char *filename, const double epsilon)

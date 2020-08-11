@@ -21,6 +21,8 @@ int boundary_sort3 = 10000;
 #endif
 #define CLP_QUOTE(s) CLP_STRING(s)
 #define CLP_STRING(s) #s
+
+#include "CoinUtilsConfig.h"
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
@@ -29,10 +31,9 @@ int boundary_sort3 = 10000;
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
 #include "CoinModel.hpp"
-#ifdef CLP_HAS_GLPK
+
+#ifdef COINUTILS_HAS_GLPK
 #include "glpk.h"
-extern glp_tran *cbc_glp_tran;
-extern glp_prob *cbc_glp_prob;
 #else
 #define GLP_UNDEF 1
 #define GLP_FEAS 2
@@ -50,6 +51,7 @@ extern glp_prob *cbc_glp_prob;
 #if PRICE_USE_OPENMP
 #include "omp.h"
 #endif
+
 #include "AbcCommon.hpp"
 #include "ClpFactorization.hpp"
 #include "CoinTime.hpp"
@@ -212,6 +214,10 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #else
           AbcSimplex * models = new AbcSimplex[1];
 #endif
+#endif
+#ifdef COINUTILS_HAS_GLPK
+  glp_tran *coin_glp_tran;
+  glp_prob *coin_glp_prob;
 #endif
   // default action on import
   int allowImportErrors = 0;
@@ -1507,20 +1513,29 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #ifdef CLP_USEFUL_PRINTOUT
             mpsFile = fileName;
 #endif
-            if (!gmpl)
+            if (!gmpl){
               status = models[iModel].readMps(fileName.c_str(),
                 keepImportNames != 0,
                 allowImportErrors != 0);
-            else if (gmpl > 0)
+            }else if (gmpl > 0){
+#ifdef COINUTILS_HAS_GLPK
               status = models[iModel].readGMPL(fileName.c_str(),
-                (gmpl == 2) ? gmplData.c_str() : NULL,
-                keepImportNames != 0);
-            else
+                                               (gmpl == 2) ? gmplData.c_str() : NULL,
+                                               keepImportNames != 0,
+                                               &coin_glp_tran, &coin_glp_prob);
+#else
+                  printf("Clp was not built with GMPL support. Exiting.\n");
+                  // This is surely not the right thing to do here. Should we
+                  // throw an exceptioon? Exit?
+                  abort();
+#endif
+            }else{
 #ifdef KILL_ZERO_READLP
               status = models[iModel].readLp(fileName.c_str(), models[iModel].getSmallElementValue());
 #else
               status = models[iModel].readLp(fileName.c_str(), 1.0e-12);
 #endif
+            }
             if (!status || (status > 0 && allowImportErrors)) {
               goodModels[iModel] = true;
               // sets to all slack (not necessary?)
@@ -2337,10 +2352,10 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 int numberRows = models[iModel].getNumRows();
                 int numberColumns = models[iModel].getNumCols();
                 int numberGlpkRows = numberRows + 1;
-#ifdef CLP_HAS_GLPK
-                if (cbc_glp_prob) {
+#ifdef COINUTILS_HAS_GLPK
+                if (coin_glp_prob) {
                   // from gmpl
-                  numberGlpkRows = glp_get_num_rows(cbc_glp_prob);
+                  numberGlpkRows = glp_get_num_rows(coin_glp_prob);
                   if (numberGlpkRows != numberRows)
                     printf("Mismatch - cbc %d rows, glpk %d\n",
                       numberRows, numberGlpkRows);
@@ -2383,17 +2398,17 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                     primalColumnSolution[i], dualColumnSolution[i]);
                 }
                 fclose(fp);
-#ifdef CLP_HAS_GLPK
-                if (cbc_glp_prob) {
-                  glp_read_sol(cbc_glp_prob, fileName.c_str());
-                  glp_mpl_postsolve(cbc_glp_tran,
-                    cbc_glp_prob,
+#ifdef COINUTILS_HAS_GLPK
+                if (coin_glp_prob) {
+                  glp_read_sol(coin_glp_prob, fileName.c_str());
+                  glp_mpl_postsolve(coin_glp_tran,
+                    coin_glp_prob,
                     GLP_SOL);
                   // free up as much as possible
-                  glp_free(cbc_glp_prob);
-                  glp_mpl_free_wksp(cbc_glp_tran);
-                  cbc_glp_prob = NULL;
-                  cbc_glp_tran = NULL;
+                  glp_free(coin_glp_prob);
+                  glp_mpl_free_wksp(coin_glp_tran);
+                  coin_glp_prob = NULL;
+                  coin_glp_tran = NULL;
                   //gmp_free_mem();
                   /* check that no memory blocks are still allocated */
                   glp_free_env();
@@ -2933,14 +2948,14 @@ clp watson.mps -\nscaling off\nprimalsimplex");
     }
   }
   delete[] goodModels;
-#ifdef CLP_HAS_GLPK
-  if (cbc_glp_prob) {
+#ifdef COINTUILS_HAS_GLPK
+  if (coin_glp_prob) {
     // free up as much as possible
-    glp_free(cbc_glp_prob);
-    glp_mpl_free_wksp(cbc_glp_tran);
+    glp_free(coin_glp_prob);
+    glp_mpl_free_wksp(coin_glp_tran);
     glp_free_env();
-    cbc_glp_prob = NULL;
-    cbc_glp_tran = NULL;
+    coin_glp_prob = NULL;
+    coin_glp_tran = NULL;
   }
 #endif
   // By now all memory should be freed
