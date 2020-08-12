@@ -5,11 +5,11 @@
 
 #include "ClpConfig.h"
 
-#ifdef CBCSOLVERLIB_BUILD
-#ifndef CBCSOLVERLIB_EXPORT
-#include "CbcSolverConfig.h"
+#ifdef CBCLIB_BUILD
+#ifndef CBCLIB_EXPORT
+#include "CbcConfig.h"
 #endif
-#define CBCORCLPPARAM_EXPORT CBCSOLVERLIB_EXPORT
+#define CBCORCLPPARAM_EXPORT CBCLIB_EXPORT
 #else
 #define CBCORCLPPARAM_EXPORT CLPLIB_EXPORT
 #endif
