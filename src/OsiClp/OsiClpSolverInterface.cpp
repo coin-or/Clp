@@ -4938,7 +4938,7 @@ int OsiClpSolverInterface::writeMpsNative(const char *filename,
 }
 int OsiClpSolverInterface::writeBasisNative(const char *filename) const
 {
-  modelPtr_->writeBasis(filename,true,2);
+  return modelPtr_->writeBasis(filename,true,2);
 }
 
 //#############################################################################
