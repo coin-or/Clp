@@ -1001,6 +1001,7 @@ public:
     const char **rowNames, const char **columnNames,
     int formatType = 0, int numberAcross = 2,
     double objSense = 0.0) const;
+  virtual int writeBasisNative(const char *filename) const;
   /// Read file in LP format (with names)
   virtual int readLp(const char *filename, const double epsilon = 1e-5);
   /** Write the problem into an Lp file of the given filename.

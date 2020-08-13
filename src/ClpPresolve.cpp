@@ -1962,7 +1962,7 @@ CoinPresolveMatrix* create_CoinPresolveMatrix(
 
 #if PRESOLVE_CONSISTENCY
   //consistent(false);
-  cpm->presolve_consistent(this, false);
+  presolve_consistent(cpm, false);
 #endif
 
   return cpm;
@@ -2162,7 +2162,7 @@ CoinPostsolveMatrix* create_CoinPostsolveMatrix(ClpSimplex *si,
   CoinFillN(cpm->cdone_, ncols1, PRESENT_IN_REDUCED);
   CoinZeroN(cpm->cdone_ + ncols1, ncols0_in - ncols1);
   CoinFillN(cpm->rdone_, nrows1, PRESENT_IN_REDUCED);
-  CoinZeroN(cpm->rdone_ + nrows1, cpm->nrows0_in - nrows1);
+  CoinZeroN(cpm->rdone_ + nrows1, nrows0_in - nrows1);
 #endif
 
   return cpm;

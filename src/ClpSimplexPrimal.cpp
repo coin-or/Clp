@@ -278,6 +278,10 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
         statusOfProblemInPrimal(lastCleaned, 1, &progress_, true, ifValuesPass, NULL);
       }
     }
+#if CLP_CHECK_SCALING
+    if ((moreSpecialOptions_&256)!=0)
+      progress_.checkScalingEtc();
+#endif
 
     // Set average theta
     nonLinearCost_->setAverageTheta(1.0e3);
@@ -829,6 +833,14 @@ int ClpSimplexPrimal::whileIterating(int valuesOption)
     columnArray_[0]->setNumElements(0);
   return returnCode;
 }
+// This allows user to save basis every so many seconds
+#if CLP_SAVE_EVERY
+static int save_number = 0;
+static double save_value = COIN_DBL_MAX;
+static double save_last = -COIN_DBL_MAX;
+static double save_first = COIN_DBL_MAX;
+static FILE *save_fp = NULL;
+#endif
 /* Checks if finished.  Updates status */
 void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   ClpSimplexProgress *progress,
@@ -841,6 +853,10 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   double saveOriginalWeight = infeasibilityCost_;
   // number of pivots done
   int numberPivots = factorization_->pivots();
+#if CLP_CHECK_SCALING
+  // See if model behaving well
+  progress->checkScalingEtc();
+#endif
   if (type == 2) {
     // trouble - restore solution
     CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
@@ -1016,6 +1032,27 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
           && factorization_->pivotTolerance() < 0.11)
       || (largestPrimalError_ > 1.0e10 && largestDualError_ > 1.0e10))
       reason2 = 2;
+    //#define CLP_BE_ON_SAFE_SIDE
+#ifdef CLP_BE_ON_SAFE_SIDE
+    if (!reason2) {
+      double sumInf=nonLinearCost_->sumInfeasibilities();
+      double obj = nonLinearCost_->feasibleReportCost();
+      double currentWeighted = obj+infeasibilityCost_*sumInf;
+      double lastObj = progress->lastObjective(0);
+      double lastWeighted = lastObj+infeasibilityCost_*lastSumInfeasibility;
+      // to mark if infeasibilityCost_ changed
+      if (progress->infeasibility_[0]==-99 ||
+	  saveOriginalWeight != infeasibilityCost_)
+	lastWeighted = 1.0e200;
+      if (currentWeighted>lastWeighted + 1.0e-6 +
+	  1.0e-6*CoinMax(fabs(lastWeighted),fabs(currentWeighted))) {
+	reason2 = 2;
+	//printf("ITs trouble %d inf %g obj %g wt %g -> %g - was %g\n",
+	//     numberIterations_,sumInf,obj,infeasibilityCost_,
+	//     currentWeighted,lastWeighted);
+      }
+    }
+#endif
     if (reason2) {
       problemStatus_ = tentativeStatus;
       doFactorization = true;
@@ -1097,6 +1134,8 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       problemStatus_ = loop; //exit if in loop
       problemStatus_ = 10; // instead - try other algorithm
       numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
+      // mark as problems
+      sumDualInfeasibilities_ = -123456789.0;
     }
     problemStatus_ = 10; // instead - try other algorithm
     return;
@@ -1486,7 +1525,12 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       // may be optimal
       if (perturbation_ == 101) {
         goToDual = unPerturb(); // stop any further perturbation
-        if ((numberRows_ > 20000 || numberDualInfeasibilities_) && !numberTimesOptimal_)
+#if CLP_CHECK_SCALING > 1
+#define CLP_PRIMAL_SIZE CLP_CHECK_SCALING
+#else
+#define CLP_PRIMAL_SIZE 20000
+#endif
+        if ((numberRows_ > CLP_PRIMAL_SIZE || numberDualInfeasibilities_) && !numberTimesOptimal_)
           goToDual = false; // Better to carry on a bit longer
         lastCleaned = -1; // carry on
       }
@@ -1691,6 +1735,9 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
     goToDual = false;
   if (goToDual || (numberIterations_ > 1000 && largestPrimalError_ > 1.0e6 && largestDualError_ > 1.0e6)) {
     problemStatus_ = 10; // try dual
+    // mark as problems
+    if (largestPrimalError_ > 1.0e6 && largestDualError_ > 1.0e6)
+      sumDualInfeasibilities_ = -123456789.0;
     // See if second call
     if ((moreSpecialOptions_ & 256) != 0 && nonLinearCost_->sumInfeasibilities() > 1.0e2) {
       numberPrimalInfeasibilities_ = nonLinearCost_->numberInfeasibilities();
@@ -1728,6 +1775,46 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   // Allow matrices to be sorted etc
   int fake = -999; // signal sort
   matrix_->correctSequence(this, fake, fake);
+#ifdef CLP_BE_ON_SAFE_SIDE
+  if (saveOriginalWeight != infeasibilityCost_)
+    progress->infeasibility_[0]=-99; // mark as changed
+#endif
+#if CLP_SAVE_EVERY
+  if (!nonLinearCost_->numberInfeasibilities()) {
+    if (objectiveValue() < save_value && CoinCpuTime() > save_last) {
+      save_value = objectiveValue();
+      if (!save_fp) {
+	save_fp = fopen("saved.bases","w");
+	save_first = CoinCpuTime();
+      }
+      save_number++;
+      char output[100];
+      sprintf(output, "saveBasis%3.3d.bas", save_number);
+      printf("saving basis %d\n",save_number);
+      double * save = CoinCopyOfArray(columnActivity_,numberColumns_);
+      if (columnScale_) {
+	for (int i=0;i<numberColumns_;i++) 
+	  columnActivity_[i] = columnActivityWork_[i]*columnScale_[i];
+      } else {
+	for (int i=0;i<numberColumns_;i++) 
+	  columnActivity_[i] = columnActivityWork_[i];
+      }
+      writeBasis(output,true,2);
+      memcpy(columnActivity_,save,numberColumns_*sizeof(double));
+      fprintf(save_fp,"basis %d after %.2f seconds objective %g\n",
+	      save_number,CoinCpuTime()-save_first,objectiveValue());
+      fflush(save_fp);
+      save_last = CoinCpuTime()+CLP_SAVE_EVERY;
+    } else if (objectiveValue() > save_value+1.0e-1+0.00001*fabs(save_value)) {
+      printf("Big problems - objective up from %g to %g\n",
+	     save_value,objectiveValue());
+      fclose(save_fp);
+      exit(77);
+    }
+    if (!problemStatus_)
+      fclose(save_fp);
+  }
+#endif
 }
 /*
    Row array has pivot column
@@ -1842,7 +1929,16 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
 
   double averageTheta = nonLinearCost_->averageTheta();
   double tentativeTheta = CoinMin(10.0 * averageTheta, maximumMovement);
+  /* CLP_MOVEMENT 
+     - 0 guess theta and use as maximum (current code)
+     - 1 use infinity as maximum
+     - 2 use guess but think carefully
+   */
+#if CLP_MOVEMENT==1
+  tentativeTheta = maximumMovement;
+#endif
   double upperTheta = maximumMovement;
+  double trueUpperTheta = maximumMovement;
   if (tentativeTheta > 0.5 * maximumMovement)
     tentativeTheta = maximumMovement;
   bool thetaAtMaximum = tentativeTheta == maximumMovement;
@@ -1880,6 +1976,9 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
     // We also re-compute reduced cost
     numberRemaining = 0;
     dualIn_ = cost_[sequenceIn_];
+#if CLP_MOVEMENT==2
+    double largestAlpha = 0.0;
+#endif
 #ifndef NDEBUG
     //double tolerance = primalTolerance_ * 1.002;
 #endif
@@ -1902,6 +2001,12 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
         // must be exactly same as when used
         double change = tentativeTheta * alpha;
         possible = (oldValue - change) <= bound + primalTolerance_;
+	// and get a limit
+	if (!thetaAtMaximum) {
+	  change = trueUpperTheta * alpha;
+	  if (oldValue - change <= bound - 0.9*primalTolerance_)
+	    trueUpperTheta = (oldValue - bound + 0.9*primalTolerance_)/alpha;
+	}
         oldValue -= bound;
       } else {
         // basic variable going towards upper bound
@@ -1909,12 +2014,21 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
         // must be exactly same as when used
         double change = tentativeTheta * alpha;
         possible = (oldValue - change) >= bound - primalTolerance_;
+	// and get a limit
+	if (!thetaAtMaximum) {
+	  change = trueUpperTheta * alpha;
+	  if (oldValue - change >= bound + 0.9*primalTolerance_)
+	    trueUpperTheta = (bound + 0.9*primalTolerance_ - oldValue)/-alpha;
+	}
         oldValue = bound - oldValue;
         alpha = -alpha;
       }
       double value;
       //assert (oldValue >= -10.0*tolerance);
       if (possible) {
+#if CLP_MOVEMENT==2
+	largestAlpha = CoinMax(largestAlpha,alpha);
+#endif
         value = oldValue - upperTheta * alpha;
 #ifdef CLP_USER_DRIVEN1
         if (!userChoiceValid1(this, iPivot, oldValue,
@@ -1954,6 +2068,58 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
         //indexRhs[numberFlip++]=iRow;
       }
     }
+#if CLP_MOVEMENT==2
+    if (largestAlpha<1.0e-3) {
+      // allow all
+      pivotOne = -1;
+      totalThru = 0.0;
+      tentativeTheta = maximumMovement;
+      numberRemaining = 0;
+      for (iIndex = 0; iIndex < number; iIndex++) {
+	
+	int iRow = which[iIndex];
+	double alpha = work[iIndex];
+	int iPivot = pivotVariable_[iRow];
+	alpha *= way;
+	double oldValue = solution_[iPivot];
+	// get where in bound sequence
+	// note that after this alpha is actually fabs(alpha)
+	bool possible;
+	// do computation same way as later on in primal
+	if (alpha > 0.0) {
+	  // basic variable going towards lower bound
+	  double bound = lower_[iPivot];
+	  // must be exactly same as when used
+	  double change = tentativeTheta * alpha;
+	  possible = (oldValue - change) <= bound + primalTolerance_;
+	  oldValue -= bound;
+	} else {
+	  // basic variable going towards upper bound
+	  double bound = upper_[iPivot];
+	  // must be exactly same as when used
+	  double change = tentativeTheta * alpha;
+	  possible = (oldValue - change) >= bound - primalTolerance_;
+	  oldValue = bound - oldValue;
+	  alpha = -alpha;
+	}
+	double value;
+	if (possible) {
+	  value = oldValue - upperTheta * alpha;
+	  if (value < -primalTolerance_ && alpha >= acceptablePivot) {
+	    upperTheta = (oldValue + primalTolerance_) / alpha;
+	    pivotOne = numberRemaining;
+	  }
+	  // add to list
+	  spare[numberRemaining] = alpha;
+	  rhs[numberRemaining] = oldValue;
+	  indexPoint[numberRemaining] = iIndex;
+	  index[numberRemaining++] = iRow;
+	  totalThru += alpha; // need more if dubious pricing
+	  setActive(iRow);
+	}
+      }
+    }
+#endif
 #if 0 // was def CLP_USER_DRIVEN
 	  clpUserStruct info;
 	  info.type=4;
@@ -1978,6 +2144,7 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
       //printf("Going round with average theta of %g\n",averageTheta);
       tentativeTheta = maximumMovement;
       thetaAtMaximum = true; // seems to be odd compiler error
+      trueUpperTheta = maximumMovement;
     } else {
       break;
     }
@@ -2114,6 +2281,7 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
         lastTheta = theta_;
         if (bestPivot > bestEverPivot)
           bestEverPivot = bestPivot;
+	trueUpperTheta = maximumMovement;
       }
     }
     // can get here without pivotRow_ set but with lastPivotRow
@@ -2166,6 +2334,11 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
   //if (iTry>50)
   //printf("** %d tries\n",iTry);
   if (pivotRow_ >= 0) {
+#if CLP_PRINT_MORE
+    if (theta_ > trueUpperTheta) {
+      printf("theta_ %g trueUpper %g\n",theta_,trueUpperTheta);
+    }
+#endif
     int position = pivotRow_; // position in list
     pivotRow_ = index[position];
     alpha_ = work[indexPoint[position]];
@@ -4088,5 +4261,3 @@ int ClpSimplexPrimal::lexSolve()
   return problemStatus_;
 }
 
-/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/

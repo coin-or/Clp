@@ -49,6 +49,36 @@ static int hiResolveTry = 9999999;
 //#############################################################################
 void OsiClpSolverInterface::initialSolve()
 {
+  //#define OSICLP_TUNING 10
+  /*
+    1 - always resolve not initialSolve
+    2 - if singular go at once to primal (flag in ClpSimplex)
+    4 - if singular as 2 but do in OsiClp
+    8 - switch off presolve (not in postprocessing)
+    16 - delete this->factorization_
+    32 - reset random number each time
+    64 - no crunch
+   */
+#if (OSICLP_TUNING&1)
+  if (preProcessingMode()) {
+    bool takeHintPre[4];
+    OsiHintStrength strengthPre[4];
+    getHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
+    getHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
+    getHintParam(OsiDoDualInInitial, takeHintPre[2], strengthPre[2]);
+    getHintParam(OsiDoPresolveInInitial, takeHintPre[3], strengthPre[3]);
+    setHintParam(OsiDoDualInResolve, takeHintPre[2], OsiHintTry);
+    setHintParam(OsiDoPresolveInResolve, takeHintPre[3], OsiHintTry);
+    resolve();
+    setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
+    setHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
+    return;
+  }
+#endif
+#if (OSICLP_TUNING&32)
+  // reset random
+  modelPtr_->randomNumberGenerator()->setSeed(123456789);
+#endif
 #define KEEP_SMALL
 #ifdef KEEP_SMALL
   if (smallModel_) {
@@ -111,12 +141,71 @@ void OsiClpSolverInterface::initialSolve()
     }
   }
   int saveMoreOptions = modelPtr_->moreSpecialOptions();
+#if OSICLP_TUNING
+  int saveSpecialOptions = specialOptions_;
+  bool takeHintPre[2];
+  OsiHintStrength strengthPre[2];
+  getHintParam(OsiDoDualInInitial, takeHintPre[0], strengthPre[0]);
+  getHintParam(OsiDoPresolveInInitial, takeHintPre[1], strengthPre[1]);
+  if (preProcessingMode()) {
+#if (OSICLP_TUNING&8)
+    if (preProcessingMode()==1)
+      setHintParam(OsiDoPresolveInInitial, false, OsiHintTry);
+#endif
+#if (OSICLP_TUNING&64)
+    specialOptions_ |= 2048; // no crunch
+#endif
+#if (OSICLP_TUNING&4)
+    // Is basis correct?
+    int numberRows = modelPtr_->numberRows();
+    double * rowActivity = modelPtr_->primalRowSolution();
+    double * rowActivitySave = CoinCopyOfArray(rowActivity,numberRows);
+    int numberColumns = modelPtr_->numberColumns();
+    double * columnActivity = modelPtr_->primalColumnSolution();
+    double * columnActivitySave = CoinCopyOfArray(columnActivity,numberColumns);
+    int nTotal = numberRows+numberColumns;
+    setBasis(basis_, modelPtr_);
+    unsigned char * status = modelPtr_->statusArray();
+    //unsigned char * statusSave = CoinCopyOfArray(status,nTotal);
+    int numberSlacks = 0;
+    for (int i=numberColumns;i<nTotal;i++) {
+      if ((status[i]&7)==1)
+	numberSlacks++;
+    }
+    int saveMaxIts = modelPtr_->maximumIterations();
+    modelPtr_->setMaximumIterations(0);
+    //modelPtr_->setLogLevel(3); //temp
+    modelPtr_->dual(0);
+    modelPtr_->setMaximumIterations(saveMaxIts);
+    // if any thrown out
+    int numberSlacks2 = 0;
+    for (int i=numberColumns;i<nTotal;i++) {
+      if ((status[i]&7)==1)
+	numberSlacks2++;
+    }
+    if (numberSlacks2>numberSlacks) {
+      // go to primal
+      basis_ = getBasis(modelPtr_);
+      memcpy(rowActivity,rowActivitySave,numberRows*sizeof(double));
+      memcpy(columnActivity,columnActivitySave,numberColumns*sizeof(double));
+      setHintParam(OsiDoDualInResolve, false, OsiHintTry);
+    } else {
+      // think ?
+    }
+    delete [] rowActivitySave;
+    delete [] columnActivitySave;
+#elif (OSICLP_TUNING&2)
+    // always primal if singular
+    modelPtr_->setMoreSpecialOptions(saveMoreOptions | 33554432);
+#endif
+  }
+#endif
   {
     bool takeHint;
     OsiHintStrength strength;
     getHintParam(OsiDoDualInInitial, takeHint, strength);
     if ((modelPtr_->specialOptions()&0x01000000)!=0 && takeHint)
-      modelPtr_->setMoreSpecialOptions(saveMoreOptions|8192); // stay in dual
+      modelPtr_->setMoreSpecialOptions(modelPtr_->moreSpecialOptions()|8192); // stay in dual
   }
   // Check (in branch and bound)
   if ((specialOptions_ & 1024) == 0) {
@@ -794,6 +883,11 @@ disaster:
   }
   modelPtr_->whatsChanged_ |= 0x30000;
   modelPtr_->setMoreSpecialOptions(saveMoreOptions);
+#ifdef OSICLP_TUNING
+  specialOptions_ = saveSpecialOptions;
+  setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
+  setHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
+#endif
 #if 0
   // delete scaled matrix and rowcopy for safety
   delete modelPtr_->scaledMatrix_;
@@ -838,6 +932,10 @@ void OsiClpSolverInterface::resolve()
     }
   }
 #endif
+#if (OSICLP_TUNING&32)
+  // reset random
+  modelPtr_->randomNumberGenerator()->setSeed(123456789);
+#endif
   if ((stuff_.solverOptions_ & 65536) != 0) {
     modelPtr_->fastDual2(&stuff_);
     return;
@@ -871,6 +969,66 @@ void OsiClpSolverInterface::resolve()
       return;
     }
   }
+  int saveMoreOptions = modelPtr_->moreSpecialOptions();
+#if OSICLP_TUNING
+  int saveSpecialOptions = specialOptions_;
+  bool takeHintPre[2];
+  OsiHintStrength strengthPre[2];
+  getHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
+  getHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
+  if (preProcessingMode()) {
+#if (OSICLP_TUNING&8)
+    if (preProcessingMode()==1)
+      setHintParam(OsiDoPresolveInResolve, false, OsiHintTry);
+#endif
+#if (OSICLP_TUNING&64)
+    specialOptions_ |= 2048; // no crunch
+#endif
+#if (OSICLP_TUNING&4)
+    // Is basis correct?
+    int numberRows = modelPtr_->numberRows();
+    double * rowActivity = modelPtr_->primalRowSolution();
+    double * rowActivitySave = CoinCopyOfArray(rowActivity,numberRows);
+    int numberColumns = modelPtr_->numberColumns();
+    double * columnActivity = modelPtr_->primalColumnSolution();
+    double * columnActivitySave = CoinCopyOfArray(columnActivity,numberColumns);
+    int nTotal = numberRows+numberColumns;
+    setBasis(basis_, modelPtr_);
+    unsigned char * status = modelPtr_->statusArray();
+    //unsigned char * statusSave = CoinCopyOfArray(status,nTotal);
+    int numberSlacks = 0;
+    for (int i=numberColumns;i<nTotal;i++) {
+      if ((status[i]&7)==1)
+	numberSlacks++;
+    }
+    int saveMaxIts = modelPtr_->maximumIterations();
+    modelPtr_->setMaximumIterations(0);
+    //modelPtr_->setLogLevel(3); //temp
+    modelPtr_->dual(0);
+    modelPtr_->setMaximumIterations(saveMaxIts);
+    // if any thrown out
+    int numberSlacks2 = 0;
+    for (int i=numberColumns;i<nTotal;i++) {
+      if ((status[i]&7)==1)
+	numberSlacks2++;
+    }
+    if (numberSlacks2>numberSlacks) {
+      // go to primal
+      basis_ = getBasis(modelPtr_);
+      memcpy(rowActivity,rowActivitySave,numberRows*sizeof(double));
+      memcpy(columnActivity,columnActivitySave,numberColumns*sizeof(double));
+      setHintParam(OsiDoDualInResolve, false, OsiHintTry);
+    } else {
+      // think ?
+    }
+    delete [] rowActivitySave;
+    delete [] columnActivitySave;
+#elif (OSICLP_TUNING&2)
+    // always primal if singular
+    modelPtr_->setMoreSpecialOptions(saveMoreOptions | 33554432);
+#endif
+  }
+#endif
   int totalIterations = 0;
   bool abortSearch = false;
   ClpObjective *savedObjective = NULL;
@@ -904,9 +1062,8 @@ void OsiClpSolverInterface::resolve()
   // If using Clp initialSolve and primal - just do here
   gotHint = (getHintParam(OsiDoDualInResolve, takeHint, strength));
   assert(gotHint);
-  int saveMoreOptions = modelPtr_->moreSpecialOptions();
   if ((modelPtr_->specialOptions()&0x01000000)!=0 && takeHint)
-    modelPtr_->setMoreSpecialOptions(saveMoreOptions|8192); // stay in dual
+    modelPtr_->setMoreSpecialOptions(modelPtr_->moreSpecialOptions()|8192); // stay in dual
   if (strength != OsiHintIgnore && !takeHint && solveOptions_.getSpecialOption(6)) {
     ClpSolve options = solveOptions_;
     // presolve
@@ -1369,6 +1526,11 @@ disaster:
     modelPtr_->whatsChanged_ &= ~0xffff;
   modelPtr_->whatsChanged_ |= 0x30000;
   modelPtr_->setMoreSpecialOptions(saveMoreOptions);
+#ifdef OSICLP_TUNING
+  specialOptions_ = saveSpecialOptions;
+  setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
+  setHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
+#endif
 #ifdef SAVE_BASIS_ETC
   if (mpsNumber<20&&mpsNumber>oldMpsNumber) {
     char name[20];
@@ -2784,6 +2946,8 @@ void OsiClpSolverInterface::unmarkHotStart()
         modelPtr_->columnScale_ = NULL;
       }
     }
+#if (OSICLP_TUNING&16)
+    delete factorization_;
 #if 1
     if (modelPtr_->factorization())
       delete factorization_;
@@ -2792,6 +2956,7 @@ void OsiClpSolverInterface::unmarkHotStart()
 #else
     modelPtr_->swapFactorization(factorization_);
     delete factorization_;
+#endif
 #endif
     delete[] spareArrays_;
     smallModel_ = NULL;
@@ -3962,7 +4127,7 @@ void OsiClpSolverInterface::setInteger(const int *indices, int len)
 */
 void OsiClpSolverInterface::setObjective(const double *array)
 {
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   modelPtr_->whatsChanged_ &= (0xffff & ~64);
   int n = modelPtr_->numberColumns();
@@ -3983,7 +4148,7 @@ void OsiClpSolverInterface::setColLower(const double *array)
   lastAlgorithm_ = 999;
   modelPtr_->whatsChanged_ &= 0x1ff7f;
   CoinMemcpyN(array, modelPtr_->numberColumns(),
-    modelPtr_->columnLower());
+	      modelPtr_->columnLower());
 }
 /* Set the upper bounds for all columns
     array [getNumCols()] is an array of values for the objective.
@@ -4768,8 +4933,12 @@ int OsiClpSolverInterface::writeMpsNative(const char *filename,
   int formatType, int numberAcross, double objSense) const
 {
   return OsiSolverInterface::writeMpsNative(filename, rowNames, columnNames,
-    formatType, numberAcross, objSense,
+    formatType, numberAcross%2, objSense,
     numberSOS_, setInfo_);
+}
+int OsiClpSolverInterface::writeBasisNative(const char *filename) const
+{
+  modelPtr_->writeBasis(filename,true,2);
 }
 
 //#############################################################################

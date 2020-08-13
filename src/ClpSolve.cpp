@@ -4172,6 +4172,7 @@ ClpSimplexProgress::ClpSimplexProgress()
   numberTimesFlagged_ = 0;
   model_ = NULL;
   oddState_ = 0;
+  checkScalingAfter_ = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -4214,6 +4215,7 @@ ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs)
   numberTimesFlagged_ = rhs.numberTimesFlagged_;
   model_ = rhs.model_;
   oddState_ = rhs.oddState_;
+  checkScalingAfter_ = rhs.checkScalingAfter_;
 }
 // Copy constructor.from model
 ClpSimplexProgress::ClpSimplexProgress(ClpSimplex *model)
@@ -4266,6 +4268,7 @@ ClpSimplexProgress::operator=(const ClpSimplexProgress &rhs)
     numberTimesFlagged_ = rhs.numberTimesFlagged_;
     model_ = rhs.model_;
     oddState_ = rhs.oddState_;
+    checkScalingAfter_ = rhs.checkScalingAfter_;
   }
   return *this;
 }
@@ -4476,7 +4479,24 @@ void ClpSimplexProgress::reset()
   numberReallyBadTimes_ = 0;
   numberTimesFlagged_ = 0;
   oddState_ = 0;
+  checkScalingAfter_ = 0;
 }
+#if CLP_CHECK_SCALING
+// Checks if all going well - may rescale
+int
+ClpSimplexProgress::checkScalingEtc()
+{ 
+  if (model_->numberIterations()<checkScalingAfter_||
+      (model_->specialOptions() & 0x03000000) != 0)
+    return 0;
+  if (model_->numberIterations()) {
+    checkScalingAfter_ = model_->checkScaling();
+    return 1;
+  } else {
+    return 0;
+  }
+}
+#endif  
 // Returns previous objective (if -1) - current if (0)
 double
 ClpSimplexProgress::lastObjective(int back) const

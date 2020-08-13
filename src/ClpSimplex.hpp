@@ -883,6 +883,13 @@ public:
   void restoreData(ClpDataSave saved);
   /// Clean up status
   void cleanStatus();
+  /** Deals with badly scaled problems
+      Returns COIN_INT_MAX if well scaled
+      otherwise when to check again.
+      May change objectiveScale_ and/or rhsScale_ and 
+      corresponding arrays
+   */
+  int checkScaling();
   /// Factorizes using current basis. For external use
   int factorize();
   /** Computes duals from scratch. If givenDjs then
@@ -1428,6 +1435,7 @@ public:
 	 4194304 bit - tolerances have been changed by code
 	 8388608 bit - tolerances are dynamic (at first)
 	 16777216 bit - if factorization kept can still declare optimal at once
+	 33554432 bit - if singular at dual startup - go to primal
      */
   inline int moreSpecialOptions() const
   {
