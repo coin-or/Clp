@@ -67,7 +67,7 @@ void OsiClpSolverInterface::initialSolve()
     getHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
     getHintParam(OsiDoDualInInitial, takeHintPre[2], strengthPre[2]);
     getHintParam(OsiDoPresolveInInitial, takeHintPre[3], strengthPre[3]);
-    setHintParam(OsiDoDualInResolve, takeHintPre[2], OsiHintDo);
+    setHintParam(OsiDoDualInResolve, takeHintPre[2], OsiHintTry);
     setHintParam(OsiDoPresolveInResolve, takeHintPre[3], OsiHintTry);
     resolve();
     setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
@@ -188,7 +188,7 @@ void OsiClpSolverInterface::initialSolve()
       basis_ = getBasis(modelPtr_);
       memcpy(rowActivity,rowActivitySave,numberRows*sizeof(double));
       memcpy(columnActivity,columnActivitySave,numberColumns*sizeof(double));
-      setHintParam(OsiDoDualInResolve, false, OsiHintDo);
+      setHintParam(OsiDoDualInResolve, false, OsiHintTry);
     } else {
       // think ?
     }
@@ -895,7 +895,7 @@ disaster:
   }
   modelPtr_->whatsChanged_ |= 0x30000;
   modelPtr_->setMoreSpecialOptions(saveMoreOptions);
-#if OSICLP_TUNING
+#ifdef OSICLP_TUNING
   specialOptions_ = saveSpecialOptions;
   setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
   setHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
@@ -1029,7 +1029,7 @@ void OsiClpSolverInterface::resolve()
       basis_ = getBasis(modelPtr_);
       memcpy(rowActivity,rowActivitySave,numberRows*sizeof(double));
       memcpy(columnActivity,columnActivitySave,numberColumns*sizeof(double));
-      setHintParam(OsiDoDualInResolve, false, OsiHintDo);
+      setHintParam(OsiDoDualInResolve, false, OsiHintTry);
     } else {
       // think ?
     }
@@ -1538,7 +1538,7 @@ disaster:
     modelPtr_->whatsChanged_ &= ~0xffff;
   modelPtr_->whatsChanged_ |= 0x30000;
   modelPtr_->setMoreSpecialOptions(saveMoreOptions);
-#if OSICLP_TUNING
+#ifdef OSICLP_TUNING
   specialOptions_ = saveSpecialOptions;
   setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
   setHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);

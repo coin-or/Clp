@@ -1450,4 +1450,3 @@ public:
 #define CLP_MOVEMENT 2 // be more careful on pivot row in primal
 #endif
 #endif
-
