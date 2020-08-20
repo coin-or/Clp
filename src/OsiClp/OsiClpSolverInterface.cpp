@@ -838,6 +838,18 @@ void OsiClpSolverInterface::initialSolve()
 disaster:
   if (deleteSolver) {
     solver->returnModel(*modelPtr_);
+    //#define DEBUG_BORROW
+#ifdef DEBUG_BORROW
+    modelPtr_->dual(0);
+    if (solver->isProvenOptimal()&&modelPtr_->problemStatus()) {
+      modelPtr_->writeMps("badinfeas.mps",0,1);
+      modelPtr_->setLogLevel(63);
+      modelPtr_->dual(0);
+      modelPtr_->allSlackBasis();
+      modelPtr_->dual(0);
+      abort();
+    }
+#endif
     delete solver;
   }
   if (startFinishOptions) {
@@ -7638,6 +7650,12 @@ bool OsiClpSolverInterface::setHintParam(OsiHintParam key, bool yesNo,
     // Printing
     if (key == OsiDoReducePrint) {
       handler_->setLogLevel(yesNo ? 0 : 1);
+    }
+    if (!yesNo && key == OsiDoScale) {
+      delete modelPtr_->rowScale_;
+      modelPtr_->rowScale_ = NULL;
+      delete modelPtr_->columnScale_;
+      modelPtr_->columnScale_ = NULL;
     }
     return true;
   } else {

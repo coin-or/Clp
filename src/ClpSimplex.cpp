@@ -5867,6 +5867,14 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
       else if (secondaryStatus_ == 2)
         secondaryStatus_ = 4;
     }
+    // see if cutoff reached
+    double limit = 0.0;
+    getDblParam(ClpDualObjectiveLimit, limit);
+    if (fabs(limit) < 1.0e30 && objectiveValue() * optimizationDirection_ > limit + 1.0e-7 + 1.0e-8 * fabs(limit)) {
+      // actually infeasible on objective
+      problemStatus_ = 1;
+      secondaryStatus_ = 1; //printf("inf on obj dual %g limit %g\n",objectiveValue(),limit);
+    }
   }
   return returnCode;
 }
@@ -6147,6 +6155,14 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
         secondaryStatus_ = 3;
       else if (secondaryStatus_ == 2)
         secondaryStatus_ = 4;
+    }
+    // see if cutoff reached
+    double limit = 0.0;
+    getDblParam(ClpDualObjectiveLimit, limit);
+    if (fabs(limit) < 1.0e30 && objectiveValue() * optimizationDirection_ > limit + 1.0e-7 + 1.0e-8 * fabs(limit)) {
+      // actually infeasible on objective
+      problemStatus_ = 1;
+      secondaryStatus_ = 1; //printf("inf on obj primal %g limit %g\n",objectiveValue(),limit);
     }
   }
   //if (problemStatus_==1&&lastAlgorithm==1)
