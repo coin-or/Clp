@@ -3,12 +3,6 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 #include "CoinPragma.hpp"
-
-//#include <cassert>
-//#include <cstdlib>
-//#include <cstdio>
-//#include <iostream>
-
 #include "OsiClpSolverInterface.hpp"
 #include "OsiUnitTests.hpp"
 #include "OsiCuts.hpp"
