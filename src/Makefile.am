@@ -47,6 +47,7 @@ libClp_la_SOURCES = \
 	ClpNode.cpp ClpNode.hpp \
 	ClpObjective.cpp ClpObjective.hpp \
 	ClpPackedMatrix.cpp ClpPackedMatrix.hpp \
+	ClpParam.cpp ClpParam.hpp \
 	ClpParameters.hpp \
 	ClpPlusMinusOneMatrix.cpp ClpPlusMinusOneMatrix.hpp \
 	ClpPredictorCorrector.cpp ClpPredictorCorrector.hpp \
@@ -121,7 +122,6 @@ endif
 
 libClpSolver_la_SOURCES = \
 	ClpSolver.cpp \
-	CbcOrClpParam.cpp CbcOrClpParam.hpp \
 	MyEventHandler.cpp MyEventHandler.hpp \
 	MyMessageHandler.cpp MyMessageHandler.hpp \
 	unitTest.cpp
@@ -167,10 +167,6 @@ clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
 ########################################################################
 
 AM_CPPFLAGS = $(CLPLIB_CFLAGS)
-
-# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
-# is built within Clp
-AM_CPPFLAGS += -DCOIN_HAS_CLP
 
 # Use additional libtool flags
 AM_LDFLAGS = $(LT_LDFLAGS)
@@ -223,7 +219,7 @@ includecoin_HEADERS = \
 	ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
-	CbcOrClpParam.hpp \
+	ClpParam.hpp \
 	Idiot.hpp \
 	ClpCholeskyPardiso.hpp \
 	ClpPESimplex.hpp \
@@ -256,7 +252,7 @@ includecoin_HEADERS += ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp
 endif
 
 # needed by Cbc
-includecoin_HEADERS += CbcOrClpParam.cpp
+includecoin_HEADERS += ClpParam.cpp
 
 
 #######################################################################

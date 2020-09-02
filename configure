@@ -16939,6 +16939,12 @@ $as_echo "no" >&6; }
     pkg_short_errors=""
   fi
 
+  # Check whether -static option of pkg-config should be used when requesting libs
+  pkg_static=
+  if test -n "$PKG_CONFIG" ; then
+    case "$LDFLAGS" in "-static" | "* -static*" ) pkg_static=--static ;; esac
+  fi
+
    if test -n "$PKG_CONFIG"; then
   COIN_HAS_PKGCONFIG_TRUE=
   COIN_HAS_PKGCONFIG_FALSE='#'
@@ -19704,7 +19710,7 @@ $as_echo "$as_me: FINALIZE_FLAGS for ClpLib:" >&6;}
 
       if test -n "${CLPLIB_PCFILES}" ; then
         temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${CLPLIB_PCFILES}`
-        temp_LFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${CLPLIB_PCFILES}`
+        temp_LFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs $pkg_static ${CLPLIB_PCFILES}`
         CLPLIB_CFLAGS="$temp_CFLAGS ${CLPLIB_CFLAGS}"
         CLPLIB_LFLAGS="$temp_LFLAGS ${CLPLIB_LFLAGS}"
       fi
@@ -19753,7 +19759,7 @@ $as_echo "$as_me: FINALIZE_FLAGS for OsiClpLib:" >&6;}
 
       if test -n "${OSICLPLIB_PCFILES}" ; then
         temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${OSICLPLIB_PCFILES}`
-        temp_LFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${OSICLPLIB_PCFILES}`
+        temp_LFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs $pkg_static ${OSICLPLIB_PCFILES}`
         OSICLPLIB_CFLAGS="$temp_CFLAGS ${OSICLPLIB_CFLAGS}"
         OSICLPLIB_LFLAGS="$temp_LFLAGS ${OSICLPLIB_LFLAGS}"
       fi
@@ -19802,7 +19808,7 @@ $as_echo "$as_me: FINALIZE_FLAGS for OsiClpUnitTest:" >&6;}
 
       if test -n "${OSICLPUNITTEST_PCFILES}" ; then
         temp_CFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --cflags ${OSICLPUNITTEST_PCFILES}`
-        temp_LFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs ${OSICLPUNITTEST_PCFILES}`
+        temp_LFLAGS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --libs $pkg_static ${OSICLPUNITTEST_PCFILES}`
         OSICLPUNITTEST_CFLAGS="$temp_CFLAGS ${OSICLPUNITTEST_CFLAGS}"
         OSICLPUNITTEST_LFLAGS="$temp_LFLAGS ${OSICLPUNITTEST_LFLAGS}"
       fi
