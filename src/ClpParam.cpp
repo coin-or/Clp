@@ -2,8 +2,6 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#include "ClpConfig.hpp"
-
 #include <string>
 #include <iostream>
 #include <cassert>
@@ -53,7 +51,7 @@ static char *where = NULL;
 extern int whichArgument;
 int ClpEnvironmentIndex = -1;
 // Alternative to environment
-char *alternativeEnvironment = NULL;
+char *alternativeEnvironmentClp = NULL;
 static FILE *ClpReadCommand = stdin;
 
 void setClpReadCommand(FILE* f) { ClpReadCommand = f; }
@@ -70,10 +68,10 @@ static size_t fillEnv()
 #else
   // Don't think it will work on Windows
   char *environ;
-  if (!alternativeEnvironment)
+  if (!alternativeEnvironmentClp)
     environ = getenv("CBC_CLP_ENVIRONMENT");
   else
-    environ = alternativeEnvironment;
+    environ = alternativeEnvironmentClp;
   size_t length = 0;
   if (environ) {
     length = strlen(environ);
@@ -103,9 +101,9 @@ static size_t fillEnv()
   }
   if (!length) {
     ClpEnvironmentIndex = -1;
-    if (alternativeEnvironment) {
-      delete[] alternativeEnvironment;
-      alternativeEnvironment = NULL;
+    if (alternativeEnvironmentClp) {
+      delete[] alternativeEnvironmentClp;
+      alternativeEnvironmentClp = NULL;
     }
   }
   return length;

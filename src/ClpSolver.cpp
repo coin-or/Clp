@@ -134,7 +134,7 @@ int mainTest(int argc, const char *argv[], int algorithm,
 static void statistics(ClpSimplex *originalModel, ClpSimplex *model);
 static void generateCode(const char *fileName, int type);
 // Alternative to environment
-extern char *alternativeEnvironment;
+extern char *alternativeEnvironmentClp;
 extern int ClpEnvironmentIndex;
 #ifdef CLP_USER_DRIVEN1
 /* Returns true if variable sequenceOut can leave basis when
@@ -2900,14 +2900,14 @@ clp watson.mps -\nscaling off\nprimalsimplex");
           break;
         case CLP_PARAM_ACTION_GUESS:
           if (goodModels[iModel]) {
-            delete[] alternativeEnvironment;
+            delete[] alternativeEnvironmentClp;
 #ifndef ABC_INHERIT
             ClpSimplexOther *model2 = static_cast< ClpSimplexOther * >(models + iModel);
-            alternativeEnvironment = model2->guess(0);
+            alternativeEnvironmentClp = model2->guess(0);
 #else
-	    alternativeEnvironment = NULL;
+	    alternativeEnvironmentClp = NULL;
 #endif
-            if (alternativeEnvironment)
+            if (alternativeEnvironmentClp)
               ClpEnvironmentIndex = 0;
             else
               std::cout << "** Guess unable to generate commands" << std::endl;
