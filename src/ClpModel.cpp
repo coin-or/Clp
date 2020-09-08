@@ -4051,7 +4051,7 @@ ClpModel::createCoinModel() const
   coinModel->zapRowNames();
   coinModel->zapColumnNames();
   for (i = 0; i < numberRows_; i++) {
-    char temp[30];
+    char temp[300];
     strcpy(temp, rowName(i).c_str());
     size_t length = strlen(temp);
     for (size_t j = 0; j < length; j++) {
@@ -4061,7 +4061,7 @@ ClpModel::createCoinModel() const
     coinModel->setRowName(i, temp);
   }
   for (i = 0; i < numberColumns_; i++) {
-    char temp[30];
+    char temp[300];
     strcpy(temp, columnName(i).c_str());
     size_t length = strlen(temp);
     for (size_t j = 0; j < length; j++) {
@@ -4084,7 +4084,7 @@ ClpModel::createCoinModel() const
         CoinBigIndex start = columnStart[i];
         double constant = coinModel->getColumnObjective(i);
         char temp[100000];
-        char temp2[30];
+        char temp2[300];
         sprintf(temp, "%g", constant);
         for (CoinBigIndex k = start; k < start + nels; k++) {
           int kColumn = row[k];
