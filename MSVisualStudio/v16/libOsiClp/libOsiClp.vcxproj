@@ -125,7 +125,6 @@
       <AdditionalIncludeDirectories>..\..\..\src\;..\..\..\..\CoinUtils\src\;..\..\..\..\Osi\src\Osi\</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>OSICLPLIB_BUILD;WIN32;_MBCS;_CRT_SECURE_NO_WARNINGS;_CRT_SECURE_NO_DEPRECATE;%(PreprocessorDefinitions);NDEBUG;_NDEBUG</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
