@@ -111,6 +111,7 @@ before_cache:
 script:
 - |-
     ############### Building Project ####################
+    set -x
     source coinbrew/.ci/setup_environment.sh
     $BASH coinbrew/coinbrew build $PROJECT --skip='ThirdParty/Metis ThirdParty/Mumps ThirdParty/Blas ThirdParty/Lapack' "${COMMON_ARGS[@]}" "${ADD_ARGS[@]}" "${DBG_ARGS[@]}" ADD_CXXFLAGS="${ADD_CXXFLAGS}" CC=${CC} CXX=${CXX}
 
