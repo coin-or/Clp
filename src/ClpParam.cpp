@@ -5,6 +5,7 @@
 #include "ClpConfig.h"
 
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <cassert>
 #ifdef CLP_HAS_READLINE
@@ -48,67 +49,29 @@ int coinFlushBufferFlag = 0;
 static bool doPrinting = true;
 static std::string afterEquals = "";
 static char printArray[250];
-static char line[1000];
-static char *where = NULL;
-extern int whichArgument;
-int ClpEnvironmentIndex = -1;
+//static char line[1000];
+//static char *where = NULL;
+//extern int whichArgument;
+//int whichField = -1;
 // Alternative to environment
-char *alternativeEnvironmentClp = NULL;
-static FILE *ClpReadCommand = stdin;
+//char *alternativeEnvironmentClp = NULL;
+//static FILE *ClpReadCommand = stdin;
 
-void setClpReadCommand(FILE* f) { ClpReadCommand = f; }
+//void setClpReadCommand(FILE* f) { ClpReadCommand = f; }
 
 void setClpPrinting(bool yesNo)
 {
   doPrinting = yesNo;
 }
 
-static size_t fillEnv()
+int fillEnv(std::string &input)
 {
 #if defined(_MSC_VER) || defined(__MSVCRT__)
+  // Don't think it will work with Visual Studio
   return 0;
 #else
-  // Don't think it will work on Windows
-  char *environ;
-  if (!alternativeEnvironmentClp)
-    environ = getenv("CBC_CLP_ENVIRONMENT");
-  else
-    environ = alternativeEnvironmentClp;
-  size_t length = 0;
-  if (environ) {
-    length = strlen(environ);
-    if (ClpEnvironmentIndex < static_cast< int >(length)) {
-      // find next non blank
-      char *whereEnv = environ + ClpEnvironmentIndex;
-      // munch white space
-      while (*whereEnv == ' ' || *whereEnv == '\t' || *whereEnv < ' ')
-        whereEnv++;
-      // copy
-      char *put = line;
-      while (*whereEnv != '\0') {
-        if (*whereEnv == ' ' || *whereEnv == '\t' || *whereEnv < ' ') {
-          break;
-        }
-        *put = *whereEnv;
-        put++;
-        assert(put - line < 1000);
-        whereEnv++;
-      }
-      ClpEnvironmentIndex = static_cast< int >(whereEnv - environ);
-      *put = '\0';
-      length = strlen(line);
-    } else {
-      length = 0;
-    }
-  }
-  if (!length) {
-    ClpEnvironmentIndex = -1;
-    if (alternativeEnvironmentClp) {
-      delete[] alternativeEnvironmentClp;
-      alternativeEnvironmentClp = NULL;
-    }
-  }
-  return length;
+  input = getenv("CBC_CLP_ENVIRONMENT");
+  return input.length();
 #endif
 }
 
@@ -919,117 +882,105 @@ void ClpReadPrintit(const char *input)
 
 // Simple read stuff
 std::string
-ClpReadNextField()
+ClpReadNextField(std::string &input, int &whichField,
+                 std::ifstream &inputFile)
 {
   std::string field;
-  static char coin_prompt[] = "Clp:";
-
-  if (!where) {
+  char coin_prompt[] = "Clp: ";
+  char *line;
+  
+  if (input == "") {
     // need new line
 #ifdef CLP_HAS_READLINE
-    if (ClpReadCommand == stdin) {
-      // Get a line from the user.
-      where = readline(coin_prompt);
-
-      // If the line has any text in it, save it on the history.
-      if (where) {
-        if (*where)
-          add_history(where);
-        strcpy(line, where);
-        free(where);
-      }
-    } else {
-      where = fgets(line, 1000, ClpReadCommand);
-    }
+     if (inputFile.is_open()) {
+        // Read from file
+        getline(inputFile, input);
+     }else{
+        // Get a line from the user.
+        input = std::string(readline(coin_prompt));
+        // If the line has any text in it, save it on the history.
+        if (input.length() > 0) {
+           add_history(input.c_str());
+        }
+        //strcpy(input, line);
+        //free(line);
+     } 
 #else
-    if (ClpReadCommand == stdin) {
-      fputs(coin_prompt, stdout);
-      fflush(stdout);
+     if (!inputFile) {
+       coin_prompt >> std::cout;
+       fflush(stdout);
+       getline(std::cin, input); 
     }
-    where = fgets(line, 1000, ClpReadCommand);
+     if (inputFile.is_open()) {
+       getline(inputFile, input);
+    }
 #endif
-    if (!where)
+    if (input == ""){
       return field; // EOF
-    where = line;
-    // clean image
-    char *lastNonBlank = line - 1;
-    while (*where != '\0') {
-      if (*where != '\t' && *where < ' ') {
-        break;
-      } else if (*where != '\t' && *where != ' ') {
-        lastNonBlank = where;
-      }
-      where++;
     }
-    where = line;
-    *(lastNonBlank + 1) = '\0';
+    
+    whichField = 0;
   }
-  // munch white space
-  while (*where == ' ' || *where == '\t')
-    where++;
-  char *saveWhere = where;
-  while (*where != ' ' && *where != '\t' && *where != '\0')
-    where++;
-  if (where != saveWhere) {
-    char save = *where;
-    *where = '\0';
-    //convert to string
-    field = saveWhere;
-    *where = save;
-  } else {
-    where = NULL;
-    field = "EOL";
+
+  std::stringstream iss(input);
+
+  int i; 
+  for (i = 0; i <= whichField; i++){ 
+     if (!(iss >> field)){
+        input = "";
+        field = "EOL";
+        whichField = -1;
+        break;
+     }
   }
+  if (i == whichField + 1){
+     whichField++;
+  }
+
   return field;
 }
 
 std::string
-ClpReadGetCommand(int &whichArgument, int argc, const char *argv[])
+ClpReadGetCommand(int &whichArgument, int &whichField,
+                  int argc, const char *argv[], std::string &input,
+                  std::ifstream &inputFile)
 {
   std::string field = "EOL";
+
   // say no =
   afterEquals = "";
   while (field == "EOL") {
     if (whichArgument > 0) {
-      if ((whichArgument < argc && argv[whichArgument]) || ClpEnvironmentIndex >= 0) {
-        if (ClpEnvironmentIndex < 0) {
-          field = argv[whichArgument++];
-        } else {
-          if (fillEnv()) {
-            field = line;
-          } else {
-            // not there
-            continue;
-          }
-        }
-        if (field == "-") {
-          std::cout << "Switching to line mode" << std::endl;
-          whichArgument = -1;
-          field = ClpReadNextField();
-        } else if (field[0] != '-') {
-          if (whichArgument != 2) {
-            // now allow std::cout<<"skipping non-command "<<field<<std::endl;
-            // field="EOL"; // skip
-          } else if (ClpEnvironmentIndex < 0) {
-            // special dispensation - taken as -import name
-            whichArgument--;
-            field = "import";
-          }
-        } else {
-          if (field != "--") {
-            // take off -
-            field = field.substr(1);
-          } else {
-            // special dispensation - taken as -import --
-            whichArgument--;
-            field = "import";
-          }
-        }
+      if (whichArgument < argc && argv[whichArgument]) {
+         field = argv[whichArgument++];
+         if (field == "-") {
+            std::cout << "Switching to line mode" << std::endl;
+            whichArgument = -1;
+         } else if (field[0] != '-') {
+            if (whichArgument == 2 && whichField < 0) {
+               // special dispensation - taken as -import name
+               whichArgument--;
+               field = "import";
+            }
+         } else {
+            if (field != "--") {
+               // take off -
+               field = field.substr(1);
+            } else {
+               // special dispensation - taken as -import --
+               whichArgument--;
+               field = "import";
+            }
+         }
       } else {
-        field = "";
+         field = "";
       }
     } else {
-      field = ClpReadNextField();
+       if (whichField == 0){
+          fillEnv(input);
+          whichField = 0;
+       }
+       field = ClpReadNextField(input, whichField, inputFile);
     }
   }
   // if = then modify and save
@@ -1041,37 +992,27 @@ ClpReadGetCommand(int &whichArgument, int argc, const char *argv[])
   //std::cout<<field<<std::endl;
   return field;
 }
+
 std::string
-ClpReadGetString(int &whichArgument, int argc, const char *argv[])
+ClpReadGetString(int &whichArgument, int &whichField,
+                 int argc, const char *argv[], std::string &input,
+                 std::ifstream &inputFile)
 {
   std::string field = "EOL";
   if (afterEquals == "") {
     if (whichArgument > 0) {
-      if (whichArgument < argc || ClpEnvironmentIndex >= 0) {
-        if (ClpEnvironmentIndex < 0) {
-	  const char * input = argv[whichArgument];
-	  if (strcmp(input,"--")&&strcmp(input,"stdin")&&
-	      strcmp(input,"stdin_lp")) {
+      if (whichArgument < argc) {
+         std::string value = argv[whichArgument];
+         if (value == "--" || value == "stdin"){
+            field = "-";
+         } else if (value == "stdin_lp"){
+            field = "-lp";
+         }else{
             field = argv[whichArgument++];
-          } else {
-            whichArgument++;
-            // -- means import from stdin
-	    // but allow for other than mps files
-	    // Clp does things in different way !!
-	    if (!strcmp(input,"--"))
-	      field = "-";
-	    else if (!strcmp(input,"stdin"))
-	      field = "-";
-	    else if (!strcmp(input,"stdin_lp"))
-	      field = "-lp";
-	  }
-        } else {
-          fillEnv();
-          field = line;
-        }
+         }
       }
     } else {
-      field = ClpReadNextField();
+       field = ClpReadNextField(input, whichField, inputFile);
     }
   } else {
     field = afterEquals;
@@ -1080,86 +1021,70 @@ ClpReadGetString(int &whichArgument, int argc, const char *argv[])
   //std::cout<<field<<std::endl;
   return field;
 }
+
 // valid 0 - okay, 1 bad, 2 not there
-int ClpReadGetIntField(int &whichArgument, int argc, const char *argv[], int *valid)
+int ClpReadGetIntField(int &whichArgument, int &whichField,
+                       int argc, const char *argv[], std::string &input,
+                       std::ifstream &inputFile, int *valid)
 {
   std::string field = "EOL";
   if (afterEquals == "") {
     if (whichArgument > 0) {
-      if (whichArgument < argc || ClpEnvironmentIndex >= 0) {
-        if (ClpEnvironmentIndex < 0) {
+       if (whichArgument < argc) {
           // may be negative value so do not check for -
           field = argv[whichArgument++];
-        } else {
-          fillEnv();
-          field = line;
-        }
-      }
+       }
     } else {
-      field = ClpReadNextField();
+       field = ClpReadNextField(input, whichField, inputFile);
     }
   } else {
-    field = afterEquals;
-    afterEquals = "";
+     field = afterEquals;
+     afterEquals = "";
   }
-  long int value = 0;
-  //std::cout<<field<<std::endl;
-  if (field != "EOL") {
-    const char *start = field.c_str();
-    char *endPointer = NULL;
-    // check valid
-    value = strtol(start, &endPointer, 10);
-    if (*endPointer == '\0') {
-      *valid = 0;
-    } else {
-      *valid = 1;
-      std::cout << "String of " << field;
-    }
-  } else {
-    *valid = 2;
+
+  int value(0);
+      
+  if (field != "EOL"){ 
+     std::stringstream ss(field);
+     *valid =  (ss >> value) ? 0:1;
+  }else{
+     *valid = 2;
   }
-  return static_cast< int >(value);
-}
-double
-ClpReadGetDoubleField(int &whichArgument, int argc, const char *argv[], int *valid)
-{
-  std::string field = "EOL";
-  if (afterEquals == "") {
-    if (whichArgument > 0) {
-      if (whichArgument < argc || ClpEnvironmentIndex >= 0) {
-        if (ClpEnvironmentIndex < 0) {
-          // may be negative value so do not check for -
-          field = argv[whichArgument++];
-        } else {
-          fillEnv();
-          field = line;
-        }
-      }
-    } else {
-      field = ClpReadNextField();
-    }
-  } else {
-    field = afterEquals;
-    afterEquals = "";
-  }
-  double value = 0.0;
-  //std::cout<<field<<std::endl;
-  if (field != "EOL") {
-    const char *start = field.c_str();
-    char *endPointer = NULL;
-    // check valid
-    value = strtod(start, &endPointer);
-    if (*endPointer == '\0') {
-      *valid = 0;
-    } else {
-      *valid = 1;
-      std::cout << "String of " << field;
-    }
-  } else {
-    *valid = 2;
-  }
+
   return value;
 }
+
+double
+ClpReadGetDoubleField(int &whichArgument, int &whichField,
+                      int argc, const char *argv[], std::string &input,
+                      std::ifstream &inputFile, int *valid)
+{
+  std::string field = "EOL";
+  if (afterEquals == "") {
+    if (whichArgument > 0) {
+      if (whichArgument < argc) {
+         // may be negative value so do not check for -
+         field = argv[whichArgument++];
+      }
+    } else {
+       field = ClpReadNextField(input, whichField, inputFile);
+    }
+  } else {
+     field = afterEquals;
+     afterEquals = "";
+  }
+
+  double value(0.0);
+  if (field != "EOL"){ 
+     std::stringstream ss(field);
+     *valid =  (ss >> value) ? 0:1;
+  }else{
+     *valid = 2;
+  }
+
+  return value;
+}
+
 /*
   Subroutine to establish the cbc parameter array. See the description of
   class ClpParam for details. Pulled from C..Main() for clarity.

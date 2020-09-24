@@ -413,17 +413,26 @@ void ClpReadPrintit(const char *input);
 
 /// Simple read stuff
 CLPLIB_EXPORT
-std::string ClpReadNextField();
+std::string ClpReadNextField(char *&input, int &whichField,
+                             std::ifstream &inputFile);
 
 CLPLIB_EXPORT
-std::string ClpReadGetCommand(int &whichArgument, int argc, const char *argv[]);
+std::string ClpReadGetCommand(int &whichArgument, int &whichField,
+                              int argc, const char *argv[], std::string &input,
+                              std::ifstream &inputFile);
 CLPLIB_EXPORT
-std::string ClpReadGetString(int &whichArgument, int argc, const char *argv[]);
+std::string ClpReadGetString(int &whichArgument, int &whichField,
+                             int argc, const char *argv[], std::string &input,
+                             std::ifstream &inputFile);
 // valid 0 - okay, 1 bad, 2 not there
 CLPLIB_EXPORT
-int ClpReadGetIntField(int &whichArgument, int argc, const char *argv[], int *valid);
+int ClpReadGetIntField(int &whichArgument, int &whichField,
+                       int argc, const char *argv[], std::string &input,
+                       std::ifstream &inputFile, int *valid);
 CLPLIB_EXPORT
-double ClpReadGetDoubleField(int &whichArgument, int argc, const char *argv[], int *valid);
+double ClpReadGetDoubleField(int &whichArgument, int &whichField,
+                             int argc, const char *argv[], std::string &input,
+                             std::ifstream &inputFile, int *valid);
 CLPLIB_EXPORT
 void setClpPrinting(bool yesNo);
 CLPLIB_EXPORT
