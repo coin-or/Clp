@@ -134,8 +134,7 @@ int mainTest(int argc, const char *argv[], int algorithm,
 static void statistics(ClpSimplex *originalModel, ClpSimplex *model);
 static void generateCode(const char *fileName, int type);
 // Alternative to environment
-extern char *alternativeEnvironmentClp;
-extern int ClpEnvironmentIndex;
+//extern char *alternativeEnvironmentClp;
 #ifdef CLP_USER_DRIVEN1
 /* Returns true if variable sequenceOut can leave basis when
    model->sequenceIn() enters.
@@ -221,6 +220,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #endif
   // Initialize argument
   int whichArgument = 1;
+  int whichField = -1;
+  std::ifstream inputFile;
   // default action on import
   int allowImportErrors = 0;
   int keepImportNames = 1;
@@ -436,11 +437,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
   //models[0].setDualRowPivotAlgorithm(steep);
   //ClpPrimalColumnSteepest steepP;
   //models[0].setPrimalColumnPivotAlgorithm(steepP);
-  std::string field;
+  std::string field, input;
 
   while (1) {
     // next command
-    field = ClpReadGetCommand(whichArgument, argc, argv);
+     field = ClpReadGetCommand(whichArgument, whichField, argc, argv,
+                               input, inputFile);
 
     // exit if null or similar
     if (!field.length()) {
@@ -609,7 +611,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         }
       } else if (type < 101) {
         // get next field as double
-        double value = ClpReadGetDoubleField(whichArgument, argc, argv, &valid);
+         double value = ClpReadGetDoubleField(whichArgument, whichField,
+                                              argc, argv, input, inputFile,
+                                              &valid);
         if (!valid) {
           parameters[iParam].setDoubleParameter(thisModel, value);
         } else if (valid == 1) {
@@ -619,7 +623,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         }
       } else if (type < 201) {
         // get next field as int
-        int value = ClpReadGetIntField(whichArgument, argc, argv, &valid);
+         int value = ClpReadGetIntField(whichArgument, whichField,
+                                        argc, argv, input, inputFile,
+                                        &valid);
         if (!valid) {
           if (parameters[iParam].type() == CLP_PARAM_INT_PRESOLVEPASS)
             preSolve = value;
@@ -651,7 +657,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         }
       } else if (type < 401) {
         // one of several strings
-        std::string value = ClpReadGetString(whichArgument, argc, argv);
+         std::string value = ClpReadGetString(whichArgument, whichField,
+                                              argc, argv, input, inputFile);
         int action = parameters[iParam].parameterOption(value);
         if (action < 0) {
           if (value != "EOL") {
@@ -1416,7 +1423,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           break;
         case CLP_PARAM_ACTION_IMPORT: {
           // get next field
-          field = ClpReadGetString(whichArgument, argc, argv);
+           field = ClpReadGetString(whichArgument, whichField,
+                                    argc, argv, input, inputFile);
           if (field == "$") {
             field = parameters[iParam].stringValue();
           } else if (field == "EOL") {
@@ -1553,10 +1561,11 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                   find[1] = 'p';
                   find[2] = 'a';
                   find[3] = 'r';
-                  FILE *fp = fopen(fileName.c_str(), "r");
-                  if (fp) {
-                    setClpReadCommand(fp); // Read from that file
-                    whichArgument = -1;
+                  inputFile.open(fileName);
+                  if (inputFile.is_open()) {
+                     whichArgument = -1;
+                  }else{
+                     std::cout << "Unable to open file" << fileName;
                   }
                 }
               }
@@ -1590,7 +1599,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               models[iModel].setObjectiveOffset(objScale * models[iModel].objectiveOffset());
             }
             // get next field
-            field = ClpReadGetString(whichArgument, argc, argv);
+            field = ClpReadGetString(whichArgument, whichField,
+                                     argc, argv, input, inputFile);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -1740,7 +1750,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_BASISIN:
           if (goodModels[iModel]) {
             // get next field
-            field = ClpReadGetString(whichArgument, argc, argv);
+             field = ClpReadGetString(whichArgument, whichField, argc, argv,
+                                      input, inputFile);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -1793,7 +1804,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_PRINTMASK:
           // get next field
           {
-            std::string name = ClpReadGetString(whichArgument, argc, argv);
+             std::string name = ClpReadGetString(whichArgument, whichField,
+                                                 argc, argv, input,
+                                                 inputFile);
             if (name != "EOL") {
               parameters[iParam].setStringValue(name);
               printMask = name;
@@ -1805,7 +1818,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_BASISOUT:
           if (goodModels[iModel]) {
             // get next field
-            field = ClpReadGetString(whichArgument, argc, argv);
+             field = ClpReadGetString(whichArgument, whichField,
+                                      argc, argv, input, inputFile);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -1852,7 +1866,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_PARAMETRICS:
           if (goodModels[iModel]) {
             // get next field
-            field = ClpReadGetString(whichArgument, argc, argv);
+             field = ClpReadGetString(whichArgument, whichField,
+                                      argc, argv, input, inputFile);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -1888,7 +1903,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           break;
         case CLP_PARAM_ACTION_SAVE: {
           // get next field
-          field = ClpReadGetString(whichArgument, argc, argv);
+           field = ClpReadGetString(whichArgument, whichField,
+                                    argc, argv, input, inputFile);
           if (field == "$") {
             field = parameters[iParam].stringValue();
           } else if (field == "EOL") {
@@ -1961,7 +1977,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         } break;
         case CLP_PARAM_ACTION_RESTORE: {
           // get next field
-          field = ClpReadGetString(whichArgument, argc, argv);
+           field = ClpReadGetString(whichArgument, whichField,
+                                    argc, argv, input, inputFile);
           if (field == "$") {
             field = parameters[iParam].stringValue();
           } else if (field == "EOL") {
@@ -2048,7 +2065,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           }
           break;
         case CLP_PARAM_ACTION_DIRECTORY: {
-          std::string name = ClpReadGetString(whichArgument, argc, argv);
+           std::string name = ClpReadGetString(whichArgument, whichField,
+                                               argc, argv, input, inputFile);
           if (name != "EOL") {
             size_t length = name.length();
             if (length > 0 && name[length - 1] == dirsep) {
@@ -2062,7 +2080,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           }
         } break;
         case CLP_PARAM_ACTION_DIRSAMPLE: {
-          std::string name = ClpReadGetString(whichArgument, argc, argv);
+           std::string name = ClpReadGetString(whichArgument, whichField,
+                                               argc, argv, input, inputFile);
           if (name != "EOL") {
             size_t length = name.length();
             if (length > 0 && name[length - 1] == dirsep) {
@@ -2076,7 +2095,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           }
         } break;
         case CLP_PARAM_ACTION_DIRNETLIB: {
-          std::string name = ClpReadGetString(whichArgument, argc, argv);
+           std::string name = ClpReadGetString(whichArgument, whichField,
+                                               argc, argv, input, inputFile);
           if (name != "EOL") {
             size_t length = name.length();
             if (length > 0 && name[length - 1] == dirsep) {
@@ -2090,7 +2110,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           }
         } break;
         case CLP_PARAM_ACTION_DIRMIPLIB: {
-          std::string name = ClpReadGetString(whichArgument, argc, argv);
+           std::string name = ClpReadGetString(whichArgument, whichField,
+                                               argc, argv, input, inputFile);
           if (name != "EOL") {
             size_t length = name.length();
             if (length > 0 && name[length - 1] == dirsep) {
@@ -2236,7 +2257,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_FAKEBOUND:
           if (goodModels[iModel]) {
             // get bound
-            double value = ClpReadGetDoubleField(whichArgument, argc, argv, &valid);
+            double value = ClpReadGetDoubleField(whichArgument,
+                                                 whichField, argc, argv,
+                                                 input, inputFile, &valid);
             if (!valid) {
               std::cout << "Setting " << parameters[iParam].name() << " to DEBUG " << value << std::endl;
               int iRow;
@@ -2304,7 +2327,8 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         case CLP_PARAM_ACTION_GMPL_SOLUTION:
           if (goodModels[iModel]) {
             // get next field
-            field = ClpReadGetString(whichArgument, argc, argv);
+             field = ClpReadGetString(whichArgument, whichField,
+                                      argc, argv, input, inputFile);
             bool append = false;
             if (field == "append$") {
               field = "$";
@@ -2866,7 +2890,8 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         case CLP_PARAM_ACTION_SAVESOL:
           if (goodModels[iModel]) {
             // get next field
-            field = ClpReadGetString(whichArgument, argc, argv);
+             field = ClpReadGetString(whichArgument, whichField,
+                                      argc, argv, input, inputFile);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -2895,26 +2920,42 @@ clp watson.mps -\nscaling off\nprimalsimplex");
             std::cout << "** Current model not valid" << std::endl;
           }
           break;
-        case CLP_PARAM_ACTION_ENVIRONMENT:
-          ClpEnvironmentIndex = 0;
-          break;
-        case CLP_PARAM_ACTION_GUESS:
-          if (goodModels[iModel]) {
-            delete[] alternativeEnvironmentClp;
-#ifndef ABC_INHERIT
-            ClpSimplexOther *model2 = static_cast< ClpSimplexOther * >(models + iModel);
-            alternativeEnvironmentClp = model2->guess(0);
-#else
-	    alternativeEnvironmentClp = NULL;
-#endif
-            if (alternativeEnvironmentClp)
-              ClpEnvironmentIndex = 0;
-            else
-              std::cout << "** Guess unable to generate commands" << std::endl;
-          } else {
-            std::cout << "** Guess needs a valid model" << std::endl;
+        case CLP_PARAM_ACTION_ENVIRONMENT: {
+#if !defined(_MSC_VER) && !defined(__MSVCRT__)
+          // Don't think it will work with Visual Studio
+          char *tmp = getenv("CBC_CLP_ENVIRONMENT");
+          if (tmp){
+             input = tmp;
+             whichField = 0;
           }
+#endif
+          std::cout << "** Parameter not valid on Windows with Visual Studio"
+                    << std::endl;
           break;
+        }
+        case CLP_PARAM_ACTION_GUESS: {
+#ifndef ABC_INHERIT
+          if (goodModels[iModel]) {
+             ClpSimplexOther *model2 =
+                static_cast< ClpSimplexOther * >(models + iModel);
+             std::string tmp = model2->guess(0);
+             if (tmp != ""){
+                input = tmp;
+                whichField = 0;
+             } else {
+                std::cout << "** Guess unable to generate commands"
+                          << std::endl;
+             }
+          } else {
+             std::cout << "** Guess needs a valid model" << std::endl;
+          }
+#else
+          std::cout << "** Can'tmake a gues in this build configuration"
+                    << std::endl;
+#endif
+          
+          break;
+        }
         default:
           abort();
         }

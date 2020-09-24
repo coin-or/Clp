@@ -276,7 +276,7 @@ public:
     int *buildRow, double *buildElement, int reConstruct = -1) const;
   /// Create a string of commands to guess at best strategy for model
   /// At present mode is ignored
-  char *guess(int mode) const;
+  std::string guess(int mode) const;
   //@}
 };
 #endif
