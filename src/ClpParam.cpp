@@ -861,11 +861,11 @@ void ClpReadPrintit(const char *input)
 
 void
 ClpReadFromStream(std::vector<std::string> &inputVector,
-                   std::istream &input)
+                   std::istream &inputStream)
 {
    inputVector.clear();
    std::string field;
-   while (input >> field){
+   while (inputStream >> field){
       std::string::size_type found = field.find('=');
       if (found != std::string::npos) {
          inputVector.push_back(field.substr(0, found));
@@ -900,13 +900,13 @@ ClpReadInteractiveInput(std::vector<std::string> &inputVector)
       return; 
    }
 
-   std::istringstream tmp(input);
-   ClpInputFromStream(inputVector, tmp);
+   std::istringstream inputStream(input);
+   ClpReadFromStream(inputVector, inputStream);
 }
 
 std::string
 ClpGetCommand(std::vector<std::string> &inputVector, int &whichField,
-                  bool &interactiveMode)
+              bool &interactiveMode)
 {
   std::string field = "";
   
@@ -942,7 +942,7 @@ ClpGetCommand(std::vector<std::string> &inputVector, int &whichField,
 
 std::string
 ClpGetString(std::vector<std::string> &inputVector, int &whichField,
-                 bool &interactiveMode)
+             bool &interactiveMode)
 {
    std::string field = "";
 
@@ -971,7 +971,7 @@ ClpGetString(std::vector<std::string> &inputVector, int &whichField,
 
 // valid 0 - okay, 1 bad, 2 not there
 int ClpGetInt(std::vector<std::string> &inputVector, int &whichField,
-                       bool &interactiveMode, int &valid)
+              bool &interactiveMode, int &valid)
 {
   if (whichField < 0 || whichField >= inputVector.size()){
      if (interactiveMode) {
@@ -996,7 +996,7 @@ int ClpGetInt(std::vector<std::string> &inputVector, int &whichField,
 
 double
 ClpGetDouble(std::vector<std::string> &inputVector, int &whichField,
-                      bool &interactiveMode, int &valid)
+             bool &interactiveMode, int &valid)
 {
   if (whichField < 0 || whichField >= inputVector.size()){
      if (interactiveMode) {
