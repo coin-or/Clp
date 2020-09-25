@@ -1569,7 +1569,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                   find[3] = 'r';
                   std::ifstream ifs(fileName);
                   if (ifs.is_open()) {
-                     ClpInputFromStream(inputVector, ifs);
+                     ClpReadFromStream(inputVector, ifs);
                      whichField = 0;
                   }else{
                      std::cout << "Unable to open file" << fileName;
@@ -2929,8 +2929,8 @@ clp watson.mps -\nscaling off\nprimalsimplex");
           // Don't think it will work with Visual Studio
           char *input = getenv("CLP_ENVIRONMENT");
           if (input){
-             std::istringstream tmp(input);
-             ClpInputFromStream(inputVector, tmp);
+             std::istringstream inputStream(input);
+             ClpReadFromStream(inputVector, inputStream);
              whichField = 0;
           }
 #endif
@@ -2945,8 +2945,8 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 static_cast< ClpSimplexOther * >(models + iModel);
              std::string input = model2->guess(0);
              if (input != ""){
-                std::istringstream tmp(input);
-                ClpInputFromStream(inputVector, tmp);
+                std::istringstream inputStream(input);
+                ClpReadFromStream(inputVector, inputStream);
                 whichField = 0;
              } else {
                 std::cout << "** Guess unable to generate commands"

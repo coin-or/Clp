@@ -412,8 +412,8 @@ CLPLIB_EXPORT
 void ClpReadPrintit(const char *input);
 
 void
-ClpInputFromStream(std::vector<std::string> &inputVector,
-                   std::istream &input);
+ClpReadFromStream(std::vector<std::string> &inputVector,
+                   std::istream &inputStream);
 
 CLPLIB_EXPORT
 void ClpReadInteractiveInput(std::vector<std::string> &inputVector);
@@ -434,8 +434,6 @@ double ClpGetDouble(std::vector<std::string> &inputVector,
                     int &valid);
 CLPLIB_EXPORT
 void setClpPrinting(bool yesNo);
-CLPLIB_EXPORT
-void setClpReadCommand(FILE* f);
 
 #define CBCMAXPARAMETERS 250
 /*
