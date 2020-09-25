@@ -47,32 +47,11 @@ int coinFlushBufferFlag = 0;
 #endif
 
 static bool doPrinting = true;
-static std::string afterEquals = "";
 static char printArray[250];
-//static char line[1000];
-//static char *where = NULL;
-//extern int whichArgument;
-//int whichField = -1;
-// Alternative to environment
-//char *alternativeEnvironmentClp = NULL;
-//static FILE *ClpReadCommand = stdin;
-
-//void setClpReadCommand(FILE* f) { ClpReadCommand = f; }
 
 void setClpPrinting(bool yesNo)
 {
   doPrinting = yesNo;
-}
-
-int fillEnv(std::string &input)
-{
-#if defined(_MSC_VER) || defined(__MSVCRT__)
-  // Don't think it will work with Visual Studio
-  return 0;
-#else
-  input = getenv("CBC_CLP_ENVIRONMENT");
-  return input.length();
-#endif
 }
 
 //#############################################################################
@@ -880,207 +859,162 @@ void ClpReadPrintit(const char *input)
   }
 }
 
-// Simple read stuff
-std::string
-ClpReadNextField(std::string &input, int &whichField,
-                 std::ifstream &inputFile)
+void
+ClpInputFromStream(std::vector<std::string> &inputVector,
+                   std::istream &input)
 {
-  std::string field;
-  char coin_prompt[] = "Clp: ";
-  char *line;
+   inputVector.clear();
+   std::string field;
+   while (input >> field){
+      std::string::size_type found = field.find('=');
+      if (found != std::string::npos) {
+         inputVector.push_back(field.substr(0, found));
+         inputVector.push_back(field.substr(found + 1));
+      } else {
+         inputVector.push_back(field);
+      }
+   }
+}
+
+void
+ClpReadLine(std::vector<std::string> &inputVector)
+{
+   std::string input;
+   inputVector.clear();
+   char coin_prompt[] = "Clp: ";
+   char *line;
   
-  if (input == "") {
-    // need new line
 #ifdef CLP_HAS_READLINE
-     if (inputFile.is_open()) {
-        // Read from file
-        getline(inputFile, input);
-     }else{
-        // Get a line from the user.
-        input = std::string(readline(coin_prompt));
-        // If the line has any text in it, save it on the history.
-        if (input.length() > 0) {
-           add_history(input.c_str());
-        }
-        //strcpy(input, line);
-        //free(line);
-     } 
+   // Get a line from the user.
+   input = std::string(readline(coin_prompt));
+   // If the line has any text in it, save it on the history.
+   if (input.length() > 0) {
+      add_history(input.c_str());
+   }
 #else
-     if (!inputFile) {
-       coin_prompt >> std::cout;
-       fflush(stdout);
-       getline(std::cin, input); 
-    }
-     if (inputFile.is_open()) {
-       getline(inputFile, input);
-    }
+   coin_prompt >> std::cout;
+   fflush(stdout);
+   getline(std::cin, input); 
 #endif
-    if (input == ""){
-      return field; // EOF
-    }
-    
-    whichField = 0;
-  }
+   if (!input.length()){
+      return; 
+   }
 
-  std::stringstream iss(input);
+   std::istringstream tmp(input);
+   ClpInputFromStream(inputVector, tmp);
+}
 
-  int i; 
-  for (i = 0; i <= whichField; i++){ 
-     if (!(iss >> field)){
-        input = "";
-        field = "EOL";
-        whichField = -1;
-        break;
+std::string
+ClpReadGetCommand(std::vector<std::string> &inputVector, int &whichField,
+                  bool &interactiveMode)
+{
+  std::string field = "";
+  
+  if ((whichField < 0 || whichField >= inputVector.size()) && interactiveMode){
+     ClpReadLine(inputVector);
+     whichField = 0;
+  } 
+
+  if (whichField >= 0 && whichField < inputVector.size()) {
+     field = inputVector[whichField++];
+     if (field == "-") {
+        std::cout << "Switching to line mode" << std::endl;
+        interactiveMode = true;
+        whichField = inputVector.size();
+     } else if (field[0] != '-') {
+        if (inputVector.size() == 1) {
+           // special dispensation - taken as -import name
+           field = "import";
+        }
+     } else {
+        if (field != "--") {
+           // take off -
+           field = field.substr(1);
+        } else {
+           // special dispensation - taken as -import --
+           field = "import";
+        }
      }
   }
-  if (i == whichField + 1){
-     whichField++;
-  }
 
   return field;
 }
 
 std::string
-ClpReadGetCommand(int &whichArgument, int &whichField,
-                  int argc, const char *argv[], std::string &input,
-                  std::ifstream &inputFile)
+ClpReadGetString(std::vector<std::string> &inputVector, int &whichField,
+                 bool &interactiveMode)
 {
-  std::string field = "EOL";
+   std::string field = "";
 
-  // say no =
-  afterEquals = "";
-  while (field == "EOL") {
-    if (whichArgument > 0) {
-      if (whichArgument < argc && argv[whichArgument]) {
-         field = argv[whichArgument++];
-         if (field == "-") {
-            std::cout << "Switching to line mode" << std::endl;
-            whichArgument = -1;
-         } else if (field[0] != '-') {
-            if (whichArgument == 2 && whichField < 0) {
-               // special dispensation - taken as -import name
-               whichArgument--;
-               field = "import";
-            }
-         } else {
-            if (field != "--") {
-               // take off -
-               field = field.substr(1);
-            } else {
-               // special dispensation - taken as -import --
-               whichArgument--;
-               field = "import";
-            }
-         }
-      } else {
-         field = "";
+   if (whichField < 0 || whichField >= inputVector.size()){
+      if (interactiveMode) {
+         // may be negative value so do not check for -
+         ClpReadLine(inputVector);
+         whichField = 0;
+      }else{
+         return field;
       }
-    } else {
-       if (whichField == 0){
-          fillEnv(input);
-          whichField = 0;
-       }
-       field = ClpReadNextField(input, whichField, inputFile);
-    }
-  }
-  // if = then modify and save
-  std::string::size_type found = field.find('=');
-  if (found != std::string::npos) {
-    afterEquals = field.substr(found + 1);
-    field = field.substr(0, found);
-  }
-  //std::cout<<field<<std::endl;
-  return field;
-}
+   }
 
-std::string
-ClpReadGetString(int &whichArgument, int &whichField,
-                 int argc, const char *argv[], std::string &input,
-                 std::ifstream &inputFile)
-{
-  std::string field = "EOL";
-  if (afterEquals == "") {
-    if (whichArgument > 0) {
-      if (whichArgument < argc) {
-         std::string value = argv[whichArgument];
-         if (value == "--" || value == "stdin"){
-            field = "-";
-         } else if (value == "stdin_lp"){
-            field = "-lp";
-         }else{
-            field = argv[whichArgument++];
-         }
-      }
-    } else {
-       field = ClpReadNextField(input, whichField, inputFile);
-    }
-  } else {
-    field = afterEquals;
-    afterEquals = "";
+  std::string value = inputVector[whichField++];
+  
+  if (value == "--" || value == "stdin"){
+     field = "-";
+  } else if (value == "stdin_lp"){
+     field = "-lp";
+  }else{
+     field = value;
   }
-  //std::cout<<field<<std::endl;
+
   return field;
 }
 
 // valid 0 - okay, 1 bad, 2 not there
-int ClpReadGetIntField(int &whichArgument, int &whichField,
-                       int argc, const char *argv[], std::string &input,
-                       std::ifstream &inputFile, int *valid)
+int ClpReadGetIntField(std::vector<std::string> &inputVector, int &whichField,
+                       bool &interactiveMode, int &valid)
 {
-  std::string field = "EOL";
-  if (afterEquals == "") {
-    if (whichArgument > 0) {
-       if (whichArgument < argc) {
-          // may be negative value so do not check for -
-          field = argv[whichArgument++];
-       }
-    } else {
-       field = ClpReadNextField(input, whichField, inputFile);
-    }
-  } else {
-     field = afterEquals;
-     afterEquals = "";
+  if (whichField < 0 || whichField >= inputVector.size()){
+     if (interactiveMode) {
+        ClpReadLine(inputVector);
+        whichField = 0;
+     } else {
+        // Nothing to read
+        valid = 2;
+        return 0;
+     }
   }
+
+  std::string field = inputVector[whichField++];
 
   int value(0);
       
-  if (field != "EOL"){ 
-     std::stringstream ss(field);
-     *valid =  (ss >> value) ? 0:1;
-  }else{
-     *valid = 2;
-  }
-
+  std::stringstream ss(field);
+  valid =  (ss >> value) ? 0:1;
+  
   return value;
 }
 
 double
-ClpReadGetDoubleField(int &whichArgument, int &whichField,
-                      int argc, const char *argv[], std::string &input,
-                      std::ifstream &inputFile, int *valid)
+ClpReadGetDoubleField(std::vector<std::string> &inputVector, int &whichField,
+                      bool &interactiveMode, int &valid)
 {
-  std::string field = "EOL";
-  if (afterEquals == "") {
-    if (whichArgument > 0) {
-      if (whichArgument < argc) {
-         // may be negative value so do not check for -
-         field = argv[whichArgument++];
-      }
-    } else {
-       field = ClpReadNextField(input, whichField, inputFile);
-    }
-  } else {
-     field = afterEquals;
-     afterEquals = "";
+  if (whichField < 0 || whichField >= inputVector.size()){
+     if (interactiveMode) {
+        ClpReadLine(inputVector);
+        whichField = 0;
+     } else {
+        // Nothing to read
+        valid = 2;
+        return 0.0;
+     }
   }
 
+  std::string field = inputVector[whichField++];
+
   double value(0.0);
-  if (field != "EOL"){ 
-     std::stringstream ss(field);
-     *valid =  (ss >> value) ? 0:1;
-  }else{
-     *valid = 2;
-  }
+  
+  std::stringstream ss(field);
+  valid =  (ss >> value) ? 0:1;
 
   return value;
 }
