@@ -416,22 +416,22 @@ ClpInputFromStream(std::vector<std::string> &inputVector,
                    std::istream &input);
 
 CLPLIB_EXPORT
-void ClpReadLine(std::vector<std::string> &inputVector);
+void ClpReadInteractiveInput(std::vector<std::string> &inputVector);
 
 CLPLIB_EXPORT
-std::string ClpReadGetCommand(std::vector<std::string> &inputVector,
-                              int &whichField, bool &interactiveMode);
+std::string ClpGetCommand(std::vector<std::string> &inputVector,
+                          int &whichField, bool &interactiveMode);
 CLPLIB_EXPORT
-std::string ClpReadGetString(std::vector<std::string> &inputVector,
-                             int &whichField, bool &interactiveMode);
+std::string ClpGetString(std::vector<std::string> &inputVector,
+                         int &whichField, bool &interactiveMode);
 // valid 0 - okay, 1 bad, 2 not there
 CLPLIB_EXPORT
-int ClpReadGetIntField(std::vector<std::string> &inputVector,
-                       int &whichField, bool &interactiveMode, int &valid);
+int ClpGetInt(std::vector<std::string> &inputVector,
+              int &whichField, bool &interactiveMode, int &valid);
 CLPLIB_EXPORT
-double ClpReadGetDoubleField(std::vector<std::string> &inputVector,
-                             int &whichField, bool &interactiveMode,
-                             int &valid);
+double ClpGetDouble(std::vector<std::string> &inputVector,
+                    int &whichField, bool &interactiveMode,
+                    int &valid);
 CLPLIB_EXPORT
 void setClpPrinting(bool yesNo);
 CLPLIB_EXPORT

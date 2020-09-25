@@ -860,7 +860,7 @@ void ClpReadPrintit(const char *input)
 }
 
 void
-ClpInputFromStream(std::vector<std::string> &inputVector,
+ClpReadFromStream(std::vector<std::string> &inputVector,
                    std::istream &input)
 {
    inputVector.clear();
@@ -877,7 +877,7 @@ ClpInputFromStream(std::vector<std::string> &inputVector,
 }
 
 void
-ClpReadLine(std::vector<std::string> &inputVector)
+ClpReadInteractiveInput(std::vector<std::string> &inputVector)
 {
    std::string input;
    inputVector.clear();
@@ -905,13 +905,13 @@ ClpReadLine(std::vector<std::string> &inputVector)
 }
 
 std::string
-ClpReadGetCommand(std::vector<std::string> &inputVector, int &whichField,
+ClpGetCommand(std::vector<std::string> &inputVector, int &whichField,
                   bool &interactiveMode)
 {
   std::string field = "";
   
   if ((whichField < 0 || whichField >= inputVector.size()) && interactiveMode){
-     ClpReadLine(inputVector);
+     ClpReadInteractiveInput(inputVector);
      whichField = 0;
   } 
 
@@ -941,7 +941,7 @@ ClpReadGetCommand(std::vector<std::string> &inputVector, int &whichField,
 }
 
 std::string
-ClpReadGetString(std::vector<std::string> &inputVector, int &whichField,
+ClpGetString(std::vector<std::string> &inputVector, int &whichField,
                  bool &interactiveMode)
 {
    std::string field = "";
@@ -949,7 +949,7 @@ ClpReadGetString(std::vector<std::string> &inputVector, int &whichField,
    if (whichField < 0 || whichField >= inputVector.size()){
       if (interactiveMode) {
          // may be negative value so do not check for -
-         ClpReadLine(inputVector);
+         ClpReadInteractiveInput(inputVector);
          whichField = 0;
       }else{
          return field;
@@ -970,12 +970,12 @@ ClpReadGetString(std::vector<std::string> &inputVector, int &whichField,
 }
 
 // valid 0 - okay, 1 bad, 2 not there
-int ClpReadGetIntField(std::vector<std::string> &inputVector, int &whichField,
+int ClpGetInt(std::vector<std::string> &inputVector, int &whichField,
                        bool &interactiveMode, int &valid)
 {
   if (whichField < 0 || whichField >= inputVector.size()){
      if (interactiveMode) {
-        ClpReadLine(inputVector);
+        ClpReadInteractiveInput(inputVector);
         whichField = 0;
      } else {
         // Nothing to read
@@ -995,12 +995,12 @@ int ClpReadGetIntField(std::vector<std::string> &inputVector, int &whichField,
 }
 
 double
-ClpReadGetDoubleField(std::vector<std::string> &inputVector, int &whichField,
+ClpGetDouble(std::vector<std::string> &inputVector, int &whichField,
                       bool &interactiveMode, int &valid)
 {
   if (whichField < 0 || whichField >= inputVector.size()){
      if (interactiveMode) {
-        ClpReadLine(inputVector);
+        ClpReadInteractiveInput(inputVector);
         whichField = 0;
      } else {
         // Nothing to read
