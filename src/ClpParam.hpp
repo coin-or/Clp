@@ -411,28 +411,27 @@ private:
 CLPLIB_EXPORT
 void ClpReadPrintit(const char *input);
 
-/// Simple read stuff
-CLPLIB_EXPORT
-std::string ClpReadNextField(char *&input, int &whichField,
-                             std::ifstream &inputFile);
+void
+ClpInputFromStream(std::vector<std::string> &inputVector,
+                   std::istream &input);
 
 CLPLIB_EXPORT
-std::string ClpReadGetCommand(int &whichArgument, int &whichField,
-                              int argc, const char *argv[], std::string &input,
-                              std::ifstream &inputFile);
+void ClpReadLine(std::vector<std::string> &inputVector);
+
 CLPLIB_EXPORT
-std::string ClpReadGetString(int &whichArgument, int &whichField,
-                             int argc, const char *argv[], std::string &input,
-                             std::ifstream &inputFile);
+std::string ClpReadGetCommand(std::vector<std::string> &inputVector,
+                              int &whichField, bool &interactiveMode);
+CLPLIB_EXPORT
+std::string ClpReadGetString(std::vector<std::string> &inputVector,
+                             int &whichField, bool &interactiveMode);
 // valid 0 - okay, 1 bad, 2 not there
 CLPLIB_EXPORT
-int ClpReadGetIntField(int &whichArgument, int &whichField,
-                       int argc, const char *argv[], std::string &input,
-                       std::ifstream &inputFile, int *valid);
+int ClpReadGetIntField(std::vector<std::string> &inputVector,
+                       int &whichField, bool &interactiveMode, int &valid);
 CLPLIB_EXPORT
-double ClpReadGetDoubleField(int &whichArgument, int &whichField,
-                             int argc, const char *argv[], std::string &input,
-                             std::ifstream &inputFile, int *valid);
+double ClpReadGetDoubleField(std::vector<std::string> &inputVector,
+                             int &whichField, bool &interactiveMode,
+                             int &valid);
 CLPLIB_EXPORT
 void setClpPrinting(bool yesNo);
 CLPLIB_EXPORT
