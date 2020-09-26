@@ -8,16 +8,13 @@
 #include <sstream>
 #include <iostream>
 #include <cassert>
-#ifdef CLP_HAS_READLINE
-#include <readline/readline.h>
-#include <readline/history.h>
-#endif
 
-#include "ClpParam.hpp"
+#include "CoinParam.hpp"
 #include "CoinPragma.hpp"
 #include "CoinTime.hpp"
 #include "CoinHelperFunctions.hpp"
 
+#include "ClpParam.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
@@ -796,7 +793,7 @@ int ClpParam::currentOptionAsInteger(int &fakeInteger) const
 void ClpParam::printLongHelp() const
 {
   if (type_ >= 1 && type_ < 600) {
-    ClpReadPrintit(longHelp_.c_str());
+    CoinPrintString(longHelp_);
     if (type_ < CLP_PARAM_INT_LOGLEVEL) {
       printf("<Range of values is %g to %g;\n\tcurrent %g>\n", lowerDoubleValue_, upperDoubleValue_, doubleValue_);
       assert(upperDoubleValue_ > lowerDoubleValue_);
@@ -832,192 +829,6 @@ void ClpParam::setFakeKeyWord(int fakeValue)
 
 //###########################################################################
 //###########################################################################
-
-void ClpReadPrintit(const char *input)
-{
-  int length = static_cast< int >(strlen(input));
-  assert(length <= 1000);
-  char temp[1001];
-  int i;
-  int n = 0;
-  for (i = 0; i < length; i++) {
-    if (input[i] == '\n') {
-      temp[n] = '\0';
-      std::cout << temp << std::endl;
-      n = 0;
-    } else if (n >= 65 && input[i] == ' ') {
-      temp[n] = '\0';
-      std::cout << temp << std::endl;
-      n = 0;
-    } else if (n || input[i] != ' ') {
-      temp[n++] = input[i];
-    }
-  }
-  if (n) {
-    temp[n] = '\0';
-    std::cout << temp << std::endl;
-  }
-}
-
-void
-ClpReadFromStream(std::vector<std::string> &inputVector,
-                   std::istream &inputStream)
-{
-   inputVector.clear();
-   std::string field;
-   while (inputStream >> field){
-      std::string::size_type found = field.find('=');
-      if (found != std::string::npos) {
-         inputVector.push_back(field.substr(0, found));
-         inputVector.push_back(field.substr(found + 1));
-      } else {
-         inputVector.push_back(field);
-      }
-   }
-}
-
-void
-ClpReadInteractiveInput(std::vector<std::string> &inputVector)
-{
-   std::string input;
-   inputVector.clear();
-   char coin_prompt[] = "Clp: ";
-   char *line;
-  
-#ifdef CLP_HAS_READLINE
-   // Get a line from the user.
-   input = std::string(readline(coin_prompt));
-   // If the line has any text in it, save it on the history.
-   if (input.length() > 0) {
-      add_history(input.c_str());
-   }
-#else
-   coin_prompt >> std::cout;
-   fflush(stdout);
-   getline(std::cin, input); 
-#endif
-   if (!input.length()){
-      return; 
-   }
-
-   std::istringstream inputStream(input);
-   ClpReadFromStream(inputVector, inputStream);
-}
-
-std::string
-ClpGetCommand(std::vector<std::string> &inputVector, int &whichField,
-              bool &interactiveMode)
-{
-  std::string field = "";
-  
-  if ((whichField < 0 || whichField >= inputVector.size()) && interactiveMode){
-     ClpReadInteractiveInput(inputVector);
-     whichField = 0;
-  } 
-
-  if (whichField >= 0 && whichField < inputVector.size()) {
-     field = inputVector[whichField++];
-     if (field == "-") {
-        std::cout << "Switching to line mode" << std::endl;
-        interactiveMode = true;
-        whichField = inputVector.size();
-     } else if (field[0] != '-') {
-        if (inputVector.size() == 1) {
-           // special dispensation - taken as -import name
-           field = "import";
-        }
-     } else {
-        if (field != "--") {
-           // take off -
-           field = field.substr(1);
-        } else {
-           // special dispensation - taken as -import --
-           field = "import";
-        }
-     }
-  }
-
-  return field;
-}
-
-std::string
-ClpGetString(std::vector<std::string> &inputVector, int &whichField,
-             bool &interactiveMode)
-{
-   std::string field = "";
-
-   if (whichField < 0 || whichField >= inputVector.size()){
-      if (interactiveMode) {
-         // may be negative value so do not check for -
-         ClpReadInteractiveInput(inputVector);
-         whichField = 0;
-      }else{
-         return field;
-      }
-   }
-
-  std::string value = inputVector[whichField++];
-  
-  if (value == "--" || value == "stdin"){
-     field = "-";
-  } else if (value == "stdin_lp"){
-     field = "-lp";
-  }else{
-     field = value;
-  }
-
-  return field;
-}
-
-// valid 0 - okay, 1 bad, 2 not there
-int ClpGetInt(std::vector<std::string> &inputVector, int &whichField,
-              bool &interactiveMode, int &valid)
-{
-  if (whichField < 0 || whichField >= inputVector.size()){
-     if (interactiveMode) {
-        ClpReadInteractiveInput(inputVector);
-        whichField = 0;
-     } else {
-        // Nothing to read
-        valid = 2;
-        return 0;
-     }
-  }
-
-  std::string field = inputVector[whichField++];
-
-  int value(0);
-      
-  std::stringstream ss(field);
-  valid =  (ss >> value) ? 0:1;
-  
-  return value;
-}
-
-double
-ClpGetDouble(std::vector<std::string> &inputVector, int &whichField,
-             bool &interactiveMode, int &valid)
-{
-  if (whichField < 0 || whichField >= inputVector.size()){
-     if (interactiveMode) {
-        ClpReadInteractiveInput(inputVector);
-        whichField = 0;
-     } else {
-        // Nothing to read
-        valid = 2;
-        return 0.0;
-     }
-  }
-
-  std::string field = inputVector[whichField++];
-
-  double value(0.0);
-  
-  std::stringstream ss(field);
-  valid =  (ss >> value) ? 0:1;
-
-  return value;
-}
 
 /*
   Subroutine to establish the cbc parameter array. See the description of

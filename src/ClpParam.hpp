@@ -409,30 +409,6 @@ private:
 };
 
 CLPLIB_EXPORT
-void ClpReadPrintit(const char *input);
-
-void
-ClpReadFromStream(std::vector<std::string> &inputVector,
-                   std::istream &inputStream);
-
-CLPLIB_EXPORT
-void ClpReadInteractiveInput(std::vector<std::string> &inputVector);
-
-CLPLIB_EXPORT
-std::string ClpGetCommand(std::vector<std::string> &inputVector,
-                          int &whichField, bool &interactiveMode);
-CLPLIB_EXPORT
-std::string ClpGetString(std::vector<std::string> &inputVector,
-                         int &whichField, bool &interactiveMode);
-// valid 0 - okay, 1 bad, 2 not there
-CLPLIB_EXPORT
-int ClpGetInt(std::vector<std::string> &inputVector,
-              int &whichField, bool &interactiveMode, int &valid);
-CLPLIB_EXPORT
-double ClpGetDouble(std::vector<std::string> &inputVector,
-                    int &whichField, bool &interactiveMode,
-                    int &valid);
-CLPLIB_EXPORT
 void setClpPrinting(bool yesNo);
 
 #define CBCMAXPARAMETERS 250
