@@ -2,6 +2,7 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
+#include "CoinParam.hpp"
 #include "CoinPragma.hpp"
 
 #include <cassert>
@@ -448,26 +449,56 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
      }
   }
 
+  std::string prompt = "Clp: ";
+  
   while (1) {
-    // next command
-     field = ClpGetCommand(inputVector, whichField, interactiveMode);
 
-    // exit if null or similar
-    if (!field.length()) {
-      if (numberGoodCommands == 1 && goodModels[0]) {
-        // we just had file name - do dual or primal
-        field = "either";
-      } else if (!numberGoodCommands) {
+     // If no arguments, just go into interactive mode
+     if (!inputVector.size()){
+        interactiveMode = true;
         // let's give the sucker a hint
         std::cout
           << "Clp takes input from arguments ( - switches to stdin)"
           << std::endl
           << "Enter ? for list of commands or help" << std::endl;
-        field = "-";
-      } else {
-        break;
-      }
-    }
+     }
+
+     // get next command
+     field = CoinGetCommand(inputVector, whichField, interactiveMode, prompt);
+
+     // exit if null or similar
+     if (!field.length()){
+        if (numberGoodCommands == 1 && goodModels[0]) {
+           // we just had file name - do dual or primal
+           field = "either";
+        } else {
+           break;
+        }
+     }
+
+     // These are some special case we deal with separately (only in non-interactive mode)
+     if (!interactiveMode){
+        if (field == "-") {
+           std::cout << "Switching to line mode" << std::endl;
+           interactiveMode = true;
+           // This effectively ignores anything that may come after
+           whichField = inputVector.size();
+        } else if (field[0] != '-') {
+           if (inputVector.size() == 1) {
+              // special dispensation - taken as -import name
+              field = "import";
+              whichField--;
+           }
+        } else {
+           if (field != "--") {
+              // take off -
+              field = field.substr(1);
+           } else {
+              // special dispensation - taken as -import --
+              field = "import";
+           }
+        }
+     }
 
     // see if ? at end
     int numberQuery = 0;
@@ -503,7 +534,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
       // found
       ClpParam found = parameters[iParam];
       ClpParameterType type = found.type();
-      int valid;
+      int status;
       numberGoodCommands++;
       if (type == CLP_PARAM_GENERALQUERY) {
         std::cout << "In argument list keywords have leading - "
@@ -619,20 +650,20 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         }
       } else if (type < 101) {
         // get next field as double
-         double value = ClpGetDouble(inputVector, whichField,
-                                     interactiveMode, valid);
-        if (!valid) {
+         double value = CoinGetDouble(inputVector, whichField,
+                                      status, interactiveMode, prompt);
+        if (!status) {
           parameters[iParam].setDoubleParameter(thisModel, value);
-        } else if (valid == 1) {
+        } else if (status == 1) {
           std::cout << " is illegal for double parameter " << parameters[iParam].name() << " value remains " << parameters[iParam].doubleValue() << std::endl;
         } else {
           std::cout << parameters[iParam].name() << " has value " << parameters[iParam].doubleValue() << std::endl;
         }
       } else if (type < 201) {
         // get next field as int
-         int value = ClpGetInt(inputVector, whichField,
-                               interactiveMode, valid);
-        if (!valid) {
+         int value = CoinGetInt(inputVector, whichField,
+                                status, interactiveMode, prompt);
+        if (!status) {
           if (parameters[iParam].type() == CLP_PARAM_INT_PRESOLVEPASS)
             preSolve = value;
           else if (parameters[iParam].type() == CLP_PARAM_INT_IDIOT)
@@ -656,15 +687,15 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           else if (parameters[iParam].type() == CLP_PARAM_INT_VERBOSE)
             verbose = value;
           parameters[iParam].setIntParameter(thisModel, value);
-        } else if (valid == 1) {
+        } else if (status == 1) {
           std::cout << " is illegal for integer parameter " << parameters[iParam].name() << " value remains " << parameters[iParam].intValue() << std::endl;
         } else {
           std::cout << parameters[iParam].name() << " has value " << parameters[iParam].intValue() << std::endl;
         }
       } else if (type < 401) {
          // one of several strings
-         std::string value = ClpGetString(inputVector, whichField,
-                                          interactiveMode);
+         std::string value = CoinGetString(inputVector, whichField,
+                                           interactiveMode, prompt);
         int action = parameters[iParam].parameterOption(value);
         if (action < 0) {
           if (value != "EOL") {
@@ -1429,8 +1460,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           break;
         case CLP_PARAM_ACTION_IMPORT: {
           // get next field
-           field = ClpGetString(inputVector, whichField,
-                                interactiveMode);
+           field = CoinGetString(inputVector, whichField,
+                                interactiveMode, prompt);
           if (field == "$") {
             field = parameters[iParam].stringValue();
           } else if (field == "EOL") {
@@ -1569,7 +1600,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                   find[3] = 'r';
                   std::ifstream ifs(fileName);
                   if (ifs.is_open()) {
-                     ClpReadFromStream(inputVector, ifs);
+                     CoinReadFromStream(inputVector, ifs);
                      whichField = 0;
                   }else{
                      std::cout << "Unable to open file" << fileName;
@@ -1606,8 +1637,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               models[iModel].setObjectiveOffset(objScale * models[iModel].objectiveOffset());
             }
             // get next field
-            field = ClpGetString(inputVector, whichField,
-                                 interactiveMode);
+            field = CoinGetString(inputVector, whichField,
+                                 interactiveMode, prompt);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -1757,8 +1788,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_BASISIN:
           if (goodModels[iModel]) {
             // get next field
-             field = ClpGetString(inputVector, whichField,
-                                  interactiveMode);
+             field = CoinGetString(inputVector, whichField,
+                                  interactiveMode, prompt);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -1811,8 +1842,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_PRINTMASK:
           // get next field
           {
-             std::string name = ClpGetString(inputVector, whichField,
-                                             interactiveMode);
+             std::string name = CoinGetString(inputVector, whichField,
+                                             interactiveMode, prompt);
             if (name != "EOL") {
               parameters[iParam].setStringValue(name);
               printMask = name;
@@ -1824,8 +1855,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_BASISOUT:
           if (goodModels[iModel]) {
             // get next field
-             field = ClpGetString(inputVector, whichField,
-                                  interactiveMode);
+             field = CoinGetString(inputVector, whichField,
+                                  interactiveMode, prompt);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -1872,8 +1903,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_PARAMETRICS:
           if (goodModels[iModel]) {
             // get next field
-             field = ClpGetString(inputVector, whichField,
-                                  interactiveMode);
+             field = CoinGetString(inputVector, whichField,
+                                  interactiveMode, prompt);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -1909,8 +1940,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           break;
         case CLP_PARAM_ACTION_SAVE: {
           // get next field
-             field = ClpGetString(inputVector, whichField,
-                                  interactiveMode);
+             field = CoinGetString(inputVector, whichField,
+                                  interactiveMode, prompt);
           if (field == "$") {
             field = parameters[iParam].stringValue();
           } else if (field == "EOL") {
@@ -1983,8 +2014,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         } break;
         case CLP_PARAM_ACTION_RESTORE: {
           // get next field
-           field = ClpGetString(inputVector, whichField,
-                                interactiveMode);
+           field = CoinGetString(inputVector, whichField,
+                                interactiveMode, prompt);
           if (field == "$") {
             field = parameters[iParam].stringValue();
           } else if (field == "EOL") {
@@ -2071,8 +2102,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           }
           break;
         case CLP_PARAM_ACTION_DIRECTORY: {
-           std::string name = ClpGetString(inputVector, whichField,
-                                           interactiveMode);
+           std::string name = CoinGetString(inputVector, whichField,
+                                           interactiveMode, prompt);
           if (name != "EOL") {
             size_t length = name.length();
             if (length > 0 && name[length - 1] == dirsep) {
@@ -2086,8 +2117,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           }
         } break;
         case CLP_PARAM_ACTION_DIRSAMPLE: {
-           std::string name = ClpGetString(inputVector, whichField,
-                                           interactiveMode);
+           std::string name = CoinGetString(inputVector, whichField,
+                                           interactiveMode, prompt);
           if (name != "EOL") {
             size_t length = name.length();
             if (length > 0 && name[length - 1] == dirsep) {
@@ -2101,8 +2132,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           }
         } break;
         case CLP_PARAM_ACTION_DIRNETLIB: {
-           std::string name = ClpGetString(inputVector, whichField,
-                                           interactiveMode);
+           std::string name = CoinGetString(inputVector, whichField,
+                                           interactiveMode, prompt);
           if (name != "EOL") {
             size_t length = name.length();
             if (length > 0 && name[length - 1] == dirsep) {
@@ -2116,8 +2147,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           }
         } break;
         case CLP_PARAM_ACTION_DIRMIPLIB: {
-           std::string name = ClpGetString(inputVector, whichField,
-                                           interactiveMode);
+           std::string name = CoinGetString(inputVector, whichField,
+                                           interactiveMode, prompt);
           if (name != "EOL") {
             size_t length = name.length();
             if (length > 0 && name[length - 1] == dirsep) {
@@ -2264,9 +2295,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_FAKEBOUND:
           if (goodModels[iModel]) {
              // get bound
-             double value = ClpGetDouble(inputVector, whichField,
-                                         interactiveMode, valid);
-            if (!valid) {
+             double value = CoinGetDouble(inputVector, whichField,
+                                          status, interactiveMode, prompt);
+            if (!status) {
               std::cout << "Setting " << parameters[iParam].name() << " to DEBUG " << value << std::endl;
               int iRow;
               int numberRows = models[iModel].numberRows();
@@ -2290,7 +2321,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                   columnUpper[iColumn] = CoinMin(columnUpper[iColumn], value);
                 }
               }
-            } else if (valid == 1) {
+            } else if (status == 1) {
               abort();
             } else {
               std::cout << "enter value for " << parameters[iParam].name() << std::endl;
@@ -2319,7 +2350,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           std::cout << "Non default values:-" << std::endl;
           std::cout << "Perturbation " << models[0].perturbation() << " (default 100)"
                     << std::endl;
-          ClpReadPrintit(
+          CoinPrintString(
             "Presolve being done with 5 passes\n\
 Dual steepest edge steep/partial on matrix shape and factorization density\n\
 Clpnnnn taken out of messages\n\
@@ -2333,7 +2364,8 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         case CLP_PARAM_ACTION_GMPL_SOLUTION:
           if (goodModels[iModel]) {
              // get next field
-             field = ClpGetString(inputVector, whichField, interactiveMode);
+             field = CoinGetString(inputVector, whichField, interactiveMode,
+                                   prompt);
             bool append = false;
             if (field == "append$") {
               field = "$";
@@ -2895,7 +2927,8 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         case CLP_PARAM_ACTION_SAVESOL:
           if (goodModels[iModel]) {
             // get next field
-             field = ClpGetString(inputVector, whichField, interactiveMode);
+             field = CoinGetString(inputVector, whichField, interactiveMode,
+                                   prompt);
             if (field == "$") {
               field = parameters[iParam].stringValue();
             } else if (field == "EOL") {
@@ -2930,7 +2963,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
           char *input = getenv("CLP_ENVIRONMENT");
           if (input){
              std::istringstream inputStream(input);
-             ClpReadFromStream(inputVector, inputStream);
+             CoinReadFromStream(inputVector, inputStream);
              whichField = 0;
           }
 #endif
@@ -2946,7 +2979,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
              std::string input = model2->guess(0);
              if (input != ""){
                 std::istringstream inputStream(input);
-                ClpReadFromStream(inputVector, inputStream);
+                CoinReadFromStream(inputVector, inputStream);
                 whichField = 0;
              } else {
                 std::cout << "** Guess unable to generate commands"
