@@ -253,7 +253,8 @@ am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
 	ClpSimplexOther.lo ClpSimplexPrimal.lo ClpSolve.lo Idiot.lo \
 	IdiSolve.lo ClpCholeskyPardiso.lo ClpPESimplex.lo \
 	ClpPEPrimalColumnDantzig.lo ClpPEPrimalColumnSteepest.lo \
-	ClpPEDualRowDantzig.lo ClpPEDualRowSteepest.lo \
+	ClpPEDualRowDantzig.lo ClpPEDualRowSteepest.lo ClpSolver.lo \
+	MyEventHandler.lo MyMessageHandler.lo unitTest.lo \
 	$(am__objects_1) $(am__objects_2) $(am__objects_3) \
 	$(am__objects_4) $(am__objects_5)
 libClp_la_OBJECTS = $(am_libClp_la_OBJECTS)
@@ -261,13 +262,9 @@ AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
-libClpSolver_la_DEPENDENCIES = libClp.la
-am_libClpSolver_la_OBJECTS = ClpSolver.lo MyEventHandler.lo \
-	MyMessageHandler.lo unitTest.lo
-libClpSolver_la_OBJECTS = $(am_libClpSolver_la_OBJECTS)
 am_clp_OBJECTS = ClpMain.$(OBJEXT)
 clp_OBJECTS = $(am_clp_OBJECTS)
-clp_DEPENDENCIES = libClpSolver.la libClp.la $(am__DEPENDENCIES_1)
+clp_DEPENDENCIES = libClp.la $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -402,8 +399,7 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(libClp_la_SOURCES) $(libClpSolver_la_SOURCES) \
-	$(clp_SOURCES)
+SOURCES = $(libClp_la_SOURCES) $(clp_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -631,7 +627,7 @@ DOXYTAG_EDIT = sed -e 's|@baredocdir_nosub@|$(datarootdir)/doc|g'
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
-lib_LTLIBRARIES = libClp.la libClpSolver.la
+lib_LTLIBRARIES = libClp.la 
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
@@ -673,24 +669,19 @@ libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpPEPrimalColumnDantzig.hpp ClpPEPrimalColumnSteepest.cpp \
 	ClpPEPrimalColumnSteepest.hpp ClpPEDualRowDantzig.cpp \
 	ClpPEDualRowDantzig.hpp ClpPEDualRowSteepest.cpp \
-	ClpPEDualRowSteepest.hpp $(am__append_1) $(am__append_2) \
-	$(am__append_3) $(am__append_4) $(am__append_5)
-libClpSolver_la_SOURCES = \
-	ClpSolver.cpp \
-	MyEventHandler.cpp MyEventHandler.hpp \
-	MyMessageHandler.cpp MyMessageHandler.hpp \
-	unitTest.cpp
-
+	ClpPEDualRowSteepest.hpp ClpSolver.cpp MyEventHandler.cpp \
+	MyEventHandler.hpp MyMessageHandler.cpp MyMessageHandler.hpp \
+	unitTest.cpp $(am__append_1) $(am__append_2) $(am__append_3) \
+	$(am__append_4) $(am__append_5)
 
 # List all additionally required libraries
 libClp_la_LIBADD = $(CLPLIB_LFLAGS)
-libClpSolver_la_LIBADD = libClp.la
 
 # List all source files for this executable, including headers
 clp_SOURCES = ClpMain.cpp 
 
 # List all additionally required libraries
-clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
+clp_LDADD = libClp.la $(CLPLIB_LFLAGS)
 
 ########################################################################
 #                            Additional flags                          #
@@ -875,9 +866,6 @@ clean-libLTLIBRARIES:
 
 libClp.la: $(libClp_la_OBJECTS) $(libClp_la_DEPENDENCIES) $(EXTRA_libClp_la_DEPENDENCIES) 
 	$(AM_V_CXXLD)$(CXXLINK) -rpath $(libdir) $(libClp_la_OBJECTS) $(libClp_la_LIBADD) $(LIBS)
-
-libClpSolver.la: $(libClpSolver_la_OBJECTS) $(libClpSolver_la_DEPENDENCIES) $(EXTRA_libClpSolver_la_DEPENDENCIES) 
-	$(AM_V_CXXLD)$(CXXLINK) -rpath $(libdir) $(libClpSolver_la_OBJECTS) $(libClpSolver_la_LIBADD) $(LIBS)
 
 clp$(EXEEXT): $(clp_OBJECTS) $(clp_DEPENDENCIES) $(EXTRA_clp_DEPENDENCIES) 
 	@rm -f clp$(EXEEXT)
