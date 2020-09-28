@@ -1598,7 +1598,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                   find[1] = 'p';
                   find[2] = 'a';
                   find[3] = 'r';
-                  std::ifstream ifs(fileName);
+                  std::ifstream ifs(fileName.c_str());
                   if (ifs.is_open()) {
                      CoinReadFromStream(inputVector, ifs);
                      whichField = 0;
