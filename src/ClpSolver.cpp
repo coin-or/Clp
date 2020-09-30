@@ -470,7 +470,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
      if (!field.length()){
         if (numberGoodCommands == 1 && goodModels[0]) {
            // we just had file name - do dual or primal
-           field = "either";
+           field = "-either";
         } else {
            break;
         }
@@ -484,18 +484,18 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
            // This effectively ignores anything that may come after
            whichField = inputVector.size();
         } else if (field[0] != '-') {
-           if (inputVector.size() == 1) {
+	  //if (inputVector.size() == 1) {
               // special dispensation - taken as -import name
               field = "import";
               whichField--;
-           }
+	      //}
         } else {
            if (field != "--") {
               // take off -
               field = field.substr(1);
            } else {
               // special dispensation - taken as -import --
-              field = "import";
+              field = "-import";
            }
         }
      }
@@ -1602,8 +1602,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                   if (ifs.is_open()) {
                      CoinReadFromStream(inputVector, ifs);
                      whichField = 0;
-                  }else{
-                     std::cout << "Unable to open file" << fileName;
+                  } else {
+		    // gets here on "-import x.mps"
+		    //std::cout << "Unable to open file" << fileName << std::endl;
                   }
                 }
               }
