@@ -2,6 +2,10 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
+
+#include "CoinUtilsConfig.h"
+#include "ClpConfig.h"
+
 #include "CoinParam.hpp"
 #include "CoinPragma.hpp"
 
@@ -24,12 +28,10 @@ int boundary_sort3 = 10000;
 #define CLP_QUOTE(s) CLP_STRING(s)
 #define CLP_STRING(s) #s
 
-#include "CoinUtilsConfig.h"
 #include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinSort.hpp"
 // History since 1.0 at end
-#include "ClpConfig.h"
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
 #include "CoinModel.hpp"
