@@ -1881,20 +1881,12 @@ sequential Lps to get a good approximate solution.");
  is initialized to 'stdout'.  The amount of output can be varied using printi!ngOptions or printMask.");
     parameters.push_back(p);
   }
-  {
-    ClpParam p("solv!e", "Solve problem",
-      CLP_PARAM_ACTION_BAB);
-         p.setLonghelp(
-          "If there are no integer variables then this just solves LP.  If there are integer variables \
-this does branch and cut." );
-         parameters.push_back( p );
-  }
   // allow solve as synonym for possible dual
   {
     ClpParam p("solv!e", "Solve problem using dual simplex (probably)",
       CLP_PARAM_ACTION_EITHERSIMPLEX);
     p.setLonghelp(
-      "Just so can use solve for clp as well as in cbc");
+      "Solves ");
     parameters.push_back(p);
   }
   {
