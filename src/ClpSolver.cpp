@@ -907,6 +907,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case CLP_PARAM_ACTION_DUALSIMPLEX:
         case CLP_PARAM_ACTION_PRIMALSIMPLEX:
         case CLP_PARAM_ACTION_EITHERSIMPLEX:
+	case CLP_PARAM_ACTION_SOLVECONTINUOUS:
         case CLP_PARAM_ACTION_BARRIER:
           // synonym for dual
         case CLP_PARAM_ACTION_BAB:
@@ -941,8 +942,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                 clpModel->setPrimalColumnPivotAlgorithm(p);
               }
             }
-            if (type == CLP_PARAM_ACTION_EITHERSIMPLEX || type == CLP_PARAM_ACTION_BAB)
+            if (type == CLP_PARAM_ACTION_EITHERSIMPLEX ||
+		type == CLP_PARAM_ACTION_BAB ||
+		type == CLP_PARAM_ACTION_SOLVECONTINUOUS) {
               models[iModel].setMoreSpecialOptions(16384 | models[iModel].moreSpecialOptions());
+	      type = CLP_PARAM_ACTION_EITHERSIMPLEX;
+	    }
             double objScale = parameters[whichClpParam(CLP_PARAM_DBL_OBJSCALE2, parameters)].doubleValue();
             if (objScale != 1.0) {
               int iColumn;
@@ -972,7 +977,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #else
             AbcSimplex *model2 = models + iModel;
 #endif
-            if (type == CLP_PARAM_ACTION_EITHERSIMPLEX || type == CLP_PARAM_ACTION_BAB)
+            if (type == CLP_PARAM_ACTION_EITHERSIMPLEX)
               solveOptions.setSpecialOption(3, 0); // allow +-1
             if (dualize == 4) {
               solveOptions.setSpecialOption(4, 77);
