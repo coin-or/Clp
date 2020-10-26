@@ -3,11 +3,9 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 
+// Need these up front to define symbols for other imports
 #include "CoinUtilsConfig.h"
 #include "ClpConfig.h"
-
-#include "CoinParam.hpp"
-#include "CoinPragma.hpp"
 
 #include <cassert>
 #include <cstdio>
@@ -17,24 +15,6 @@
 #include <string>
 #include <iostream>
 #include <sstream>
-
-int boundary_sort = 1000;
-int boundary_sort2 = 1000;
-int boundary_sort3 = 10000;
-// for printing
-#ifndef CLP_OUTPUT_FORMAT
-#define CLP_OUTPUT_FORMAT % 15.8g
-#endif
-#define CLP_QUOTE(s) CLP_STRING(s)
-#define CLP_STRING(s) #s
-
-#include "CoinPragma.hpp"
-#include "CoinHelperFunctions.hpp"
-#include "CoinSort.hpp"
-// History since 1.0 at end
-#include "CoinMpsIO.hpp"
-#include "CoinFileIO.hpp"
-#include "CoinModel.hpp"
 
 #ifdef COINUTILS_HAS_GLPK
 #include "glpk.h"
@@ -55,11 +35,24 @@ int boundary_sort3 = 10000;
 #if PRICE_USE_OPENMP
 #include "omp.h"
 #endif
+#ifdef DMALLOC
+#include "dmalloc.h"
+#endif
+
+#include "CoinParam.hpp"
+#include "CoinPragma.hpp"
+#include "CoinPragma.hpp"
+#include "CoinHelperFunctions.hpp"
+#include "CoinSort.hpp"
+// History since 1.0 at end
+#include "CoinMpsIO.hpp"
+#include "CoinFileIO.hpp"
+#include "CoinModel.hpp"
+#include "CoinTime.hpp"
+#include "CoinWarmStartBasis.hpp"
 
 #include "AbcCommon.hpp"
 #include "ClpFactorization.hpp"
-#include "CoinTime.hpp"
-#include "CoinWarmStartBasis.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpSimplexOther.hpp"
 #include "ClpSolve.hpp"
@@ -85,9 +78,17 @@ int boundary_sort3 = 10000;
 #include "AbcDualRowSteepest.hpp"
 #include "AbcDualRowDantzig.hpp"
 #endif
-#ifdef DMALLOC
-#include "dmalloc.h"
+
+int boundary_sort = 1000;
+int boundary_sort2 = 1000;
+int boundary_sort3 = 10000;
+// for printing
+#ifndef CLP_OUTPUT_FORMAT
+#define CLP_OUTPUT_FORMAT % 15.8g
 #endif
+#define CLP_QUOTE(s) CLP_STRING(s)
+#define CLP_STRING(s) #s
+
 #ifdef CLP_USEFUL_PRINTOUT
 static double startElapsed = 0.0;
 static double startCpu = 0.0;
@@ -1611,7 +1612,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                      whichField = 0;
                   } else {
 		    // gets here on "-import x.mps"
-		    //std::cout << "Unable to open file" << fileName << std::endl;
+		    std::cout << "Unable to open file" << fileName << std::endl;
                   }
                 }
               }
@@ -2974,9 +2975,10 @@ clp watson.mps -\nscaling off\nprimalsimplex");
              CoinReadFromStream(inputVector, inputStream);
              whichField = 0;
           }
-#endif
+#else
           std::cout << "** Parameter not valid on Windows with Visual Studio"
                     << std::endl;
+#endif
           break;
         }
         case CLP_PARAM_ACTION_GUESS: {
