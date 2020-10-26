@@ -79,9 +79,6 @@
 #include "AbcDualRowDantzig.hpp"
 #endif
 
-int boundary_sort = 1000;
-int boundary_sort2 = 1000;
-int boundary_sort3 = 10000;
 // for printing
 #ifndef CLP_OUTPUT_FORMAT
 #define CLP_OUTPUT_FORMAT % 15.8g
@@ -90,19 +87,15 @@ int boundary_sort3 = 10000;
 #define CLP_STRING(s) #s
 
 #ifdef CLP_USEFUL_PRINTOUT
-static double startElapsed = 0.0;
-static double startCpu = 0.0;
-static std::string mpsFile = "";
 extern double debugDouble[10];
 extern int debugInt[24];
 #endif
-#if defined(CLP_HAS_WSMP) || defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD) || defined(TAUCS_BARRIER) || defined(CLP_HAS_MUMPS)
+#if defined(CLP_HAS_WSMP) || defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD)\
+   || defined(TAUCS_BARRIER) || defined(CLP_HAS_MUMPS)
 #define FOREIGN_BARRIER
 #endif
 
-static double totalTime = 0.0;
-static bool maskMatches(const int *starts, char **masks,
-  std::string &check);
+static bool maskMatches(const int *starts, char **masks, std::string &check);
 #ifndef ABC_INHERIT
 static ClpSimplex *currentModel = NULL;
 #else
@@ -196,12 +189,12 @@ CLPLIB_EXPORT
 int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #endif
 {
-  double time1 = CoinCpuTime(), time2;
   // Set up all non-standard stuff
   //int numberModels=1;
 #ifdef CLP_USEFUL_PRINTOUT
-  startElapsed = CoinGetTimeOfDay();
-  startCpu = CoinCpuTime();
+  double startElapsed = CoinGetTimeOfDay();
+  double startCpu = CoinCpuTime();
+  static std::string mpsFile = "";
   memset(debugInt, 0, sizeof(debugInt));
   memset(debugDouble, 0, sizeof(debugDouble));
 #endif
@@ -1595,9 +1588,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               goodModels[iModel] = true;
               // sets to all slack (not necessary?)
               thisModel->createStatus();
-              time2 = CoinCpuTime();
-              totalTime += time2 - time1;
-              time1 = time2;
               // Go to canned file if just input file
               if (whichField == 2 && inputVector.size() == 2) {
                 // only if ends .mps
@@ -1786,9 +1776,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #endif
               if (deleteModel2)
                 delete model2;
-              time2 = CoinCpuTime();
-              totalTime += time2 - time1;
-              time1 = time2;
             }
           } else {
             std::cout << "** Current model not valid" << std::endl;
@@ -1901,9 +1888,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             if (canOpen) {
               ClpSimplex *model2 = models + iModel;
               model2->writeBasis(fileName.c_str(), outputFormat > 1, outputFormat - 2);
-              time2 = CoinCpuTime();
-              totalTime += time2 - time1;
-              time1 = time2;
             }
           } else {
             std::cout << "** Current model not valid" << std::endl;
@@ -1940,9 +1924,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             }
             ClpSimplex *model2 = models + iModel;
             static_cast< ClpSimplexOther * >(model2)->parametrics(fileName.c_str());
-            time2 = CoinCpuTime();
-            totalTime += time2 - time1;
-            time1 = time2;
           } else {
             std::cout << "** Current model not valid" << std::endl;
           }
@@ -2012,9 +1993,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               delete model2;
             if (!status) {
               goodModels[iModel] = true;
-              time2 = CoinCpuTime();
-              totalTime += time2 - time1;
-              time1 = time2;
             } else {
               // errors
               std::cout << "There were errors on output" << std::endl;
@@ -2061,9 +2039,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             int status = models[iModel].restoreModel(fileName.c_str());
             if (!status) {
               goodModels[iModel] = true;
-              time2 = CoinCpuTime();
-              totalTime += time2 - time1;
-              time1 = time2;
             } else {
               // errors
               std::cout << "There were errors on input" << std::endl;
