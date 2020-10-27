@@ -43,14 +43,6 @@
 int coinFlushBufferFlag = 0;
 #endif
 
-static bool doPrinting = true;
-static char printArray[250];
-
-void setClpPrinting(bool yesNo)
-{
-  doPrinting = yesNo;
-}
-
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -306,27 +298,32 @@ ClpParam::doubleParameter(ClpSimplex *model) const
   return value;
 }
 
-int ClpParam::setDoubleParameter(ClpSimplex *model, double value)
+int ClpParam::setDoubleParameter(ClpSimplex *model, double value,
+                                 bool doPrinting)
 {
   int returnCode;
-  setDoubleParameterWithMessage(model, value, returnCode);
-  if (doPrinting && strlen(printArray))
-    std::cout << printArray << std::endl;
+  std::string message =
+     setDoubleParameterWithMessage(model, value, returnCode);
+  if (doPrinting){
+    std::cout << message << std::endl;
+  }
   return returnCode;
 }
 
-// Sets int parameter and returns printable string and error code
-const char *
-ClpParam::setDoubleParameterWithMessage(ClpSimplex *model, double value, int &returnCode)
+std::string
+ClpParam::setDoubleParameterWithMessage(ClpSimplex *model, double value,
+                                        int &returnCode)
 {
   double oldValue = doubleValue_;
+  std::ostringstream buffer;
   if (value < lowerDoubleValue_ || value > upperDoubleValue_) {
-    sprintf(printArray, "%g was provided for %s - valid range is %g to %g",
-      value, name_.c_str(), lowerDoubleValue_, upperDoubleValue_);
-    returnCode = 1;
+     buffer << value << " was provided for " << name_;
+     buffer << " - valid range is " << lowerDoubleValue_;
+     buffer << " to " << upperDoubleValue_ << std::endl;
+     returnCode = 1;
   } else {
-    sprintf(printArray, "%s was changed from %g to %g",
-      name_.c_str(), oldValue, value);
+    buffer << name_ << " was changed from ";
+    buffer << oldValue << " to " << value << std::endl;
     returnCode = 0;
     doubleValue_ = value;
     switch (type_) {
@@ -363,8 +360,9 @@ ClpParam::setDoubleParameterWithMessage(ClpSimplex *model, double value, int &re
     default:
       break;
     }
+    returnCode = 0;
   }
-  return printArray;
+  return buffer.str();
 }
 
 void ClpParam::setDoubleValue(double value)
@@ -374,22 +372,6 @@ void ClpParam::setDoubleValue(double value)
   } else {
     doubleValue_ = value;
   }
-}
-const char *
-ClpParam::setDoubleValueWithMessage(double value)
-{
-  printArray[0] = '\0';
-  if (value < lowerDoubleValue_ || value > upperDoubleValue_) {
-    sprintf(printArray, "%g was provided for %s - valid range is %g to %g",
-      value, name_.c_str(), lowerDoubleValue_, upperDoubleValue_);
-  } else {
-    if (value == doubleValue_)
-      return NULL;
-    sprintf(printArray, "%s was changed from %g to %g",
-      name_.c_str(), doubleValue_, value);
-    doubleValue_ = value;
-  }
-  return printArray;
 }
 
 int ClpParam::checkDoubleParameter(double value) const
@@ -443,28 +425,34 @@ int ClpParam::intParameter(ClpSimplex *model) const
   return value;
 }
 
-int ClpParam::setIntParameter(ClpSimplex *model, int value)
+int ClpParam::setIntParameter(ClpSimplex *model, int value,
+                              bool doPrinting)
 {
   int returnCode;
-  setIntParameterWithMessage(model, value, returnCode);
-  if (doPrinting && strlen(printArray))
-    std::cout << printArray << std::endl;
+  std::string message = setIntParameterWithMessage(model, value, returnCode);
+  if (doPrinting){
+    std::cout << message << std::endl;
+  }
   return returnCode;
 }
-// Sets int parameter and returns printable string and error code
-const char *
-ClpParam::setIntParameterWithMessage(ClpSimplex *model, int value, int &returnCode)
+
+std::string
+ClpParam::setIntParameterWithMessage(ClpSimplex *model, int value,
+                                     int &returnCode)
 {
   int oldValue = intValue_;
+  std::ostringstream buffer;
   if (value < lowerIntValue_ || value > upperIntValue_) {
-    sprintf(printArray, "%d was provided for %s - valid range is %d to %d",
-      value, name_.c_str(), lowerIntValue_, upperIntValue_);
-    returnCode = 1;
+     buffer << value << " was provided for " << name_;
+     buffer << " - valid range is " << lowerIntValue_ << " to ";
+     buffer << upperIntValue_ << std::endl;
+     returnCode = 1;
   } else {
     intValue_ = value;
-    sprintf(printArray, "%s was changed from %d to %d",
-      name_.c_str(), oldValue, value);
-    returnCode = 0;
+    if (type_ != CLP_PARAM_INT_RANDOMSEED){
+       buffer << name_ << " was changed from " << oldValue;
+       buffer << " to " << value << std::endl;
+    }
     switch (type_) {
     case CLP_PARAM_INT_LOGLEVEL:
       model->setLogLevel(value);
@@ -491,8 +479,8 @@ ClpParam::setIntParameterWithMessage(ClpSimplex *model, int value, int &returnCo
         while (time >= COIN_INT_MAX)
           time *= 0.5;
         value = static_cast< int >(time);
-        sprintf(printArray, "using time of day %s was changed from %d to %d",
-          name_.c_str(), oldValue, value);
+        buffer << "using time of day, " << name_ << " was changed from ";
+        buffer << oldValue << " to " << value << std::endl;
       }
       model->setRandomSeed(value);
     } break;
@@ -511,9 +499,11 @@ ClpParam::setIntParameterWithMessage(ClpSimplex *model, int value, int &returnCo
     default:
       break;
     }
+    returnCode = 0;
   }
-  return printArray;
+  return buffer.str();
 }
+
 void ClpParam::setIntValue(int value)
 {
   if (value < lowerIntValue_ || value > upperIntValue_) {
@@ -521,22 +511,6 @@ void ClpParam::setIntValue(int value)
   } else {
     intValue_ = value;
   }
-}
-const char *
-ClpParam::setIntValueWithMessage(int value)
-{
-  printArray[0] = '\0';
-  if (value < lowerIntValue_ || value > upperIntValue_) {
-    sprintf(printArray, "%d was provided for %s - valid range is %d to %d",
-      value, name_.c_str(), lowerIntValue_, upperIntValue_);
-  } else {
-    if (value == intValue_)
-      return NULL;
-    sprintf(printArray, "%s was changed from %d to %d",
-      name_.c_str(), intValue_, value);
-    intValue_ = value;
-  }
-  return printArray;
 }
 
 void ClpParam::setStringValue(std::string value)
@@ -700,64 +674,71 @@ void ClpParam::setCurrentOption(int value, bool printIt)
   currentKeyWord_ = value;
 }
 // Sets current parameter option and returns printable string
-const char *
+std::string
 ClpParam::setCurrentOptionWithMessage(int value)
 {
+  std::ostringstream buffer;
   if (value != currentKeyWord_) {
+    buffer << "Option for " << name_ << " changed from ";
     char current[100];
     char newString[100];
-    if (currentKeyWord_ >= 0 && (fakeKeyWord_ <= 0 || currentKeyWord_ < fakeKeyWord_))
-      strcpy(current, definedKeyWords_[currentKeyWord_].c_str());
-    else if (currentKeyWord_ < 0)
-      sprintf(current, "minus%d", -currentKeyWord_ - 1000);
-    else
-      sprintf(current, "plus%d", currentKeyWord_ - 1000);
-    if (value >= 0 && (fakeKeyWord_ <= 0 || value < fakeKeyWord_))
-      strcpy(newString, definedKeyWords_[value].c_str());
-    else if (value < 0)
-      sprintf(newString, "minus%d", -value - 1000);
-    else
-      sprintf(newString, "plus%d", value - 1000);
-    sprintf(printArray, "Option for %s changed from %s to %s",
-      name_.c_str(), current, newString);
+    if (currentKeyWord_ >= 0 && (fakeKeyWord_ <= 0 ||
+                                 currentKeyWord_ < fakeKeyWord_)){
+       buffer << definedKeyWords_[currentKeyWord_];
+    }else if (currentKeyWord_ < 0){
+       buffer << "minus" << -currentKeyWord_ - 1000;
+    }else{
+       buffer << "plus" << currentKeyWord_ - 1000;
+    }
+    buffer << " to ";
+    if (value >= 0 && (fakeKeyWord_ <= 0 || value < fakeKeyWord_)){
+       buffer << definedKeyWords_[value];
+    }else if (value < 0){
+       buffer << "minus" << -value - 1000;
+    }else{
+       buffer << "plus" << value - 1000;
+    }
+    
 #if FLUSH_PRINT_BUFFER > 2
-    if (name_ == "bufferedMode")
+    if (name_ == "bufferedMode"){
       coinFlushBufferFlag = value;
+    }
 #endif
     currentKeyWord_ = value;
-  } else {
-    printArray[0] = '\0';
   }
-  return printArray;
+  return buffer.str();
 }
+
 // Sets current parameter option using string with message
-const char *
+std::string
 ClpParam::setCurrentOptionWithMessage(const std::string value)
 {
+  std::ostringstream buffer;
   int action = parameterOption(value);
   char current[100];
-  printArray[0] = '\0';
   if (action >= 0) {
 #if FLUSH_PRINT_BUFFER > 2
     if (name_ == "bufferedMode")
       coinFlushBufferFlag = action;
 #endif
-    if (action == currentKeyWord_)
-      return NULL;
-    if (currentKeyWord_ >= 0 && (fakeKeyWord_ <= 0 || currentKeyWord_ < fakeKeyWord_))
-      strcpy(current, definedKeyWords_[currentKeyWord_].c_str());
-    else if (currentKeyWord_ < 0)
-      sprintf(current, "minus%d", -currentKeyWord_ - 1000);
-    else
-      sprintf(current, "plus%d", currentKeyWord_ - 1000);
-    sprintf(printArray, "Option for %s changed from %s to %s",
-      name_.c_str(), current, value.c_str());
+    if (action == currentKeyWord_){
+       return buffer.str();
+    }
+    buffer << "Option for " << name_ << " changed from ";
+    if (currentKeyWord_ >= 0 && (fakeKeyWord_ <= 0 ||
+                                 currentKeyWord_ < fakeKeyWord_)){
+       buffer << definedKeyWords_[currentKeyWord_];
+    }else if (currentKeyWord_ < 0){
+       buffer << "minus" << -currentKeyWord_ - 1000;
+    }else{
+       buffer << "plus" << currentKeyWord_ - 1000;
+    }
+    buffer << " to " << value;
     currentKeyWord_ = action;
   } else {
-    sprintf(printArray, "Option for %s given illegal value %s",
-      name_.c_str(), value.c_str());
+     buffer << "Option for " << name_ << " given illegal value " << value;
   }
-  return printArray;
+  return buffer.str();
 }
 
 /* Returns current parameter option position

@@ -321,8 +321,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
   generalMessageHandler->setPrefix(false);
   CoinMessages generalMessages = models->messages();
   char generalPrint[10000];
+  bool noPrinting_ = false;
   {
-    bool noPrinting_ = false;
     memset(&info, 0, sizeof(info));
     if (argc > 2 && !strcmp(argv[2], "-AMPL")) {
       usingAmpl = 1;
@@ -367,7 +367,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
       }
       if (noPrinting_) {
         models->messageHandler()->setLogLevel(0);
-        setClpPrinting(false);
       }
       if (!noPrinting_)
         printf("%d rows, %d columns and %d elements\n",
@@ -649,7 +648,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
          double value = CoinGetDouble(inputVector, whichField,
                                       status, interactiveMode, prompt);
         if (!status) {
-          parameters[iParam].setDoubleParameter(thisModel, value);
+           parameters[iParam].setDoubleParameter(thisModel, value, noPrinting_);
         } else if (status == 1) {
           std::cout << " is illegal for double parameter " << parameters[iParam].name() << " value remains " << parameters[iParam].doubleValue() << std::endl;
         } else {
@@ -682,7 +681,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             dualize = value;
           else if (parameters[iParam].type() == CLP_PARAM_INT_VERBOSE)
             verbose = value;
-          parameters[iParam].setIntParameter(thisModel, value);
+          parameters[iParam].setIntParameter(thisModel, value, noPrinting_);
         } else if (status == 1) {
           std::cout << " is illegal for integer parameter " << parameters[iParam].name() << " value remains " << parameters[iParam].intValue() << std::endl;
         } else {

@@ -242,9 +242,11 @@ public:
   /// Gets a double parameter
   double doubleParameter(ClpSimplex *model) const;
   /// Sets a double parameter (nonzero code if error)
-  int setDoubleParameter(ClpSimplex *model, double value);
+  int setDoubleParameter(ClpSimplex *model, double value,
+                         bool doPrinting = false);
   /// Sets double parameter and returns printable string and error code
-  const char *setDoubleParameterWithMessage(ClpSimplex *model, double value, int &returnCode);
+  std::string setDoubleParameterWithMessage(ClpSimplex *model, double value,
+                                            int &returnCode);
   /// Gets double value
   inline double doubleValue() const
   {
@@ -252,16 +254,16 @@ public:
   }
   /// Sets double value
   void setDoubleValue(double value);
-  /// Sets double value with message
-  const char *setDoubleValueWithMessage(double value);
   /// Checks a double parameter (nonzero code if error)
   int checkDoubleParameter(double value) const;
   /// Gets a int parameter
   int intParameter(ClpSimplex *model) const;
   /// Sets a int parameter (nonzero code if error)
-  int setIntParameter(ClpSimplex *model, int value);
+  int setIntParameter(ClpSimplex *model, int value,
+                      bool doPrinting = false);
   /// Sets int parameter and returns printable string and error code
-  const char *setIntParameterWithMessage(ClpSimplex *model, int value, int &returnCode);
+  std::string setIntParameterWithMessage(ClpSimplex *model, int value,
+                                         int &returnCode);
   // Gets int value
   inline int intValue() const
   {
@@ -269,8 +271,6 @@ public:
   }
   /// Sets int value
   void setIntValue(int value);
-  /// Sets int value with message
-  const char *setIntValueWithMessage(int value);
   /// Gets string value
   inline std::string stringValue() const
   {
@@ -298,9 +298,9 @@ public:
   /// Sets current parameter option using string
   void setCurrentOption(const std::string value);
   /// Sets current parameter option and returns printable string
-  const char *setCurrentOptionWithMessage(int value);
+  std::string setCurrentOptionWithMessage(int value);
   /// Sets current parameter option using string with message
-  const char *setCurrentOptionWithMessage(const std::string value);
+  std::string setCurrentOptionWithMessage(const std::string value);
   /// Returns current parameter option position
   int currentOptionAsInteger() const;
   /** Returns current parameter option position
