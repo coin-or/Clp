@@ -6901,7 +6901,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
       counts[n]++;
     } else {
       int nOther = n-nOnes;
-      if (nOther<MAX_ONES&nOnes<MAX_ONES) {
+      if (nOther<MAX_ONES&&nOnes<MAX_ONES) {
 	counts[(n-nOnes)*MAX_ONES+nOnes]++;
       } else {
 	nOdd++;
