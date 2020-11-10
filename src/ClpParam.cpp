@@ -721,9 +721,6 @@ ClpParam::setCurrentOptionWithMessage(const std::string value)
     if (name_ == "bufferedMode")
       coinFlushBufferFlag = action;
 #endif
-    if (action == currentKeyWord_){
-       return buffer.str();
-    }
     buffer << "Option for " << name_ << " changed from ";
     if (currentKeyWord_ >= 0 && (fakeKeyWord_ <= 0 ||
                                  currentKeyWord_ < fakeKeyWord_)){
