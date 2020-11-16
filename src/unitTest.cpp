@@ -40,7 +40,7 @@
 #include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
-#include "ClpParameters.hpp"
+#include "ClpModelParameters.hpp"
 #include "ClpNetworkMatrix.hpp"
 #include "ClpPlusMinusOneMatrix.hpp"
 #include "MyMessageHandler.hpp"

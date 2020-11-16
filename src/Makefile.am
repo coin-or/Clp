@@ -47,8 +47,10 @@ libClp_la_SOURCES = \
 	ClpNode.cpp ClpNode.hpp \
 	ClpObjective.cpp ClpObjective.hpp \
 	ClpPackedMatrix.cpp ClpPackedMatrix.hpp \
+	ClpParamUtils.cpp ClpParamUtils.hpp \
 	ClpParam.cpp ClpParam.hpp \
-	ClpParameters.hpp \
+	ClpParameters.cpp ClpParameters.hpp \
+	ClpModelParameters.hpp \
 	ClpPlusMinusOneMatrix.cpp ClpPlusMinusOneMatrix.hpp \
 	ClpPredictorCorrector.cpp ClpPredictorCorrector.hpp \
 	ClpPdco.cpp ClpPdco.hpp \
@@ -197,11 +199,13 @@ includecoin_HEADERS = \
 	ClpMatrixBase.hpp \
 	ClpMessage.hpp \
 	ClpModel.hpp \
+	ClpModelParameters.hpp \
 	ClpNetworkMatrix.hpp \
 	ClpNonLinearCost.hpp \
 	ClpNode.hpp \
 	ClpObjective.hpp \
 	ClpPackedMatrix.hpp \
+	ClpParamUtils.hpp \
 	ClpPdcoBase.hpp \
 	ClpPlusMinusOneMatrix.hpp \
 	ClpParameters.hpp \
@@ -217,6 +221,7 @@ includecoin_HEADERS = \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
 	ClpParam.hpp \
+	ClpParameters.hpp \
 	Idiot.hpp \
 	ClpCholeskyPardiso.hpp \
 	ClpPESimplex.hpp \

@@ -21,7 +21,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinTypes.h"
 #include "CoinFinite.hpp"
-#include "ClpParameters.hpp"
+#include "ClpModelParameters.hpp"
 #include "ClpObjective.hpp"
 
 #ifdef COINUTILS_HAS_GLPK
