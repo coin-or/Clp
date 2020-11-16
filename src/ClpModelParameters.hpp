@@ -2,8 +2,8 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
-#ifndef _ClpParameters_H
-#define _ClpParameters_H
+#ifndef _ClpModelParameters_H
+#define _ClpModelParameters_H
 
 /** This is where to put any useful stuff.
 
