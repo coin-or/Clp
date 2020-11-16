@@ -1,0 +1,166 @@
+/*
+  Copyright (C) 2007, Lou Hafer, International Business Machines Corporation
+  and others.  All Rights Reserved.
+
+  This code is licensed under the terms of the Eclipse Public License (EPL).
+
+*/
+#ifndef ClpParameters_H
+#define ClpParameters_H
+
+/* \file ClpParameters.hpp
+   \brief Declarations for parameters of Clp.
+*/
+
+#include "ClpConfig.h"
+
+#include "ClpParam.hpp"
+#include "ClpModel.hpp"
+
+/* \brief Clp algorithm control class
+
+  This class defines and stores the parameters used to control the operation 
+  of Clp.
+*/
+
+class ClpParameters {
+
+public:
+  /*! \name Constructors and destructors */
+  //@{
+
+  /*! \brief Default constructor */
+  ClpParameters();
+
+  /*! \brief Destructor */
+  ~ClpParameters();
+
+  /*! \name Enumeration types used for Clp keyword parameters */
+  //@{
+
+  /*! \brief Codes to specify one or off for binary parameters
+
+     - ParamOff: Capability is switched off
+     - ParamOn: Capability is switched on
+   */
+
+  enum OnOffMode { ParamOff = 0, ParamOn, ParamEndMarker };
+
+  /*! \brief What parameters to print
+
+    - displayAll:
+    - displayLowHigh:
+    - displayHigh:
+    - displayEndMarker
+
+   */
+
+  enum CommandDisplayMode {
+     displayAll = 0,
+     displayLowHigh,
+     displayHigh,
+     displayEndMarker
+  };
+  //@}
+  
+  /*! \name Operators
+      \brief Functions that define operators to allow access by []. 
+  */
+
+  //@{
+
+  ClpParam &operator[](std::size_t idx){
+     return getParam(idx);
+  }
+   
+  /*! \name Functions for Setting Up Parameters
+      \brief Functions that populate the parameters objects. 
+  */
+
+  //@{
+  /*! set up the solver parameter vector */
+  void addClpParams();
+  void addClpStrParams();
+  void addClpHelpParams();
+  void addClpActionParams();
+  void addClpKwdParams();
+  void addClpDblParams();
+  void addClpIntParams();
+  void addClpBoolParams();
+  //@{
+
+  /*! \name Access functions
+      \brief Functions that get and set data. 
+  */
+
+  //@{
+  /* \brief Get Clp solver parameter vector */
+  inline CoinParamVec &paramVec() { return parameters_; }
+
+  /* \brief Get specific Clp solver parameter object */
+  inline ClpParam &getParam(int code) {
+     return static_cast<ClpParam &>(parameters_[code]);
+  }
+
+  /* \brief Get value of parameter */
+  void getParamVal(int code, std::string &value) {
+     value = parameters_[code].getVal(value);
+  }
+  void getParamVal(int code, double &value) {
+     value = parameters_[code].getVal(value);
+  }
+  void getParamVal(int code, int &value) {
+     value = parameters_[code].getVal(value);
+  }
+
+  /* \brief Set value of parameter */
+   void setParamVal(int code, std::string value,
+                    std::string *message = NULL,
+                    CoinParam::ParamPushMode pMode = CoinParam::pushDefault) {
+      parameters_[code].setVal(value, message, pMode);
+  }
+   void setParamVal(int code, double value,
+                    std::string *message = NULL,
+                    CoinParam::ParamPushMode pMode = CoinParam::pushDefault) {
+      parameters_[code].setVal(value, message, pMode);
+  }
+   void setParamVal(int code, int value,
+                    std::string *message = NULL,
+                    CoinParam::ParamPushMode pMode = CoinParam::pushDefault) {
+      parameters_[code].setVal(value, message, pMode);
+  }
+
+  /* \brief Get version */
+  inline std::string getVersion() { return CLP_VERSION; }
+
+  /* \brief Get default directory */
+  inline std::string getDefaultDirectory() { return dfltDirectory_; }
+
+  /* \brief Set default directory */
+   inline void setDefaultDirectory(std::string dir) { dfltDirectory_ = dir; }
+
+  /*! \brief Set Clp model */
+  inline void setModel(ClpModel *model) { model_ = model; }
+
+  /*! \brief Get Clp model */
+  inline ClpModel *getModel() const { return (model_); }
+  //@{
+
+   /*! \brief Returns index of first parameter that matches and number of 
+     matches overall. Returns CLP_INVALID if no match */
+   int matches(std::string field, int &numberMatches); 
+   
+private:
+   
+  /*! \brief Default directory prefix */
+  std::string dfltDirectory_;
+
+  /*! \brief The Cbc parameter vector (parameters stored by their index) */
+  CoinParamVec parameters_;
+
+  /*! \brief A pointer to the current ClpModel object */
+  ClpModel *model_;
+
+};
+
+#endif
