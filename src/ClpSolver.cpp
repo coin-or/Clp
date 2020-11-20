@@ -74,6 +74,7 @@
 #include "ClpPresolve.hpp"
 #include "ClpParam.hpp"
 #include "ClpParameters.hpp"
+#include "ClpSolver.hpp"
 
 #include "ClpModelParameters.hpp"
 #ifdef ABC_INHERIT
@@ -83,93 +84,13 @@
 #include "AbcDualRowDantzig.hpp"
 #endif
 
-// for printing
-#ifndef CLP_OUTPUT_FORMAT
-#define CLP_OUTPUT_FORMAT % 15.8g
-#endif
-#define CLP_QUOTE(s) CLP_STRING(s)
-#define CLP_STRING(s) #s
-
-#ifdef CLP_USEFUL_PRINTOUT
-extern double debugDouble[10];
-extern int debugInt[24];
-#endif
-#if defined(CLP_HAS_WSMP) || defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD)\
-   || defined(TAUCS_BARRIER) || defined(CLP_HAS_MUMPS)
-#define FOREIGN_BARRIER
-#endif
-
-static bool maskMatches(const int *starts, char **masks, std::string &check);
-#ifndef ABC_INHERIT
-static ClpSimplex *currentModel = NULL;
-#else
-static AbcSimplex *currentModel = NULL;
-#endif
-
-extern "C" {
-static void
-#if defined(_MSC_VER)
-  __cdecl
-#endif // _MSC_VER
-  signal_handler(int /*whichSignal*/)
-{
-  if (currentModel != NULL)
-    currentModel->setMaximumIterations(0); // stop at next iterations
-  return;
-}
-void openblas_set_num_threads(int num_threads);
-}
-
+//#############################################################################
 //#############################################################################
 
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
 
-#ifndef ABC_INHERIT
-int mainTest(int argc, const char *argv[], int algorithm,
-  ClpSimplex empty, ClpSolve solveOptions, int switchOff, bool doVector);
-#else
-int mainTest(int argc, const char *argv[], int algorithm,
-  AbcSimplex empty, ClpSolve solveOptions, int switchOff, bool doVector);
-#endif
-static void statistics(ClpSimplex *originalModel, ClpSimplex *model);
-static void generateCode(const char *fileName, int type);
-#ifdef CLP_USER_DRIVEN1
-/* Returns true if variable sequenceOut can leave basis when
-   model->sequenceIn() enters.
-   This function may be entered several times for each sequenceOut.  
-   The first time realAlpha will be positive if going to lower bound
-   and negative if going to upper bound (scaled bounds in lower,upper) - then will be zero.
-   currentValue is distance to bound.
-   currentTheta is current theta.
-   alpha is fabs(pivot element).
-   Variable will change theta if currentValue - currentTheta*alpha < 0.0
-*/
-bool userChoiceValid1(const ClpSimplex *model,
-  int sequenceOut,
-  double currentValue,
-  double currentTheta,
-  double alpha,
-  double realAlpha)
-{
-  return true;
-}
-/* This returns true if chosen in/out pair valid.
-   The main thing to check would be variable flipping bounds may be
-   OK.  This would be signaled by reasonable theta_ and valueOut_.
-   If you return false sequenceIn_ will be flagged as ineligible.
-*/
-bool userChoiceValid2(const ClpSimplex *model)
-{
-  return true;
-}
-/* If a good pivot then you may wish to unflag some variables.
- */
-void userChoiceWasGood(ClpSimplex *model)
-{
-}
-#endif
 #ifndef ABC_INHERIT
 CLPLIB_EXPORT
 void ClpMain0(ClpSimplex *models)
@@ -185,12 +106,18 @@ void ClpMain0(AbcSimplex *models)
   models->setPrimalTolerance(1.0e-6);
 #endif
 }
+
+//#############################################################################
+//#############################################################################
+
 #ifndef ABC_INHERIT
 CLPLIB_EXPORT
-int ClpMain1(int argc, const char *argv[], ClpSimplex *models)
+int ClpMain1(std::vector<std::string> inputVector, ClpSimplex *models,
+             ampl_info *info)
 #else
 CLPLIB_EXPORT
-int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
+   int ClpMain1(std::vector<std::string> inputVector, AbcSimplex *models,
+                ampl_info *info)
 #endif
 {
   // Set up all non-standard stuff
@@ -318,104 +245,26 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
     goodModels[0] = true;
     numberGoodCommands = 1;
   }
-  ampl_info info;
+
   int usingAmpl = 0;
   CoinMessageHandler *generalMessageHandler = models->messageHandler();
   generalMessageHandler->setPrefix(false);
   CoinMessages generalMessages = models->messages();
   char generalPrint[10000];
   bool noPrinting_ = false;
-  {
-    memset(&info, 0, sizeof(info));
-    if (argc > 2 && !strcmp(argv[2], "-AMPL")) {
-      usingAmpl = 1;
-      // see if log in list
-      noPrinting_ = true;
-      for (int i = 1; i < argc; i++) {
-        if (!strncmp(argv[i], "log", 3)) {
-          const char *equals = strchr(argv[i], '=');
-          if (equals && atoi(equals + 1) > 0) {
-            noPrinting_ = false;
-            info.logLevel = atoi(equals + 1);
-            parameters[ClpParam::LOGLEVEL]->setIntVal(info.logLevel);
-            // mark so won't be overWritten
-            info.numberRows = -1234567;
-            break;
-          }
-        }
-      }
 
-      union {
-        void *voidModel;
-        CoinModel *model;
-      } coinModelStart;
-      coinModelStart.model = NULL;
-      int returnCode = readAmpl(&info, argc, const_cast< char ** >(argv), &coinModelStart.voidModel, "clp");
-      if (returnCode)
-        return returnCode;
-      if (info.numberBinary + info.numberIntegers + info.numberSos
-        && !info.starts) {
-        printf("Unable to handle integer problems\n");
-        return 1;
-      }
-      whichField = 2; // so will start with parameters
-      // see if log in list (including environment)
-      for (int i = 1; i < info.numberArguments; i++) {
-        if (!strcmp(info.arguments[i], "log")) {
-          if (i < info.numberArguments - 1 && atoi(info.arguments[i + 1]) > 0)
-            noPrinting_ = false;
-          break;
-        }
-      }
-      if (noPrinting_) {
-        models->messageHandler()->setLogLevel(0);
-      }
-      if (!noPrinting_)
-        printf("%d rows, %d columns and %d elements\n",
-          info.numberRows, info.numberColumns, info.numberElements);
-      if (!coinModelStart.model) {
-        // linear
-        models->loadProblem(info.numberColumns, info.numberRows,
-          reinterpret_cast< const CoinBigIndex * >(info.starts),
-          info.rows, info.elements,
-          info.columnLower, info.columnUpper, info.objective,
-          info.rowLower, info.rowUpper);
-      } else {
-        // QP
-        models->loadProblem(*(coinModelStart.model));
-      }
-      // If we had a solution use it
-      if (info.primalSolution) {
-        models->setColSolution(info.primalSolution);
-      }
-      // status
-      if (info.rowStatus) {
-        unsigned char *statusArray = models->statusArray();
-        int i;
-        for (i = 0; i < info.numberColumns; i++)
-          statusArray[i] = static_cast< unsigned char >(info.columnStatus[i]);
-        statusArray += info.numberColumns;
-        for (i = 0; i < info.numberRows; i++)
-          statusArray[i] = static_cast< unsigned char >(info.rowStatus[i]);
-      }
-      freeArrays1(&info);
-      // modify objective if necessary
-      models->setOptimizationDirection(info.direction);
-      models->setObjectiveOffset(-info.offset);
-      if (info.offset) {
-        sprintf(generalPrint, "Ampl objective offset is %g",
-          info.offset);
-        generalMessageHandler->message(CLP_GENERAL, generalMessages)
-          << generalPrint
-          << CoinMessageEol;
-      }
-      goodModels[0] = true;
-      // change argc etc
-      argc = info.numberArguments;
-      argv = const_cast< const char ** >(info.arguments);
-    }
+  if (info){
+     // We're using AMPL
+     usingAmpl = 1;
+     if (info->logLevel == 0){
+        noPrinting_ = true;
+     }
+     parameters[ClpParam::LOGLEVEL]->setIntVal(info->logLevel);
+     // Skip the -AMPL
+     whichField = 2;
+     goodModels[0] = true;
   }
-
+  
   // Hidden stuff for barrier
   int choleskyType = 0;
   int gamma = 0;
@@ -434,18 +283,6 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
   //ClpPrimalColumnSteepest steepP;
   //models[0].setPrimalColumnPivotAlgorithm(steepP);
   std::string field;
-  std::vector<std::string> inputVector;
-  for (int i = 1; i < argc; i++){
-     std::string tmp(argv[i]);
-     std::string::size_type found = tmp.find('=');
-     if (found != std::string::npos) {
-        inputVector.push_back(tmp.substr(0, found));
-        inputVector.push_back(tmp.substr(found + 1));
-     } else {
-        inputVector.push_back(tmp);
-     }
-  }
-
   std::string prompt = "Clp: ";
   
   while (1) {
@@ -900,9 +737,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         // action
         if (paramCode == ClpParam::EXIT) {
           if (usingAmpl) {
-            writeAmpl(&info);
-            freeArrays2(&info);
-            freeArgs(&info);
+            writeAmpl(info);
+            freeArrays2(info);
+            freeArgs(info);
           }
           break; // stop all
         }
@@ -1207,38 +1044,38 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                   pos += sprintf(buf + pos, "status unknown,");
                   iStat = 6;
                 }
-                info.problemStatus = iStat;
-                info.objValue = value;
+                info->problemStatus = iStat;
+                info->objValue = value;
                 pos += sprintf(buf + pos, " objective %.*g", ampl_obj_prec(),
                   value);
                 sprintf(buf + pos, "\n%d iterations",
                   model2->getIterationCount());
-                free(info.primalSolution);
+                free(info->primalSolution);
                 int numberColumns = model2->numberColumns();
-                info.primalSolution = reinterpret_cast< double * >(malloc(numberColumns * sizeof(double)));
-                CoinCopyN(model2->primalColumnSolution(), numberColumns, info.primalSolution);
+                info->primalSolution = reinterpret_cast< double * >(malloc(numberColumns * sizeof(double)));
+                CoinCopyN(model2->primalColumnSolution(), numberColumns, info->primalSolution);
                 int numberRows = model2->numberRows();
-                free(info.dualSolution);
-                info.dualSolution = reinterpret_cast< double * >(malloc(numberRows * sizeof(double)));
-                CoinCopyN(model2->dualRowSolution(), numberRows, info.dualSolution);
+                free(info->dualSolution);
+                info->dualSolution = reinterpret_cast< double * >(malloc(numberRows * sizeof(double)));
+                CoinCopyN(model2->dualRowSolution(), numberRows, info->dualSolution);
                 CoinWarmStartBasis *basis = model2->getBasis();
-                free(info.rowStatus);
-                info.rowStatus = reinterpret_cast< int * >(malloc(numberRows * sizeof(int)));
-                free(info.columnStatus);
-                info.columnStatus = reinterpret_cast< int * >(malloc(numberColumns * sizeof(int)));
+                free(info->rowStatus);
+                info->rowStatus = reinterpret_cast< int * >(malloc(numberRows * sizeof(int)));
+                free(info->columnStatus);
+                info->columnStatus = reinterpret_cast< int * >(malloc(numberColumns * sizeof(int)));
                 // Put basis in
                 int i;
                 // free,basic,ub,lb are 0,1,2,3
                 for (i = 0; i < numberRows; i++) {
                   CoinWarmStartBasis::Status status = basis->getArtifStatus(i);
-                  info.rowStatus[i] = status;
+                  info->rowStatus[i] = status;
                 }
                 for (i = 0; i < numberColumns; i++) {
                   CoinWarmStartBasis::Status status = basis->getStructStatus(i);
-                  info.columnStatus[i] = status;
+                  info->columnStatus[i] = status;
                 }
                 // put buffer into info
-                strcpy(info.buffer, buf);
+                strcpy(info->buffer, buf);
                 delete basis;
               }
 #ifndef NDEBUG
@@ -3062,6 +2899,97 @@ clp watson.mps -\nscaling off\nprimalsimplex");
 #endif
   return 0;
 }
+
+#ifndef ABC_INHERIT
+int clpReadAmpl(ampl_info *info, int argc, char **argv, ClpSimplex *models,
+                const char* solvername)
+#else
+int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models,
+            const char* solvername)
+#endif
+{
+   memset(&info, 0, sizeof(info));
+   bool noPrinting = true;
+   for (int i = 1; i < argc; i++) {
+      if (!strncmp(argv[i], "log", 3)) {
+         const char *equals = strchr(argv[i], '=');
+         if (equals && atoi(equals + 1) > 0) {
+            noPrinting = false;
+            info->logLevel = atoi(equals + 1);
+            // mark so won't be overWritten
+            info->numberRows = -1234567;
+            break;
+         }
+      }
+   }
+   
+   union {
+      void *voidModel;
+      CoinModel *model;
+   } coinModelStart;
+   coinModelStart.model = NULL;
+   int returnCode = readAmpl(info, argc, argv, &coinModelStart.voidModel,
+                             "clp");
+   if (returnCode)
+      return returnCode;
+   if (info->numberBinary + info->numberIntegers + info->numberSos
+       && !info->starts) {
+      printf("Unable to handle integer problems\n");
+      return 1;
+   }
+   // see if log in list (including environment)
+   for (int i = 1; i < info->numberArguments; i++) {
+      if (!strcmp(info->arguments[i], "log")) {
+         if (i < info->numberArguments - 1 && atoi(info->arguments[i + 1]) > 0)
+            noPrinting = false;
+         break;
+      }
+   }
+   if (noPrinting) {
+      models->messageHandler()->setLogLevel(0);
+   }
+   if (!noPrinting)
+      printf("%d rows, %d columns and %d elements\n",
+             info->numberRows, info->numberColumns, info->numberElements);
+   if (!coinModelStart.model) {
+      // linear
+      models->loadProblem(info->numberColumns, info->numberRows,
+                          reinterpret_cast< const CoinBigIndex * >(info->starts),
+                          info->rows, info->elements,
+                          info->columnLower, info->columnUpper, info->objective,
+                          info->rowLower, info->rowUpper);
+   } else {
+      // QP
+      models->loadProblem(*(coinModelStart.model));
+   }
+   // If we had a solution use it
+   if (info->primalSolution) {
+      models->setColSolution(info->primalSolution);
+   }
+   // status
+   if (info->rowStatus) {
+      unsigned char *statusArray = models->statusArray();
+      int i;
+      for (i = 0; i < info->numberColumns; i++)
+         statusArray[i] = static_cast< unsigned char >(info->columnStatus[i]);
+      statusArray += info->numberColumns;
+      for (i = 0; i < info->numberRows; i++)
+         statusArray[i] = static_cast< unsigned char >(info->rowStatus[i]);
+   }
+   freeArrays1(info);
+   // modify objective if necessary
+   models->setOptimizationDirection(info->direction);
+   models->setObjectiveOffset(-info->offset);
+   if (info->offset) {
+      char generalPrint[1000];
+      sprintf(generalPrint, "Ampl objective offset is %g",
+              info->offset);
+      models->messageHandler()->message(CLP_GENERAL, models->messages())
+         << generalPrint
+         << CoinMessageEol;
+   }
+}
+
 static void breakdown(const char *name, CoinBigIndex numberLook, const double *region)
 {
   double range[] = {
