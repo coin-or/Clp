@@ -50,10 +50,6 @@ public:
       // ActionParameters
       FIRSTACTIONPARAM,
       // Begin used in Cbc
-      IMPORT,
-      EXPORT,
-      RESTORE,
-      SAVE,
       MAXIMIZE,
       MINIMIZE,
       EXIT,
@@ -81,8 +77,7 @@ public:
       NETLIB_BARRIER,
       NETLIB_TUNE,
       REALLY_SCALE,
-      BASISIN,
-      BASISOUT,
+      SOLVE,
       SOLVECONTINUOUS,
       CLEARCUTS,
       VERSION,
@@ -100,10 +95,16 @@ public:
       DIRSAMPLE,
       DIRNETLIB,
       DIRMIPLIB,
+      IMPORT,
+      EXPORT,
       PRINTMASK,
+      RESTORE,
+      SAVE,
       SAVESOL,
       SOLUTION,
       // End used in Cbc
+      BASISIN,
+      BASISOUT,
       LASTSTRINGPARAM,
       
       // On/Off Parameters

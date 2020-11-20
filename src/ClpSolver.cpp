@@ -278,35 +278,35 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
   std::string solutionSaveFile = "solution.file";
   std::string printMask = "";
   ClpParameters parameters;
-  parameters[ClpParam::BASISIN].setStrVal(importBasisFile);
-  parameters[ClpParam::BASISOUT].setStrVal(exportBasisFile);
-  parameters[ClpParam::PRINTMASK].setStrVal(printMask);
-  parameters[ClpParam::DIRECTORY].setStrVal(directory);
-  parameters[ClpParam::DIRSAMPLE].setStrVal(dirSample);
-  parameters[ClpParam::DIRNETLIB].setStrVal(dirNetlib);
-  parameters[ClpParam::DIRMIPLIB].setStrVal(dirMiplib);
-  parameters[ClpParam::DUALBOUND].setDblVal(models->dualBound());
-  parameters[ClpParam::DUALTOLERANCE].setDblVal(models->dualTolerance());
-  parameters[ClpParam::EXPORT].setStrVal(exportFile);
-  parameters[ClpParam::IDIOT].setIntVal(doIdiot);
-  parameters[ClpParam::IMPORT].setStrVal(importFile);
-  parameters[ClpParam::LOGLEVEL].setIntVal(models->logLevel());
-  parameters[ClpParam::MAXFACTOR].setIntVal(models->factorizationFrequency());
-  parameters[ClpParam::MAXITERATION].setIntVal(models->maximumIterations());
-  parameters[ClpParam::OUTPUTFORMAT].setIntVal(outputFormat);
-  parameters[ClpParam::PRESOLVEPASS].setIntVal(preSolve);
-  parameters[ClpParam::PERTVALUE].setIntVal(models->perturbation());
-  parameters[ClpParam::PRIMALTOLERANCE].setDblVal(models->primalTolerance());
-  parameters[ClpParam::PRIMALWEIGHT].setDblVal(models->infeasibilityCost());
-  parameters[ClpParam::RESTORE].setStrVal(restoreFile);
-  parameters[ClpParam::SAVE].setStrVal(saveFile);
-  parameters[ClpParam::TIMELIMIT].setDblVal(models->maximumSeconds());
-  parameters[ClpParam::SOLUTION].setStrVal(solutionFile);
-  parameters[ClpParam::SAVESOL].setStrVal(solutionSaveFile);
-  parameters[ClpParam::SPRINT].setIntVal(doSprint);
-  parameters[ClpParam::SUBSTITUTION].setIntVal(substitution);
-  parameters[ClpParam::DUALIZE].setIntVal(dualize);
-  parameters[ClpParam::PRESOLVETOLERANCE].setDblVal(1.0e-8);
+  parameters[ClpParam::BASISIN]->setStrVal(importBasisFile);
+  parameters[ClpParam::BASISOUT]->setStrVal(exportBasisFile);
+  parameters[ClpParam::PRINTMASK]->setStrVal(printMask);
+  parameters[ClpParam::DIRECTORY]->setStrVal(directory);
+  parameters[ClpParam::DIRSAMPLE]->setStrVal(dirSample);
+  parameters[ClpParam::DIRNETLIB]->setStrVal(dirNetlib);
+  parameters[ClpParam::DIRMIPLIB]->setStrVal(dirMiplib);
+  parameters[ClpParam::DUALBOUND]->setDblVal(models->dualBound());
+  parameters[ClpParam::DUALTOLERANCE]->setDblVal(models->dualTolerance());
+  parameters[ClpParam::EXPORT]->setStrVal(exportFile);
+  parameters[ClpParam::IDIOT]->setIntVal(doIdiot);
+  parameters[ClpParam::IMPORT]->setStrVal(importFile);
+  parameters[ClpParam::LOGLEVEL]->setIntVal(models->logLevel());
+  parameters[ClpParam::MAXFACTOR]->setIntVal(models->factorizationFrequency());
+  parameters[ClpParam::MAXITERATION]->setIntVal(models->maximumIterations());
+  parameters[ClpParam::OUTPUTFORMAT]->setIntVal(outputFormat);
+  parameters[ClpParam::PRESOLVEPASS]->setIntVal(preSolve);
+  parameters[ClpParam::PERTVALUE]->setIntVal(models->perturbation());
+  parameters[ClpParam::PRIMALTOLERANCE]->setDblVal(models->primalTolerance());
+  parameters[ClpParam::PRIMALWEIGHT]->setDblVal(models->infeasibilityCost());
+  parameters[ClpParam::RESTORE]->setStrVal(restoreFile);
+  parameters[ClpParam::SAVE]->setStrVal(saveFile);
+  parameters[ClpParam::TIMELIMIT]->setDblVal(models->maximumSeconds());
+  parameters[ClpParam::SOLUTION]->setStrVal(solutionFile);
+  parameters[ClpParam::SAVESOL]->setStrVal(solutionSaveFile);
+  parameters[ClpParam::SPRINT]->setIntVal(doSprint);
+  parameters[ClpParam::SUBSTITUTION]->setIntVal(substitution);
+  parameters[ClpParam::DUALIZE]->setIntVal(dualize);
+  parameters[ClpParam::PRESOLVETOLERANCE]->setDblVal(1.0e-8);
   int verbose = 0;
 
   // total number of commands read
@@ -337,7 +337,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           if (equals && atoi(equals + 1) > 0) {
             noPrinting_ = false;
             info.logLevel = atoi(equals + 1);
-            parameters[ClpParam::LOGLEVEL].setIntVal(info.logLevel);
+            parameters[ClpParam::LOGLEVEL]->setIntVal(info.logLevel);
             // mark so won't be overWritten
             info.numberRows = -1234567;
             break;
@@ -419,7 +419,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
   // Hidden stuff for barrier
   int choleskyType = 0;
   int gamma = 0;
-  parameters[ClpParam::BARRIERSCALE].setModeVal(2);
+  parameters[ClpParam::BARRIERSCALE]->setModeVal(2);
   int scaleBarrier = 2;
   int doKKT = 0;
   int crossover = 2; // do crossover unless quadratic
@@ -515,10 +515,10 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
     // find out if valid command
     int numberMatches = 0;
     int paramCode = parameters.matches(field, numberMatches);
-    ClpParam param = parameters[paramCode];
+    ClpParam *param = parameters[paramCode];
 
     ClpSimplex *thisModel = models + iModel;
-    if (param.type() != CoinParam::paramInvalid && !numberQuery) {
+    if (param->type() != CoinParam::paramInvalid && !numberQuery) {
       int status;
       numberGoodCommands++;
       if (paramCode == ClpParam::GENERALQUERY) {
@@ -534,7 +534,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         std::cout << "Commands are:" << std::endl;
         int maxAcross = 10;
         //bool evenHidden = false;
-        int commandPrintLevel = parameters[ClpParam::COMMANDPRINTLEVEL].modeVal();
+        int commandPrintLevel = parameters[ClpParam::COMMANDPRINTLEVEL]->modeVal();
         if ((verbose & 8) != 0) {
           // even hidden
           // evenHidden = true;
@@ -554,17 +554,17 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         int across = 0;
         int lengthLine = 0;
         int type = -1;
-        ClpParam p;
+        ClpParam *p;
         std::cout << "#### Clp Parameters ###" << std::endl;
         for (int iParam = ClpParam::FIRSTPARAM + 1;
              iParam < ClpParam::LASTPARAM; iParam++) {
-           if (parameters[iParam].type() == CoinParam::paramInvalid){
+           if (parameters[iParam]->type() == CoinParam::paramInvalid){
               continue;
            }else{
               p = parameters[iParam];
            }
-           if (p.type() != type) {
-              type = p.type();
+           if (p->type() != type) {
+              type = p->type();
               if ((verbose % 4) != 0) {
                  std::cout << std::endl;
               }
@@ -573,18 +573,18 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                  std::cout << std::endl;
               }
            }
-           if (p.getDisplayPriority() >= commandPrintLevel){
+           if (p->getDisplayPriority() >= commandPrintLevel){
               if (!across) {
                 if ((verbose & 2) != 0)
                   std::cout << "Command ";
               }
-              int length = p.lengthMatchName() + 1;
+              int length = p->lengthMatchName() + 1;
               if (lengthLine + length > 80) {
                 std::cout << std::endl;
                 across = 0;
                 lengthLine = 0;
               }
-              std::cout << " " << p.matchName();
+              std::cout << " " << p->matchName();
               lengthLine += length;
               across++;
               if (across == maxAcross) {
@@ -592,11 +592,11 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                 if (verbose) {
                   // put out description as well
                   if ((verbose & 1) != 0)
-                    std::cout << p.shortHelp();
+                    std::cout << p->shortHelp();
                   std::cout << std::endl;
                   if ((verbose & 2) != 0) {
                      std::cout << "---- description" << std::endl;
-                     p.printLongHelp();
+                     p->printLongHelp();
                      std::cout << "----" << std::endl
                                << std::endl;
                   }
@@ -619,47 +619,47 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
          types.push_back("Keyword parameters:");
          int across = 0;
          int type = -1;
-         ClpParam p;
+         ClpParam *p;
          std::cout << "#### Clp Parameters ###" << std::endl;
          for (int iParam = ClpParam::FIRSTPARAM + 1;
               iParam < ClpParam::LASTPARAM; iParam++) {
-           if (parameters[iParam].type() == CoinParam::paramInvalid){
+           if (parameters[iParam]->type() == CoinParam::paramInvalid){
               continue;
            }else{
               p = parameters[iParam];
            }
-            if (p.type() != type) {
-               type = p.type();
+            if (p->type() != type) {
+               type = p->type();
                std::cout << types[type] << std::endl;
             }
             if (!across)
                std::cout << "  ";
-            std::cout << p.matchName() << "  ";
+            std::cout << p->matchName() << "  ";
             across++;
             if (across == maxAcross) {
                std::cout << std::endl;
                across = 0;
             }
          }
-      } else if (param.type() == CoinParam::paramDbl) {
+      } else if (param->type() == CoinParam::paramDbl) {
         // get next field as double
          double value = CoinGetDouble(inputVector, whichField,
                                       status, interactiveMode, prompt);
         if (!status) {
            std::string message;
-           param.setVal(value, &message);
+           param->setVal(value, &message);
            if (!noPrinting_){
               std::cout << message << std::endl;
            }
         } else if (status == 1) {
            std::cout << " is illegal for double parameter "
-                     << param.name() << " value remains "
-                     << param.dblVal() << std::endl;
+                     << param->name() << " value remains "
+                     << param->dblVal() << std::endl;
         } else {
-          std::cout << param.name() << " has value "
-                    << param.dblVal() << std::endl;
+          std::cout << param->name() << " has value "
+                    << param->dblVal() << std::endl;
         }
-      } else if (param.type() == CoinParam::paramInt) {
+      } else if (param->type() == CoinParam::paramInt) {
         // get next field as int
          int value = CoinGetInt(inputVector, whichField,
                                 status, interactiveMode, prompt);
@@ -687,29 +687,29 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
           else if (paramCode == ClpParam::VERBOSE)
             verbose = value;
           std::string message;
-          param.setVal(value, &message);
+          param->setVal(value, &message);
           if (!noPrinting_){
              std::cout << message << std::endl;
           }
         } else if (status == 1) {
           std::cout << " is illegal for integer parameter "
-                    << param.name() << " value remains "
-                    << param.intVal() << std::endl;
+                    << param->name() << " value remains "
+                    << param->intVal() << std::endl;
         } else {
-          std::cout << param.name() << " has value "
-                    << param.intVal() << std::endl;
+          std::cout << param->name() << " has value "
+                    << param->intVal() << std::endl;
         }
-      } else if (param.type() == CoinParam::paramStr) {
+      } else if (param->type() == CoinParam::paramKwd) {
          // one of several strings
          std::string value = CoinGetString(inputVector, whichField,
                                            interactiveMode, prompt);
          std::string message;
-         if (param.setKwdVal(value, &message)){
+         if (param->setKwdVal(value, &message)){
             if (!noPrinting_ && message.length()) {
                generalMessageHandler->message(CLP_GENERAL, generalMessages)
                   << message << CoinMessageEol;
             }
-            int action = param.modeVal();
+            int action = param->modeVal();
             // TODO this should be part of the push method
             switch (paramCode) {
              case ClpParam::DIRECTION:
@@ -763,11 +763,11 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #endif
                } else if (action == 4) {
                   // Positive edge steepest
-                  ClpPEDualRowSteepest p(fabs(parameters[ClpParam::PSI].dblVal()));
+                  ClpPEDualRowSteepest p(fabs(parameters[ClpParam::PSI]->dblVal()));
                   thisModel->setDualRowPivotAlgorithm(p);
                } else if (action == 5) {
                   // Positive edge Dantzig
-                  ClpPEDualRowDantzig p(fabs(parameters[ClpParam::PSI].dblVal()));
+                  ClpPEDualRowDantzig p(fabs(parameters[ClpParam::PSI]->dblVal()));
                   thisModel->setDualRowPivotAlgorithm(p);
                }
                break;
@@ -795,11 +795,11 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                   thisModel->setPrimalColumnPivotAlgorithm(steep);
                } else if (action == 7) {
                   // Positive edge steepest
-                  ClpPEPrimalColumnSteepest p(fabs(parameters[ClpParam::PSI].dblVal()));
+                  ClpPEPrimalColumnSteepest p(fabs(parameters[ClpParam::PSI]->dblVal()));
                   thisModel->setPrimalColumnPivotAlgorithm(p);
                } else if (action == 8) {
                   // Positive edge Dantzig
-                  ClpPEPrimalColumnDantzig p(fabs(parameters[ClpParam::PSI].dblVal()));
+                  ClpPEPrimalColumnDantzig p(fabs(parameters[ClpParam::PSI]->dblVal()));
                   thisModel->setPrimalColumnPivotAlgorithm(p);
                }
                break;
@@ -910,6 +910,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         case ClpParam::DUALSIMPLEX:
         case ClpParam::PRIMALSIMPLEX:
         case ClpParam::EITHERSIMPLEX:
+	case ClpParam::SOLVE:
 	case ClpParam::SOLVECONTINUOUS:
         case ClpParam::BARRIER:
           // synonym for dual
@@ -922,7 +923,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
 #endif
             //openblas_set_num_threads(4);
             // deal with positive edge
-            double psi = parameters[ClpParam::PSI].dblVal();
+            double psi = parameters[ClpParam::PSI]->dblVal();
             if (psi > 0.0) {
               ClpDualRowPivot *dualp = clpModel->dualRowPivot();
               ClpDualRowSteepest *d1 = dynamic_cast< ClpDualRowSteepest * >(dualp);
@@ -947,11 +948,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             }
             if (paramCode == ClpParam::EITHERSIMPLEX ||
 		paramCode == ClpParam::BAB ||
+                paramCode == ClpParam::SOLVE ||
 		paramCode == ClpParam::SOLVECONTINUOUS) {
               models[iModel].setMoreSpecialOptions(16384 | models[iModel].moreSpecialOptions());
 	      paramCode = ClpParam::EITHERSIMPLEX;
 	    }
-            double objScale = parameters[ClpParam::OBJSCALE2].dblVal();
+            double objScale = parameters[ClpParam::OBJSCALE2]->dblVal();
             if (objScale != 1.0) {
               int iColumn;
               int numberColumns = models[iModel].numberColumns();
@@ -1166,10 +1168,10 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               }
             }
 #ifdef CLP_MULTIPLE_FACTORIZATIONS
-            int denseCode = parameters[ClpParam::DENSE].intVal();
+            int denseCode = parameters[ClpParam::DENSE]->intVal();
             if (denseCode != -1)
               model2->factorization()->setGoDenseThreshold(denseCode);
-            int smallCode = parameters[ClpParam::SMALLFACT].intVal();
+            int smallCode = parameters[ClpParam::SMALLFACT]->intVal();
             if (smallCode != -1)
               model2->factorization()->setGoSmallThreshold(smallCode);
             model2->factorization()->goDenseOrSmall(model2->numberRows());
@@ -1373,7 +1375,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                 << generalPrint
                 << CoinMessageEol;
               // switch off (user can switch back on)
-              parameters[ClpParam::DUALIZE].setIntVal(dualize);
+              parameters[ClpParam::DUALIZE]->setIntVal(dualize);
             }
             if (status >= 0)
               basisHasValues = 1;
@@ -1394,7 +1396,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               pinfo.setSubstitution(substitution);
               if ((printOptions & 1) != 0)
                 pinfo.statistics();
-              double presolveTolerance = parameters[ClpParam::PRESOLVETOLERANCE].dblVal();
+              double presolveTolerance = parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
               model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
                 true, preSolve);
               if (model2) {
@@ -1469,12 +1471,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
            field = CoinGetString(inputVector, whichField,
                                 interactiveMode, prompt);
            if (field == "$") {
-              field = param.strVal();
+              field = param->strVal();
            } else if (field == "EOL") {
-              param.printString();
+              param->printString();
               break;
            } else {
-              param.setStrVal(field);
+              param->setStrVal(field);
            }
           std::string fileName;
           bool canOpen = false;
@@ -1607,7 +1609,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                      whichField = 0;
                   } else {
 		    // gets here on "-import x.mps"
-		    std::cout << "Unable to open file" << fileName << std::endl;
+		    std::cout << "Unable to open file " << fileName << std::endl;
                   }
                 }
               }
@@ -1619,7 +1621,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
         } break;
         case ClpParam::EXPORT:
           if (goodModels[iModel]) {
-            double objScale = parameters[ClpParam::OBJSCALE2].dblVal();
+            double objScale = parameters[ClpParam::OBJSCALE2]->dblVal();
             if (objScale != 1.0) {
               int iColumn;
               int numberColumns = models[iModel].numberColumns();
@@ -1644,12 +1646,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             field = CoinGetString(inputVector, whichField,
                                  interactiveMode, prompt);
             if (field == "$") {
-              field = param.strVal();
+              field = param->strVal();
             } else if (field == "EOL") {
-              param.printString();
+              param->printString();
               break;
             } else {
-              param.setStrVal(field);
+              param->setStrVal(field);
             }
             std::string fileName;
             bool canOpen = false;
@@ -1694,7 +1696,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
                 pinfo.setSubstitution(substitution);
                 if ((printOptions & 1) != 0)
                   pinfo.statistics();
-                double presolveTolerance = parameters[ClpParam::PRESOLVETOLERANCE].dblVal();
+                double presolveTolerance = parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
                 model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
                   true, preSolve, false, false);
                 if (model2) {
@@ -1792,12 +1794,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
              field = CoinGetString(inputVector, whichField,
                                   interactiveMode, prompt);
             if (field == "$") {
-              field = param.strVal();
+              field = param->strVal();
             } else if (field == "EOL") {
-              param.printString();
+              param->printString();
               break;
             } else {
-              param.setStrVal(field);
+              param->setStrVal(field);
             }
             std::string fileName;
             bool canOpen = false;
@@ -1846,10 +1848,10 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
              std::string name = CoinGetString(inputVector, whichField,
                                              interactiveMode, prompt);
             if (name != "EOL") {
-              param.setStrVal(name);
+              param->setStrVal(name);
               printMask = name;
             } else {
-              param.printString();
+              param->printString();
             }
           }
           break;
@@ -1859,12 +1861,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
              field = CoinGetString(inputVector, whichField,
                                   interactiveMode, prompt);
             if (field == "$") {
-              field = param.strVal();
+              field = param->strVal();
             } else if (field == "EOL") {
-              param.printString();
+              param->printString();
               break;
             } else {
-              param.setStrVal(field);
+              param->setStrVal(field);
             }
             std::string fileName;
             bool canOpen = false;
@@ -1904,12 +1906,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
              field = CoinGetString(inputVector, whichField,
                                   interactiveMode, prompt);
             if (field == "$") {
-              field = param.strVal();
+              field = param->strVal();
             } else if (field == "EOL") {
-              param.printString();
+              param->printString();
               break;
             } else {
-              param.setStrVal(field);
+              param->setStrVal(field);
             }
             std::string fileName;
             //bool canOpen = false;
@@ -1938,12 +1940,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
              field = CoinGetString(inputVector, whichField,
                                   interactiveMode, prompt);
           if (field == "$") {
-            field = param.strVal();
+            field = param->strVal();
           } else if (field == "EOL") {
-            param.printString();
+            param->printString();
             break;
           } else {
-            param.setStrVal(field);
+            param->setStrVal(field);
           }
           std::string fileName;
           bool canOpen = false;
@@ -1976,7 +1978,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             ClpSimplex *model2 = models + iModel;
             if (preSolve) {
               ClpPresolve pinfo;
-              double presolveTolerance = parameters[ClpParam::PRESOLVETOLERANCE].dblVal();
+              double presolveTolerance = parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
               model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
                 false, preSolve);
               if (model2) {
@@ -2009,12 +2011,12 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
            field = CoinGetString(inputVector, whichField,
                                 interactiveMode, prompt);
           if (field == "$") {
-            field = param.strVal();
+            field = param->strVal();
           } else if (field == "EOL") {
-            param.printString();
+            param->printString();
             break;
           } else {
-            param.setStrVal(field);
+            param->setStrVal(field);
           }
           std::string fileName;
           bool canOpen = false;
@@ -2100,9 +2102,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             } else {
               directory = name + dirsep;
             }
-            param.setStrVal(directory);
+            param->setStrVal(directory);
           } else {
-            param.printString();
+            param->printString();
           }
         } break;
         case ClpParam::DIRSAMPLE: {
@@ -2115,9 +2117,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             } else {
               dirSample = name + dirsep;
             }
-            param.setStrVal(dirSample);
+            param->setStrVal(dirSample);
           } else {
-            param.printString();
+            param->printString();
           }
         } break;
         case ClpParam::DIRNETLIB: {
@@ -2130,9 +2132,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             } else {
               dirNetlib = name + dirsep;
             }
-            param.setStrVal(dirNetlib);
+            param->setStrVal(dirNetlib);
           } else {
-            param.printString();
+            param->printString();
           }
         } break;
         case ClpParam::DIRMIPLIB: {
@@ -2145,9 +2147,9 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             } else {
               dirMiplib = name + dirsep;
             }
-            param.setStrVal(dirMiplib);
+            param->setStrVal(dirMiplib);
           } else {
-            param.printString();
+            param->printString();
           }
         } break;
         case ClpParam::STDIN:
@@ -2287,7 +2289,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
              double value = CoinGetDouble(inputVector, whichField,
                                           status, interactiveMode, prompt);
             if (!status) {
-              std::cout << "Setting " << param.name()
+              std::cout << "Setting " << param->name()
                         << " to DEBUG " << value << std::endl;
               int iRow;
               int numberRows = models[iModel].numberRows();
@@ -2315,7 +2317,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               abort();
             } else {
               std::cout << "enter value for "
-                        << param.name() << std::endl;
+                        << param->name() << std::endl;
             }
           }
           break;
@@ -2363,12 +2365,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               append = true;
             }
             if (field == "$") {
-              field = param.strVal();
+              field = param->strVal();
             } else if (field == "EOL") {
-              param.printString();
+              param->printString();
               break;
             } else {
-              param.setStrVal(field);
+              param->setStrVal(field);
             }
             std::string fileName;
             FILE *fp = NULL;
@@ -2921,12 +2923,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
              field = CoinGetString(inputVector, whichField, interactiveMode,
                                    prompt);
             if (field == "$") {
-              field = param.strVal();
+              field = param->strVal();
             } else if (field == "EOL") {
-              param.printString();
+              param->printString();
               break;
             } else {
-              param.setStrVal(field);
+              param->setStrVal(field);
             }
             std::string fileName;
             if (field[0] == '/' || field[0] == '\\') {
@@ -2997,12 +2999,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
     } else if (numberMatches == 1) {
       if (!numberQuery) {
         std::cout << "Short match for " << field << " - completion: ";
-        std::cout << param.matchName() << std::endl;
+        std::cout << param->matchName() << std::endl;
       } else if (numberQuery) {
-        std::cout << param.matchName() << " : ";
-        std::cout << param.shortHelp() << std::endl;
+        std::cout << param->matchName() << " : ";
+        std::cout << param->shortHelp() << std::endl;
         if (numberQuery >= 2)
-          param.printLongHelp();
+          param->printLongHelp();
       }
     } else {
       if (!numberQuery){
@@ -3011,20 +3013,20 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                   << std::endl;
       } else {
          std::cout << "Completions of " << field << ":" << std::endl;
-         ClpParam p;
+         ClpParam *p;
          for (int iParam = ClpParam::FIRSTPARAM+1;
               iParam < ClpParam::LASTPARAM; iParam++) {
-            if (parameters[iParam].type() == CoinParam::paramInvalid){
+            if (parameters[iParam]->type() == CoinParam::paramInvalid){
                continue;
             } else {
                p = parameters[iParam];
             }
-            int match = p.matches(field);
+            int match = p->matches(field);
             if (match &&
-                p.getDisplayPriority() != CoinParam::displayPriorityNone) {
-               std::cout << p.matchName();
+                p->getDisplayPriority() != CoinParam::displayPriorityNone) {
+               std::cout << p->matchName();
                if (numberQuery >= 2){
-                  std::cout << " : " << p.shortHelp();
+                  std::cout << " : " << p->shortHelp();
                }
                std::cout << std::endl;
             }

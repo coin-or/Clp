@@ -69,7 +69,7 @@ public:
 
   //@{
 
-  ClpParam &operator[](std::size_t idx){
+  ClpParam *operator[](std::size_t idx){
      return getParam(idx);
   }
    
@@ -98,36 +98,36 @@ public:
   inline CoinParamVec &paramVec() { return parameters_; }
 
   /* \brief Get specific Clp solver parameter object */
-  inline ClpParam &getParam(int code) {
-     return static_cast<ClpParam &>(parameters_[code]);
+  inline ClpParam *getParam(int code) {
+     return static_cast<ClpParam *>(parameters_[code]);
   }
 
   /* \brief Get value of parameter */
   void getParamVal(int code, std::string &value) {
-     value = parameters_[code].getVal(value);
+     value = parameters_[code]->getVal(value);
   }
   void getParamVal(int code, double &value) {
-     value = parameters_[code].getVal(value);
+     value = parameters_[code]->getVal(value);
   }
   void getParamVal(int code, int &value) {
-     value = parameters_[code].getVal(value);
+     value = parameters_[code]->getVal(value);
   }
 
   /* \brief Set value of parameter */
    void setParamVal(int code, std::string value,
                     std::string *message = NULL,
                     CoinParam::ParamPushMode pMode = CoinParam::pushDefault) {
-      parameters_[code].setVal(value, message, pMode);
+      parameters_[code]->setVal(value, message, pMode);
   }
    void setParamVal(int code, double value,
                     std::string *message = NULL,
                     CoinParam::ParamPushMode pMode = CoinParam::pushDefault) {
-      parameters_[code].setVal(value, message, pMode);
+      parameters_[code]->setVal(value, message, pMode);
   }
    void setParamVal(int code, int value,
                     std::string *message = NULL,
                     CoinParam::ParamPushMode pMode = CoinParam::pushDefault) {
-      parameters_[code].setVal(value, message, pMode);
+      parameters_[code]->setVal(value, message, pMode);
   }
 
   /* \brief Get version */
