@@ -4,6 +4,8 @@
 
 #include "ClpConfig.h"
 
+#include <queue>
+
 #include "CoinModel.hpp"
 #include "CoinPragma.hpp"
 
@@ -233,16 +235,17 @@ static void malloc_stats2()
 //#############################################################################
 //#############################################################################
 
-void formInputVector(std::vector<std::string> &inputVector, int argc, char **argv)
+void formInputQueue(std::queue<std::string> &inputQueue,
+                    int argc, char **argv)
 {
    for (int i = 1; i < argc; i++){
       std::string tmp(argv[i]);
       std::string::size_type found = tmp.find('=');
       if (found != std::string::npos) {
-         inputVector.push_back(tmp.substr(0, found));
-         inputVector.push_back(tmp.substr(found + 1));
+         inputQueue.push(tmp.substr(0, found));
+         inputQueue.push(tmp.substr(found + 1));
       } else {
-         inputVector.push_back(tmp);
+         inputQueue.push(tmp);
       }
    }
 }
@@ -296,20 +299,25 @@ main(int argc, const char *argv[])
   ClpMain0(models);
 
   int returnCode;
-  std::vector<std::string> inputVector;
+  std::queue<std::string> inputQueue;
   
   if (argc > 2 && !strcmp(argv[2], "-AMPL")) {
      ampl_info info;
-     returnCode = clpReadAmpl(&info, argc, const_cast< char ** >(argv), models, "clp");
+     returnCode = clpReadAmpl(&info, argc, const_cast< char ** >(argv), models,
+                              "clp");
      if (!returnCode) {
-        // Put arguments into a vector. This should be moved to constructor of ClpSolver
-        formInputVector(inputVector, info.numberArguments, info.arguments);
-        returnCode = ClpMain1(inputVector, models, &info);
+        // Put arguments into a queue.
+        // This should be moved to constructor of ClpSolver
+        formInputQueue(inputQueue, info.numberArguments, info.arguments);
+        // We don't need to first two arguments from here on
+        inputQueue.pop();
+        inputQueue.pop();
+        returnCode = ClpMain1(inputQueue, models, &info);
      }
   } else {
-     // Put arguments into a vector
-     formInputVector(inputVector, argc, const_cast< char ** >(argv));
-     returnCode = ClpMain1(inputVector, models);
+     // Put arguments into a queue.
+     formInputQueue(inputQueue, argc, const_cast< char ** >(argv));
+     returnCode = ClpMain1(inputQueue, models);
   }     
   delete[] models;
   return returnCode;
