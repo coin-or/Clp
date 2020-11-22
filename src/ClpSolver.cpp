@@ -87,6 +87,36 @@
 //#############################################################################
 //#############################################################################
 
+#ifndef ABC_INHERIT
+void printGeneralMessage(ClpSimplex *model, std::string message)
+#else
+void printGeneralMessage(AbcSimplex *model, std::string message)
+#endif
+{
+   if (message.length()){
+      model->messageHandler()->message(CLP_GENERAL, model->messages())
+         << message << CoinMessageEol;
+   }
+}
+
+//#############################################################################
+//#############################################################################
+
+#ifndef ABC_INHERIT
+void printGeneralWarning(ClpSimplex *model, std::string message)
+#else
+void printGeneralWarning(AbcSimplex *model, std::string message)
+#endif
+{
+   if (message.length()){
+      model->messageHandler()->message(CLP_GENERAL_WARNING, model->messages())
+         << message << CoinMessageEol;
+   }
+}
+
+//#############################################################################
+//#############################################################################
+
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
@@ -112,11 +142,11 @@ void ClpMain0(AbcSimplex *models)
 
 #ifndef ABC_INHERIT
 CLPLIB_EXPORT
-int ClpMain1(std::vector<std::string> inputVector, ClpSimplex *models,
+int ClpMain1(std::queue<std::string> inputQueue, ClpSimplex *models,
              ampl_info *info)
 #else
 CLPLIB_EXPORT
-   int ClpMain1(std::vector<std::string> inputVector, AbcSimplex *models,
+   int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
                 ampl_info *info)
 #endif
 {
@@ -145,8 +175,6 @@ CLPLIB_EXPORT
   glp_tran *coin_glp_tran;
   glp_prob *coin_glp_prob;
 #endif
-  // Initialize the counter for input field number
-  int whichField = 0;
   // default action on import
   int allowImportErrors = 0;
   int keepImportNames = 1;
@@ -205,7 +233,7 @@ CLPLIB_EXPORT
   std::string solutionSaveFile = "solution.file";
   std::string printMask = "";
   ClpParameters parameters;
-  parameters[ClpParam::BASISIN]->setStrVal(importBasisFile);
+  parameters[ClpParam::BASISIN]->setVal(importBasisFile);
   parameters[ClpParam::BASISOUT]->setStrVal(exportBasisFile);
   parameters[ClpParam::PRINTMASK]->setStrVal(printMask);
   parameters[ClpParam::DIRECTORY]->setStrVal(directory);
@@ -250,18 +278,11 @@ CLPLIB_EXPORT
   CoinMessageHandler *generalMessageHandler = models->messageHandler();
   generalMessageHandler->setPrefix(false);
   CoinMessages generalMessages = models->messages();
-  char generalPrint[10000];
-  bool noPrinting_ = false;
 
   if (info){
      // We're using AMPL
      usingAmpl = 1;
-     if (info->logLevel == 0){
-        noPrinting_ = true;
-     }
      parameters[ClpParam::LOGLEVEL]->setIntVal(info->logLevel);
-     // Skip the -AMPL
-     whichField = 2;
      goodModels[0] = true;
   }
   
@@ -282,23 +303,26 @@ CLPLIB_EXPORT
   //models[0].setDualRowPivotAlgorithm(steep);
   //ClpPrimalColumnSteepest steepP;
   //models[0].setPrimalColumnPivotAlgorithm(steepP);
-  std::string field;
+  std::string field, message;
+  std::ostringstream buffer;
+  int status, iValue;
+  double dValue;
   std::string prompt = "Clp: ";
+  
+  // If no arguments, just go into interactive mode
+  if (inputQueue.empty()){
+     interactiveMode = true;
+     // let's give the sucker a hint
+     std::cout
+        << "Clp takes input from arguments ( - switches to stdin)"
+        << std::endl
+        << "Enter ? for list of commands or help" << std::endl;
+  }
   
   while (1) {
 
-     // If no arguments, just go into interactive mode
-     if (!inputVector.size()){
-        interactiveMode = true;
-        // let's give the sucker a hint
-        std::cout
-          << "Clp takes input from arguments ( - switches to stdin)"
-          << std::endl
-          << "Enter ? for list of commands or help" << std::endl;
-     }
-
      // get next command
-     field = CoinGetCommand(inputVector, whichField, interactiveMode, prompt);
+     field = CoinParamUtils::getNextField(inputQueue, interactiveMode, prompt);
 
      // exit if null or similar
      if (!field.length()){
@@ -316,14 +340,11 @@ CLPLIB_EXPORT
         if (field == "-") {
            std::cout << "Switching to line mode" << std::endl;
            interactiveMode = true;
-           // This effectively ignores anything that may come after
-           whichField = inputVector.size();
+           while(!inputQueue.empty()) inputQueue.pop();
         } else if (field[0] != '-') {
-	  //if (inputVector.size() == 1) {
-              // special dispensation - taken as -import name
-              field = "import";
-              whichField--;
-	      //}
+           // special dispensation - taken as -import name, put name back on queue
+           inputQueue.push(field);
+           field = "import";
         } else {
            if (field != "--") {
               // take off -
@@ -334,24 +355,19 @@ CLPLIB_EXPORT
            }
         }
      }
-
-    // see if ? at end
-    int numberQuery = 0;
-    if (field != "?" && field != "???") {
-      size_t length = field.length();
-      size_t i;
-      for (i = length - 1; i > 0; i--) {
-        if (field[i] == '?')
-          numberQuery++;
-        else
-          break;
-      }
-      field = field.substr(0, length - numberQuery);
-    }
-
+     
+     int numberMatches(0), numberShortMatches(0), numberQuery(0);
+     
     // find out if valid command
-    int numberMatches = 0;
-    int paramCode = parameters.matches(field, numberMatches);
+     int paramCode = CoinParamUtils::lookupParam(field, parameters.paramVec(),
+                                                 &numberMatches,
+                                                 &numberShortMatches,
+                                                 &numberQuery);
+
+     if (numberQuery){
+        field = field.substr(0, field.length() - numberQuery);
+     }
+
     ClpParam *param = parameters[paramCode];
 
     ClpSimplex *thisModel = models + iModel;
@@ -480,54 +496,48 @@ CLPLIB_EXPORT
          }
       } else if (param->type() == CoinParam::paramDbl) {
         // get next field as double
-         double value = CoinGetDouble(inputVector, whichField,
-                                      status, interactiveMode, prompt);
+         status = CoinParamUtils::getValue(inputQueue, dValue);
         if (!status) {
-           std::string message;
-           param->setVal(value, &message);
-           if (!noPrinting_){
-              std::cout << message << std::endl;
-           }
+           param->setVal(dValue, &message);
+           printGeneralMessage(models, message);
         } else if (status == 1) {
-           std::cout << " is illegal for double parameter "
-                     << param->name() << " value remains "
-                     << param->dblVal() << std::endl;
+           buffer.str("");
+           buffer << "is illegal for double parameter " << param->name() << " value remains "
+                  << param->dblVal() << std::endl;
+           printGeneralMessage(models, buffer.str());
         } else {
-          std::cout << param->name() << " has value "
-                    << param->dblVal() << std::endl;
+           buffer.str("");
+           buffer << param->name() << " has value " << param->dblVal() << std::endl;
+           printGeneralMessage(models, buffer.str());
         }
       } else if (param->type() == CoinParam::paramInt) {
         // get next field as int
-         int value = CoinGetInt(inputVector, whichField,
-                                status, interactiveMode, prompt);
-        if (!status) {
-          if (paramCode == ClpParam::PRESOLVEPASS)
-            preSolve = value;
-          else if (paramCode == ClpParam::IDIOT)
-            doIdiot = value;
-          else if (paramCode == ClpParam::SPRINT)
-            doSprint = value;
-          else if (paramCode == ClpParam::OUTPUTFORMAT)
-            outputFormat = value;
-          else if (paramCode == ClpParam::SLPVALUE)
-            slpValue = value;
-          else if (paramCode == ClpParam::CPP)
-            cppValue = value;
-          else if (paramCode == ClpParam::PRESOLVEOPTIONS)
-            presolveOptions = value;
-          else if (paramCode == ClpParam::PRINTOPTIONS)
-            printOptions = value;
-          else if (paramCode == ClpParam::SUBSTITUTION)
-            substitution = value;
-          else if (paramCode == ClpParam::DUALIZE)
-            dualize = value;
-          else if (paramCode == ClpParam::VERBOSE)
-            verbose = value;
-          std::string message;
-          param->setVal(value, &message);
-          if (!noPrinting_){
-             std::cout << message << std::endl;
-          }
+         status = CoinParamUtils::getValue(inputQueue, iValue);
+         if (!status) {
+            if (paramCode == ClpParam::PRESOLVEPASS)
+               preSolve = iValue;
+            else if (paramCode == ClpParam::IDIOT)
+               doIdiot = iValue;
+            else if (paramCode == ClpParam::SPRINT)
+               doSprint = iValue;
+            else if (paramCode == ClpParam::OUTPUTFORMAT)
+               outputFormat = iValue;
+            else if (paramCode == ClpParam::SLPVALUE)
+               slpValue = iValue;
+            else if (paramCode == ClpParam::CPP)
+               cppValue = iValue;
+            else if (paramCode == ClpParam::PRESOLVEOPTIONS)
+               presolveOptions = iValue;
+            else if (paramCode == ClpParam::PRINTOPTIONS)
+               printOptions = iValue;
+            else if (paramCode == ClpParam::SUBSTITUTION)
+               substitution = iValue;
+            else if (paramCode == ClpParam::DUALIZE)
+               dualize = iValue;
+            else if (paramCode == ClpParam::VERBOSE)
+               verbose = iValue;
+            param->setVal(iValue, &message);
+            printGeneralMessage(models, message);
         } else if (status == 1) {
           std::cout << " is illegal for integer parameter "
                     << param->name() << " value remains "
@@ -538,14 +548,9 @@ CLPLIB_EXPORT
         }
       } else if (param->type() == CoinParam::paramKwd) {
          // one of several strings
-         std::string value = CoinGetString(inputVector, whichField,
-                                           interactiveMode, prompt);
-         std::string message;
-         if (param->setKwdVal(value, &message)){
-            if (!noPrinting_ && message.length()) {
-               generalMessageHandler->message(CLP_GENERAL, generalMessages)
-                  << message << CoinMessageEol;
-            }
+         status = CoinParamUtils::getValue(inputQueue, field);
+         if (param->setVal(field, &message)){
+            printGeneralMessage(models, message);
             int action = param->modeVal();
             // TODO this should be part of the push method
             switch (paramCode) {
@@ -848,9 +853,11 @@ CLPLIB_EXPORT
                 ClpSimplex *thisModel = model2;
                 thisModel = static_cast< ClpSimplexOther * >(thisModel)->dualOfModel(fractionRow, fractionColumn);
                 if (thisModel) {
-                  printf("Dual of model has %d rows and %d columns\n",
-                    thisModel->numberRows(), thisModel->numberColumns());
-                  thisModel->setOptimizationDirection(1.0);
+                   buffer.str("");
+                   buffer << "Dual of model has " << thisModel->numberRows() << " rows and "
+                          << thisModel->numberColumns() << " columns" << std::endl;
+                   printGeneralMessage(models, buffer.str());
+                   thisModel->setOptimizationDirection(1.0);
 #ifndef ABC_INHERIT
                   model2 = thisModel;
 #else
@@ -879,15 +886,15 @@ CLPLIB_EXPORT
                 preSolve = -preSolve;
                 if (preSolve <= 100) {
                   presolveType = ClpSolve::presolveNumber;
-                  printf("Doing %d presolve passes - picking up non-costed slacks\n",
-                    preSolve);
                   solveOptions.setDoSingletonColumn(true);
                 } else {
                   preSolve -= 100;
                   presolveType = ClpSolve::presolveNumberCost;
-                  printf("Doing %d presolve passes - picking up costed slacks\n",
-                    preSolve);
                 }
+                buffer.str("");
+                buffer << "Doing " << preSolve 
+                       <<" presolve passes - picking up non-costed slacks" << std::endl;
+                printGeneralMessage(models, buffer.str());
               }
             } else if (preSolve) {
               presolveType = ClpSolve::presolveOn;
@@ -1001,7 +1008,7 @@ CLPLIB_EXPORT
                 // now call generate code
                 generateCode("user_driver.cpp", cppValue);
               } else {
-                std::cout << "Unable to open file user_driver.cpp" << std::endl;
+                 printGeneralMessage(models, "Unable to open file user_driver.cpp\n");
               }
             }
 #ifdef CLP_MULTIPLE_FACTORIZATIONS
@@ -1157,21 +1164,29 @@ CLPLIB_EXPORT
                         rhsValue = rowUpper[i];
                     }
                     effectiveRhs[i] = rhsValue;
-                    if (fabs(effectiveRhs[i]) > 1.0e10 && printBad)
-                      printf("Large rhs row %d %g\n",
-                        i, effectiveRhs[i]);
+                    if (fabs(effectiveRhs[i]) > 1.0e10 && printBad){
+                       buffer.str("");
+                       buffer << "Large rhs row "
+                              << i << " " << effectiveRhs[i] << " after" << std::endl;
+                       printGeneralWarning(models, buffer.str());
+                    }
                   }
                   simplex->times(-1.0, bound, effectiveRhs);
                   double bSum = 0.0;
                   for (int i = 0; i < numberRows; i++) {
                     bSum += effectiveRhs[i] * ray[i];
-                    if (fabs(effectiveRhs[i]) > 1.0e10 && printBad)
-                      printf("Large rhs row %d %g after\n",
-                        i, effectiveRhs[i]);
+                    if (fabs(effectiveRhs[i]) > 1.0e10 && printBad){
+                       buffer.str("");
+                       buffer << "Large rhs row "
+                              << i << " " << effectiveRhs[i] << " after" << std::endl;
+                       printGeneralWarning(models, buffer.str());
+                    }
                   }
                   if ((numberBad || bSum > 1.0e-6) && printBad) {
-                    printf("Bad infeasibility ray %g  - %d bad\n",
-                      bSum, numberBad);
+                     buffer.str("");
+                     buffer << "Bad infeasibility ray "
+                            << bSum << "  - " << numberBad << " bad" << std::endl;
+                     printGeneralWarning(models, buffer.str());
                   } else {
                     //printf("Good ray - infeasibility %g\n",
                     //     -bSum);
@@ -1202,22 +1217,17 @@ CLPLIB_EXPORT
                 thisModel->primal(1);
                 currentModel = NULL;
               }
-              CoinMessageHandler *generalMessageHandler = models->messageHandler();
-              generalMessageHandler->setPrefix(false);
-              CoinMessages generalMessages = models->messages();
-              char generalPrint[100];
-              sprintf(generalPrint, "After translating dual back to primal - objective value is %g",
-                thisModel->objectiveValue());
-              generalMessageHandler->message(CLP_GENERAL, generalMessages)
-                << generalPrint
-                << CoinMessageEol;
+              buffer.str("");
+              buffer << "After translating dual back to primal - objective value is "
+                     << thisModel->objectiveValue();
+              printGeneralMessage(models, buffer.str());
               // switch off (user can switch back on)
               parameters[ClpParam::DUALIZE]->setIntVal(dualize);
             }
             if (status >= 0)
               basisHasValues = 1;
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+               printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
         case ClpParam::STATISTICS:
@@ -1237,30 +1247,31 @@ CLPLIB_EXPORT
               model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
                 true, preSolve);
               if (model2) {
-                printf("Statistics for presolved model\n");
+                printGeneralMessage(models, "Statistics for presolved model\n");
                 deleteModel2 = true;
               } else {
-                printf("Presolved model looks infeasible - will use unpresolved\n");
+                printGeneralMessage(models, "Presolved model looks infeasible - will use "
+                                    "unpresolved\n");
                 model2 = models + iModel;
               }
             } else {
-              printf("Statistics for unpresolved model\n");
+              printGeneralMessage(models, "Statistics for unpresolved model\n");
               model2 = models + iModel;
             }
             statistics(models + iModel, model2);
             if (deleteModel2)
               delete model2;
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
         case ClpParam::TIGHTEN:
           if (goodModels[iModel]) {
             int numberInfeasibilities = models[iModel].tightenPrimalBounds();
             if (numberInfeasibilities)
-              std::cout << "** Analysis indicates model infeasible" << std::endl;
+               printGeneralWarning(models, "** Analysis indicates model infeasible\n");
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
         case ClpParam::PLUSMINUS:
@@ -1272,15 +1283,15 @@ CLPLIB_EXPORT
               if (newMatrix->getIndices()) {
                 models[iModel].replaceMatrix(newMatrix);
                 delete saveMatrix;
-                std::cout << "Matrix converted to +- one matrix" << std::endl;
+                printGeneralMessage(models, "Matrix converted to +- one matrix\n");
               } else {
-                std::cout << "Matrix can not be converted to +- 1 matrix" << std::endl;
+                 printGeneralWarning(models, "Matrix cannot be converted to +- 1 matrix\n");
               }
             } else {
-              std::cout << "Matrix not a ClpPackedMatrix" << std::endl;
+                printGeneralWarning(models, "Matrix not a ClpPackedMatrix\n");
             }
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
         case ClpParam::NETWORK:
@@ -1292,28 +1303,27 @@ CLPLIB_EXPORT
               if (newMatrix->getIndices()) {
                 models[iModel].replaceMatrix(newMatrix);
                 delete saveMatrix;
-                std::cout << "Matrix converted to network matrix" << std::endl;
+                printGeneralMessage(models, "Matrix converted to network matrix\n");
               } else {
-                std::cout << "Matrix can not be converted to network matrix" << std::endl;
+                 printGeneralWarning(models, "Matrix can not be converted to network matrix\n");
               }
             } else {
-              std::cout << "Matrix not a ClpPackedMatrix" << std::endl;
+               printGeneralWarning(models, "Matrix not a ClpPackedMatrix\n");
             }
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
         case ClpParam::IMPORT: {
           // get next field
-           field = CoinGetString(inputVector, whichField,
-                                interactiveMode, prompt);
+           status = CoinParamUtils::getValue(inputQueue, field);
            if (field == "$") {
               field = param->strVal();
            } else if (field == "EOL") {
               param->printString();
               break;
            } else {
-              param->setStrVal(field);
+              param->setVal(field);
            }
           std::string fileName;
           bool canOpen = false;
@@ -1353,10 +1363,13 @@ CLPLIB_EXPORT
                 gmpl = 1;
                 fileName = field.substr(0, percent);
                 gmplData = field.substr(percent + 1);
-                if (percent < length - 1)
-                  gmpl = 2; // two files
-                printf("GMPL model file %s and data file %s\n",
-                  fileName.c_str(), gmplData.c_str());
+                if (percent < length - 1){
+                   gmpl = 2; // two files
+                }
+                buffer.str("");
+                buffer << "GMPL model file " << fileName  << " and data file " << gmplData
+                       << std::endl;
+                printGeneralMessage(models, buffer.str());
               }
             } else if (field[0] == '~') {
               char *environVar = getenv("HOME");
@@ -1378,8 +1391,10 @@ CLPLIB_EXPORT
                 gmplData = directory + field.substr(percent + 1);
                 if (percent < length - 1)
                   gmpl = 2; // two files
-                printf("GMPL model file %s and data file %s\n",
-                  fileName.c_str(), gmplData.c_str());
+                buffer.str("");
+                buffer << "GMPL model file " << fileName  << " and data file " << gmplData
+                       << std::endl;
+                printGeneralMessage(models, buffer.str());
               }
             }
             std::string name = fileName;
@@ -1393,11 +1408,15 @@ CLPLIB_EXPORT
                   fclose(fp);
                 } else {
                   canOpen = false;
-                  std::cout << "Unable to open file " << gmplData << std::endl;
+                  buffer.str("");
+                  buffer << "Unable to open file " << gmplData << std::endl;
+                  printGeneralWarning(models, buffer.str());
                 }
               }
             } else {
-              std::cout << "Unable to open file " << fileName << std::endl;
+               buffer.str("");
+               buffer << "Unable to open file " << gmplData << std::endl;
+               printGeneralWarning(models, buffer.str());
             }
           }
           if (canOpen) {
@@ -1411,15 +1430,15 @@ CLPLIB_EXPORT
                 allowImportErrors != 0);
             }else if (gmpl > 0){
 #ifdef COINUTILS_HAS_GLPK
-              status = models[iModel].readGMPL(fileName.c_str(),
-                                               (gmpl == 2) ? gmplData.c_str() : NULL,
-                                               keepImportNames != 0,
-                                               &coin_glp_tran, &coin_glp_prob);
+               status = models[iModel].readGMPL(fileName.c_str(),
+                                                (gmpl == 2) ? gmplData.c_str() : NULL,
+                                                keepImportNames != 0,
+                                                &coin_glp_tran, &coin_glp_prob);
 #else
-                  printf("Clp was not built with GMPL support. Exiting.\n");
-                  // This is surely not the right thing to do here. Should we
-                  // throw an exceptioon? Exit?
-                  abort();
+               printGeneralWarning(models, "Clp was not built with GMPL support. Exiting.\n");
+               // This is surely not the right thing to do here. Should we
+               // throw an exceptioon? Exit?
+               abort();
 #endif
             }else{
 #ifdef KILL_ZERO_READLP
@@ -1433,7 +1452,7 @@ CLPLIB_EXPORT
               // sets to all slack (not necessary?)
               thisModel->createStatus();
               // Go to canned file if just input file
-              if (whichField == 2 && inputVector.size() == 2) {
+              if (inputQueue.empty()) {
                 // only if ends .mps
                 char *find = const_cast< char * >(strstr(fileName.c_str(), ".mps"));
                 if (find && find[4] == '\0') {
@@ -1442,17 +1461,20 @@ CLPLIB_EXPORT
                   find[3] = 'r';
                   std::ifstream ifs(fileName.c_str());
                   if (ifs.is_open()) {
-                     CoinReadFromStream(inputVector, ifs);
-                     whichField = 0;
+                     CoinParamUtils::readFromStream(inputQueue, ifs);
                   } else {
 		    // gets here on "-import x.mps"
-		    std::cout << "Unable to open file " << fileName << std::endl;
+                     buffer.str("");
+                     buffer << "No parameter file " << fileName << " found" << std::endl;
+                     printGeneralMessage(models, buffer.str());
                   }
                 }
               }
             } else {
               // errors
-              std::cout << "There were " << status << " errors on input" << std::endl;
+               buffer.str("");
+               buffer << "There were " << status << " errors on input" << std::endl;
+               printGeneralMessage(models, buffer.str());
             }
           }
         } break;
@@ -1480,15 +1502,14 @@ CLPLIB_EXPORT
               models[iModel].setObjectiveOffset(objScale * models[iModel].objectiveOffset());
             }
             // get next field
-            field = CoinGetString(inputVector, whichField,
-                                 interactiveMode, prompt);
+            status = CoinParamUtils::getValue(inputQueue, field);
             if (field == "$") {
               field = param->strVal();
             } else if (field == "EOL") {
               param->printString();
               break;
             } else {
-              param->setStrVal(field);
+              param->setVal(field);
             }
             std::string fileName;
             bool canOpen = false;
@@ -1512,7 +1533,9 @@ CLPLIB_EXPORT
               fclose(fp);
               canOpen = true;
             } else {
-              std::cout << "Unable to open file " << fileName << std::endl;
+               buffer.str("");
+               buffer << "Unable to open file " << fileName << std::endl;
+               printGeneralWarning(models, buffer.str());
             }
             if (canOpen) {
               // If presolve on then save presolved
@@ -1520,8 +1543,10 @@ CLPLIB_EXPORT
               ClpSimplex *model2 = models + iModel;
               if (dualize && dualize < 3) {
                 model2 = static_cast< ClpSimplexOther * >(model2)->dualOfModel();
-                printf("Dual of model has %d rows and %d columns\n",
-                  model2->numberRows(), model2->numberColumns());
+                buffer.str("");
+                buffer << "Dual of model has " << model2->numberRows() << " rows and "
+                       << model2->numberColumns() << " columns" << std::endl;
+                printGeneralMessage(models, buffer.str());
                 model2->setOptimizationDirection(1.0);
                 preSolve = 0; // as picks up from model
               }
@@ -1537,18 +1562,22 @@ CLPLIB_EXPORT
                 model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
                   true, preSolve, false, false);
                 if (model2) {
-                  printf("Saving presolved model on %s\n",
-                    fileName.c_str());
+                   buffer.str("");
+                   buffer << "Saving presolved model on " << fileName << std::endl;
+                   printGeneralMessage(models, buffer.str());
                   deleteModel2 = true;
                 } else {
-                  printf("Presolved model looks infeasible - saving original on %s\n",
-                    fileName.c_str());
+                   buffer.str("");
+                   buffer << "Presolved model looks infeasible - saving original on "
+                          << fileName << std::endl;
+                   printGeneralMessage(models, buffer.str());
                   deleteModel2 = false;
                   model2 = models + iModel;
                 }
               } else {
-                printf("Saving model on %s\n",
-                  fileName.c_str());
+                 buffer.str("");
+                 buffer << "Saving model on " << fileName << std::endl;
+                 printGeneralMessage(models, buffer.str());
               }
 #if 0
               // Convert names
@@ -1622,21 +1651,19 @@ CLPLIB_EXPORT
                  delete model2;
             }
           } else {
-             std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
         case ClpParam::BASISIN:
           if (goodModels[iModel]) {
-            // get next field
-             field = CoinGetString(inputVector, whichField,
-                                  interactiveMode, prompt);
+             status= CoinParamUtils::getValue(inputQueue, field);
             if (field == "$") {
               field = param->strVal();
             } else if (field == "EOL") {
               param->printString();
               break;
             } else {
-              param->setStrVal(field);
+              param->setVal(field);
             }
             std::string fileName;
             bool canOpen = false;
@@ -1665,7 +1692,9 @@ CLPLIB_EXPORT
                 fclose(fp);
                 canOpen = true;
               } else {
-                std::cout << "Unable to open file " << fileName << std::endl;
+                 buffer.str("");
+                 buffer << "Unable to open file " << fileName << std::endl;
+                 printGeneralWarning(models, buffer.str());
               }
             }
             if (canOpen) {
@@ -1676,34 +1705,27 @@ CLPLIB_EXPORT
                 basisHasValues = 1;
             }
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
-        case ClpParam::PRINTMASK:
-          // get next field
-          {
-             std::string name = CoinGetString(inputVector, whichField,
-                                             interactiveMode, prompt);
-            if (name != "EOL") {
-              param->setStrVal(name);
-              printMask = name;
-            } else {
-              param->printString();
-            }
+           case ClpParam::PRINTMASK:
+          if (!CoinParamUtils::getValue(inputQueue, field)) {
+             param->setVal(field);
+             printMask = field;
+          } else {
+             param->printString();
           }
           break;
         case ClpParam::BASISOUT:
           if (goodModels[iModel]) {
-            // get next field
-             field = CoinGetString(inputVector, whichField,
-                                  interactiveMode, prompt);
+             status = CoinParamUtils::getValue(inputQueue, field);
             if (field == "$") {
               field = param->strVal();
             } else if (field == "EOL") {
               param->printString();
               break;
             } else {
-              param->setStrVal(field);
+              param->setVal(field);
             }
             std::string fileName;
             bool canOpen = false;
@@ -1727,28 +1749,28 @@ CLPLIB_EXPORT
               fclose(fp);
               canOpen = true;
             } else {
-              std::cout << "Unable to open file " << fileName << std::endl;
+               buffer.str("");
+               buffer << "Unable to open file " << fileName << std::endl;
+               printGeneralWarning(models, buffer.str());
             }
             if (canOpen) {
               ClpSimplex *model2 = models + iModel;
               model2->writeBasis(fileName.c_str(), outputFormat > 1, outputFormat - 2);
             }
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
         case ClpParam::PARAMETRICS:
           if (goodModels[iModel]) {
-            // get next field
-             field = CoinGetString(inputVector, whichField,
-                                  interactiveMode, prompt);
+             status = CoinParamUtils::getValue(inputQueue, field);
             if (field == "$") {
               field = param->strVal();
             } else if (field == "EOL") {
               param->printString();
               break;
             } else {
-              param->setStrVal(field);
+              param->setVal(field);
             }
             std::string fileName;
             //bool canOpen = false;
@@ -1769,20 +1791,18 @@ CLPLIB_EXPORT
             ClpSimplex *model2 = models + iModel;
             static_cast< ClpSimplexOther * >(model2)->parametrics(fileName.c_str());
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
         case ClpParam::SAVE: {
-          // get next field
-             field = CoinGetString(inputVector, whichField,
-                                  interactiveMode, prompt);
+           status = CoinParamUtils::getValue(inputQueue, field);
           if (field == "$") {
             field = param->strVal();
           } else if (field == "EOL") {
             param->printString();
             break;
           } else {
-            param->setStrVal(field);
+            param->setVal(field);
           }
           std::string fileName;
           bool canOpen = false;
@@ -1806,7 +1826,9 @@ CLPLIB_EXPORT
             fclose(fp);
             canOpen = true;
           } else {
-            std::cout << "Unable to open file " << fileName << std::endl;
+             buffer.str("");
+             buffer << "Unable to open file " << fileName << std::endl;
+             printGeneralWarning(models, buffer.str());
           }
           if (canOpen) {
             int status;
@@ -1819,18 +1841,22 @@ CLPLIB_EXPORT
               model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
                 false, preSolve);
               if (model2) {
-                printf("Saving presolved model on %s\n",
-                  fileName.c_str());
+                 buffer.str("");
+                 buffer << "Saving presolved model on " << fileName << std::endl;
+                 printGeneralMessage(models, buffer.str());
                 deleteModel2 = true;
               } else {
-                printf("Presolved model looks infeasible - saving original on %s\n",
-                  fileName.c_str());
+                 buffer.str("");
+                 buffer << "Presolved model looks infeasible - saving original on "
+                        << fileName << std::endl;
+                 printGeneralMessage(models, buffer.str());
                 deleteModel2 = false;
                 model2 = models + iModel;
               }
             } else {
-              printf("Saving model on %s\n",
-                fileName.c_str());
+               buffer.str("");
+               buffer << "Saving model on " << fileName << std::endl;
+               printGeneralMessage(models, buffer.str());
             }
             status = model2->saveModel(fileName.c_str());
             if (deleteModel2)
@@ -1839,21 +1865,19 @@ CLPLIB_EXPORT
               goodModels[iModel] = true;
             } else {
               // errors
-              std::cout << "There were errors on output" << std::endl;
+               printGeneralWarning(models, "There were errors on output\n");
             }
           }
         } break;
         case ClpParam::RESTORE: {
-          // get next field
-           field = CoinGetString(inputVector, whichField,
-                                interactiveMode, prompt);
+           status = CoinParamUtils::getValue(inputQueue, field);
           if (field == "$") {
             field = param->strVal();
           } else if (field == "EOL") {
             param->printString();
             break;
           } else {
-            param->setStrVal(field);
+            param->setVal(field);
           }
           std::string fileName;
           bool canOpen = false;
@@ -1877,15 +1901,17 @@ CLPLIB_EXPORT
             fclose(fp);
             canOpen = true;
           } else {
-            std::cout << "Unable to open file " << fileName << std::endl;
+             buffer.str("");
+             buffer << "Unable to open file " << fileName << std::endl;
+             printGeneralWarning(models, buffer.str());
           }
           if (canOpen) {
             int status = models[iModel].restoreModel(fileName.c_str());
             if (!status) {
               goodModels[iModel] = true;
             } else {
-              // errors
-              std::cout << "There were errors on input" << std::endl;
+               // errors
+               printGeneralWarning(models, "There were errors on output\n");
             }
           }
         } break;
@@ -1930,68 +1956,60 @@ CLPLIB_EXPORT
           }
           break;
         case ClpParam::DIRECTORY: {
-           std::string name = CoinGetString(inputVector, whichField,
-                                           interactiveMode, prompt);
-          if (name != "EOL") {
-            size_t length = name.length();
-            if (length > 0 && name[length - 1] == dirsep) {
-              directory = name;
+          if (!CoinParamUtils::getValue(inputQueue, field)) {
+            size_t length = field.length();
+            if (length > 0 && field[length - 1] == dirsep) {
+              directory = field;
             } else {
-              directory = name + dirsep;
+              directory = field + dirsep;
             }
-            param->setStrVal(directory);
+            param->setVal(directory);
           } else {
             param->printString();
           }
         } break;
         case ClpParam::DIRSAMPLE: {
-           std::string name = CoinGetString(inputVector, whichField,
-                                           interactiveMode, prompt);
-          if (name != "EOL") {
-            size_t length = name.length();
-            if (length > 0 && name[length - 1] == dirsep) {
-              dirSample = name;
+          if (!CoinParamUtils::getValue(inputQueue, field)) {
+            size_t length = field.length();
+            if (length > 0 && field[length - 1] == dirsep) {
+              dirSample = field;
             } else {
-              dirSample = name + dirsep;
+              dirSample = field + dirsep;
             }
-            param->setStrVal(dirSample);
+            param->setVal(dirSample);
           } else {
             param->printString();
           }
         } break;
         case ClpParam::DIRNETLIB: {
-           std::string name = CoinGetString(inputVector, whichField,
-                                           interactiveMode, prompt);
-          if (name != "EOL") {
-            size_t length = name.length();
-            if (length > 0 && name[length - 1] == dirsep) {
-              dirNetlib = name;
+          if (!CoinParamUtils::getValue(inputQueue, field)) {
+            size_t length = field.length();
+            if (length > 0 && field[length - 1] == dirsep) {
+              dirNetlib = field;
             } else {
-              dirNetlib = name + dirsep;
+              dirNetlib = field + dirsep;
             }
-            param->setStrVal(dirNetlib);
+            param->setVal(dirNetlib);
           } else {
             param->printString();
           }
         } break;
         case ClpParam::DIRMIPLIB: {
-           std::string name = CoinGetString(inputVector, whichField,
-                                           interactiveMode, prompt);
-          if (name != "EOL") {
-            size_t length = name.length();
-            if (length > 0 && name[length - 1] == dirsep) {
-              dirMiplib = name;
+          if (!CoinParamUtils::getValue(inputQueue, field)) {
+            size_t length = field.length();
+            if (length > 0 && field[length - 1] == dirsep) {
+              dirMiplib = field;
             } else {
-              dirMiplib = name + dirsep;
+              dirMiplib = field + dirsep;
             }
-            param->setStrVal(dirMiplib);
+            param->setVal(dirMiplib);
           } else {
             param->printString();
           }
         } break;
         case ClpParam::STDIN:
           interactiveMode = true;
-          whichField = inputVector.size();
+          while(!inputQueue.empty()) inputQueue.pop();
           break;
         case ClpParam::NETLIB_DUAL:
         case ClpParam::NETLIB_EITHER:
@@ -2074,8 +2092,11 @@ CLPLIB_EXPORT
                   hiSizeX = size;
               }
             }
-            if (loSizeX != -1 || hiSizeX != 1000000)
-              printf("Solving problems %d<= and <%d\n", loSizeX, hiSizeX);
+            if (loSizeX != -1 || hiSizeX != 1000000){
+               buffer.str("");
+               buffer << "Solving problems " << loSizeX << "<= and <" << hiSizeX
+                      << std::endl;
+               printGeneralMessage(models, buffer.str());
           }
 #endif
           // for moment then back to models[iModel]
@@ -2123,11 +2144,11 @@ CLPLIB_EXPORT
         case ClpParam::FAKEBOUND:
           if (goodModels[iModel]) {
              // get bound
-             double value = CoinGetDouble(inputVector, whichField,
-                                          status, interactiveMode, prompt);
+             status = CoinParamUtils::getValue(inputQueue, dValue);
             if (!status) {
-              std::cout << "Setting " << param->name()
-                        << " to DEBUG " << value << std::endl;
+              buffer.str("");
+              buffer << "Setting " << param->name() << " to DEBUG " << dValue << std::endl;
+              printGeneralMessage(models, buffer.str());
               int iRow;
               int numberRows = models[iModel].numberRows();
               double *rowLower = models[iModel].rowLower();
@@ -2135,8 +2156,8 @@ CLPLIB_EXPORT
               for (iRow = 0; iRow < numberRows; iRow++) {
                 // leave free ones for now
                 if (rowLower[iRow] > -1.0e20 || rowUpper[iRow] < 1.0e20) {
-                  rowLower[iRow] = CoinMax(rowLower[iRow], -value);
-                  rowUpper[iRow] = CoinMin(rowUpper[iRow], value);
+                  rowLower[iRow] = CoinMax(rowLower[iRow], -dValue);
+                  rowUpper[iRow] = CoinMin(rowUpper[iRow], dValue);
                 }
               }
               int iColumn;
@@ -2146,15 +2167,14 @@ CLPLIB_EXPORT
               for (iColumn = 0; iColumn < numberColumns; iColumn++) {
                 // leave free ones for now
                 if (columnLower[iColumn] > -1.0e20 || columnUpper[iColumn] < 1.0e20) {
-                  columnLower[iColumn] = CoinMax(columnLower[iColumn], -value);
-                  columnUpper[iColumn] = CoinMin(columnUpper[iColumn], value);
+                  columnLower[iColumn] = CoinMax(columnLower[iColumn], -dValue);
+                  columnUpper[iColumn] = CoinMin(columnUpper[iColumn], dValue);
                 }
               }
             } else if (status == 1) {
               abort();
             } else {
-              std::cout << "enter value for "
-                        << param->name() << std::endl;
+              std::cout << "enter value for " << param->name() << std::endl;
             }
           }
           break;
@@ -2162,7 +2182,7 @@ CLPLIB_EXPORT
           if (goodModels[iModel]) {
             ClpSimplex newModel(models[iModel],
               models[iModel].scalingFlag());
-            printf("model really really scaled\n");
+            printGeneralMessage(models, "model really really scaled\n");
             models[iModel] = newModel;
           }
           break;
@@ -2170,8 +2190,10 @@ CLPLIB_EXPORT
           // Replace the sample code by whatever you want
           if (goodModels[iModel]) {
             ClpSimplex *thisModel = &models[iModel];
-            printf("Dummy user code - model has %d rows and %d columns\n",
-              thisModel->numberRows(), thisModel->numberColumns());
+            buffer.str("");
+            buffer << "Dummy user code - model has " << thisModel->numberRows() << " rows and "
+                   << thisModel->numberColumns() << " columns" << std::endl;
+            printGeneralMessage(models, buffer.str());
           }
           break;
         case ClpParam::HELP:
@@ -2180,7 +2202,7 @@ CLPLIB_EXPORT
           std::cout << "Non default values:-" << std::endl;
           std::cout << "Perturbation " << models[0].perturbation() << " (default 100)"
                     << std::endl;
-          CoinPrintString(
+          CoinParamUtils::printString(
             "Presolve being done with 5 passes\n\
 Dual steepest edge steep/partial on matrix shape and factorization density\n\
 Clpnnnn taken out of messages\n\
@@ -2194,9 +2216,8 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         case ClpParam::GMPL_SOLUTION:
           if (goodModels[iModel]) {
              // get next field
-             field = CoinGetString(inputVector, whichField, interactiveMode,
-                                   prompt);
-            bool append = false;
+             status = CoinParamUtils::getValue(inputQueue, field);
+             bool append = false;
             if (field == "append$") {
               field = "$";
               append = true;
@@ -2207,7 +2228,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               param->printString();
               break;
             } else {
-              param->setStrVal(field);
+              param->setVal(field);
             }
             std::string fileName;
             FILE *fp = NULL;
@@ -2249,9 +2270,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 if (coin_glp_prob) {
                   // from gmpl
                   numberGlpkRows = glp_get_num_rows(coin_glp_prob);
-                  if (numberGlpkRows != numberRows)
-                    printf("Mismatch - cbc %d rows, glpk %d\n",
-                      numberRows, numberGlpkRows);
+                  if (numberGlpkRows != numberRows){
+                     buffer.str("");
+                     buffer << "Mismatch - cbc " << numberRows << " rows, glpk "
+                            << numberGlpkRows << std::endl;
+                     printGeneralMessage(models, buffer.str());
+                  }
                 }
 #endif
                 fprintf(fp, "%d %d\n", numberGlpkRows,
@@ -2376,10 +2400,13 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                       CoinMin(primal - lower, upper - primal));
                   }
                 }
-                printf("For rows %d at lower, %d between, %d at upper - lowest %g, highest %g most away %g - highest dual %g lowest %g\n",
-                  numberAtLower, numberBetween, numberAtUpper,
-                  lowestPrimal, highestPrimal, largestAway,
-                  lowestDual, highestDual);
+                buffer.str("");
+                buffer << "For rows " << numberAtLower << " at lower, " << numberBetween
+                       << " between, " << numberAtUpper << " at upper - lowest "
+                       << lowestPrimal << ", highest " << highestPrimal << " most away "
+                       << largestAway << " - highest dual " << highestDual << " lowest "
+                       << lowestDual << std::endl;
+                printGeneralMessage(models, buffer.str());
                 int numberColumns = models[iModel].numberColumns();
                 double *dualColumnSolution = models[iModel].dualColumnSolution();
                 double *primalColumnSolution = models[iModel].primalColumnSolution();
@@ -2413,10 +2440,13 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                       CoinMin(primal - lower, upper - primal));
                   }
                 }
-                printf("For columns %d at lower, %d between, %d at upper - lowest %g, highest %g most away %g - highest dual %g lowest %g\n",
-                  numberAtLower, numberBetween, numberAtUpper,
-                  lowestPrimal, highestPrimal, largestAway,
-                  lowestDual, highestDual);
+                buffer.str("");
+                buffer << "For columns " << numberAtLower << " at lower, " << numberBetween
+                       << " between, " << numberAtUpper << " at upper - lowest "
+                       << lowestPrimal << ", highest " << highestPrimal << " most away "
+                       << largestAway << " - highest dual " << highestDual << " lowest "
+                       << lowestDual << std::endl;
+                printGeneralMessage(models, buffer.str());
                 break;
               }
               // make fancy later on
@@ -2446,7 +2476,9 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 assert(lengthMask < 100);
                 if (*pMask2 == '"') {
                   if (pMask2[lengthMask - 1] != '"') {
-                    printf("mismatched \" in mask %s\n", pMask2);
+                     buffer.str("");
+                     buffer << "mismatched \" in mask " << pMask2 << std::endl;
+                     printGeneralWarning(models, buffer.str());
                     break;
                   } else {
                     strcpy(pMask, pMask2 + 1);
@@ -2454,7 +2486,9 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                   }
                 } else if (*pMask2 == '\'') {
                   if (pMask2[lengthMask - 1] != '\'') {
-                    printf("mismatched ' in mask %s\n", pMask2);
+                     buffer.str("");
+                     buffer << "mismatched ' in mask " << pMask2 << std::endl;
+                     printGeneralWarning(models, buffer.str());
                     break;
                   } else {
                     strcpy(pMask, pMask2 + 1);
@@ -2464,8 +2498,10 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                   strcpy(pMask, pMask2);
                 }
                 if (lengthMask > static_cast< size_t >(lengthName)) {
-                  printf("mask %s too long - skipping\n", pMask);
-                  break;
+                   buffer.str("");
+                   buffer << "mask " << pMask << " too long - skipping" << std::endl;
+                   printGeneralWarning(models, buffer.str());
+                   break;
                 }
                 maxMasks = 1;
                 for (size_t iChar = 0; iChar < lengthMask; iChar++) {
@@ -2569,7 +2605,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                     if (n) {
                       number = n;
                     } else {
-                      printf("No names match - doing all\n");
+                      printGeneralWarning(models, "No names match - doing all\n");
                       for (int i = 0; i < number; i++)
                         which[i] = i;
                     }
@@ -2587,7 +2623,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                     if (n) {
                       number = n;
                     } else {
-                      printf("No names match - doing all\n");
+                      printGeneralWarning(models, "No names match - doing all\n");
                       for (int i = 0; i < number; i++)
                         which[i] = i + numberColumns;
                     }
@@ -2747,25 +2783,26 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 delete[] masks;
               }
             } else {
-              std::cout << "Unable to open file " << fileName << std::endl;
+                 buffer.str("");
+                 buffer << "Unable to open file " << fileName << std::endl;
+                 printGeneralWarning(models, buffer.str());
             }
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
 
           break;
         case ClpParam::SAVESOL:
           if (goodModels[iModel]) {
             // get next field
-             field = CoinGetString(inputVector, whichField, interactiveMode,
-                                   prompt);
+             status = CoinParamUtils::getValue(inputQueue, field);
             if (field == "$") {
               field = param->strVal();
             } else if (field == "EOL") {
               param->printString();
               break;
             } else {
-              param->setStrVal(field);
+              param->setVal(field);
             }
             std::string fileName;
             if (field[0] == '/' || field[0] == '\\') {
@@ -2784,7 +2821,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
             }
             ClpParamUtils::saveSolution(models + iModel, fileName);
           } else {
-            std::cout << "** Current model not valid" << std::endl;
+             printGeneralWarning(models, "** Current model not valid\n");
           }
           break;
         case ClpParam::ENVIRONMENT: {
@@ -2792,13 +2829,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
           // Don't think it will work with Visual Studio
           char *input = getenv("CLP_ENVIRONMENT");
           if (input){
+             while(!inputQueue.empty()) inputQueue.pop();
              std::istringstream inputStream(input);
-             CoinReadFromStream(inputVector, inputStream);
-             whichField = 0;
+             CoinParamUtils::readFromStream(inputQueue, inputStream);
           }
 #else
-          std::cout << "** Parameter not valid on Windows with Visual Studio"
-                    << std::endl;
+             printGeneralWarning(models, "** Parameter not valid on Windows with Visual Studio\n");
 #endif
           break;
         }
@@ -2809,19 +2845,17 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 static_cast< ClpSimplexOther * >(models + iModel);
              std::string input = model2->guess(0);
              if (input != ""){
+                while(!inputQueue.empty()) inputQueue.pop();
                 std::istringstream inputStream(input);
-                CoinReadFromStream(inputVector, inputStream);
-                whichField = 0;
+                CoinParamUtils::readFromStream(inputQueue, inputStream);
              } else {
-                std::cout << "** Guess unable to generate commands"
-                          << std::endl;
+                printGeneralWarning(models, "** Guess unable to generate commands\n");
              }
           } else {
-             std::cout << "** Guess needs a valid model" << std::endl;
+             printGeneralWarning(models, "** Guess needs a valid model\n");
           }
 #else
-          std::cout << "** Can'tmake a gues in this build configuration"
-                    << std::endl;
+          printGeneralWarning(models, "** Can'tmake a gues in this build configuration\n");
 #endif
           
           break;
@@ -2928,13 +2962,13 @@ int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models,
       CoinModel *model;
    } coinModelStart;
    coinModelStart.model = NULL;
-   int returnCode = readAmpl(info, argc, argv, &coinModelStart.voidModel,
-                             "clp");
-   if (returnCode)
+   int returnCode = readAmpl(info, argc, argv, &coinModelStart.voidModel, "clp");
+   if (returnCode){
       return returnCode;
+   }
    if (info->numberBinary + info->numberIntegers + info->numberSos
        && !info->starts) {
-      printf("Unable to handle integer problems\n");
+      printGeneralWarning(models, "Unable to handle integer problems\n");
       return 1;
    }
    // see if log in list (including environment)
@@ -2948,9 +2982,12 @@ int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models,
    if (noPrinting) {
       models->messageHandler()->setLogLevel(0);
    }
-   if (!noPrinting)
-      printf("%d rows, %d columns and %d elements\n",
-             info->numberRows, info->numberColumns, info->numberElements);
+   if (!noPrinting){
+      std::ostringstream buffer;
+      buffer << info->numberRows << " rows, " << info->numberColumns << " columns and "
+             << info->numberElements << " elements" << std::endl;
+      printGeneralMessage(models, buffer.str());
+   }
    if (!coinModelStart.model) {
       // linear
       models->loadProblem(info->numberColumns, info->numberRows,
@@ -2981,12 +3018,10 @@ int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models,
    models->setOptimizationDirection(info->direction);
    models->setObjectiveOffset(-info->offset);
    if (info->offset) {
-      char generalPrint[1000];
-      sprintf(generalPrint, "Ampl objective offset is %g",
-              info->offset);
-      models->messageHandler()->message(CLP_GENERAL, models->messages())
-         << generalPrint
-         << CoinMessageEol;
+      std::ostringstream buffer;
+      buffer.str("");
+      buffer << "Ampl objective offset is " << info->offset << std::endl;
+      printGeneralMessage(models, buffer.str());
    }
 }
 
