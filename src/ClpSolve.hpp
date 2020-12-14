@@ -341,6 +341,8 @@ public:
   void startCheck();
   /// Returns cycle length in whileIterating
   int cycle(int in, int out, int wayIn, int wayOut);
+  /// Checks if all going well - may rescale
+  int checkScalingEtc();
 
   /// Returns previous objective (if -1) - current if (0)
   double lastObjective(int back = 1) const;
@@ -458,6 +460,8 @@ public:
   int numberTimesFlagged_;
   /// If things are in an odd state
   int oddState_;
+  /// Check scaling etc after this
+  int checkScalingAfter_;
   //@}
 };
 

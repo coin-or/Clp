@@ -3809,8 +3809,11 @@ int ClpModel::writeMps(const char *filename,
   if (quadraticObj)
     quadratic = quadraticObj->quadraticObjective();
 #endif
-  int returnCode = writer.writeMps(filename, 0 /* do not gzip it*/, formatType, numberAcross,
-    quadratic);
+  /* do not gzip it - unless .gz */
+  int returnCode = writer.writeMps(filename,
+				   strstr(filename,".gz") ? 1 : 0,
+				   formatType, numberAcross,
+				   quadratic);
   if (rowNames) {
     deleteNamesAsChar(rowNames, numberRows_ + 1);
     deleteNamesAsChar(columnNames, numberColumns_);
@@ -4425,6 +4428,7 @@ ClpDataSave::ClpDataSave()
   zeroSimplexTolerance_ = 1.0e-13;
   acceptablePivot_ = 0.0;
   objectiveScale_ = 1.0;
+  rhsScale_ = 1.0;
   perturbation_ = 0;
   forceFactorization_ = -1;
   scalingFlag_ = 0;
@@ -4443,6 +4447,7 @@ ClpDataSave::ClpDataSave(const ClpDataSave &rhs)
   zeroSimplexTolerance_ = rhs.zeroSimplexTolerance_;
   acceptablePivot_ = rhs.acceptablePivot_;
   objectiveScale_ = rhs.objectiveScale_;
+  rhsScale_ = rhs.rhsScale_;
   sparseThreshold_ = rhs.sparseThreshold_;
   perturbation_ = rhs.perturbation_;
   forceFactorization_ = rhs.forceFactorization_;
@@ -4471,6 +4476,7 @@ ClpDataSave::operator=(const ClpDataSave &rhs)
     zeroSimplexTolerance_ = rhs.zeroSimplexTolerance_;
     acceptablePivot_ = rhs.acceptablePivot_;
     objectiveScale_ = rhs.objectiveScale_;
+    rhsScale_ = rhs.rhsScale_;
     sparseThreshold_ = rhs.sparseThreshold_;
     perturbation_ = rhs.perturbation_;
     forceFactorization_ = rhs.forceFactorization_;

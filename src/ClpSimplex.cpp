@@ -131,7 +131,11 @@ ClpSimplex::ClpSimplex(bool emptyMessages)
   , abcSimplex_(NULL)
   , abcState_(0)
 #endif
+#ifndef CLP_OLD_PROGRESS
   , minIntervalProgressUpdate_(0.7)
+#else
+  , minIntervalProgressUpdate_(-1.0)
+#endif
   , lastStatusUpdate_(0.0)
 
 {
@@ -2136,6 +2140,71 @@ int ClpSimplex::housekeeping(double objectiveChange)
     handler_->printing(algorithm_ > 0) << dualIn_ << theta_;
     handler_->message() << CoinMessageEol;
   }
+  //#define CLP_CHECK_EVERY_IT
+#ifdef CLP_CHECK_EVERY_IT
+  static bool goneFeasible=false;
+  static double * savedStuff=NULL;
+  if (algorithm_>0 && numberIterations_>=2760) {
+    static double lastWt = COIN_DBL_MAX;
+    if (!numberIterations_) {
+      lastWt = COIN_DBL_MAX;
+      delete [] savedStuff;
+      savedStuff=NULL;
+    }
+    if (goneFeasible) {
+      // get true objective and infeasibility
+      double obj = objectiveOffset();
+      double inf = 0.0;
+      int n = numberColumns_+numberRows_;
+      double * cost = savedStuff;
+      double * lower = cost + n;
+      double * upper = lower + n;
+      for (int i=0;i<n;i++) {
+	double lowerValue = lower[i];
+	double upperValue = upper[i];
+	double solValue = solution_[i];
+	obj += cost[i]*solValue;
+	if (solValue>upperValue+primalTolerance_)
+	  inf += (solValue-upperValue-primalTolerance_);
+	else if (solValue<lowerValue-primalTolerance_)
+	  inf += (lowerValue-solValue-primalTolerance_);
+      }
+      double thisWt = obj+inf*infeasibilityCost_;
+      if (thisWt>lastWt+5.0e-7*fabs(lastWt)+1.0e-7&&goneFeasible)
+	printf("it %d obj %g scaled inf %g weighted obj %.18g - last %.18g\n",
+	       numberIterations_,obj,inf,thisWt,lastWt);
+      lastWt = thisWt;
+    }
+    if (!numberPrimalInfeasibilities_) {
+      if (!goneFeasible) {
+	lastWt = COIN_DBL_MAX;
+	int n = numberColumns_+numberRows_;
+	ClpNonLinearCost temp(*nonLinearCost_);
+	savedStuff = new double [3*n];
+	double * cost = savedStuff;
+	double * lower = cost + n;
+	double * upper = lower + n;
+	memcpy(cost,cost_,n*sizeof(double));
+	memcpy(lower,lower_,n*sizeof(double));
+	memcpy(upper,upper_,n*sizeof(double));
+	temp.feasibleBounds();
+	for (int i=0;i<n;i++) {
+	  double t = cost[i];
+	  cost[i] = cost_[i];
+	  cost_[i] = t;
+	  t = lower[i];
+	  lower[i] = lower_[i];
+	  lower_[i] = t;
+	  t = upper[i];
+	  upper[i] = upper_[i];
+	  upper_[i] = t;
+	}
+      }
+      goneFeasible=true;
+      handler_->setLogLevel(63);
+    }
+  }
+#endif
 #if 0
      if (numberIterations_ > 10000)
           printf(" it %d %g %c%d %c%d\n"
@@ -3157,7 +3226,7 @@ void ClpSimplex::checkBothSolutions()
           // may be free
           // Say free or superbasic
           moreSpecialOptions_ &= ~8;
-          djValue *= 0.01;
+          djValue *= 100.0;
           if (fabs(djValue) > dualTolerance) {
             if (getStatus(iSequence) == isFree)
               numberDualInfeasibilitiesFree++;
@@ -3169,10 +3238,10 @@ void ClpSimplex::checkBothSolutions()
               numberSuperBasicWithDj++;
               if (firstFreeDual < 0)
                 firstFreeDual = iSequence;
+	      if (firstFreePrimal < 0)
+		firstFreePrimal = iSequence;
             }
           }
-          if (firstFreePrimal < 0)
-            firstFreePrimal = iSequence;
         }
       }
     }
@@ -5602,15 +5671,20 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
     setInitialDenseFactorization(true);
     // Allow for catastrophe
     int saveMax = intParam_[ClpMaxNumIteration];
-    if (numberIterations_) {
-      // normal
-      if (intParam_[ClpMaxNumIteration] > 100000 + numberIterations_)
-        intParam_[ClpMaxNumIteration]
-          = numberIterations_ + 1000 + 2 * numberRows_ + numberColumns_;
-    } else {
-      // Not normal allow more
-      baseIteration_ += 2 * (numberRows_ + numberColumns_);
-    }
+    // check to see if code decided dual had problems
+    if (sumPrimalInfeasibilities_ != -123456789.0 && numberIterations_) {
+      // normal clean up
+      perturbation_ = 100;
+      if (numberIterations_) {
+	// normal
+	if (intParam_[ClpMaxNumIteration] > 100000 + numberIterations_)
+	  intParam_[ClpMaxNumIteration]
+	    = numberIterations_ + 1000 + 2 * numberRows_ + numberColumns_;
+      } else {
+	// Not normal allow more
+	baseIteration_ += 2 * (numberRows_ + numberColumns_);
+      }
+    } 
     // check which algorithms allowed
     int dummy;
     ClpPackedMatrix *ordinary = dynamic_cast< ClpPackedMatrix * >(matrix_);
@@ -5810,6 +5884,14 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
       else if (secondaryStatus_ == 2)
         secondaryStatus_ = 4;
     }
+    // see if cutoff reached
+    double limit = 0.0;
+    getDblParam(ClpDualObjectiveLimit, limit);
+    if (fabs(limit) < 1.0e30 && objectiveValue() * optimizationDirection_ > limit + 1.0e-7 + 1.0e-8 * fabs(limit)) {
+      // actually infeasible on objective
+      problemStatus_ = 1;
+      secondaryStatus_ = 1; //printf("inf on obj dual %g limit %g\n",objectiveValue(),limit);
+    }
   }
   return returnCode;
 }
@@ -5822,7 +5904,7 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
   if (objective_->type() > 1 && objective_->activated())
     return reducedGradient();
 #endif
-  CoinAssert((ifValuesPass >= 0 && ifValuesPass < 3) || (ifValuesPass >= 12 && ifValuesPass < 100) || (ifValuesPass >= 112 && ifValuesPass < 200));
+  CoinAssert((ifValuesPass >= 0 && ifValuesPass < 4) || (ifValuesPass >= 12 && ifValuesPass < 100) || (ifValuesPass >= 112 && ifValuesPass < 200));
   if (ifValuesPass >= 12) {
     int numberProblems = (ifValuesPass - 10) % 100;
     ifValuesPass = (ifValuesPass < 100) ? 1 : 2;
@@ -6030,7 +6112,8 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
     //lastAlgorithm=-1;
     //printf("Cleaning up with dual\n");
     int savePerturbation = perturbation_;
-    perturbation_ = 100;
+    if (sumDualInfeasibilities_ != -123456789.0 && numberIterations_)
+      perturbation_ = 100;
     bool denseFactorization = initialDenseFactorization();
     // It will be safe to allow dense
     setInitialDenseFactorization(true);
@@ -6089,6 +6172,14 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
         secondaryStatus_ = 3;
       else if (secondaryStatus_ == 2)
         secondaryStatus_ = 4;
+    }
+    // see if cutoff reached
+    double limit = 0.0;
+    getDblParam(ClpDualObjectiveLimit, limit);
+    if (fabs(limit) < 1.0e30 && objectiveValue() * optimizationDirection_ > limit + 1.0e-7 + 1.0e-8 * fabs(limit)) {
+      // actually infeasible on objective
+      problemStatus_ = 1;
+      secondaryStatus_ = 1; //printf("inf on obj primal %g limit %g\n",objectiveValue(),limit);
     }
   }
   //if (problemStatus_==1&&lastAlgorithm==1)
@@ -7631,6 +7722,7 @@ int ClpSimplex::readMps(const char *filename,
   createStatus();
   return status;
 }
+
 // Read GMPL files from the given filenames
 int ClpSimplex::readGMPL(const char *filename, const char *dataName,
   bool keepNames)
@@ -7639,6 +7731,7 @@ int ClpSimplex::readGMPL(const char *filename, const char *dataName,
   createStatus();
   return status;
 }
+
 // Read file in LP format from file with name filename.
 int ClpSimplex::readLp(const char *filename, const double epsilon)
 {
@@ -9226,6 +9319,10 @@ int ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
           }
         } else {
           matrix_->rhsOffset(this, true); // redo rhs offset
+	  if ((moreSpecialOptions_&33554432)!=0 && algorithm_ < 0) {
+	    problemStatus_ = 11; // mark as odd
+	    return 1; // go to primal
+	  }
         }
         totalNumberThrownOut += numberThrownOut;
       }
@@ -9321,6 +9418,7 @@ ClpSimplex::saveData()
   saved.forceFactorization_ = forceFactorization_;
   saved.acceptablePivot_ = acceptablePivot_;
   saved.objectiveScale_ = objectiveScale_;
+  saved.rhsScale_ = rhsScale_;
   // Progress indicator
   progress_.fillFromModel(this);
   return saved;
@@ -9337,8 +9435,143 @@ void ClpSimplex::restoreData(ClpDataSave saved)
   dualBound_ = saved.dualBound_;
   forceFactorization_ = saved.forceFactorization_;
   objectiveScale_ = saved.objectiveScale_;
+  rhsScale_ = saved.rhsScale_;
   acceptablePivot_ = saved.acceptablePivot_;
 }
+#if CLP_CHECK_SCALING
+/* Deals with badly scaled problems
+   Returns COIN_INT_MAX if well scaled
+   otherwise when to check again.
+   May change objectiveScale_ and/or rhsScale_ and 
+   corresponding arrays
+*/
+int
+ClpSimplex::checkScaling()
+{
+  double largestCost = 0.0;
+  double largestObj = 0.0;
+  const double * obj = objective();
+  if (!columnScale_) {
+    for (int i=0;i<numberColumns_;i++) { 
+      largestCost = CoinMax(largestCost,fabs(solution_[i]*obj[i]));
+      largestObj = CoinMax(largestObj,fabs(obj[i]));
+    }
+  } else {
+    for (int i=0;i<numberColumns_;i++) {
+      largestCost =
+	CoinMax(largestCost,fabs(solution_[i]*obj[i]*columnScale_[i]));
+      largestObj = CoinMax(largestObj,fabs(obj[i]));
+    }
+  }
+  if (rhsScale_==1.0 && objectiveScale_==1.0 && largestCost<1.0e7) {
+    if (largestObj < 1.0e8)
+      return COIN_INT_MAX;
+    else
+      return 2*numberIterations_;
+  }
+#define CLP_SCALING_PRINT 0
+#if CLP_SCALING_PRINT > 1
+  checkBothSolutions();
+  printf("Obj %g Primal %g %d Dual %g %d\n",
+	 objectiveValue_,
+	 sumPrimalInfeasibilities_,numberPrimalInfeasibilities_,
+	 sumDualInfeasibilities_,numberDualInfeasibilities_);
+#endif
+  if (largestCost/(rhsScale_*objectiveScale_)<1.0e7&&
+      (rhsScale_!=1.0||objectiveScale_!=1.0)) {
+    // Looks good now
+#if CLP_SCALING_PRINT 
+    printf("Looks good now - largest cost %g\n",
+    	   largestCost/(rhsScale_*objectiveScale_));
+#endif
+    double multiplierRhs = 1.0/rhsScale_;
+    rhsScale_ = 1.0;
+    double multiplierObj = 1.0/objectiveScale_;
+    objectiveScale_ = 1.0;
+    if (algorithm_>0) {
+      nonLinearCost_->feasibleBounds();
+    }
+    for (int i=0;i<numberColumns_+numberRows_;i++) {
+      if (lower_[i]>-1.0e50) 
+	lower_[i] *= multiplierRhs;
+      if (upper_[i]<1.0e50) 
+	upper_[i] *= multiplierRhs;
+      solution_[i] *= multiplierRhs;
+      cost_[i] *= multiplierObj;
+    }
+    if (algorithm_>0) {
+      delete nonLinearCost_; 
+      nonLinearCost_ = new ClpNonLinearCost(this);
+      nonLinearCost_->checkInfeasibilities(0);
+    }
+    return COIN_INT_MAX;
+  } else {
+    if (rhsScale_ == 1.0 && objectiveScale_ == 1.0) {
+      double largestObj=0.0;
+      double largestRhs=0.0;
+      double largestCost=0.0;
+      for (int i=0;i<numberColumns_+numberRows_;i++) {
+	largestObj = CoinMax(largestObj,fabs(cost_[i]));
+	largestRhs = CoinMax(largestRhs,fabs(solution_[i]));
+	largestCost = CoinMax(largestCost,fabs(solution_[i]*cost_[i]));
+      }
+      if (largestCost>1.0e9) {
+#if CLP_SCALING_PRINT 
+	printf("Largest obj %g , rhs %g cost %g\n",largestObj,
+	       largestRhs,largestCost);
+#endif
+	// need true lower and upper if primal
+	if (algorithm_>0) {
+	  nonLinearCost_->feasibleBounds();
+	}
+	if (largestObj > 1.0e8) {
+	  objectiveScale_ = 1.0e7/largestObj;
+	  for (int i=0;i<numberColumns_+numberRows_;i++) {
+	    cost_[i] *= objectiveScale_;
+	    dj_[i] *= objectiveScale_;
+	  }
+	}
+	if (largestRhs > 1.0e9) {
+	  rhsScale_ = 1.0e8/largestRhs;
+#if CLP_SCALING_PRINT 
+	  printf("scaling rhs %g\n",rhsScale_);
+#endif
+	  bool atFake = false;
+	  for (int i=0;i<numberColumns_+numberRows_;i++) {
+	    solution_[i] *= rhsScale_;
+	    if (fabs(lower_[i])<1.0e50) {
+	      lower_[i] *= rhsScale_;
+	      if (getFakeBound(i)==lowerFake)
+		atFake=true;
+	    }
+	    if (fabs(upper_[i])<1.0e50) {
+	      upper_[i] *= rhsScale_;
+	      if (getFakeBound(i)==upperFake)
+		atFake=true;
+	    }
+	  }
+	  if (atFake) {
+#if CLP_SCALING_PRINT 
+	    printf("Some fake\n");
+#endif
+	    dualBound_ *= rhsScale_; // ???
+	  }
+	}
+      }
+      if (algorithm_>0) {
+	delete nonLinearCost_; 
+	nonLinearCost_ = new ClpNonLinearCost(this);
+	nonLinearCost_->checkInfeasibilities(0);
+      }
+    } else {
+      // could see if we need to redo
+    }
+    return numberIterations_; // try
+    //return CoinMin(CoinMax(100,numberRows_),1000)
+    //+ numberIterations_;
+  }
+}
+#endif
 // To flag a variable (not inline to allow for column generation)
 void ClpSimplex::setFlagged(int sequence)
 {
@@ -12799,7 +13032,13 @@ void ClpSimplex::copyEnabledStuff(const ClpSimplex *rhs)
   solveType_ = rhs->solveType_;
   if (rhs->solution_) {
     int numberTotal = numberRows_ + numberColumns_;
-    assert(!solution_);
+    if (solution_) {
+      delete [] solution_;
+      delete [] lower_;
+      delete [] upper_;
+      delete [] dj_;
+      delete [] cost_;
+    }
     solution_ = CoinCopyOfArray(rhs->solution_, numberTotal);
     lower_ = CoinCopyOfArray(rhs->lower_, numberTotal);
     upper_ = CoinCopyOfArray(rhs->upper_, numberTotal);
@@ -12997,4 +13236,3 @@ void CoinPthreadStuff::waitAllTasks()
   }
 #endif
 }
-

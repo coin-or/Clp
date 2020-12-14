@@ -1426,6 +1426,7 @@ public:
   double zeroSimplexTolerance_;
   double acceptablePivot_;
   double objectiveScale_;
+  double rhsScale_;
   int sparseThreshold_;
   int perturbation_;
   int forceFactorization_;
@@ -1434,7 +1435,11 @@ public:
   //@}
 };
 
+// Semi experimental options 
+#ifdef CLP_EXPERIMENT_JJF
+#define CLP_CHECK_SCALING 1 // for badly scaled problems
+#define OSICLP_TUNING 10 // various switches
+#define CLP_MOVEMENT 2 // be more careful on pivot row in primal
+#endif
 #endif
 
-/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/

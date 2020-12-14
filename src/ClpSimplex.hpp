@@ -12,11 +12,13 @@
 
 #include <iostream>
 #include <cfloat>
+
 #include "ClpModel.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpSolve.hpp"
 #include "ClpConfig.h"
 #include "CoinIndexedVector.hpp"
+
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
 class ClpFactorization;
@@ -268,7 +270,7 @@ public:
     bool ignoreErrors = false);
   /// Read GMPL files from the given filenames
   int readGMPL(const char *filename, const char *dataName,
-    bool keepNames = false);
+	       bool keepNames = false);
   /// Read file in LP format from file with name filename.
   /// See class CoinLpIO for description of this format.
   int readLp(const char *filename, const double epsilon = 1e-5);
@@ -874,6 +876,13 @@ public:
   void restoreData(ClpDataSave saved);
   /// Clean up status
   void cleanStatus();
+  /** Deals with badly scaled problems
+      Returns COIN_INT_MAX if well scaled
+      otherwise when to check again.
+      May change objectiveScale_ and/or rhsScale_ and 
+      corresponding arrays
+   */
+  int checkScaling();
   /// Factorizes using current basis. For external use
   int factorize();
   /** Computes duals from scratch. If givenDjs then
@@ -1419,6 +1428,8 @@ public:
 	 4194304 bit - tolerances have been changed by code
 	 8388608 bit - tolerances are dynamic (at first)
 	 16777216 bit - if factorization kept can still declare optimal at once
+	 33554432 bit - if singular at dual startup - go to primal
+	 67108864 bit - try sorted values pass
      */
   inline int moreSpecialOptions() const
   {
@@ -1454,6 +1465,8 @@ public:
 	 4194304 bit - tolerances have been changed by code
 	 8388608 bit - tolerances are dynamic (at first)
 	 16777216 bit - if factorization kept can still declare optimal at once
+	 33554432 bit - if singular at dual startup - go to primal
+	 67108864 bit - try sorted values pass
      */
   inline void setMoreSpecialOptions(int value)
   {

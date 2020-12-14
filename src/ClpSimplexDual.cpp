@@ -239,9 +239,14 @@ int ClpSimplexDual::startupSolve(int ifValuesPass, double *saveDuals, int startF
   // If user asked for perturbation - do it
   numberFake_ = 0; // Number of variables at fake bounds
   numberChanged_ = 0; // Number of variables with changed costs
+  unsigned char * copyOfStatus = NULL;
+  if ((moreSpecialOptions_&33554432)!=0) {
+    copyOfStatus = CoinCopyOfArray(status_,numberColumns_+numberRows_);
+  }
   if (!startup(0 /* ? fix valuesPass */, startFinishOptions)) {
     int usePrimal = 0;
     // looks okay
+    delete [] copyOfStatus;
     // Superbasic variables not allowed
     // If values pass then scale pi
     if (ifValuesPass) {
@@ -373,6 +378,19 @@ int ClpSimplexDual::startupSolve(int ifValuesPass, double *saveDuals, int startF
     }
     return usePrimal;
   } else {
+    if ((moreSpecialOptions_&33554432)!=0) {
+      if (problemStatus_==11) {
+	problemStatus_=10;
+	if (!columnScale_) {
+	  memcpy(solution_,columnActivity_,numberColumns_*sizeof(double));
+	} else {
+	  for (int i=0;i<numberColumns_;i++)
+	    solution_[i] = columnActivity_[i]*inverseColumnScale_[i];
+	}
+	memcpy(status_,copyOfStatus,numberColumns_+numberRows_);
+      }
+      delete [] copyOfStatus;
+    }
     return 1;
   }
 }
@@ -413,10 +431,14 @@ void ClpSimplexDual::gutsOfDual(int ifValuesPass, double *&saveDuals, int initia
   int factorType = 0;
   // Start check for cycles
   progress_.startCheck();
+#if CLP_CHECK_SCALING
+  if ((moreSpecialOptions_&256)!=0)
+    progress_.checkScalingEtc();
+#endif
   // Say change made on first iteration
   changeMade_ = 1;
   // Say last objective infinite
-  //lastObjectiveValue_=-COIN_DBL_MAX;
+  double lastObjectiveValue=-1.0e100;
   progressFlag_ = 0;
   /*
        Status of problem:
@@ -489,8 +511,14 @@ void ClpSimplexDual::gutsOfDual(int ifValuesPass, double *&saveDuals, int initia
     // may factorize, checks if problem finished
     statusOfProblemInDual(lastCleaned, factorType, saveDuals, data,
       ifValuesPass);
+    if (objectiveValue_>
+	1.0e-4+1.0e-9*fabs(lastObjectiveValue)+lastObjectiveValue) {
+      // reset smallest
+      smallestPrimalInfeasibility = COIN_DBL_MAX;
+    }
     smallestPrimalInfeasibility = CoinMin(smallestPrimalInfeasibility,
       sumPrimalInfeasibilities_);
+    lastObjectiveValue = objectiveValue_;
     if (sumPrimalInfeasibilities_ > 1.0e5 && sumPrimalInfeasibilities_ > 1.0e5 * smallestPrimalInfeasibility && (moreSpecialOptions_ & 256) == 0 && ((progress_.lastObjective(0) < -1.0e10 && -progress_.lastObjective(1) > -1.0e5) || sumPrimalInfeasibilities_ > 1.0e10 * smallestPrimalInfeasibility) && problemStatus_ < 0) {
       // problems - try primal
       problemStatus_ = 10;
@@ -4800,6 +4828,10 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
 #ifdef CLP_INVESTIGATE_SERIAL
   if (z_thinks > 0 && z_thinks < 2)
     z_thinks += 2;
+#endif
+#if CLP_CHECK_SCALING
+  // See if model behaving well
+  progress_.checkScalingEtc();
 #endif
   bool arraysNotCreated = (type == 0);
   // If lots of iterations then adjust costs if large ones
