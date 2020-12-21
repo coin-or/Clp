@@ -82,8 +82,7 @@ CXXLINKFLAGS = @RPATH_FLAGS@
 INCL += $(ADDINCFLAGS)
 
 # Linker flags
-# the --static is only necessary when linking against static libs, but we don't know in this template whether that's the case
-@COIN_HAS_PKGCONFIG_TRUE@LIBS = `PKG_CONFIG_PATH=@COIN_PKG_CONFIG_PATH@ @PKG_CONFIG@ --libs clp --static`
+@COIN_HAS_PKGCONFIG_TRUE@LIBS = `PKG_CONFIG_PATH=@COIN_PKG_CONFIG_PATH@ @PKG_CONFIG@ --libs clp`
 @COIN_HAS_PKGCONFIG_FALSE@LIBS = -L@libdir@ -lClpSolver -lClp
 LIBS += $(ADDLIBS)
 
