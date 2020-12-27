@@ -1125,10 +1125,13 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   }
   // Check if looping
   int loop;
-  if (type != 2 && !ifValuesPass)
+  if (type != 2) {
     loop = progress->looping();
-  else
+    if (ifValuesPass)
+      loop = -1;
+  } else {
     loop = -1;
+  }
   if (loop >= 0) {
     if (!problemStatus_) {
       // declaring victory
@@ -1754,10 +1757,15 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   // make sure first free monotonic
   if (firstFree_ >= 0 && saveFirstFree >= 0) {
     if (numberIterations_) {
-      firstFree_ = saveFirstFree;
+      if (numberIterations_>progress->lastIterationNumber(1))
+	firstFree_ = saveFirstFree;
+      else
+	firstFree_ =-1; // something odd
     } else {
+      // check
       firstFree_ = -1;
-      nextSuperBasic(1, columnArray_[0]);
+      if (progress->lastIterationNumber(1))
+	nextSuperBasic(1, columnArray_[0]);
     }
   }
   if (doFactorization) {

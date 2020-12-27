@@ -4516,7 +4516,7 @@ void ClpSimplexProgress::setInfeasibility(double value)
     realInfeasibility_[i - 1] = realInfeasibility_[i];
   realInfeasibility_[CLP_PROGRESS - 1] = value;
 }
-// Returns number of primal infeasibilities (if -1) - current if (0)
+// Returns number of primal infeasibilities (if +1) - current if (0)
 int ClpSimplexProgress::numberInfeasibilities(int back) const
 {
   return numberInfeasibilities_[CLP_PROGRESS - 1 - back];
@@ -4526,7 +4526,7 @@ void ClpSimplexProgress::modifyObjective(double value)
 {
   objective_[CLP_PROGRESS - 1] = value;
 }
-// Returns previous iteration number (if -1) - current if (0)
+// Returns previous iteration number (if +1) - current if (0)
 int ClpSimplexProgress::lastIterationNumber(int back) const
 {
   return iterationNumber_[CLP_PROGRESS - 1 - back];

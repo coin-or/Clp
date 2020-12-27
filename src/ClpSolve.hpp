@@ -348,13 +348,13 @@ public:
   double lastObjective(int back = 1) const;
   /// Set real primal infeasibility and move back
   void setInfeasibility(double value);
-  /// Returns real primal infeasibility (if -1) - current if (0)
+  /// Returns real primal infeasibility (if 1) - current if (0)
   double lastInfeasibility(int back = 1) const;
-  /// Returns number of primal infeasibilities (if -1) - current if (0)
+  /// Returns number of primal infeasibilities (if 1) - current if (0)
   int numberInfeasibilities(int back = 1) const;
   /// Modify objective e.g. if dual infeasible in dual
   void modifyObjective(double value);
-  /// Returns previous iteration number (if -1) - current if (0)
+  /// Returns previous iteration number (if 1) - current if (0)
   int lastIterationNumber(int back = 1) const;
   /// clears all iteration numbers (to switch off panic)
   void clearIterationNumbers();
