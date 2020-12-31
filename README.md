@@ -5,7 +5,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/coin-or/Clp?sort=semver)](https://github.com/coin-or/Clp/releases)
 
 _This file is auto-generated from [config.yml](.coin-or/config.yml) using the 
-[generate_readme](.coin-or/generate_readme).
+[generate_readme](.coin-or/generate_readme) script.
 To make changes, please edit [config.yml](.coin-or/config.yml) or the generation script._
 
 Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
@@ -37,11 +37,19 @@ The Clp website is https://github.com/coin-or/Clp.
 
 ## CURRENT BUILD STATUS
 
-[![Build Status](https://travis-ci.org/coin-or/Clp.svg?branch=master)](https://travis-ci.org/coin-or/Clp)
+[![Build Status](https://travis-ci.com/coin-or/Clp.svg?branch=master)](https://travis-ci.com/coin-or/Clp)
 
-[![Build status](https://ci.appveyor.com/api/projects/status/h3daf7woiig6n176/branch/master?svg=true)](https://ci.appveyor.com/project/tkralphs/clp-m0kud/branch/master)
+[![Build status](https://ci.appveyor.com/api/projects/status/h3daf7woiig6n176/branch/master?svg=true)](https://ci.appveyor.com/project/coin-or/Clp/branch/master)
 
 ## DOWNLOAD
+
+### Docker image
+
+There is a Docker image that provides Clp, as well as other projects
+in the [COIN-OR Optimization
+Suite](https://github.com/coin-or/COIN-OR-OptimizationSuite)[here](https://hub.docker.com/repository/docker/coinor/coin-or-optimization-suite)
+
+### Binaries
 
 Binaries for most platforms are available as part of [Clp](https://bintray.com/coin-or/download/Clp). 
 
