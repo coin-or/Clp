@@ -179,7 +179,7 @@ documentation [here](http://coin-or.github.io/Clp/Doxygen).
 ## Project Links
 
 Help:
- * [mailing list](http://list.coin-or.org/mailman/listinfo/clp)
+ * [Discussion forum](https://github.com/coin-or/Clp/discussions)
  * [Report a bug](https://github.com/coin-or/Clp/issues/new)
  
 Documentation:
