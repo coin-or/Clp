@@ -5009,12 +5009,8 @@ bool ClpPackedMatrix::allElementsInRange(ClpModel *model,
         double value = fabs(elementByColumn[j]);
         int iRow = row[j];
         if (iRow < 0 || iRow >= numberRows) {
-          if(sizeof(CoinBigIndex) == sizeof(int))
-            printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-          else if(sizeof(CoinBigIndex) == sizeof(long))
-            printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-          else if(sizeof(CoinBigIndex) == sizeof(long long))
-            printf("Out of range %d %lld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+	  printf("Out of range %d %lld %d %g\n", iColumn,
+		 static_cast<long long>(j), row[j], elementByColumn[j]);
           return false;
         }
         if (mark[iRow] == -1) {
@@ -5057,12 +5053,8 @@ bool ClpPackedMatrix::allElementsInRange(ClpModel *model,
         double value = fabs(elementByColumn[j]);
         int iRow = row[j];
         if (iRow < 0 || iRow >= numberRows) {
-          if(sizeof(CoinBigIndex) == sizeof(int))
-            printf("Out of range %d %d %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-          else if(sizeof(CoinBigIndex) == sizeof(long))
-            printf("Out of range %d %ld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
-          else if(sizeof(CoinBigIndex) == sizeof(long long))
-            printf("Out of range %d %lld %d %g\n", iColumn, j, row[j], elementByColumn[j]);
+	  printf("Out of range %d %lld %d %g\n", iColumn,
+		 static_cast<long long>(j), row[j], elementByColumn[j]);
           return false;
         }
         if (!value)
