@@ -3386,6 +3386,7 @@ let CLP write the original problem to file by using 'file'.");
     p.append("aggregate");
     p.append("forcesos");
     p.append("stop!aftersaving");
+    p.append("equalallstop");
     p.setLonghelp(
       "This tries to reduce size of model in a similar way to presolve and \
 it also tries to strengthen the model - this can be very useful and is worth trying. \
