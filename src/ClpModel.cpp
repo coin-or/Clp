@@ -3748,7 +3748,8 @@ int ClpModel::emptyProblem(int *infeasNumber, double *infeasSum, bool printMessa
     delete[] ray_;
     ray_ = new double[numberColumns_];
     CoinZeroN(ray_, numberColumns_);
-    ray_[badColumn] = badValue;
+    if (badColumn>=0) // might be empty problem!
+      ray_[badColumn] = badValue;
   }
   return returnCode;
 }
