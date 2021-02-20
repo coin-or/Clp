@@ -214,7 +214,7 @@ public:
   ClpParam(int code, std::string name, std::string help,
            double lower = -COIN_DBL_MAX, double upper = COIN_DBL_MAX,
            double defaultValue = 0.0, std::string longHelp = "",
-           CoinDisplayPriority display = displayPriorityHigh);
+           CoinDisplayPriority displayPriority = CoinParam::displayPriorityHigh);
   
   /*! \brief Constructor for a parameter with an integer value
     
@@ -223,7 +223,7 @@ public:
   ClpParam(int code, std::string name, std::string help,
            int lower = -COIN_INT_MAX, int upper = COIN_INT_MAX,
            int defaultValue = 0, std::string longHelp = "",
-           CoinDisplayPriority display = displayPriorityHigh);
+           CoinDisplayPriority displayPriority = CoinParam::displayPriorityHigh);
   
   /*! \brief Constructor for a parameter with keyword values
 
@@ -237,7 +237,7 @@ public:
   ClpParam(int code, std::string name, std::string help,
            std::string defaultKwd, int defaultMode,
            std::string longHelp = "",
-           CoinDisplayPriority display = displayPriorityHigh);
+           CoinDisplayPriority displayPriority = CoinParam::displayPriorityHigh);
   
   /*! \brief Constructor for a string parameter
 
@@ -246,12 +246,12 @@ public:
     */
   ClpParam(int code, std::string name, std::string help,
            std::string defaultValue, std::string longHelp = "",
-           CoinDisplayPriority display = displayPriorityHigh);
+           CoinDisplayPriority displayPriority = CoinParam::displayPriorityHigh);
 
   /*! \brief Constructor for an action parameter */
   // No defaults to resolve ambiguity
   ClpParam(int code, std::string name, std::string help,
-           std::string longHelp, CoinDisplayPriority display);
+           std::string longHelp, CoinDisplayPriority displayPriority);
 
   /*! \brief Copy constructor */
   ClpParam(const ClpParam &orig);

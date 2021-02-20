@@ -81,11 +81,9 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *model,
 #endif
 
 #ifndef ABC_INHERIT
-int clpReadAmpl(ampl_info *info, int argc, char **argv, ClpSimplex *models,
-                const char* solvername);
+int clpReadAmpl(ampl_info *info, int argc, char **argv, ClpSimplex *models);
 #else
-int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models,
-                const char* solvername);
+int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models);
 #endif
 static void statistics(ClpSimplex *originalModel, ClpSimplex *model);
 static void generateCode(const char *fileName, int type);
