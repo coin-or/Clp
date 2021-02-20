@@ -252,6 +252,7 @@ void formInputQueue(std::queue<std::string> &inputQueue,
 
 //#############################################################################
 //#############################################################################
+
 int
 #if defined(_MSC_VER)
   __cdecl
@@ -303,8 +304,7 @@ main(int argc, const char *argv[])
   
   if (argc > 2 && !strcmp(argv[2], "-AMPL")) {
      ampl_info info;
-     returnCode = clpReadAmpl(&info, argc, const_cast< char ** >(argv), models,
-                              "clp");
+     returnCode = clpReadAmpl(&info, argc, const_cast< char ** >(argv), models);
      if (!returnCode) {
         // Put arguments into a queue.
         // This should be moved to constructor of ClpSolver

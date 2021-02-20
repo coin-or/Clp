@@ -358,20 +358,25 @@ CLPLIB_EXPORT
      
      int numberMatches(0), numberShortMatches(0), numberQuery(0);
      
-    // find out if valid command
+     // find out if valid command
      int paramCode = CoinParamUtils::lookupParam(field, parameters.paramVec(),
                                                  &numberMatches,
                                                  &numberShortMatches,
                                                  &numberQuery);
 
-     if (numberQuery){
-        field = field.substr(0, field.length() - numberQuery);
-     }
-
+    if (paramCode < 0){
+       std::cout << "No match for " << field << " - ? for list of commands"
+                 << std::endl;
+       continue;
+    }
+    if (numberMatches > 1 || numberShortMatches == 1 || numberQuery > 0){
+       continue;
+    }
+    
     ClpParam *param = parameters[paramCode];
-
     ClpSimplex *thisModel = models + iModel;
-    if (param->type() != CoinParam::paramInvalid && !numberQuery) {
+
+    //if (param->type() != CoinParam::paramInvalid && !numberQuery) {
       int status;
       numberGoodCommands++;
       if (paramCode == ClpParam::GENERALQUERY) {
@@ -2864,7 +2869,9 @@ clp watson.mps -\nscaling off\nprimalsimplex");
           abort();
           }
       }
-      } else if (!numberMatches) {
+#if 0
+    // These are not needed      
+    } else if (!numberMatches) {
       std::cout << "No match for " << field << " - ? for list of commands"
                 << std::endl;
     } else if (numberMatches == 1) {
@@ -2904,6 +2911,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
          }
       }
     }
+#endif
   }
   delete[] goodModels;
 #ifdef COINTUILS_HAS_GLPK
@@ -2935,11 +2943,9 @@ clp watson.mps -\nscaling off\nprimalsimplex");
 }
 
 #ifndef ABC_INHERIT
-int clpReadAmpl(ampl_info *info, int argc, char **argv, ClpSimplex *models,
-                const char* solvername)
+int clpReadAmpl(ampl_info *info, int argc, char **argv, ClpSimplex *models)
 #else
-int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models,
-            const char* solvername)
+int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models)
 #endif
 {
    memset(&info, 0, sizeof(info));
