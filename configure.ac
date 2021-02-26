@@ -76,13 +76,17 @@ AC_CLP_ABOCA(1)
 # version distributed with Fedora.
 
 # amd.h
-AC_COIN_CHK_LIB(AMD,[ClpLib],[-lamd],[-I/usr/include/suitesparse],[],
-                [amd_defaults])
+AC_COIN_CHK_LIBHDR(AMD,[ClpLib],[-lamd],[-I/usr/include/suitesparse],[],
+  [[double Control[AMD_CONTROL];
+   amd_defaults(Control);]],
+  [#include "amd.h"])
 
 # CHOLMOD from UFL
 # Requires AMD, but apparently not for a link check with dynamic libraries.
 # cholmod.h
-AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],[cholmod_start])
+AC_COIN_CHK_LIBHDR(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],
+  [cholmod_start((cholmod_common*)0);],
+  [#include "cholmod.h"])
 
 # MUMPS. Check first for ThirdParty/MUMPS, on the assumption that if the user
 # bothered to build it, we should use it. If it's not present, try for a
@@ -90,7 +94,9 @@ AC_COIN_CHK_LIB(CHOLMOD,[ClpLib],[-lcholmod],[-I/usr/include/suitesparse],[],[ch
 # using clp.
 AC_COIN_CHK_PKG(MUMPS,[ClpLib],[coinmumps])
 if test $coin_has_mumps = no ; then
-  AC_COIN_CHK_LIB(MUMPS,[ClpLib],[-ldmumps],[-I/usr/include/MUMPS],[],[dmumps_c])
+  AC_COIN_CHK_LIBHDR(MUMPS,[ClpLib],[-ldmumps],[-I/usr/include/MUMPS],[],
+    [dmumps_c((DMUMPS_STRUC_C*)0)],
+    [#include "dmumps_c.h"])
 fi
 
 # WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
