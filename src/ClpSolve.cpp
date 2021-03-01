@@ -2670,6 +2670,11 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       model2->addColumns(numberArtificials, NULL, NULL, addCost,
         addStarts, addRow, addElement);
     }
+    // redo
+    element = model2->matrix()->getElements();
+    row = model2->matrix()->getIndices();
+    columnStart = model2->matrix()->getVectorStarts();
+    columnLength = model2->matrix()->getVectorLengths();
     delete[] addStarts;
     delete[] addRow;
     delete[] addElement;
@@ -3064,7 +3069,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         // try singletons
         char *markX = new char[numberColumns];
         memset(markX, 0, numberColumns);
-        for (int i = 0; i < numberSort; i++)
+        for (int i = 0; i < numberSort; i++) 
           markX[sort[i]] = 1;
         int n = numberSort;
         for (int i = 0; i < numberColumns; i++) {
