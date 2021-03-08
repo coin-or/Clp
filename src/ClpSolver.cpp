@@ -55,7 +55,6 @@
 #include "ClpDualRowSteepest.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpLinearObjective.hpp"
-#include "ClpMessage.hpp"
 #include "ClpNetworkMatrix.hpp"
 #include "ClpPEDualRowDantzig.hpp"
 #include "ClpPEDualRowSteepest.hpp"
@@ -86,13 +85,13 @@
 //#############################################################################
 
 #ifndef ABC_INHERIT
-void printGeneralMessage(ClpSimplex *model, std::string message)
+void printGeneralMessage(ClpSimplex *model, std::string message, int type)
 #else
-void printGeneralMessage(AbcSimplex *model, std::string message)
+void printGeneralMessage(AbcSimplex *model, std::string message, int type)
 #endif
 {
   if (message.length()) {
-    model->messageHandler()->message(CLP_GENERAL, model->messages())
+    model->messageHandler()->message(type, model->messages())
         << message << CoinMessageEol;
   }
 }
@@ -101,13 +100,13 @@ void printGeneralMessage(AbcSimplex *model, std::string message)
 //#############################################################################
 
 #ifndef ABC_INHERIT
-void printGeneralWarning(ClpSimplex *model, std::string message)
+void printGeneralWarning(ClpSimplex *model, std::string message, int type)
 #else
-void printGeneralWarning(AbcSimplex *model, std::string message)
+   void printGeneralWarning(AbcSimplex *model, std::string message, int type)
 #endif
 {
   if (message.length()) {
-    model->messageHandler()->message(CLP_GENERAL_WARNING, model->messages())
+    model->messageHandler()->message(type, model->messages())
         << message << CoinMessageEol;
   }
 }
@@ -140,11 +139,11 @@ void ClpMain0(AbcSimplex *models)
 
 #ifndef ABC_INHERIT
 CLPLIB_EXPORT
-int ClpMain1(std::queue<std::string> inputQueue, ClpSimplex *models,
+int ClpMain1(std::deque<std::string> inputQueue, ClpSimplex *models,
              ampl_info *info)
 #else
 CLPLIB_EXPORT
-int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
+int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
              ampl_info *info)
 #endif
 {
@@ -232,34 +231,34 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
   std::string printMask = "";
   ClpParameters parameters;
   parameters[ClpParam::BASISIN]->setVal(importBasisFile);
-  parameters[ClpParam::BASISOUT]->setStrVal(exportBasisFile);
-  parameters[ClpParam::PRINTMASK]->setStrVal(printMask);
-  parameters[ClpParam::DIRECTORY]->setStrVal(directory);
-  parameters[ClpParam::DIRSAMPLE]->setStrVal(dirSample);
-  parameters[ClpParam::DIRNETLIB]->setStrVal(dirNetlib);
-  parameters[ClpParam::DIRMIPLIB]->setStrVal(dirMiplib);
-  parameters[ClpParam::DUALBOUND]->setDblVal(models->dualBound());
-  parameters[ClpParam::DUALTOLERANCE]->setDblVal(models->dualTolerance());
-  parameters[ClpParam::EXPORT]->setStrVal(exportFile);
-  parameters[ClpParam::IDIOT]->setIntVal(doIdiot);
-  parameters[ClpParam::IMPORT]->setStrVal(importFile);
-  parameters[ClpParam::LOGLEVEL]->setIntVal(models->logLevel());
-  parameters[ClpParam::MAXFACTOR]->setIntVal(models->factorizationFrequency());
-  parameters[ClpParam::MAXITERATION]->setIntVal(models->maximumIterations());
-  parameters[ClpParam::OUTPUTFORMAT]->setIntVal(outputFormat);
-  parameters[ClpParam::PRESOLVEPASS]->setIntVal(preSolve);
-  parameters[ClpParam::PERTVALUE]->setIntVal(models->perturbation());
-  parameters[ClpParam::PRIMALTOLERANCE]->setDblVal(models->primalTolerance());
-  parameters[ClpParam::PRIMALWEIGHT]->setDblVal(models->infeasibilityCost());
-  parameters[ClpParam::RESTORE]->setStrVal(restoreFile);
-  parameters[ClpParam::SAVE]->setStrVal(saveFile);
-  parameters[ClpParam::TIMELIMIT]->setDblVal(models->maximumSeconds());
-  parameters[ClpParam::SOLUTION]->setStrVal(solutionFile);
-  parameters[ClpParam::SAVESOL]->setStrVal(solutionSaveFile);
-  parameters[ClpParam::SPRINT]->setIntVal(doSprint);
-  parameters[ClpParam::SUBSTITUTION]->setIntVal(substitution);
-  parameters[ClpParam::DUALIZE]->setIntVal(dualize);
-  parameters[ClpParam::PRESOLVETOLERANCE]->setDblVal(1.0e-8);
+  parameters[ClpParam::BASISOUT]->setVal(exportBasisFile);
+  parameters[ClpParam::PRINTMASK]->setVal(printMask);
+  parameters[ClpParam::DIRECTORY]->setVal(directory);
+  parameters[ClpParam::DIRSAMPLE]->setVal(dirSample);
+  parameters[ClpParam::DIRNETLIB]->setVal(dirNetlib);
+  parameters[ClpParam::DIRMIPLIB]->setVal(dirMiplib);
+  parameters[ClpParam::DUALBOUND]->setVal(models->dualBound());
+  parameters[ClpParam::DUALTOLERANCE]->setVal(models->dualTolerance());
+  parameters[ClpParam::EXPORT]->setVal(exportFile);
+  parameters[ClpParam::IDIOT]->setVal(doIdiot);
+  parameters[ClpParam::IMPORT]->setVal(importFile);
+  parameters[ClpParam::LOGLEVEL]->setVal(models->logLevel());
+  parameters[ClpParam::MAXFACTOR]->setVal(models->factorizationFrequency());
+  parameters[ClpParam::MAXITERATION]->setVal(models->maximumIterations());
+  parameters[ClpParam::OUTPUTFORMAT]->setVal(outputFormat);
+  parameters[ClpParam::PRESOLVEPASS]->setVal(preSolve);
+  parameters[ClpParam::PERTVALUE]->setVal(models->perturbation());
+  parameters[ClpParam::PRIMALTOLERANCE]->setVal(models->primalTolerance());
+  parameters[ClpParam::PRIMALWEIGHT]->setVal(models->infeasibilityCost());
+  parameters[ClpParam::RESTORE]->setVal(restoreFile);
+  parameters[ClpParam::SAVE]->setVal(saveFile);
+  parameters[ClpParam::TIMELIMIT]->setVal(models->maximumSeconds());
+  parameters[ClpParam::SOLUTION]->setVal(solutionFile);
+  parameters[ClpParam::SAVESOL]->setVal(solutionSaveFile);
+  parameters[ClpParam::SPRINT]->setVal(doSprint);
+  parameters[ClpParam::SUBSTITUTION]->setVal(substitution);
+  parameters[ClpParam::DUALIZE]->setVal(dualize);
+  parameters[ClpParam::PRESOLVETOLERANCE]->setVal(1.0e-8);
   int verbose = 0;
 
   // total number of commands read
@@ -272,22 +271,22 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
     numberGoodCommands = 1;
   }
 
-  int usingAmpl = 0;
+  bool usingAmpl = false;
   CoinMessageHandler *generalMessageHandler = models->messageHandler();
   generalMessageHandler->setPrefix(false);
   CoinMessages generalMessages = models->messages();
 
   if (info) {
     // We're using AMPL
-    usingAmpl = 1;
-    parameters[ClpParam::LOGLEVEL]->setIntVal(info->logLevel);
+    usingAmpl = true;
+    parameters[ClpParam::LOGLEVEL]->setVal(info->logLevel);
     goodModels[0] = true;
   }
 
   // Hidden stuff for barrier
   int choleskyType = 0;
   int gamma = 0;
-  parameters[ClpParam::BARRIERSCALE]->setModeVal(2);
+  parameters[ClpParam::BARRIERSCALE]->setVal(2);
   int scaleBarrier = 2;
   int doKKT = 0;
   int crossover = 2; // do crossover unless quadratic
@@ -338,10 +337,10 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
         std::cout << "Switching to line mode" << std::endl;
         interactiveMode = true;
         while (!inputQueue.empty())
-          inputQueue.pop();
+          inputQueue.pop_back();
       } else if (field[0] != '-') {
         // special dispensation - taken as -import name, put name back on queue
-        inputQueue.push(field);
+        inputQueue.push_back(field);
         field = "import";
       } else {
         if (field != "--") {
@@ -556,16 +555,16 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
       status = CoinParamUtils::getValue(inputQueue, field);
       if (param->setVal(field, &message)) {
         printGeneralMessage(models, message);
-        int action = param->modeVal();
+        int mode = param->modeVal();
         // TODO this should be part of the push method
         switch (paramCode) {
         case ClpParam::DIRECTION:
-          if (action == 0) {
+          if (mode == 0) {
             models[iModel].setOptimizationDirection(1);
 #ifdef ABC_INHERIT
             thisModel->setOptimizationDirection(1);
 #endif
-          } else if (action == 1) {
+          } else if (mode == 1) {
             models[iModel].setOptimizationDirection(-1);
 #ifdef ABC_INHERIT
             thisModel->setOptimizationDirection(-1);
@@ -578,14 +577,14 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
           }
           break;
         case ClpParam::DUALPIVOT:
-          if (action == 0) {
+          if (mode == 0) {
             ClpDualRowSteepest steep(3);
             thisModel->setDualRowPivotAlgorithm(steep);
 #ifdef ABC_INHERIT
             AbcDualRowSteepest steep2(3);
             models[iModel].setDualRowPivotAlgorithm(steep2);
 #endif
-          } else if (action == 1) {
+          } else if (mode == 1) {
             // ClpDualRowDantzig dantzig;
             ClpDualRowDantzig dantzig;
             thisModel->setDualRowPivotAlgorithm(dantzig);
@@ -593,7 +592,7 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
             AbcDualRowDantzig dantzig2;
             models[iModel].setDualRowPivotAlgorithm(dantzig2);
 #endif
-          } else if (action == 2) {
+          } else if (mode == 2) {
             // partial steep
             ClpDualRowSteepest steep(2);
             thisModel->setDualRowPivotAlgorithm(steep);
@@ -601,51 +600,51 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
             AbcDualRowSteepest steep2(2);
             models[iModel].setDualRowPivotAlgorithm(steep2);
 #endif
-          } else if (action == 3) {
+          } else if (mode == 3) {
             ClpDualRowSteepest steep;
             thisModel->setDualRowPivotAlgorithm(steep);
 #ifdef ABC_INHERIT
             AbcDualRowSteepest steep2;
             models[iModel].setDualRowPivotAlgorithm(steep2);
 #endif
-          } else if (action == 4) {
+          } else if (mode == 4) {
             // Positive edge steepest
             ClpPEDualRowSteepest p(fabs(parameters[ClpParam::PSI]->dblVal()));
             thisModel->setDualRowPivotAlgorithm(p);
-          } else if (action == 5) {
+          } else if (mode == 5) {
             // Positive edge Dantzig
             ClpPEDualRowDantzig p(fabs(parameters[ClpParam::PSI]->dblVal()));
             thisModel->setDualRowPivotAlgorithm(p);
           }
           break;
         case ClpParam::PRIMALPIVOT:
-          if (action == 0) {
+          if (mode == 0) {
             ClpPrimalColumnSteepest steep(3);
             thisModel->setPrimalColumnPivotAlgorithm(steep);
-          } else if (action == 1) {
+          } else if (mode == 1) {
             ClpPrimalColumnSteepest steep(0);
             thisModel->setPrimalColumnPivotAlgorithm(steep);
-          } else if (action == 2) {
+          } else if (mode == 2) {
             ClpPrimalColumnDantzig dantzig;
             thisModel->setPrimalColumnPivotAlgorithm(dantzig);
-          } else if (action == 3) {
+          } else if (mode == 3) {
             ClpPrimalColumnSteepest steep(4);
             thisModel->setPrimalColumnPivotAlgorithm(steep);
-          } else if (action == 4) {
+          } else if (mode == 4) {
             ClpPrimalColumnSteepest steep(1);
             thisModel->setPrimalColumnPivotAlgorithm(steep);
-          } else if (action == 5) {
+          } else if (mode == 5) {
             ClpPrimalColumnSteepest steep(2);
             thisModel->setPrimalColumnPivotAlgorithm(steep);
-          } else if (action == 6) {
+          } else if (mode == 6) {
             ClpPrimalColumnSteepest steep(10);
             thisModel->setPrimalColumnPivotAlgorithm(steep);
-          } else if (action == 7) {
+          } else if (mode == 7) {
             // Positive edge steepest
             ClpPEPrimalColumnSteepest p(
                 fabs(parameters[ClpParam::PSI]->dblVal()));
             thisModel->setPrimalColumnPivotAlgorithm(p);
-          } else if (action == 8) {
+          } else if (mode == 8) {
             // Positive edge Dantzig
             ClpPEPrimalColumnDantzig p(
                 fabs(parameters[ClpParam::PSI]->dblVal()));
@@ -653,92 +652,92 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
           }
           break;
         case ClpParam::SCALING:
-          thisModel->scaling(action);
+          thisModel->scaling(mode);
           break;
         case ClpParam::AUTOSCALE:
-          thisModel->setAutomaticScaling(action != 0);
+          thisModel->setAutomaticScaling(mode != 0);
           break;
         case ClpParam::SPARSEFACTOR:
-          thisModel->setSparseFactorization((1 - action) != 0);
+          thisModel->setSparseFactorization((1 - mode) != 0);
           break;
         case ClpParam::BIASLU:
-          thisModel->factorization()->setBiasLU(action);
+          thisModel->factorization()->setBiasLU(mode);
           break;
         case ClpParam::PERTURBATION:
-          if (action == 0)
+          if (mode == 0)
             thisModel->setPerturbation(50);
           else
             thisModel->setPerturbation(100);
           break;
         case ClpParam::ERRORSALLOWED:
-          allowImportErrors = action;
+          allowImportErrors = mode;
           break;
         case ClpParam::ABCWANTED:
 #ifdef ABC_INHERIT
-          models[iModel].setAbcState(action);
+          models[iModel].setAbcState(mode);
 #elif ABOCA_LITE
-          setAbcState(action);
+          setAbcState(mode);
           {
             char temp[3];
-            sprintf(temp, "%d", action);
+            sprintf(temp, "%d", mode);
             __cilkrts_set_param("nworkers", temp);
-            printf("setting cilk workers to %d\n", action);
+            printf("setting cilk workers to %d\n", mode);
           }
 #elif PRICE_USE_OPENMP
-          omp_set_num_threads(action);
+          omp_set_num_threads(mode);
 #endif
           break;
         case ClpParam::INTPRINT:
-          printMode = action;
+          printMode = mode;
           break;
         case ClpParam::KEEPNAMES:
-          keepImportNames = 1 - action;
+          keepImportNames = 1 - mode;
           break;
         case ClpParam::PRESOLVE:
-          if (action == 0)
+          if (mode == 0)
             preSolve = DEFAULT_PRESOLVE_PASSES;
-          else if (action == 1)
+          else if (mode == 1)
             preSolve = 0;
-          else if (action == 2)
+          else if (mode == 2)
             preSolve = 10;
           else
             preSolveFile = true;
           break;
         case ClpParam::PFI:
-          thisModel->factorization()->setForrestTomlin(action == 0);
+          thisModel->factorization()->setForrestTomlin(mode == 0);
           break;
         case ClpParam::FACTORIZATION:
-          models[iModel].factorization()->forceOtherFactorization(action);
+          models[iModel].factorization()->forceOtherFactorization(mode);
 #ifdef ABC_INHERIT
-          thisModel->factorization()->forceOtherFactorization(action);
+          thisModel->factorization()->forceOtherFactorization(mode);
 #endif
           break;
         case ClpParam::CRASH:
-          doCrash = action;
+          doCrash = mode;
           break;
         case ClpParam::VECTOR:
-          doVector = action;
+          doVector = mode;
           break;
         case ClpParam::MESSAGES:
-          models[iModel].messageHandler()->setPrefix(action != 0);
+          models[iModel].messageHandler()->setPrefix(mode != 0);
 #ifdef ABC_INHERIT
-          thisModel->messageHandler()->setPrefix(action != 0);
+          thisModel->messageHandler()->setPrefix(mode != 0);
 #endif
           break;
         case ClpParam::CHOLESKY:
-          choleskyType = action;
+          choleskyType = mode;
           break;
         case ClpParam::GAMMA:
-          gamma = action;
+          gamma = mode;
           break;
         case ClpParam::BARRIERSCALE:
-          scaleBarrier = action;
+          scaleBarrier = mode;
           break;
         case ClpParam::KKT:
-          doKKT = action;
+          doKKT = mode;
           break;
         case ClpParam::CROSSOVER:
-          crossover = action;
+          crossover = mode;
           break;
         default:
           // abort();
@@ -1250,7 +1249,7 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
                 << thisModel->objectiveValue();
             printGeneralMessage(models, buffer.str());
             // switch off (user can switch back on)
-            parameters[ClpParam::DUALIZE]->setIntVal(dualize);
+            parameters[ClpParam::DUALIZE]->setVal(dualize);
           }
           if (status >= 0)
             basisHasValues = 1;
@@ -1504,7 +1503,6 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
                 if (ifs.is_open()) {
                   CoinParamUtils::readFromStream(inputQueue, ifs);
                 } else {
-                  // gets here on "-import x.mps"
                   buffer.str("");
                   buffer << "No parameter file " << fileName << " found"
                          << std::endl;
@@ -2060,7 +2058,7 @@ int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *models,
       case ClpParam::STDIN:
         interactiveMode = true;
         while (!inputQueue.empty())
-          inputQueue.pop();
+          inputQueue.pop_back();
         break;
       case ClpParam::NETLIB_DUAL:
       case ClpParam::NETLIB_EITHER:
@@ -2904,8 +2902,9 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         // Don't think it will work with Visual Studio
         char *input = getenv("CLP_ENVIRONMENT");
         if (input) {
-          while (!inputQueue.empty())
-            inputQueue.pop();
+          while (!inputQueue.empty()){
+             inputQueue.pop_back();
+          }
           std::istringstream inputStream(input);
           CoinParamUtils::readFromStream(inputQueue, inputStream);
         }
@@ -2922,8 +2921,9 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               static_cast<ClpSimplexOther *>(models + iModel);
           std::string input = model2->guess(0);
           if (input != "") {
-            while (!inputQueue.empty())
-              inputQueue.pop();
+            while (!inputQueue.empty()){
+               inputQueue.pop_back();
+            }
             std::istringstream inputStream(input);
             CoinParamUtils::readFromStream(inputQueue, inputStream);
           } else {

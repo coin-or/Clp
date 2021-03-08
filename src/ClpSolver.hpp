@@ -15,6 +15,7 @@
 #ifdef ABC_INHERIT
 #include "AbcSimplex.hpp"
 #endif
+#include "ClpMessage.hpp"
 
 // for printing
 #ifndef CLP_OUTPUT_FORMAT
@@ -70,14 +71,26 @@ int mainTest(int argc, const char *argv[], int algorithm,
 CLPLIB_EXPORT
 void ClpMain0(ClpSimplex *models);
 CLPLIB_EXPORT
-int ClpMain1(std::queue<std::string> inputQueue, ClpSimplex *model,
+int ClpMain1(std::deque<std::string> inputQueue, ClpSimplex *model,
              ampl_info *info = NULL);
 #else
 CLPLIB_EXPORT
 void ClpMain0(AbcSimplex *models);
 CLPLIB_EXPORT
-int ClpMain1(std::queue<std::string> inputQueue, AbcSimplex *model,
+int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *model,
              ampl_info *info = NULL);
+#endif
+
+#ifndef ABC_INHERIT
+void printGeneralMessage(ClpSimplex *model, std::string message, int type = CLP_GENERAL);
+#else
+void printGeneralMessage(AbcSimplex *model, std::string message, int type = CLP_GENERAL);
+#endif
+
+#ifndef ABC_INHERIT
+void printGeneralWarning(ClpSimplex *model, std::string message, int type = CLP_GENERAL_WARNING);
+#else
+void printGeneralWarning(AbcSimplex *model, std::string message, int type = CLP_GENERAL_WARNING);
 #endif
 
 #ifndef ABC_INHERIT

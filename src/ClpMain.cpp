@@ -4,7 +4,7 @@
 
 #include "ClpConfig.h"
 
-#include <queue>
+#include <deque>
 
 #include "CoinModel.hpp"
 #include "CoinPragma.hpp"
@@ -235,17 +235,17 @@ static void malloc_stats2()
 //#############################################################################
 //#############################################################################
 
-void formInputQueue(std::queue<std::string> &inputQueue,
+void formInputQueue(std::deque<std::string> &inputQueue,
                     int argc, char **argv)
 {
    for (int i = 1; i < argc; i++){
       std::string tmp(argv[i]);
       std::string::size_type found = tmp.find('=');
       if (found != std::string::npos) {
-         inputQueue.push(tmp.substr(0, found));
-         inputQueue.push(tmp.substr(found + 1));
+         inputQueue.push_back(tmp.substr(0, found));
+         inputQueue.push_back(tmp.substr(found + 1));
       } else {
-         inputQueue.push(tmp);
+         inputQueue.push_back(tmp);
       }
    }
 }
@@ -300,7 +300,7 @@ main(int argc, const char *argv[])
   ClpMain0(models);
 
   int returnCode;
-  std::queue<std::string> inputQueue;
+  std::deque<std::string> inputQueue;
   
   if (argc > 2 && !strcmp(argv[2], "-AMPL")) {
      ampl_info info;
@@ -310,8 +310,8 @@ main(int argc, const char *argv[])
         // This should be moved to constructor of ClpSolver
         formInputQueue(inputQueue, info.numberArguments, info.arguments);
         // We don't need to first two arguments from here on
-        inputQueue.pop();
-        inputQueue.pop();
+        inputQueue.pop_back();
+        inputQueue.pop_back();
         returnCode = ClpMain1(inputQueue, models, &info);
      }
   } else {
