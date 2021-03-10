@@ -2040,6 +2040,11 @@ void Idiot::crossOver(int mode)
         delete[] which;
       }
     }
+    // Maybe presolve did nothing!
+    if (pinfo.nullPresolve()) {
+      delete model_;
+      model_ = NULL;
+    }
     if (model_) {
       // See if we want to go all way
       int oldSize = 2 * saveModel->numberRows() + saveModel->numberColumns();

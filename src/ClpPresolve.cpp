@@ -428,7 +428,8 @@ void check_sol(CoinPresolveMatrix *prob, double tol)
 
   double *rsol = new double[nrows];
   memset(rsol, 0, nrows * sizeof(double));
-
+  double sumColInf = 0.0;
+  double smallTol = 1.0e-7;
   for (colx = 0; colx < ncols; ++colx) {
     if (1) {
       CoinBigIndex k = mcstrt[colx];
@@ -440,30 +441,45 @@ void check_sol(CoinPresolveMatrix *prob, double tol)
         k++;
         rsol[row] += solutionValue * coeff;
       }
-      if (csol[colx] < clo[colx] - tol) {
-        printf("low CSOL:  %d  - %g %g %g\n",
-          colx, clo[colx], csol[colx], cup[colx]);
-      } else if (csol[colx] > cup[colx] + tol) {
-        printf("high CSOL:  %d  - %g %g %g\n",
-          colx, clo[colx], csol[colx], cup[colx]);
+      if (csol[colx] < clo[colx] - smallTol) {
+	sumColInf += clo[colx] - csol[colx];
+	if (csol[colx] < clo[colx] - tol) 
+	  printf("low CSOL:  %d  - %g %g %g\n",
+		 colx, clo[colx], csol[colx], cup[colx]);
+      } else if (csol[colx] > cup[colx] + smallTol) {
+	sumColInf += csol[colx] - cup[colx];
+	if (csol[colx] > cup[colx] + tol) 
+	  printf("high CSOL:  %d  - %g %g %g\n",
+		 colx, clo[colx], csol[colx], cup[colx]);
       }
     }
   }
+  double sumRowInf = 0.0;
+  double sumRowInaccuracy = 0.0;
   int rowx;
   for (rowx = 0; rowx < nrows; ++rowx) {
     if (hinrow[rowx]) {
-      if (fabs(rsol[rowx] - acts[rowx]) > tol)
-        printf("inacc RSOL:  %d - %g %g (acts_ %g) %g\n",
-          rowx, rlo[rowx], rsol[rowx], acts[rowx], rup[rowx]);
-      if (rsol[rowx] < rlo[rowx] - tol) {
-        printf("low RSOL:  %d - %g %g %g\n",
-          rowx, rlo[rowx], rsol[rowx], rup[rowx]);
-      } else if (rsol[rowx] > rup[rowx] + tol) {
-        printf("high RSOL:  %d - %g %g %g\n",
-          rowx, rlo[rowx], rsol[rowx], rup[rowx]);
+      if (fabs(rsol[rowx] - acts[rowx]) > smallTol) {
+	sumRowInaccuracy += fabs(rsol[rowx] - acts[rowx]);
+	if (fabs(rsol[rowx] - acts[rowx]) > tol)
+	  printf("inacc RSOL:  %d - %g %g (acts_ %g) %g\n",
+		 rowx, rlo[rowx], rsol[rowx], acts[rowx], rup[rowx]);
+      }
+      if (rsol[rowx] < rlo[rowx] - smallTol) {
+	sumRowInf += rlo[rowx] - rsol[rowx];
+	if (rsol[rowx] < rlo[rowx] - tol) 
+	  printf("low RSOL:  %d - %g %g %g\n",
+		 rowx, rlo[rowx], rsol[rowx], rup[rowx]);
+      } else if (rsol[rowx] > rup[rowx] + smallTol) {
+	sumRowInf += rsol[rowx] - rup[rowx];
+	if (rsol[rowx] > rup[rowx] + tol) 
+	  printf("high RSOL:  %d - %g %g %g\n",
+		 rowx, rlo[rowx], rsol[rowx], rup[rowx]);
       }
     }
   }
+  printf("Row inaccuracy %g row infeasibility %g column infeasibility %g\n",
+	 sumRowInaccuracy,sumRowInf,sumColInf);
   delete[] rsol;
 }
 #endif
@@ -1962,7 +1978,7 @@ CoinPresolveMatrix* create_CoinPresolveMatrix(
 
 #if PRESOLVE_CONSISTENCY
   //consistent(false);
-  cpm->presolve_consistent(this, false);
+  presolve_consistent(cpm, false);
 #endif
 
   return cpm;
@@ -2162,7 +2178,7 @@ CoinPostsolveMatrix* create_CoinPostsolveMatrix(ClpSimplex *si,
   CoinFillN(cpm->cdone_, ncols1, PRESENT_IN_REDUCED);
   CoinZeroN(cpm->cdone_ + ncols1, ncols0_in - ncols1);
   CoinFillN(cpm->rdone_, nrows1, PRESENT_IN_REDUCED);
-  CoinZeroN(cpm->rdone_ + nrows1, cpm->nrows0_in - nrows1);
+  CoinZeroN(cpm->rdone_ + nrows1, cpm->nrows0_ - nrows1);
 #endif
 
   return cpm;

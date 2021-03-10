@@ -2316,7 +2316,7 @@ at the root node (1), \
 at depth less than modifier (2), \
 objective equals best possible (4), or \
 at depth less than modifier and objective equals best possible (6). \
-11, 12, 14, and 16 are like 1, 2, 4, and 6, respecitively, but do strong branching on all integer (incl. non-fractional) variables. \
+11, 12, 14, and 16 are like 1, 2, 4, and 6, respectively, but do strong branching on all integer (incl. non-fractional) variables. \
 Values >= 100 are used to specify a depth limit (value/100), otherwise 5 is used. \
 If the values >= 100, then above rules are applied to value%100.");
     p.setIntValue(0);

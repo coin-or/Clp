@@ -290,6 +290,11 @@ public:
   {
     presolveActions_ |= 0x80000000;
   }
+  /// Checks if null presolve!
+  inline bool nullPresolve() const
+  {
+    return (paction_==NULL);
+  }
   /// Return presolve status (0,1,2)
   int presolveStatus() const;
 
