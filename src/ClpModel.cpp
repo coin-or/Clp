@@ -1364,11 +1364,7 @@ void ClpModel::resize(int newNumberRows, int newNumberColumns)
     matrix_->deleteCols(numberColumns_ - newNumberColumns, which);
     delete[] which;
   } else if (!matrix_) {
-    CoinBigIndex * starts = new CoinBigIndex [newNumberColumns+1];
-    memset(starts,0,(newNumberColumns+1)*sizeof(CoinBigIndex));
-    CoinPackedMatrix matrix(true,newNumberRows,newNumberColumns,0,
-			    NULL,NULL,starts,NULL);
-    delete [] starts;
+    CoinPackedMatrix matrix;
     matrix_ = new ClpPackedMatrix(matrix);
   }
   if (integerType_ && numberColumns2 > maximumColumns_) {
