@@ -1398,7 +1398,9 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       }
     }
   }
-  bool looksOptimal = (!numberDualInfeasibilities_ && !nonLinearCost_->sumInfeasibilities());
+  bool looksOptimal = (!numberDualInfeasibilities_ &&
+		       !nonLinearCost_->sumInfeasibilities() &&
+		       firstFree_ < 0);
   // had ||(type==3&&problemStatus_!=-5) -- ??? why ????
   if ((dualFeasible() || problemStatus_ == -4) && (!ifValuesPass || looksOptimal || firstFree_ < 0)) {
     // see if extra helps

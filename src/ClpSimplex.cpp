@@ -3241,6 +3241,9 @@ void ClpSimplex::checkBothSolutions()
 	      if (firstFreePrimal < 0)
 		firstFreePrimal = iSequence;
             }
+	  } else if (getStatus(iSequence) == superBasic &&
+		     firstFreePrimal < 0) {
+	    firstFreePrimal = iSequence;
           }
         }
       }
