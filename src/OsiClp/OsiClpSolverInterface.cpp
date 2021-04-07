@@ -10427,12 +10427,16 @@ void OsiClpSolverInterface::crossover(int options, int basis)
   CoinZeroN(rowActivity, numberRows);
   modelPtr_->clpMatrix()->times(1.0, columnActivity, rowActivity);
   modelPtr_->checkSolution();
-  printf("%d primal infeasibilities summing to %g\n",
-    modelPtr_->numberPrimalInfeasibilities(),
-    modelPtr_->sumPrimalInfeasibilities());
-  printf("%d dual infeasibilities summing to %g\n",
-    modelPtr_->numberDualInfeasibilities(),
-    modelPtr_->sumDualInfeasibilities());
+  if (handler_->logLevel()>1) {
+    printf("%d primal infeasibilities summing to %g\n",
+	   modelPtr_->numberPrimalInfeasibilities(),
+	   modelPtr_->sumPrimalInfeasibilities());
+    printf("%d dual infeasibilities summing to %g\n",
+	   modelPtr_->numberDualInfeasibilities(),
+	   modelPtr_->sumDualInfeasibilities());
+  } else if (!handler_->logLevel()) {
+    modelPtr_->messageHandler()->setLogLevel(0);
+  }
   // get which variables are fixed
   double *saveLower = NULL;
   double *saveUpper = NULL;
