@@ -1127,7 +1127,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   int loop;
   if (type != 2) {
     loop = progress->looping();
-    if (ifValuesPass)
+    if (ifValuesPass && loop != 3)
       loop = -1;
   } else {
     loop = -1;
