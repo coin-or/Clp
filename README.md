@@ -47,7 +47,7 @@ The Clp development site is https://github.com/coin-or/Clp.
 
 There is a Docker image that provides Clp, as well as other projects
 in the [COIN-OR Optimization
-Suite](https://github.com/coin-or/COIN-OR-OptimizationSuite)[here](https://hub.docker.com/repository/docker/coinor/coin-or-optimization-suite)
+Suite](https://github.com/coin-or/COIN-OR-OptimizationSuite) [here](https://hub.docker.com/repository/docker/coinor/coin-or-optimization-suite)
 
 ### Binaries
 
@@ -58,7 +58,7 @@ are archived as part of Clp
 [here](https://www.coin-or.org/download/binary/Clp).
 
  * *Linux*: On Debian/Ubuntu, Clp is available in the package `coinor-clp` and can be installed with apt. On Fedora, Clp is available in the package `coin-or-Clp`.
- * *Windows*: The easiest way to get Clp on Windows is to download from *[Bintray](https://bintray.com/coin-or/download/Clp)*.
+ * *Windows*: The easiest way to get Clp on Windows is to download an archive as described above.
  * *Mac OS X*: The easiest way to get Cbc on Mac OS X is through [Homebrew](https://brew.sh).
    * `brew tap coin-or-tools/coinor`
    * `brew install coin-or-tools/coinor/clp`
