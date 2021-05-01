@@ -29,7 +29,7 @@ Clp is written in C++ and is released as open source under the [Eclipse Public L
 
 It is distributed under the auspices of the [COIN-OR Foundation](https://www.coin-or.org)
 
-The Clp website is https://github.com/coin-or/Clp.
+The Clp development site is https://github.com/coin-or/Clp.
 
 ## CITE
 
@@ -51,7 +51,11 @@ Suite](https://github.com/coin-or/COIN-OR-OptimizationSuite)[here](https://hub.d
 
 ### Binaries
 
-Binaries for most platforms are available as part of [Clp](https://bintray.com/coin-or/download/Clp). 
+For newer releases, binaries will be made available as assets attached to
+releases in Github
+[here](https://github.com/coin-or/Clp/releases). Older binaries
+are archived as part of Clp
+[here](https://www.coin-or.org/download/binary/Clp).
 
  * *Linux*: On Debian/Ubuntu, Clp is available in the package `coinor-clp` and can be installed with apt. On Fedora, Clp is available in the package `coin-or-Clp`.
  * *Windows*: The easiest way to get Clp on Windows is to download from *[Bintray](https://bintray.com/coin-or/download/Clp)*.
@@ -62,7 +66,9 @@ Binaries for most platforms are available as part of [Clp](https://bintray.com/c
 Due to license incompatibilities, pre-compiled binaries lack some functionality.
 If binaries are not available for your platform for the latest version and you would like to request them to be built and posted, feel free to let us know on the mailing list.
 
-*Source code* can be obtained either by
+### Source
+
+Source code can be obtained either by
 
  * Downloading a snapshot of the source code for the latest release version of Clp from the
  [releases](https://github.com/coin-or/Clp/releases) page.
