@@ -101,7 +101,7 @@ fi
 
 # WSMP (Watson Sparse Matrix Package from IBM T.J. Watson)
 AC_ARG_WITH([wsmp],
-            AC_HELP_STRING([--with-wsmp],[specify WSMP library]),
+            AS_HELP_STRING([--with-wsmp],[specify WSMP library]),
             [have_wsmp=yes; wsmp_lflags=$withval],
             [have_wsmp=no])
 
@@ -161,10 +161,10 @@ fi
 AC_CONFIG_FILES([doxydoc/doxygen.conf])
 
 # Here put the location and name of the configuration header file
-AC_CONFIG_HEADER([src/config.h src/config_clp.h])
+AC_CONFIG_HEADERS([src/config.h src/config_clp.h])
 
 if test $coin_has_osi = yes ; then
-  AC_CONFIG_HEADER([src/OsiClp/config_osiclp.h])
+  AC_CONFIG_HEADERS([src/OsiClp/config_osiclp.h])
 fi
 
 # Finally, we let configure write all the output...
