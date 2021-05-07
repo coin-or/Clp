@@ -108,7 +108,7 @@ static Clp_message clp_us_english[] = {
 #ifndef NO_FATHOM_PRINT
   { CLP_FATHOM_STATUS, 63, 2, "Fathoming node %d - %d nodes (%d iterations) - current depth %d" },
   { CLP_FATHOM_SOLUTION, 64, 1, "Fathoming node %d - solution of %g after %d nodes at depth %d" },
-  { CLP_FATHOM_FINISH, 65, 1, "Fathoming node %d (depth %d) took %d nodes (%d iterations) - maximum depth %d" },
+  { CLP_FATHOM_FINISH, 65, 2, "Fathoming node %d (depth %d) took %d nodes (%d iterations) - maximum depth %d" },
 #endif
   { CLP_GENERAL, 1000, 1, "%s" },
   { CLP_GENERAL2, 1001, 2, "%s" },

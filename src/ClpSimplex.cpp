@@ -9557,7 +9557,8 @@ ClpSimplex::checkScaling()
 #if CLP_SCALING_PRINT 
 	    printf("Some fake\n");
 #endif
-	    dualBound_ *= rhsScale_; // ???
+	    if (algorithm_<0)
+	      static_cast<ClpSimplexDual *>(this)->resetFakeBounds(0);
 	  }
 	}
       }
@@ -9569,9 +9570,9 @@ ClpSimplex::checkScaling()
     } else {
       // could see if we need to redo
     }
-    return numberIterations_; // try
-    //return CoinMin(CoinMax(100,numberRows_),1000)
-    //+ numberIterations_;
+    int addIterations =
+      CoinMax(CoinMin(CoinMax(100,numberRows_),1000),numberIterations_);
+    return addIterations + numberIterations_;
   }
 }
 #endif
@@ -11273,11 +11274,13 @@ int ClpSimplex::fathom(void *stuff)
   // say can declare optimal
   moreSpecialOptions_ |= 16777216;
   int saveMaxIterations = maximumIterations();
-  setMaximumIterations((((moreSpecialOptions_ & 2048) == 0) ? 200 : 2000)
-    + 2 * (numberRows_ + numberColumns_));
+  if ((moreSpecialOptions_ & 2048) == 0)
+    setMaximumIterations(200 + 2 * (numberRows_ + numberColumns_));
+  else
+    setMaximumIterations(2000 + 10 * (numberRows_ + numberColumns_));
   double saveObjLimit;
   getDblParam(ClpDualObjectiveLimit, saveObjLimit);
-  if (perturbation_ < 100) {
+  if (perturbation_ < 100 || (moreSpecialOptions_ & 2048) != 0) {
     double limit = saveObjLimit * optimizationDirection_;
     setDblParam(ClpDualObjectiveLimit,
       (limit + 1.0e-2 + 1.0e-7 * fabs(limit)) * optimizationDirection_);
@@ -11488,6 +11491,19 @@ int ClpSimplex::fathom(void *stuff)
     setMaximumIterations(saveMaxIterations);
     setDblParam(ClpDualObjectiveLimit, saveObjLimit);
     return returnCode;
+  }
+  if ((moreSpecialOptions_ & 2048) != 0) {
+    // perturb true objective
+    int saveFlag = scalingFlag_;
+    int savePerturbation = perturbation_;
+    perturbation_ = 50;
+    scalingFlag_ = 0;
+    createRim(63);
+    (static_cast< ClpSimplexDual * >(this))->perturb();
+    memcpy(objective(),cost_,numberColumns_*sizeof(double));
+    deleteRim();
+    scalingFlag_ = saveFlag;
+    perturbation_ = savePerturbation;
   }
   int returnCode = startFastDual2(info);
   if (returnCode) {
@@ -11915,6 +11931,9 @@ int ClpSimplex::fathom(void *stuff)
       << numberNodes << numberIterations << maxDepth + info->startingDepth_
       << CoinMessageEol;
 #endif
+  //if (info->nNodes_)
+  //printf("info %d nnodes %d nits %d maxdepth %d (start %d)\n",info->nNodes_,
+  //	   numberNodes,numberIterations,maxDepth+info->startingDepth_,info->startingDepth_);
   //printf("fathom finished after %d nodes\n",numberNodes);
   if (bestStatus) {
     CoinMemcpyN(bestLower, numberColumns_, columnLower_);

@@ -3844,15 +3844,41 @@ int ClpSimplex::initialSolve(ClpSolve &options)
             if (getColumnStatus(i) == superBasic)
               numberSuperBasic++;
           }
+	  // double check if looks odd
           if (sumDual > 1000.0 * sumPrimal || numberSuperBasic) {
             primal(1);
+	    if (!finalStatus&&problemStatus_) {
+	      handler_->message(CLP_GENERAL, messages_)
+		<< "Primal after postsolve not optimal! - trying dual"
+		<< CoinMessageEol;
+	      dual();
+	    }
           } else if (sumPrimal > 1000.0 * sumDual) {
             dual();
+	    if (!finalStatus&&problemStatus_) {
+	      handler_->message(CLP_GENERAL, messages_)
+		<< "Dual after postsolve not optimal! - trying primal"
+		<< CoinMessageEol;
+	      primal(1);
+	    }
           } else {
-            if (method != ClpSolve::useDual)
+            if (method != ClpSolve::useDual) {
               primal(1);
-            else
+	      if (!finalStatus&&problemStatus_) {
+		handler_->message(CLP_GENERAL, messages_)
+		  << "Primal after postsolve not optimal! - trying dual"
+		  << CoinMessageEol;
+		dual();
+	      }
+            } else {
               dual();
+	      if (!finalStatus&&problemStatus_) {
+		handler_->message(CLP_GENERAL, messages_)
+		  << "Dual after postsolve not optimal! - trying primal"
+		  << CoinMessageEol;
+		primal(1);
+	      }
+	    }
           }
 #else
           dealWithAbc(1, 2, interrupt);
@@ -4496,6 +4522,14 @@ ClpSimplexProgress::checkScalingEtc()
     return 0;
   if (model_->numberIterations()) {
     checkScalingAfter_ = model_->checkScaling();
+    if (checkScalingAfter_!=COIN_INT_MAX) { 
+      for (int i = 0; i < CLP_PROGRESS; i++) {
+	if (model_->algorithm() >= 0)
+	  objective_[i] = COIN_DBL_MAX * 1.0e-50;
+	else
+	  objective_[i] = -COIN_DBL_MAX * 1.0e-50;
+      }
+    }
     return 1;
   } else {
     return 0;
