@@ -11,8 +11,7 @@ AC_DEFUN([AC_CLP_ABOCA],
 [
   aboca_dflt_buildtype=m4_default([$1],1)
   AC_ARG_ENABLE([aboca],
-    [AC_HELP_STRING([--enable-aboca],
-      [Enables build of the Aboca solver;
+    [AS_HELP_STRING([--enable-aboca],[Enables build of the Aboca solver;
        1 - build Abc serial but no inherit code (default when built);
        2 - build Abc serial and inherit code;
        3 - build Abc cilk parallel but no inherit code;
