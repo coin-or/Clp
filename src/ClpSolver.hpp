@@ -94,8 +94,10 @@ void printGeneralWarning(AbcSimplex *model, std::string message, int type = CLP_
 #endif
 
 #ifndef ABC_INHERIT
+CLPLIB_EXPORT
 int clpReadAmpl(ampl_info *info, int argc, char **argv, ClpSimplex *models);
 #else
+CLPLIB_EXPORT
 int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models);
 #endif
 static void statistics(ClpSimplex *originalModel, ClpSimplex *model);
