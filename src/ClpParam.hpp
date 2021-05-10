@@ -85,7 +85,6 @@ public:
       USERCLP,
       MODELIN,
       PARAMETRICS,
-      RESTORESOL,
       GUESS,
       LASTACTIONPARAM,
       

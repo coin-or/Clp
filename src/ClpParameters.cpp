@@ -263,14 +263,6 @@ void ClpParameters::addClpActionParams() {
       "dual and primal tolerances.",
       CoinParam::displayPriorityHigh);
 
-  parameters_[ClpParam::RESTORESOL]->setup(
-      "restoreS!olution", "reads solution from file",
-      "This will read a binary solution file from the given file name.  It "
-      "will use the default directory given by 'directory'.  A name of '$' "
-      "will use the previous value for the name. This is initialized to "
-      "'solution.file'. This reads in a file from saveSolution",
-      CoinParam::displayPriorityHigh);
-
   parameters_[ClpParam::REALLY_SCALE]->setup("reallyS!cale",
                                             "Scales model in place", "",
                                             CoinParam::displayPriorityNone);
