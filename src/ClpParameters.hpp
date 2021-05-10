@@ -23,7 +23,7 @@
   of Clp.
 */
 
-class ClpParameters {
+class CLPLIB_EXPORT ClpParameters {
 
 public:
   /*! \name Constructors and destructors */
