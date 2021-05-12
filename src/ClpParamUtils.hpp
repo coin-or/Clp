@@ -34,7 +34,9 @@ int pushClpKwdParam(CoinParam &param);
 int pushClpStrParam(CoinParam &param);
 int pushClpBoolParam(CoinParam &param);
 
+CLPLIB_EXPORT
 void restoreSolution(ClpSimplex *lpSolver, std::string fileName, int mode);
+CLPLIB_EXPORT
 void saveSolution(const ClpSimplex *lpSolver, std::string fileName);
    
 } // namespace ClpParamUtils
