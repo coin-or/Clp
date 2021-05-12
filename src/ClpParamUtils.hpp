@@ -9,6 +9,8 @@
 #ifndef ClpParamUtils_H
 #define ClpParamUtils_H
 
+#include "ClpConfig.h"
+
 #include "CoinParam.hpp"
 #include "ClpSimplex.hpp"
 
