@@ -313,6 +313,17 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
     std::cout << "Clp takes input from arguments ( - switches to stdin)"
               << std::endl
               << "Enter ? for list of commands or help" << std::endl;
+  } else {
+    // See if first is file
+    std::string inputFile = inputQueue.front();
+    if (inputFile[0]!='-') {
+      FILE * fp = fopen(inputFile.c_str(),"r");
+      if (fp) {
+	fclose(fp);
+	// insert -import
+	inputQueue.push_front("-import");
+      }
+    }
   }
 
   while (1) {
@@ -338,10 +349,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         interactiveMode = true;
         while (!inputQueue.empty())
           inputQueue.pop_back();
-      } else if (field[0] != '-') {
-        // special dispensation - taken as -import name, put name back on queue
-        inputQueue.push_back(field);
-        field = "import";
       } else {
         if (field != "--") {
           // take off -
@@ -361,8 +368,9 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         &numberQuery);
 
     if (paramCode < 0) {
-      std::cout << "No match for " << field << " - ? for list of commands"
-                << std::endl;
+      if (!numberMatches)
+	std::cout << "No match for " << field << " - ? for list of commands"
+		  << std::endl;
       continue;
     }
     if (numberMatches > 1 || numberShortMatches == 1 || numberQuery > 0) {
@@ -374,7 +382,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
 
     int status;
     numberGoodCommands++;
-    if (paramCode == ClpParam::GENERALQUERY) {
+    if (paramCode == ClpParam::GENERALQUERY ||
+	paramCode == ClpParam::FULLGENERALQUERY) {
       // TODO Make this a method in the settings class
       std::cout << "In argument list keywords have leading - "
                    ", -stdin or just - switches to stdin"
@@ -393,6 +402,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       // bool evenHidden = false;
       int commandPrintLevel =
           parameters[ClpParam::COMMANDPRINTLEVEL]->modeVal();
+      if (paramCode == ClpParam::FULLGENERALQUERY) {
+	verbose = 1;
+	commandPrintLevel = 1;
+      }	
       if ((verbose & 8) != 0) {
         // even hidden
         // evenHidden = true;
@@ -409,59 +422,49 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       types.push_back("Double parameters:");
       types.push_back("String parameters:");
       types.push_back("Keyword parameters:");
-      int across = 0;
-      int lengthLine = 0;
-      int type = -1;
-      ClpParam *p;
       std::cout << "#### Clp Parameters ###" << std::endl;
-      for (int iParam = ClpParam::FIRSTPARAM + 1; iParam < ClpParam::LASTPARAM;
-           iParam++) {
-        if (parameters[iParam]->type() == CoinParam::paramInvalid) {
-          continue;
-        } else {
-          p = parameters[iParam];
-        }
-        if (p->type() != type) {
-          type = p->type();
-          if ((verbose % 4) != 0) {
-            std::cout << std::endl;
-          }
-          std::cout << types[type] << std::endl;
-          if ((verbose & 2) != 0) {
-            std::cout << std::endl;
-          }
-        }
-        if (p->getDisplayPriority() >= commandPrintLevel) {
-          if (!across) {
-            if ((verbose & 2) != 0)
-              std::cout << "Command ";
-          }
+      for (int type = 1; type < 6; type++) {
+	int across = 0;
+	int lengthLine = 0; 
+	std::cout << types[type] << std::endl;
+	for (int iParam = ClpParam::FIRSTPARAM + 1; iParam < ClpParam::LASTPARAM;
+	     iParam++) {
+	  ClpParam *p = parameters[iParam];
+	  if (p->type() != type ||  
+	      p->getDisplayPriority() <= commandPrintLevel) 
+	    continue;
           int length = p->lengthMatchName() + 1;
           if (lengthLine + length > 80) {
             std::cout << std::endl;
             across = 0;
             lengthLine = 0;
           }
-          std::cout << " " << p->matchName();
+          if (!across && (verbose & 2) != 0)
+	    std::cout << "Command ";
+          std::cout << p->matchName() << " ";
           lengthLine += length;
           across++;
+	  if (verbose) {
+	    // put out description as well
+	    if ((verbose & 1) != 0)
+	      std::cout << p->shortHelp();
+	    std::cout << std::endl;
+	    if ((verbose & 2) != 0) {
+	      std::cout << "---- description" << std::endl;
+	      p->printLongHelp();
+	      std::cout << "----" << std::endl << std::endl;
+	    }
+            across = 0;
+            lengthLine = 0;
+	  }
           if (across == maxAcross) {
             across = 0;
-            if (verbose) {
-              // put out description as well
-              if ((verbose & 1) != 0)
-                std::cout << p->shortHelp();
-              std::cout << std::endl;
-              if ((verbose & 2) != 0) {
-                std::cout << "---- description" << std::endl;
-                p->printLongHelp();
-                std::cout << "----" << std::endl << std::endl;
-              }
-            } else {
-              std::cout << std::endl;
-            }
+            lengthLine = 0;
+	    std::cout << std::endl;
           }
         }
+	if (across)
+	  std::cout << std::endl;
       }
     } else if (paramCode == ClpParam::FULLGENERALQUERY) {
       // TODO Make this a method in the settings class
@@ -746,7 +749,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       }
     } else {
       // action
-      if (paramCode == ClpParam::EXIT) {
+      if (paramCode == ClpParam::EXIT ||
+	  paramCode == ClpParam::STOP ||
+	  paramCode == ClpParam::QUIT ||
+	  paramCode == ClpParam::END) {
         if (usingAmpl) {
           writeAmpl(info);
           freeArrays2(info);

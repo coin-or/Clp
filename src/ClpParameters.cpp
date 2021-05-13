@@ -81,6 +81,13 @@ void ClpParameters::addClpHelpParams() {
        code++) {
     getParam(code)->setPushFunc(ClpParamUtils::doHelpParam);
   }
+  parameters_[ClpParam::GENERALQUERY]->setup(
+						"?", "Print a list of commands","",
+      CoinParam::displayPriorityNone);
+
+  parameters_[ClpParam::FULLGENERALQUERY]->setup(
+						    "???", "Print a list with *all* commands, even those hidden with `?'","",
+      CoinParam::displayPriorityNone);
 }
 
 //###########################################################################
@@ -140,16 +147,18 @@ void ClpParameters::addClpActionParams() {
       "This starts reading from environment variable CLP_ENVIRONMENT.",
       CoinParam::displayPriorityNone);
 
-  parameters_[ClpParam::EXIT]->setup(
+  parameters_[ClpParam::END]->setup(
       "end", "Stops clp execution",
       "This stops execution ; end, exit, quit and stop are synonyms",
       CoinParam::displayPriorityHigh);
 
-#if 0
-    parameters_[ClpParam::EXIT]->setup("quit", "Stops clp execution",
+#if 1
+    parameters_[ClpParam::QUIT]->setup("quit", "Stops clp execution",
       "This stops the execution of Clp, end, exit, quit and stop are synonyms", CoinParam::displayPriorityHigh);
 
-    parameters_[ClpParam::EXIT]->setup("stop", "Stops clp execution",
+    parameters_[ClpParam::EXIT]->setup("exit", "Stops clp execution",
+      "This stops the execution of Clp, end, exit, quit and stop are synonyms", CoinParam::displayPriorityHigh);
+    parameters_[ClpParam::STOP]->setup("stop", "Stops clp execution",
       "This stops the execution of Clp, end, exit, quit and stop are synonyms", CoinParam::displayPriorityHigh);
 #endif
 
