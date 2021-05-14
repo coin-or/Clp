@@ -349,6 +349,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         interactiveMode = true;
         while (!inputQueue.empty())
           inputQueue.pop_back();
+	field = CoinParamUtils::getNextField(inputQueue, interactiveMode, prompt);
       } else {
         if (field != "--") {
           // take off -
