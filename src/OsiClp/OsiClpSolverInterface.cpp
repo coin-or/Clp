@@ -3439,8 +3439,6 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
           bSum, bSum2, numberBad, nNonzeroBasic);
 #endif
       } else {
-        if (numberColumns < 0)
-          debugMode = -numberColumns;
         if ((debugMode & 4) != 0) {
           int *tempC = new int[numberColumns];
           double *temp = new double[numberColumns];
