@@ -348,8 +348,9 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       if (field == "-") {
         std::cout << "Switching to line mode" << std::endl;
         interactiveMode = true;
-        while (!inputQueue.empty())
-          inputQueue.pop_back();
+        while (!inputQueue.empty()){
+          inputQueue.pop_front();
+        }
 	field = CoinParamUtils::getNextField(inputQueue, interactiveMode, prompt);
       } else {
         if (field != "--") {
@@ -2109,7 +2110,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       case ClpParam::STDIN:
         interactiveMode = true;
         while (!inputQueue.empty())
-          inputQueue.pop_back();
+          inputQueue.pop_front();
         break;
       case ClpParam::NETLIB_DUAL:
       case ClpParam::NETLIB_EITHER:
@@ -2954,7 +2955,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         char *input = getenv("CLP_ENVIRONMENT");
         if (input) {
           while (!inputQueue.empty()){
-             inputQueue.pop_back();
+             inputQueue.pop_front();
           }
           std::istringstream inputStream(input);
           CoinParamUtils::readFromStream(inputQueue, inputStream);
@@ -2973,7 +2974,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
           std::string input = model2->guess(0);
           if (input != "") {
             while (!inputQueue.empty()){
-               inputQueue.pop_back();
+               inputQueue.pop_front();
             }
             std::istringstream inputStream(input);
             CoinParamUtils::readFromStream(inputQueue, inputStream);
