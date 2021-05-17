@@ -506,6 +506,26 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       // get next field as double
       status = CoinParamUtils::getValue(inputQueue, dValue);
       if (!status) {
+	if (paramCode == ClpParam::DUALTOLERANCE)
+	  thisModel->setDualTolerance(dValue);
+	else if (paramCode == ClpParam::PRIMALTOLERANCE)
+	  thisModel->setPrimalTolerance(dValue);
+	else if (paramCode == ClpParam::ZEROTOLERANCE)
+	  thisModel->setSmallElementValue(dValue);
+	else if (paramCode == ClpParam::DUALBOUND)
+	  thisModel->setDualBound(dValue);
+	else if (paramCode == ClpParam::PRIMALWEIGHT)
+	  thisModel->setInfeasibilityCost(dValue);
+	else if (paramCode == ClpParam::TIMELIMIT)
+	  thisModel->setMaximumSeconds(dValue);
+	else if (paramCode == ClpParam::OBJSCALE)
+	  thisModel->setObjectiveScale(dValue);
+	else if (paramCode == ClpParam::RHSSCALE)
+	  thisModel->setRhsScale(dValue);
+	else if (paramCode == ClpParam::PRESOLVETOLERANCE)
+	  thisModel->setDblParam(ClpPresolveTolerance, dValue);
+	else if (paramCode == ClpParam::PROGRESS)
+	  thisModel->setMinIntervalProgressUpdate(dValue);
         param->setVal(dValue, &message);
         printGeneralMessage(models, message);
       } else if (status == 1) {
@@ -545,6 +565,20 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           dualize = iValue;
         else if (paramCode == ClpParam::VERBOSE)
           verbose = iValue;
+        else if (paramCode == ClpParam::MAXFACTOR)
+	  thisModel->factorization()->maximumPivots(iValue);
+        else if (paramCode == ClpParam::PERTVALUE)
+	  thisModel->setPerturbation(iValue);
+        else if (paramCode == ClpParam::MAXITERATION)
+	  thisModel->setMaximumIterations(iValue);
+        else if (paramCode == ClpParam::SPECIALOPTIONS)
+	  thisModel->setSpecialOptions(iValue);
+        else if (paramCode == ClpParam::RANDOMSEED)
+	  thisModel->setRandomSeed(iValue);
+        else if (paramCode == ClpParam::MORESPECIALOPTIONS)
+	  thisModel->setMoreSpecialOptions(iValue);
+        else if (paramCode == ClpParam::VECTOR_MODE)
+	  thisModel->setVectorMode(iValue);
         param->setVal(iValue, &message);
         printGeneralMessage(models, message);
       } else if (status == 1) {
