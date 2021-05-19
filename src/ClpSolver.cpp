@@ -230,6 +230,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
   std::string solutionSaveFile = "solution.file";
   std::string printMask = "";
   ClpParameters parameters;
+  parameters.setModel(models);
   parameters[ClpParam::BASISIN]->setVal(importBasisFile);
   parameters[ClpParam::BASISOUT]->setVal(exportBasisFile);
   parameters[ClpParam::PRINTMASK]->setVal(printMask);
@@ -506,6 +507,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       // get next field as double
       status = CoinParamUtils::getValue(inputQueue, dValue);
       if (!status) {
+#if 0 
 	if (paramCode == ClpParam::DUALTOLERANCE)
 	  thisModel->setDualTolerance(dValue);
 	else if (paramCode == ClpParam::PRIMALTOLERANCE)
@@ -526,6 +528,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
 	  thisModel->setDblParam(ClpPresolveTolerance, dValue);
 	else if (paramCode == ClpParam::PROGRESS)
 	  thisModel->setMinIntervalProgressUpdate(dValue);
+#endif
         param->setVal(dValue, &message);
         printGeneralMessage(models, message);
       } else if (status == 1) {
@@ -565,6 +568,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           dualize = iValue;
         else if (paramCode == ClpParam::VERBOSE)
           verbose = iValue;
+#if 0
         else if (paramCode == ClpParam::MAXFACTOR)
 	  thisModel->factorization()->maximumPivots(iValue);
         else if (paramCode == ClpParam::PERTVALUE)
@@ -579,6 +583,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
 	  thisModel->setMoreSpecialOptions(iValue);
         else if (paramCode == ClpParam::VECTOR_MODE)
 	  thisModel->setVectorMode(iValue);
+#endif
         param->setVal(iValue, &message);
         printGeneralMessage(models, message);
       } else if (status == 1) {
@@ -795,6 +800,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }
         break; // stop all
       }
+#ifdef CBC_CLUMSY_CODING
+      /* Synchronize Clp model - Int and Dbl */
+      parameters.synchronizeModel();
+#endif
+
       switch (paramCode) {
       case ClpParam::DUALSIMPLEX:
       case ClpParam::PRIMALSIMPLEX:

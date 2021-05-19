@@ -10,6 +10,7 @@
 
 #include "ClpParamUtils.hpp"
 #include "ClpParameters.hpp"
+#include "ClpFactorization.hpp"
 
 /*
   Constructor for settings class.
@@ -30,9 +31,11 @@ ClpParameters::~ClpParameters() {
   for (int i = 0; i < parameters_.size(); i++){
      delete parameters_[i];
   }
+#ifndef CBC_CLUMSY_CODING
   if (model_) {
     delete model_;
   }
+#endif
 }
 
 int ClpParameters::matches(std::string field, int &numberMatches) {
@@ -72,7 +75,130 @@ void ClpParameters::addClpParams() {
 
   return;
 }
-
+#ifdef CBC_CLUMSY_CODING
+//#define PRINT_CLP_CHANGES
+// Synchronize Clp model - Int and Dbl 
+void ClpParameters::synchronizeModel() {
+  if (model_) {
+    // Integer parameters
+    int intValue;
+    int modelIntValue;
+    parameters_[ClpParam::MAXFACTOR]->getVal(intValue);
+#ifdef PRINT_CLP_CHANGES
+    modelIntValue = model_->factorization()->maximumPivots();
+    if (intValue!=modelIntValue)
+      printf("changing ? from %d to %d at line %d\n",modelIntValue,intValue,__LINE__+1);
+#endif
+    model_->factorization()->maximumPivots(intValue);
+    parameters_[ClpParam::PERTVALUE]->getVal(intValue);
+#ifdef PRINT_CLP_CHANGES
+    modelIntValue = model_->perturbation();
+    if (intValue!=modelIntValue)
+      printf("changing ? from %d to %d at line %d\n",modelIntValue,intValue,__LINE__+1);
+#endif
+    model_->setPerturbation(intValue);
+    parameters_[ClpParam::MAXITERATION]->getVal(intValue);
+#ifdef PRINT_CLP_CHANGES
+    modelIntValue = model_->maximumIterations();
+    if (intValue!=modelIntValue)
+      printf("changing ? from %d to %d at line %d\n",modelIntValue,intValue,__LINE__+1);
+#endif
+    model_->setMaximumIterations(intValue);
+    parameters_[ClpParam::SPECIALOPTIONS]->getVal(intValue);
+#ifdef PRINT_CLP_CHANGES
+    modelIntValue = model_->specialOptions();
+    if (intValue!=modelIntValue)
+      printf("changing ? from %d to %d at line %d\n",modelIntValue,intValue,__LINE__+1);
+#endif
+    model_->setSpecialOptions(intValue);
+    parameters_[ClpParam::RANDOMSEED]->getVal(intValue);
+    model_->setRandomSeed(intValue);
+    parameters_[ClpParam::MORESPECIALOPTIONS]->getVal(intValue);
+#ifdef PRINT_CLP_CHANGES
+    modelIntValue = model_->moreSpecialOptions();
+    if (intValue!=modelIntValue)
+      printf("changing ? from %d to %d at line %d\n",modelIntValue,intValue,__LINE__+1);
+#endif
+    model_->setMoreSpecialOptions(intValue);
+    // Double parameters
+    double doubleValue;
+    double modelDoubleValue;
+    parameters_[ClpParam::DUALTOLERANCE]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    modelDoubleValue = model_->dualTolerance();
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+    model_->setDualTolerance(doubleValue);
+    parameters_[ClpParam::PRIMALTOLERANCE]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    modelDoubleValue = model_->primalTolerance();
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+    model_->setPrimalTolerance(doubleValue);
+    parameters_[ClpParam::ZEROTOLERANCE]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    modelDoubleValue = model_->getSmallElementValue();
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+    model_->setSmallElementValue(doubleValue);
+    parameters_[ClpParam::DUALBOUND]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    modelDoubleValue = model_->dualBound();
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+    model_->setDualBound(doubleValue);
+    parameters_[ClpParam::PRIMALWEIGHT]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    modelDoubleValue = model_->infeasibilityCost();
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+    model_->setInfeasibilityCost(doubleValue);
+    parameters_[ClpParam::TIMELIMIT]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    modelDoubleValue = model_->maximumSeconds();
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+    model_->setMaximumSeconds(doubleValue);
+    parameters_[ClpParam::OBJSCALE]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    modelDoubleValue = model_->objectiveScale();
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+    model_->setObjectiveScale(doubleValue);
+    parameters_[ClpParam::RHSSCALE]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    modelDoubleValue = model_->rhsScale();
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+    model_->setRhsScale(doubleValue);
+    parameters_[ClpParam::PRESOLVETOLERANCE]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    model_->getDblParam(ClpPresolveTolerance, doubleValue);
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+    model_->setDblParam(ClpPresolveTolerance, doubleValue);
+#ifndef CLP_OLD_PROGRESS
+    // I dislike new way
+    parameters_[ClpParam::PROGRESS]->getVal(doubleValue);
+#ifdef PRINT_CLP_CHANGES
+    modelDoubleValue = model_->getMinIntervalProgressUpdate();
+    if (doubleValue!=modelDoubleValue)
+      printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+    model_->setMinIntervalProgressUpdate(doubleValue);
+#endif
+#endif
+  }
+}
+#endif
 //###########################################################################
 //###########################################################################
 
@@ -858,6 +984,11 @@ void ClpParameters::addClpIntParams() {
       "call\n \tsetMaximumIterations(value)\n can be useful.  If the code "
       "stops on seconds or by an interrupt this will be treated as stopping on "
       "maximum iterations. This is ignored in branchAndCut - use maxN!odes.");
+
+  parameters_[ClpParam::MORESPECIALOPTIONS]->setup(
+      "moreS!pecialOptions", "Yet more dubious options for Simplex", 0,
+      COIN_INT_MAX, 0,
+      "See ClpSimplex.hpp.");
 
   parameters_[ClpParam::OUTPUTFORMAT]->setup(
       "output!Format", "Which output format to use", 1, 6, 0,

@@ -15,7 +15,7 @@
 #include "ClpConfig.h"
 
 #include "ClpParam.hpp"
-#include "ClpModel.hpp"
+#include "ClpSimplex.hpp"
 
 /* \brief Clp algorithm control class
 
@@ -140,10 +140,14 @@ public:
    inline void setDefaultDirectory(std::string dir) { dfltDirectory_ = dir; }
 
   /*! \brief Set Clp model */
-  inline void setModel(ClpModel *model) { model_ = model; }
+  inline void setModel(ClpSimplex *model) { model_ = model; }
 
   /*! \brief Get Clp model */
-  inline ClpModel *getModel() const { return (model_); }
+  inline ClpSimplex *getModel() const { return (model_); }
+#ifdef CBC_CLUMSY_CODING
+  /*! \brief Synchronize Clp model - Int and Dbl */
+  void synchronizeModel();
+#endif
   //@{
 
    /*! \brief Returns index of first parameter that matches and number of 
@@ -158,8 +162,8 @@ private:
   /*! \brief The Cbc parameter vector (parameters stored by their index) */
   CoinParamVec parameters_;
 
-  /*! \brief A pointer to the current ClpModel object */
-  ClpModel *model_;
+  /*! \brief A pointer to the current ClpSimplex object */
+  ClpSimplex *model_;
 
 };
 
