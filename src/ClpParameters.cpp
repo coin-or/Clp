@@ -31,11 +31,6 @@ ClpParameters::~ClpParameters() {
   for (int i = 0; i < parameters_.size(); i++){
      delete parameters_[i];
   }
-#ifndef CBC_CLUMSY_CODING
-  if (model_) {
-    delete model_;
-  }
-#endif
 }
 
 int ClpParameters::matches(std::string field, int &numberMatches) {
