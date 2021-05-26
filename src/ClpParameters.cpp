@@ -12,6 +12,9 @@
 #include "ClpParameters.hpp"
 #include "ClpFactorization.hpp"
 
+//###########################################################################
+//###########################################################################
+
 /*
   Constructor for settings class.
 */
@@ -27,11 +30,17 @@ ClpParameters::ClpParameters() : parameters_(ClpParam::LASTPARAM), model_(0) {
   addClpParams();
 }
 
+//###########################################################################
+//###########################################################################
+
 ClpParameters::~ClpParameters() {
   for (int i = 0; i < parameters_.size(); i++){
      delete parameters_[i];
   }
 }
+
+//###########################################################################
+//###########################################################################
 
 int ClpParameters::matches(std::string field, int &numberMatches) {
   int firstMatch = -1;
@@ -52,6 +61,9 @@ int ClpParameters::matches(std::string field, int &numberMatches) {
   return firstMatch < 0 ? ClpParam::INVALID : firstMatch;
 }
 
+//###########################################################################
+//###########################################################################
+
 void ClpParameters::addClpParams() {
 
   addClpStrParams();
@@ -70,6 +82,10 @@ void ClpParameters::addClpParams() {
 
   return;
 }
+
+//###########################################################################
+//###########################################################################
+
 #ifdef CBC_CLUMSY_CODING
 //#define PRINT_CLP_CHANGES
 // Synchronize Clp model - Int and Dbl 
@@ -194,6 +210,7 @@ void ClpParameters::synchronizeModel() {
   }
 }
 #endif
+
 //###########################################################################
 //###########################################################################
 
@@ -201,13 +218,13 @@ void ClpParameters::addClpHelpParams() {
   for (int code = ClpParam::FIRSTHELPPARAM + 1; code < ClpParam::LASTHELPPARAM;
        code++) {
     getParam(code)->setPushFunc(ClpParamUtils::doHelpParam);
+    getParam(code)->setType(CoinParam::paramAct);
   }
   parameters_[ClpParam::GENERALQUERY]->setup(
-						"?", "Print a list of commands","",
-      CoinParam::displayPriorityNone);
+      "?", "Print a list of commands", "", CoinParam::displayPriorityNone);
 
   parameters_[ClpParam::FULLGENERALQUERY]->setup(
-						    "???", "Print a list with *all* commands, even those hidden with `?'","",
+      "???", "Print a list with *all* commands, even those hidden with `?'", "",
       CoinParam::displayPriorityNone);
 }
 
@@ -215,6 +232,11 @@ void ClpParameters::addClpHelpParams() {
 //###########################################################################
 
 void ClpParameters::addClpActionParams() {
+
+  for (int code = ClpParam::FIRSTACTIONPARAM + 1; code < ClpParam::LASTACTIONPARAM;
+       code++) {
+    getParam(code)->setType(CoinParam::paramAct);
+  }
 
   parameters_[ClpParam::ALLSLACK]->setup(
       "allS!lack", "Set basis back to all slack and reset solution",
@@ -274,13 +296,17 @@ void ClpParameters::addClpActionParams() {
       CoinParam::displayPriorityHigh);
 
 #if 1
-    parameters_[ClpParam::QUIT]->setup("quit", "Stops clp execution",
-      "This stops the execution of Clp, end, exit, quit and stop are synonyms", CoinParam::displayPriorityHigh);
+  parameters_[ClpParam::QUIT]->setup("quit", "Stops clp execution",
+      "This stops the execution of Clp, end, exit, quit and stop are synonyms",
+      CoinParam::displayPriorityHigh);
 
-    parameters_[ClpParam::EXIT]->setup("exit", "Stops clp execution",
-      "This stops the execution of Clp, end, exit, quit and stop are synonyms", CoinParam::displayPriorityHigh);
-    parameters_[ClpParam::STOP]->setup("stop", "Stops clp execution",
-      "This stops the execution of Clp, end, exit, quit and stop are synonyms", CoinParam::displayPriorityHigh);
+  parameters_[ClpParam::EXIT]->setup("exit", "Stops clp execution",
+      "This stops the execution of Clp, end, exit, quit and stop are synonyms",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::STOP]->setup("stop", "Stops clp execution",
+      "This stops the execution of Clp, end, exit, quit and stop are synonyms",
+      CoinParam::displayPriorityHigh);
 #endif
 
   parameters_[ClpParam::GMPL_SOLUTION]->setup(
@@ -436,31 +462,38 @@ void ClpParameters::addClpActionParams() {
 
 void ClpParameters::addClpStrParams() {
 
+  for (int code = ClpParam::FIRSTSTRINGPARAM + 1; code < ClpParam::LASTSTRINGPARAM;
+       code++) {
+    getParam(code)->setType(CoinParam::paramStr);
+    getParam(code)->setDefault(dfltDirectory_);
+  }
+
   parameters_[ClpParam::BASISIN]->setup(
-      "basisI!n", "Import basis from bas file", std::string("default.bas"),
+      "basisI!n", "Import basis from bas file", 
       "This will read an MPS format basis file from the given file name.  It "
       "will use the default directory given by 'directory'.  A name of '$' "
       "will use the previous value for the name. This is initialized to '', "
       "i.e. it must be set.  If you have libz then it can read compressed "
       "files 'xxxxxxxx.gz' or xxxxxxxx.bz2.",
       CoinParam::displayPriorityHigh);
-
+  parameters_[ClpParam::BASISIN]->setDefault(std::string("default.bas"));
+  
   parameters_[ClpParam::BASISOUT]->setup(
-      "basisO!ut", "Export basis as bas file", std::string("default.bas"),
+      "basisO!ut", "Export basis as bas file", 
       "This will write an MPS format basis file to the given file name.  It "
       "will use the default directory given by 'directory'.  A name of '$' "
       "will use the previous value for the name.  This is initialized to "
       "'default.bas'.",
       CoinParam::displayPriorityHigh);
-
+  parameters_[ClpParam::BASISOUT]->setDefault(std::string("default.bas"));
+  
   parameters_[ClpParam::DIRECTORY]->setup(
-      "directory", "Set Default directory for import etc.", dfltDirectory_,
+      "directory", "Set Default directory for import etc.", 
       "This sets the directory which import, export, saveModel, restoreModel "
       "etc. will use. It is initialized to the current directory.");
 
   parameters_[ClpParam::DIRSAMPLE]->setup(
       "dirSample", "Set directory where the COIN-OR sample problems are.",
-      dfltDirectory_,
       "This sets the directory where the COIN-OR sample problems reside. It is "
       "used only when -unitTest is passed to clp. clp will pick up the test "
       "problems from this directory. It is initialized to '../../Data/Sample'",
@@ -468,7 +501,6 @@ void ClpParameters::addClpStrParams() {
 
   parameters_[ClpParam::DIRNETLIB]->setup(
       "dirNetlib", "Set directory where the netlib problems are.",
-      dfltDirectory_,
       "This sets the directory where the netlib problems reside. One can get "
       "the netlib problems from COIN-OR or from the main netlib site. This "
       "parameter is used only when -netlib is passed to cbc. cbc will pick up "
@@ -479,7 +511,6 @@ void ClpParameters::addClpStrParams() {
 
   parameters_[ClpParam::DIRMIPLIB]->setup(
       "dirMiplib", "Set directory where the miplib 2003 problems are.",
-      dfltDirectory_,
       "This sets the directory where the miplib 2003 problems reside. One can "
       "get the miplib problems from COIN-OR or from the main miplib site. This "
       "parameter is used only when -miplib is passed to cbc. cbc will pick up "
@@ -489,7 +520,7 @@ void ClpParameters::addClpStrParams() {
       CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::EXPORT]->setup(
-      "export", "Export model as mps file", std::string("default.mps"),
+      "export", "Export model as mps file", 
       "This will write an MPS format file to the given file name.  It will use "
       "the default directory given by 'directory'.  A name of '$' will use the "
       "previous value for the name.  This is initialized to 'default.mps'. It "
@@ -497,9 +528,10 @@ void ClpParameters::addClpStrParams() {
       "Rnnnnnnn and Cnnnnnnn.  This can be done by setting 'keepnames' off "
       "before importing mps file.",
       CoinParam::displayPriorityHigh);
-
+  parameters_[ClpParam::EXPORT]->setDefault(std::string("default.mps"));
+  
   parameters_[ClpParam::IMPORT]->setup(
-      "import", "Import model from mps file", std::string("default.mps"),
+      "import", "Import model from mps file", 
       "This will read an MPS format file from the given file name.  It will "
       "use the default directory given by 'directory'.  A name of '$' will use "
       "the previous value for the name. This is initialized to '', i.e. it "
@@ -507,29 +539,34 @@ void ClpParameters::addClpStrParams() {
       "'xxxxxxxx.gz' or 'xxxxxxxx.bz2'. If 'keepnames' is off, then names are "
       "dropped -> Rnnnnnnn and Cnnnnnnn.",
       CoinParam::displayPriorityHigh);
-
+  parameters_[ClpParam::IMPORT]->setDefault(std::string("default.mps"));
+  
   parameters_[ClpParam::PRINTMASK]->setup(
       "printM!ask", "Control printing of solution with a regular expression",
-      "",
       "If set then only those names which match mask are printed in a "
       "solution. '?' matches any character and '*' matches any set of "
       "characters.  The default is '' (unset) so all variables are printed. "
       "This is only active if model has names.");
-
+  parameters_[ClpParam::PRINTMASK]->setDefault("");
+  
   parameters_[ClpParam::RESTORE]->setup(
       "restore!Model", "Restore model from binary file",
-      std::string("default.prob"),
       "This reads data save by saveModel from the given file.  It will use the "
       "default directory given by 'directory'.  A name of '$' will use the "
       "previous value for the name.  This is initialized to 'default.prob'.",
       CoinParam::displayPriorityHigh);
-
+  parameters_[ClpParam::RESTORE]->setDefault(std::string("default.prob"));
+  
   parameters_[ClpParam::SAVE]->setup(
-      "saveM!odel", "Save model to binary file", std::string("default.prob"),
-      "This will save the problem to the given file name for future use by restoreModel. It will use the default directory given by 'directory'.  A name of '$' will use the previous value for the name.  This is initialized to 'default.prob'.");
-      
-      parameters_[ClpParam::SAVESOL]->setup(
-      "saveS!olution", "saves solution to file", std::string("solution.sln"),
+      "saveM!odel", "Save model to binary file", 
+      "This will save the problem to the given file name for future use by "
+      "restoreModel. It will use the default directory given by 'directory'.  "
+      "A name of '$' will use the previous value for the name.  This is "
+      "initialized to 'default.prob'.");
+  parameters_[ClpParam::SAVE]->setDefault(std::string("default.prob"));
+  
+  parameters_[ClpParam::SAVESOL]->setup(
+      "saveS!olution", "saves solution to file", 
       "This will write a binary solution file to the given file name.  It will "
       "use the default directory given by 'directory'.  A name of '$' will use "
       "the previous value for the name.  This is initialized to "
@@ -539,14 +576,16 @@ void ClpParameters::addClpStrParams() {
       "reduced costs - see bottom of parameters_[ClpParam::]->setup(.cpp for "
       "code that reads or writes file. If name contains '_fix_read_' then does "
       "not write but reads and will fix all variables");
-
-  parameters_[ClpParam::SOLUTION]->setup(
-      "solu!tion", "Prints solution to file", std::string("stdout"),
+  parameters_[ClpParam::SAVESOL]->setDefault(std::string("solution.sln"));
+  
+  parameters_[ClpParam::SOLUTION]->setup("solu!tion", "Prints solution to file", 
       "This will write a primitive solution file to the given file name.  It "
       "will use the default directory given by 'directory'.  A name of '$' "
       "will use the previous value for the name.  This is initialized to "
       "'stdout'.  The amount of output can be varied using printi!ngOptions or "
       "printMask.");
+  parameters_[ClpParam::SOLUTION]->setDefault(std::string("stdout"));
+  
 }
 
 //###########################################################################
@@ -555,14 +594,16 @@ void ClpParameters::addClpStrParams() {
 void ClpParameters::addClpKwdParams() {
   for (int code = ClpParam::FIRSTKWDPARAM + 1; code < ClpParam::LASTKWDPARAM;
        code++) {
-    parameters_[code]->setPushFunc(ClpParamUtils::pushClpKwdParam);
+    getParam(code)->setPushFunc(ClpParamUtils::pushClpKwdParam);
+    getParam(code)->setType(CoinParam::paramKwd);
   }
 
 #if CLP_HAS_ABC
   parameters_[ClpParam::ABCWANTED]->setup(
-      "abc", "Whether to visit Aboca", "off", 0,
+      "abc", "Whether to visit Aboca", 
       "Decide whether to use A Basic Optimization Code (Accelerated?) and "
       "whether to try going parallel!");
+  parameters_[ClpParam::ABCWANTED]->appendKwd("off");
   parameters_[ClpParam::ABCWANTED]->appendKwd("one");
   parameters_[ClpParam::ABCWANTED]->appendKwd("two");
   parameters_[ClpParam::ABCWANTED]->appendKwd("three");
@@ -573,38 +614,46 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::ABCWANTED]->appendKwd("eight");
   parameters_[ClpParam::ABCWANTED]->appendKwd("on");
   parameters_[ClpParam::ABCWANTED]->appendKwd("decide");
+  parameters_[ClpParam::ABCWANTED]->setDefault("off");
   paramAboca.setFakeKeyWord(10);
 #endif
 
   parameters_[ClpParam::COMMANDPRINTLEVEL]->setup(
-      "allC!ommands", "Whether to print less used commands", "no", 0,
+      "allC!ommands", "Whether to print less used commands", 
       "For the sake of your sanity, only the more useful and simple commands "
       "are printed out on ?.");
+  parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("no");
   parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("more");
   parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("all");
+  parameters_[ClpParam::COMMANDPRINTLEVEL]->setDefault("no");
 
   parameters_[ClpParam::BIASLU]->setup(
-      "biasLU", "Whether factorization biased towards U", "LX", 0, "",
+      "biasLU", "Whether factorization biased towards U", "",
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::BIASLU]->appendKwd("LX");
   parameters_[ClpParam::BIASLU]->appendKwd("UX");
   parameters_[ClpParam::BIASLU]->appendKwd("UU");
   parameters_[ClpParam::BIASLU]->appendKwd("LL");
+  parameters_[ClpParam::BIASLU]->setDefault("LX");
 
   parameters_[ClpParam::BARRIERSCALE]->setup(
-      "bscale", "Whether to scale in barrier (and ordering speed)", "off", 0,
+      "bscale", "Whether to scale in barrier (and ordering speed)", 
       "", CoinParam::displayPriorityNone);
+  parameters_[ClpParam::BARRIERSCALE]->appendKwd("off");
   parameters_[ClpParam::BARRIERSCALE]->appendKwd("on");
   parameters_[ClpParam::BARRIERSCALE]->appendKwd("off1");
   parameters_[ClpParam::BARRIERSCALE]->appendKwd("on1");
   parameters_[ClpParam::BARRIERSCALE]->appendKwd("off2");
   parameters_[ClpParam::BARRIERSCALE]->appendKwd("on2");
+  parameters_[ClpParam::BARRIERSCALE]->setDefault("off");
 
   parameters_[ClpParam::CHOLESKY]->setup(
-      "chol!esky", "Which cholesky algorithm", "native", 0,
+      "chol!esky", "Which cholesky algorithm", 
       "For a barrier code to be effective it needs a good Cholesky ordering "
       "and factorization. The native ordering and factorization is not state "
       "of the art, although acceptable. You may want to link in one from "
       "another source.  See Makefile.locations for some possibilities.");
+  parameters_[ClpParam::CHOLESKY]->appendKwd("native");
   parameters_[ClpParam::CHOLESKY]->appendKwd("dense");
 #ifdef CLP_HAS_WSMP
   parameters_[ClpParam::CHOLESKY]->appendKwd("fudge!Long");
@@ -633,15 +682,17 @@ void ClpParameters::addClpKwdParams() {
 #else
   parameters_[ClpParam::CHOLESKY]->appendKwd("Pardiso_dummy");
 #endif
+  parameters_[ClpParam::CHOLESKY]->setDefault("native");
 
   parameters_[ClpParam::CRASH]->setup(
-      "crash", "Whether to create basis for problem", "off", 0,
+      "crash", "Whether to create basis for problem", 
       "If crash is set to 'on' and there is an all slack basis then Clp will "
       "flip or put structural variables into the basis with the aim of getting "
       "dual feasible.  On average, dual simplex seems to perform better "
       "without it and there are alternative types of 'crash' for primal "
       "simplex, e.g. 'idiot' or 'sprint'. A variant due to Solow and Halim "
       "which is as 'on' but just flips is also available.");
+  parameters_[ClpParam::CRASH]->appendKwd("off");
   parameters_[ClpParam::CRASH]->appendKwd("on");
   parameters_[ClpParam::CRASH]->appendKwd("so!low_halim");
   parameters_[ClpParam::CRASH]->appendKwd("lots");
@@ -661,30 +712,34 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::CRASH]->appendKwd("idiot6");
   parameters_[ClpParam::CRASH]->appendKwd("idiot7");
 #endif
+  parameters_[ClpParam::CRASH]->setDefault("off");
 
   parameters_[ClpParam::CROSSOVER]->setup(
       "cross!over",
       "Whether to get a basic solution with the simplex algorithm after the "
       "barrier algorithm finished",
-      "on", 0,
       "Interior point algorithms do not obtain a basic solution. This option "
       "will crossover to a basic solution suitable for ranging or branch and "
       "cut. With the current state of the solver for quadratic programs it may "
       "be a good idea to switch off crossover for this case (and maybe "
       "presolve as well) - the option 'maybe' does this.");
   parameters_[ClpParam::CRASH]->appendKwd("off");
+  parameters_[ClpParam::CROSSOVER]->appendKwd("on");
   parameters_[ClpParam::CRASH]->appendKwd("maybe");
   parameters_[ClpParam::CRASH]->appendKwd("presolve");
+  parameters_[ClpParam::CROSSOVER]->setDefault("on");
 
   parameters_[ClpParam::DIRECTION]->setup(
-      "direction", "Minimize or Maximize", "min!imize", 0,
+      "direction", "Minimize or Maximize", 
       "The default is minimize - use 'direction maximize' for maximization.\n "
       "You can also use the parameters 'maximize' or 'minimize'.");
+  parameters_[ClpParam::DIRECTION]->appendKwd("min!imize");
   parameters_[ClpParam::DIRECTION]->appendKwd("max!imize");
   parameters_[ClpParam::DIRECTION]->appendKwd("zero");
+  parameters_[ClpParam::DIRECTION]->setDefault("min!imize");
 
   parameters_[ClpParam::DUALPIVOT]->setup(
-      "dualP!ivot", "Dual pivot choice algorithm", "auto!matic", 0,
+      "dualP!ivot", "Dual pivot choice algorithm", 
       "The Dantzig method is simple but its use is deprecated.  Steepest is "
       "the method of choice and there are two variants which keep all weights "
       "updated but only scan a subset each iteration. Partial switches this on "
@@ -693,14 +748,16 @@ void ClpParameters::addClpKwdParams() {
       "This selects incoming variables to try to avoid degenerate moves. See "
       "also option psi.",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::DUALPIVOT]->appendKwd("auto!matic");
   parameters_[ClpParam::DUALPIVOT]->appendKwd("dant!zig");
   parameters_[ClpParam::DUALPIVOT]->appendKwd("partial");
   parameters_[ClpParam::DUALPIVOT]->appendKwd("steep!est");
   parameters_[ClpParam::DUALPIVOT]->appendKwd("PEsteep!est");
   parameters_[ClpParam::DUALPIVOT]->appendKwd("PEdantzig");
+  parameters_[ClpParam::DUALPIVOT]->setDefault("auto!matic");
 
   parameters_[ClpParam::FACTORIZATION]->setup(
-      "fact!orization", "Which factorization to use", "normal", 0,
+      "fact!orization", "Which factorization to use",
 #ifndef ABC_INHERIT
       "The default is to use the normal CoinFactorization, but other choices "
       "are a dense one, OSL's, or one designed for small problems."
@@ -712,22 +769,26 @@ void ClpParameters::addClpKwdParams() {
       "a long factorization."
 #endif
   );
+  parameters_[ClpParam::FACTORIZATION]->appendKwd("normal");
   parameters_[ClpParam::FACTORIZATION]->appendKwd("dense");
   parameters_[ClpParam::FACTORIZATION]->appendKwd("simple");
   parameters_[ClpParam::FACTORIZATION]->appendKwd("osl");
+  parameters_[ClpParam::FACTORIZATION]->setDefault("normal");
 
   parameters_[ClpParam::GAMMA]->setup("gamma!(Delta)",
-                                     "Whether to regularize barrier", "off", 0,
+                                     "Whether to regularize barrier", 
                                      "", CoinParam::displayPriorityLow);
+  parameters_[ClpParam::GAMMA]->appendKwd("off");
   parameters_[ClpParam::GAMMA]->appendKwd("on");
   parameters_[ClpParam::GAMMA]->appendKwd("gamma");
   parameters_[ClpParam::GAMMA]->appendKwd("delta");
   parameters_[ClpParam::GAMMA]->appendKwd("onstrong");
   parameters_[ClpParam::GAMMA]->appendKwd("gammastrong");
   parameters_[ClpParam::GAMMA]->appendKwd("deltastrong");
+  parameters_[ClpParam::GAMMA]->setDefault("off");
 
   parameters_[ClpParam::PRESOLVE]->setup(
-      "presolve", "Whether to presolve problem", "on", 0,
+      "presolve", "Whether to presolve problem",
       "Presolve analyzes the model to find such things as redundant equations, "
       "equations which fix some variables, equations which can be transformed "
       "into bounds, etc. For the initial solve of any problem this is worth "
@@ -735,12 +796,14 @@ void ClpParameters::addClpKwdParams() {
       "normally do 5 passes, while using 'more' will do 10.  If the problem is "
       "very large one can let CLP write the original problem to file by using "
       "'file'.");
+  parameters_[ClpParam::PRESOLVE]->appendKwd("on");
   parameters_[ClpParam::PRESOLVE]->appendKwd("off");
   parameters_[ClpParam::PRESOLVE]->appendKwd("more");
   parameters_[ClpParam::PRESOLVE]->appendKwd("file");
+  parameters_[ClpParam::PRESOLVE]->setDefault("on");
 
   parameters_[ClpParam::PRIMALPIVOT]->setup(
-      "primalP!ivot", "Primal pivot choice algorithm", "auto!matic", 0,
+      "primalP!ivot", "Primal pivot choice algorithm", 
       "The Dantzig method is simple but its use is deprecated.  Exact devex is "
       "the method of choice and there are two variants which keep all weights "
       "updated but only scan a subset each iteration. Partial switches this on "
@@ -752,6 +815,7 @@ void ClpParameters::addClpKwdParams() {
       "Towhidi, M., Soumis, F., The positive edge pricing rule for the dual "
       "simplex.",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::PRIMALPIVOT]->appendKwd("autom!matic");
   parameters_[ClpParam::PRIMALPIVOT]->appendKwd("exa!ct");
   parameters_[ClpParam::PRIMALPIVOT]->appendKwd("dant!zig");
   parameters_[ClpParam::PRIMALPIVOT]->appendKwd("part!ial");
@@ -760,9 +824,10 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::PRIMALPIVOT]->appendKwd("sprint");
   parameters_[ClpParam::PRIMALPIVOT]->appendKwd("PEsteep!est");
   parameters_[ClpParam::PRIMALPIVOT]->appendKwd("PEdantzig");
+  parameters_[ClpParam::PRIMALPIVOT]->setDefault("auto!matic");
 
   parameters_[ClpParam::INTPRINT]->setup(
-      "printi!ngOptions", "Print options", "normal", 0,
+      "printi!ngOptions", "Print options", 
       "This changes the amount and format of printing a solution:\nnormal - "
       "nonzero column variables \n integer - nonzero integer column "
       "variables\n special - in format suitable for OsiRowCutDebugger\n rows - "
@@ -770,6 +835,7 @@ void ClpParameters::addClpKwdParams() {
       "variables and row activities.\n\n For non-integer problems 'integer' "
       "and 'special' act like 'normal'. Also see printMask for controlling "
       "output.");
+  parameters_[ClpParam::INTPRINT]->appendKwd("normal");
   parameters_[ClpParam::INTPRINT]->appendKwd("integer");
   parameters_[ClpParam::INTPRINT]->appendKwd("special");
   parameters_[ClpParam::INTPRINT]->appendKwd("rows");
@@ -783,32 +849,38 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::INTPRINT]->appendKwd("boundsall");
   parameters_[ClpParam::INTPRINT]->appendKwd("fixint");
   parameters_[ClpParam::INTPRINT]->appendKwd("fixall");
+  parameters_[ClpParam::INTPRINT]->setDefault("normal");
 
   parameters_[ClpParam::SCALING]->setup("scal!ing", "Whether to scale problem",
-                                       "auto!matic", 0, "",
-                                       CoinParam::displayPriorityLow);
+                                       "", CoinParam::displayPriorityLow);
+  parameters_[ClpParam::SCALING]->appendKwd("auto!matic");
   parameters_[ClpParam::SCALING]->appendKwd("off");
   parameters_[ClpParam::SCALING]->appendKwd("equi!librium");
   parameters_[ClpParam::SCALING]->appendKwd("geo!metric");
   parameters_[ClpParam::SCALING]->appendKwd("dynamic");
   parameters_[ClpParam::SCALING]->appendKwd("rows!only");
+  parameters_[ClpParam::SCALING]->setDefault("auto!matic");
 
 #ifndef COIN_AVX2
   parameters_[ClpParam::VECTOR]->setup(
-      "vector", "Whether to use vector? Form of matrix in simplex", "off", 0,
+      "vector", "Whether to use vector? Form of matrix in simplex", 
       "If this is on ClpPackedMatrix uses extra column copy in odd format.",
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::VECTOR]->appendKwd("off");
   parameters_[ClpParam::VECTOR]->appendKwd("on");
+  parameters_[ClpParam::VECTOR]->setDefault("off");
 #else
   parameters_[ClpParam::VECTOR]->setup(
-      "vector", "Try and use vector instructions in simplex", "off", 0,
+      "vector", "Try and use vector instructions in simplex", 
       "At present only for Intel architectures - but could be extended. Uses "
       "avx2 or avx512 instructions. Uses different storage for matrix - can be "
       "of benefit without instruction set on some problems. I may add pool to "
       "switch on a pool matrix",
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::VECTOR]->appendKwd("off");
   parameters_[ClpParam::VECTOR]->appendKwd("on");
   parameters_[ClpParam::VECTOR]->appendKwd("ones");
+  parameters_[ClpParam::VECTOR]->setDefault("off");
 #endif
 }
 
@@ -818,13 +890,14 @@ void ClpParameters::addClpKwdParams() {
 void ClpParameters::addClpDblParams() {
   for (int code = ClpParam::FIRSTDBLPARAM + 1; code < ClpParam::LASTDBLPARAM;
        code++) {
-    parameters_[code]->setPushFunc(ClpParamUtils::pushClpDblParam);
+    getParam(code)->setPushFunc(ClpParamUtils::pushClpDblParam);
+    getParam(code)->setType(CoinParam::paramDbl);
   }
 
   parameters_[ClpParam::DUALBOUND]->setup(
       "dualB!ound",
       "Initially algorithm acts as if no gap between bounds exceeds this value",
-      1.0e-20, 1.0e20, 0.0,
+      1.0e-20, 1.0e20, 
       "The dual algorithm in Clp is a single phase algorithm as opposed to a "
       "two phase algorithm where you first get feasible then optimal.  If a "
       "problem has both upper and lower bounds then it is trivial to get dual "
@@ -836,39 +909,44 @@ void ClpParameters::addClpDblParams() {
       "iterations, while too low a bound means the code may go all the way and "
       "then have to increase the bounds.  OSL had a heuristic to adjust "
       "bounds, maybe we need that here.");
+  parameters_[ClpParam::DUALBOUND]->setDefault(0.0);
 
-  parameters_[ClpParam::DUALTOLERANCE]->setup("dualT!olerance", "For an optimal solution no dual infeasibility may exceed this value", 1.0e-20, COIN_DBL_MAX, 0.0, "Normally the default tolerance is fine, but one may want to increase it a bit if the dual simplex algorithm seems to be having a hard time. One method which can be faster is to use a large tolerance e.g. 1.0e-4 and the dual simplex algorithm and then to clean up the problem using the primal simplex algorithm with the correct tolerance (remembering to switch off presolve for this final short clean up phase).");
+  parameters_[ClpParam::DUALTOLERANCE]->setup("dualT!olerance", "For an optimal solution no dual infeasibility may exceed this value", 1.0e-20, COIN_DBL_MAX, "Normally the default tolerance is fine, but one may want to increase it a bit if the dual simplex algorithm seems to be having a hard time. One method which can be faster is to use a large tolerance e.g. 1.0e-4 and the dual simplex algorithm and then to clean up the problem using the primal simplex algorithm with the correct tolerance (remembering to switch off presolve for this final short clean up phase).");
+  parameters_[ClpParam::DUALTOLERANCE]->setDefault(0.0);
                                          
   parameters_[ClpParam::FAKEBOUND]->setup(
       "fakeB!ound", "All bounds <= this value - DEBUG", 1.0, 1.0e15);
+  parameters_[ClpParam::FAKEBOUND]->setDefault(0.0);
 
   parameters_[ClpParam::OBJSCALE]->setup(
       "objective!Scale", "Scale factor to apply to objective", -COIN_DBL_MAX,
-      COIN_DBL_MAX, 1.0,
+      COIN_DBL_MAX,
       "If the objective function has some very large values, you may wish to "
       "scale them internally by this amount.  It can also be set by autoscale. "
       "It is applied after scaling.  You are unlikely to need this.",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::OBJSCALE]->setDefault(1.0);
 
   parameters_[ClpParam::PRESOLVETOLERANCE]->setup(
       "preT!olerance", "Tolerance to use in presolve", 1.0e-20, COIN_DBL_MAX,
-      0.0,
       "One may want to increase this tolerance if presolve says the problem is "
       "infeasible and one has awkward numbers and is sure that the problem is "
       "really feasible.");
+  parameters_[ClpParam::PRESOLVETOLERANCE]->setDefault(0.09);
 
   parameters_[ClpParam::PRIMALTOLERANCE]->setup(
       "primalT!olerance",
       "For a feasible solution no primal infeasibility, i.e., constraint "
       "violation, may exceed this value",
-      1.0e-20, COIN_DBL_MAX, 0.0,
+      1.0e-20, COIN_DBL_MAX,
       "Normally the default tolerance is fine, but one may want to increase it "
       "a bit if the primal simplex algorithm seems to be having a hard time.");
+  parameters_[ClpParam::PRIMALTOLERANCE]->setDefault(0.0);
 
   parameters_[ClpParam::PRIMALWEIGHT]->setup(
       "primalW!eight",
       "Initially algorithm acts as if it costs this much to be infeasible",
-      1.0e-20, COIN_DBL_MAX, 0.0,
+      1.0e-20, COIN_DBL_MAX, 
       "The primal algorithm in Clp is a single phase algorithm as opposed to a "
       "two phase algorithm where you first get feasible then optimal.  So Clp "
       "is minimizing this weight times the sum of primal infeasibilities plus "
@@ -877,43 +955,50 @@ void ClpParameters::addClpDblParams() {
       "iterate into the wrong directory for long and then has to increase the "
       "weight in order to get feasible."); // OSL had a heuristic to adjust
                                            // bounds, maybe we need that here.
+  parameters_[ClpParam::PRIMALWEIGHT]->setDefault(0.0);
 
   parameters_[ClpParam::PSI]->setup(
       "psi", "Two-dimension pricing factor for Positive Edge criterion", -1.1,
-      1.1, -0.5,
+      1.1, 
       "The Positive Edge criterion has been added to select incoming variables to try and avoid degenerate moves. Variables not in the promising set have their infeasibility weight multiplied by psi, so 0.01 would mean that if there were any promising variables, then they would always be chosen, while 1.0 effectively switches the algorithm off. There are two ways of switching this feature on.  One way is to set psi to a positive value and then the Positive Edge criterion will be used for both primal and dual simplex.  The other way is to select PEsteepest in dualpivot choice (for example), then the absolute value of psi is used. \
 Code donated by Jeremy Omer.  See Towhidi, M., Desrosiers, J., Soumis, F., The positive edge criterion within COIN-OR's CLP; Omer, J., Towhidi, M., Soumis, F., The positive edge pricing rule for the dual simplex."); // Until this settles down it is only implemented in CLP.
+  parameters_[ClpParam::PSI]->setDefault(-0.5);
 
   parameters_[ClpParam::PROGRESS]->setup(
       "progress!(Interval)", "Time interval for printing progress",
-      -COIN_DBL_MAX, COIN_DBL_MAX, 0.7,
+      -COIN_DBL_MAX, COIN_DBL_MAX,
       "This sets a minimum interval for some printing - elapsed seconds");
+  parameters_[ClpParam::PROGRESS]->setDefault(0.7);
 
   parameters_[ClpParam::OBJSCALE2]->setup(
       "reallyO!bjectiveScale", "Scale factor to apply to objective in place",
-      -COIN_DBL_MAX, COIN_DBL_MAX, 1.0,
+      -COIN_DBL_MAX, COIN_DBL_MAX, 
       "You can set this to -1.0 to test maximization or other to stress code",
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::OBJSCALE2]->setDefault(1.0);
 
   parameters_[ClpParam::RHSSCALE]->setup(
       "rhs!Scale", "Scale factor to apply to rhs and bounds", -COIN_DBL_MAX,
-      COIN_DBL_MAX, 1.0,
+      COIN_DBL_MAX, 
       "If the rhs or bounds have some very large meaningful values, you may "
       "wish to scale them internally by this amount.  It can also be set by "
       "autoscale.  This should not be needed.",
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::RHSSCALE]->setDefault(1.0);
 
   parameters_[ClpParam::TIMELIMIT]->setup(
-      "sec!onds", "Maximum seconds", -1.0, COIN_DBL_MAX, -1.0,
+      "sec!onds", "Maximum seconds", -1.0, COIN_DBL_MAX, 
       "After this many seconds clp will act as if maximum iterations had been "
       "reached (if value >=0).");
+  parameters_[ClpParam::TIMELIMIT]->setDefault(-1.0);
 
   parameters_[ClpParam::ZEROTOLERANCE]->setup(
       "zeroT!olerance",
       "Kill all coefficients whose absolute value is less than this value",
-      1.0e-100, 1.0e-5, 1.0e-20,
+      1.0e-100, 1.0e-5, 
       "This applies to reading mps files (and also lp files if "
       "KILL_ZERO_READLP defined)");
+  parameters_[ClpParam::ZEROTOLERANCE]->setDefault(1.0e-20);
 }
 
 //###########################################################################
@@ -922,11 +1007,12 @@ Code donated by Jeremy Omer.  See Towhidi, M., Desrosiers, J., Soumis, F., The p
 void ClpParameters::addClpIntParams() {
   for (int code = ClpParam::FIRSTINTPARAM + 1; code < ClpParam::LASTINTPARAM;
        code++) {
-    parameters_[code]->setPushFunc(ClpParamUtils::pushClpIntParam);
+    getParam(code)->setPushFunc(ClpParamUtils::pushClpIntParam);
+    getParam(code)->setType(CoinParam::paramInt);
   }
 
   parameters_[ClpParam::CPP]->setup(
-      "cpp!Generate", "Generates C++ code", -1, 50000, 0,
+      "cpp!Generate", "Generates C++ code", -1, 50000,
       "Once you like what the stand-alone solver does then this allows you to "
       "generate user_driver.cpp which approximates the code. 0 gives simplest "
       "driver, 1 generates saves and restores, 2 generates saves and restores "
@@ -934,59 +1020,66 @@ void ClpParameters::addClpIntParams() {
       "dependent code rather than computed values. This is now deprecated as "
       "you can call stand-alone solver - see Cbc/examples/driver4.cpp.",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::CPP]->setDefault(0);
 
   parameters_[ClpParam::DECOMPOSE_BLOCKS]->setup(
       "decomp!ose", "Whether to try decomposition", -COIN_INT_MAX, COIN_INT_MAX,
-      0,
       "0 - off, 1 choose blocks >1 use as blocks Dantzig Wolfe if primal, "
       "Benders if dual - uses sprint pass for number of passes",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::DECOMPOSE_BLOCKS]->setDefault(0);
 
   parameters_[ClpParam::DENSE]->setup(
       "dense!Threshold", "Threshold for using dense factorization", -1, 10000,
-      -1,
       "If processed problem <= this use dense factorization",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::DENSE]->setDefault(-1);
 
   parameters_[ClpParam::DUALIZE]->setup("dualize", "Solves dual reformulation",
-                                       0, 4, 0, "Don't even think about it.",
+                                       0, 4, "Don't even think about it.",
                                        CoinParam::displayPriorityLow);
+  parameters_[ClpParam::DUALIZE]->setDefault(0);
 
   parameters_[ClpParam::IDIOT]->setup(
-      "idiot!Crash", "Whether to try idiot crash", -1, COIN_INT_MAX, 0,
+      "idiot!Crash", "Whether to try idiot crash", -1, COIN_INT_MAX,
       "This is a type of 'crash' which works well on some homogeneous "
       "problems. It works best on problems with unit elements and rhs but will "
       "do something to any model.  It should only be used before the primal "
       "simplex algorithm.  It can be set to -1 when the code decides for "
       "itself whether to use it, 0 to switch off, or n > 0 to do n passes.");
+  parameters_[ClpParam::IDIOT]->setDefault(0);
 
   parameters_[ClpParam::LOGLEVEL]->setup(
-      "log!Level", "Level of detail in Coin branch and Cut output", -63, 63, 1,
+      "log!Level", "Level of detail in Coin branch and Cut output", -63, 63,
       "If 0 then there should be no output in normal circumstances.  1 is "
       "probably the best value for most uses, while 2 and 3 give more "
       "information.");
+  parameters_[ClpParam::LOGLEVEL]->setDefault(1);
 
   parameters_[ClpParam::MAXFACTOR]->setup(
       "maxF!actor", "Maximum number of iterations between refactorizations", 1,
-      COIN_INT_MAX, 0,
+      COIN_INT_MAX, 
       "If this is left at its default value of 200 then CLP will guess a  "
       "value to use.  CLP may decide to re-factorize earlier for accuracy.");
+  parameters_[ClpParam::MAXFACTOR]->setDefault(0);
 
   parameters_[ClpParam::MAXITERATION]->setup(
       "maxIt!erations", "Maximum number of iterations before stopping", 0,
-      COIN_INT_MAX, 0,
+      COIN_INT_MAX, 
       "This can be used for testing purposes.  The corresponding library "
       "call\n \tsetMaximumIterations(value)\n can be useful.  If the code "
       "stops on seconds or by an interrupt this will be treated as stopping on "
       "maximum iterations. This is ignored in branchAndCut - use maxN!odes.");
+  parameters_[ClpParam::MAXITERATION]->setDefault(0);
 
   parameters_[ClpParam::MORESPECIALOPTIONS]->setup(
       "moreS!pecialOptions", "Yet more dubious options for Simplex", 0,
-      COIN_INT_MAX, 0,
+      COIN_INT_MAX, 
       "See ClpSimplex.hpp.");
+  parameters_[ClpParam::MORESPECIALOPTIONS]->setDefault(0);
 
   parameters_[ClpParam::OUTPUTFORMAT]->setup(
-      "output!Format", "Which output format to use", 1, 6, 0,
+      "output!Format", "Which output format to use", 1, 6,
       "Normally export will be done using normal representation for numbers "
       "and two values per line.  You may want to do just one per line (for "
       "grep or suchlike) and you may wish to save with absolute accuracy using "
@@ -995,79 +1088,91 @@ void ClpParameters::addClpIntParams() {
       "format, 3,4 gives greater precision, while 5,6 give IEEE values.  When "
       "used for exporting a basis 1 does not save values, 2 saves values, 3 "
       "with greater accuracy and 4 in IEEE.");
+  parameters_[ClpParam::OUTPUTFORMAT]->setDefault(0);
 
   parameters_[ClpParam::PRESOLVEPASS]->setup(
-      "passP!resolve", "How many passes in presolve", -200, 100, 0,
+      "passP!resolve", "How many passes in presolve", -200, 100,
       "Normally Presolve does 10 passes but you may want to do less to make it "
       "more lightweight or do more if improvements are still being made.  As "
       "Presolve will return if nothing is being taken out, you should not "
       "normally need to use this fine tuning.",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::PRESOLVEPASS]->setDefault(0);
 
   parameters_[ClpParam::PERTVALUE]->setup("pertV!alue", "Method of perturbation",
-                                         -5000, 102, 0, "",
+                                         -5000, 102, "",
                                          CoinParam::displayPriorityLow);
+  parameters_[ClpParam::PERTVALUE]->setDefault(0);
 
   parameters_[ClpParam::PRINTOPTIONS]->setup(
-      "pO!ptions", "Dubious print options", 0, COIN_INT_MAX, 0,
+      "pO!ptions", "Dubious print options", 0, COIN_INT_MAX,
       "If this is > 0 then presolve will give more information and branch and "
       "cut will give statistics",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::PRINTOPTIONS]->setDefault(0);
 
   parameters_[ClpParam::RANDOMSEED]->setup(
-      "randomS!eed", "Random seed for Clp", 0, COIN_INT_MAX, 1234567,
+      "randomS!eed", "Random seed for Clp", 0, COIN_INT_MAX, 
       "Initialization of the random seed for pseudo-random numbers used to "
       "break ties in degenerate problems. This may yield a different "
       "continuous optimum and, in the context of Cbc, different cuts and "
       "heuristic solutions. The special value of 0 lets CLP use the time of "
       "the day for the initial seed.");
+  parameters_[ClpParam::RANDOMSEED]->setDefault(1234567);
 
   parameters_[ClpParam::SLPVALUE]->setup(
-      "slp!Value", "Number of slp passes before primal", -50000, 50000, 0,
+      "slp!Value", "Number of slp passes before primal", -50000, 50000,
       "If you are solving a quadratic problem using primal then it may be "
       "helpful to do some sequential Lps to get a good approximate solution.",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::SLPVALUE]->setDefault(0);
 
   parameters_[ClpParam::SMALLFACT]->setup(
       "small!Factorization", "Threshold for using small factorization", -1,
-      10000, -1, "If processed problem <= this use small factorization",
+      10000, "If processed problem <= this use small factorization",
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::SMALLFACT]->setDefault(-1);
 
   parameters_[ClpParam::SPECIALOPTIONS]->setup(
       "special!Options", "Dubious options for Simplex - see ClpSimplex.hpp", 0,
-      COIN_INT_MAX, 0, "", CoinParam::displayPriorityNone);
+      COIN_INT_MAX, "", CoinParam::displayPriorityNone);
+  parameters_[ClpParam::SPECIALOPTIONS]->setDefault(0);
 
   parameters_[ClpParam::SPRINT]->setup(
-      "sprint!Crash", "Whether to try sprint crash", -1, COIN_INT_MAX, 0,
+      "sprint!Crash", "Whether to try sprint crash", -1, COIN_INT_MAX, 
       "For long and thin problems this method may solve a series of small "
       "problems created by taking a subset of the columns.  The idea as "
       "'Sprint' was introduced by J. Forrest after an LP code of that name of "
       "the 60's which tried the same tactic (not totally successfully). CPLEX "
       "calls it 'sifting'.  -1 lets CLP automatically choose the number of "
       "passes, 0 is off, n is number of passes");
+  parameters_[ClpParam::SPRINT]->setDefault(0);
 
   parameters_[ClpParam::SUBSTITUTION]->setup(
       "subs!titution", "How long a column to substitute for in presolve", 0,
-      10000, 3,
+      10000,
       "Normally Presolve gets rid of 'free' variables when there are no more "
       "than 3 coefficients in a row.  If you increase this, the number of rows "
       "may decrease but the number of coefficients may increase.",
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::SUBSTITUTION]->setDefault(3);
 
 #ifdef CLP_THREAD
   parameters_[ClpParam::THREADS]->setup(
-      "thread!s", "Number of threads to try and use", -100, 100000, 0,
+      "thread!s", "Number of threads to try and use", -100, 100000,
       "To use multiple threads, set threads to number wanted.  It may be "
       "better to use one or two more than number of cpus available.  If 100+n "
       "then n threads and search is repeatable (maybe be somewhat slower), if "
       "200+n use threads for root cuts, 400+n threads used in sub-trees.");
 #endif
+  parameters_[ClpParam::THREADS]->setDefault(0);
 
   parameters_[ClpParam::VERBOSE]->setup(
-      "verbose", "Switches on longer help on single ?", 0, 31, 0,
+      "verbose", "Switches on longer help on single ?", 0, 31,
       "Set to 1 to get short help with ? list, 2 to get long help, 3 for both. "
       " (add 4 to just get ampl ones).",
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::VERBOSE]->setDefault(0);
 }
 
 //###########################################################################
@@ -1076,66 +1181,75 @@ void ClpParameters::addClpIntParams() {
 void ClpParameters::addClpBoolParams() {
   for (int code = ClpParam::FIRSTBOOLPARAM + 1; code < ClpParam::LASTBOOLPARAM;
        code++) {
-    parameters_[code]->appendKwd("off", ClpParameters::ParamOff);
-    parameters_[code]->appendKwd("on", ClpParameters::ParamOn);
-    parameters_[code]->setPushFunc(ClpParamUtils::pushClpKwdParam);
+    getParam(code)->setType(CoinParam::paramKwd);
+    getParam(code)->appendKwd("off", ClpParameters::ParamOff);
+    getParam(code)->appendKwd("on", ClpParameters::ParamOn);
+    getParam(code)->setPushFunc(ClpParamUtils::pushClpKwdParam);
   }
 
   parameters_[ClpParam::AUTOSCALE]->setup(
       "auto!Scale",
       "Whether to scale objective, rhs and bounds of problem if they look odd",
-      "off", 0,
       "If you think you may get odd objective values or large equality rows "
       "etc then it may be worth setting this true.  It is still experimental "
       "and you may prefer to use objective!Scale and rhs!Scale.",
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::AUTOSCALE]->setDefault("off");
 
   parameters_[ClpParam::BUFFER_MODE]->setup(
-      "buff!eredMode", "Whether to flush print buffer", "on", 1,
+      "buff!eredMode", "Whether to flush print buffer", 
       "Default is on, off switches on unbuffered output");
+  parameters_[ClpParam::BUFFER_MODE]->setDefault("on");
 
   parameters_[ClpParam::ERRORSALLOWED]->setup(
-      "error!sAllowed", "Whether to allow import errors", "off", 0,
+      "error!sAllowed", "Whether to allow import errors", 
       "The default is not to use any model which had errors when reading the "
       "mps file. Setting this to 'on' will allow all errors from which the "
       "code can recover simply by ignoring the error.  There are some errors "
       "from which the code can not recover e.g. no ENDATA.  This has to be set "
       "before import i.e. -errorsAllowed on -import xxxxxx.mps.");
+  parameters_[ClpParam::ERRORSALLOWED]->setDefault("off");
 
   parameters_[ClpParam::KEEPNAMES]->setup(
-      "keepN!ames", "Whether to keep names from import", "on", 1,
+      "keepN!ames", "Whether to keep names from import", 
       "It saves space to get rid of names so if you need to you can set this "
       "to off. This needs to be set before the import of model - so -keepnames "
       "off -import xxxxx.mps.");
+  parameters_[ClpParam::KEEPNAMES]->setDefault("on");
 
   parameters_[ClpParam::KKT]->setup(
-      "KKT", "Whether to use KKT factorization in barrier", "off", 0, "",
+      "KKT", "Whether to use KKT factorization in barrier", 
       CoinParam::displayPriorityLow);
+  parameters_[ClpParam::KKT]->setDefault("off");
 
   parameters_[ClpParam::MESSAGES]->setup(
-      "mess!ages", "Controls if Clpnnnn is printed", "off", 0,
+      "mess!ages", "Controls if Clpnnnn is printed", 
       "The default behavior is to put out messages such as:\n Clp0005 2261  "
       "Objective 109.024 Primal infeas 944413 (758)\n but this program turns "
       "this off to make it look more friendly.  It can be useful to turn them "
       "back on if you want to be able to 'grep' for particular messages or if "
       "you intend to override the behavior of a particular message.");
+  parameters_[ClpParam::MESSAGES]->setDefault("off");
 
   parameters_[ClpParam::PERTURBATION]->setup(
-      "perturb!ation", "Whether to perturb the problem", "on", 1,
+      "perturb!ation", "Whether to perturb the problem", 
       "Perturbation helps to stop cycling, but CLP uses other measures for "
       "this. However, large problems and especially ones with unit elements "
       "and unit right hand sides or costs benefit from perturbation.  Normally "
       "CLP tries to be intelligent, but one can switch this off.");
+  parameters_[ClpParam::PERTURBATION]->setDefault("on");
 
   parameters_[ClpParam::PFI]->setup(
-      "PFI", "Whether to use Product Form of Inverse in simplex", "off", 0,
+      "PFI", "Whether to use Product Form of Inverse in simplex", 
       "By default clp uses Forrest-Tomlin L-U update.  If you are masochistic "
       "you can switch it off.",
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::PFI]->setDefault("off");
 
   parameters_[ClpParam::SPARSEFACTOR]->setup(
-      "spars!eFactor", "Whether factorization treated as sparse", "on", 1, "",
+      "spars!eFactor", "Whether factorization treated as sparse", 
       CoinParam::displayPriorityNone);
+  parameters_[ClpParam::SPARSEFACTOR]->setDefault("on");
 }
 
 //###########################################################################
