@@ -184,11 +184,14 @@ void ClpParameters::setDefaults(int strategy) {
       break;
    }
 
-   // Set all parameters vcalues to thie defaults to begin with
+   // Set all parameters values to their defaults to begin with
    
    for (int code = ClpParam::FIRSTPARAM + 1;
         code < ClpParam::LASTPARAM; code++) {
-      getParam(code)->restoreDefault();
+      if (getParam(code)->type() != CoinParam::paramInvalid &&
+          getParam(code)->type() != CoinParam::paramAct){ 
+         getParam(code)->restoreDefault();
+      }
    }
    
 }
@@ -1263,7 +1266,7 @@ void ClpParameters::addClpBoolParams() {
       "off -import xxxxx.mps.");
 
   parameters_[ClpParam::KKT]->setup(
-      "KKT", "Whether to use KKT factorization in barrier", 
+      "KKT", "Whether to use KKT factorization in barrier", "",
       CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::MESSAGES]->setup(
@@ -1288,7 +1291,7 @@ void ClpParameters::addClpBoolParams() {
       CoinParam::displayPriorityNone);
 
   parameters_[ClpParam::SPARSEFACTOR]->setup(
-      "spars!eFactor", "Whether factorization treated as sparse", 
+      "spars!eFactor", "Whether factorization treated as sparse", "",
       CoinParam::displayPriorityNone);
 }
 
