@@ -195,7 +195,7 @@ public:
       LASTPARAM
    };
 
-  //@}
+   //@}
 
   /*! \name Constructors and Destructors
 

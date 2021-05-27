@@ -32,12 +32,18 @@ public:
   /*! \brief Default constructor */
   ClpParameters();
 
+  ClpParameters(int strategy);
+
   /*! \brief Destructor */
   ~ClpParameters();
 
   /*! \name Enumeration types used for Clp keyword parameters */
   //@{
 
+   /*! \brief Codes to specify overall strategies */
+   
+   enum ClpStrategy { DefaultStrategy = 0 };
+      
   /*! \brief Codes to specify one or off for binary parameters
 
      - ParamOff: Capability is switched off
@@ -78,6 +84,7 @@ public:
   */
 
   //@{
+
   /*! set up the solver parameter vector */
   void addClpParams();
   void addClpStrParams();
@@ -87,6 +94,10 @@ public:
   void addClpDblParams();
   void addClpIntParams();
   void addClpBoolParams();
+
+  /*! set up the default */
+  void setDefaults(int strategy);
+
   //@{
 
   /*! \name Access functions
