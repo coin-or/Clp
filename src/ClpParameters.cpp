@@ -128,7 +128,9 @@ void ClpParameters::setDefaults(int strategy) {
    // Now set up  parameters according to overall strategies
    switch (strategy) {
     case ClpParameters::DefaultStrategy:
+#if CLP_HAS_ABC
       parameters_[ClpParam::ABCWANTED]->setDefault("off");
+#endif
       parameters_[ClpParam::COMMANDPRINTLEVEL]->setDefault("no");
       parameters_[ClpParam::COMMANDPRINTLEVEL]->setDefault("no");
       parameters_[ClpParam::BARRIERSCALE]->setDefault("off");
@@ -922,7 +924,7 @@ void ClpParameters::addClpKwdParams() {
       "Towhidi, M., Soumis, F., The positive edge pricing rule for the dual "
       "simplex.",
       CoinParam::displayPriorityLow);
-  parameters_[ClpParam::PRIMALPIVOT]->appendKwd("autom!matic");
+  parameters_[ClpParam::PRIMALPIVOT]->appendKwd("auto!matic");
   parameters_[ClpParam::PRIMALPIVOT]->appendKwd("exa!ct");
   parameters_[ClpParam::PRIMALPIVOT]->appendKwd("dant!zig");
   parameters_[ClpParam::PRIMALPIVOT]->appendKwd("part!ial");
