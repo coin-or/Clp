@@ -4517,7 +4517,7 @@ void ClpSimplexProgress::reset()
 int
 ClpSimplexProgress::checkScalingEtc()
 { 
-  if (model_->numberIterations()<checkScalingAfter_||
+  if (!model_||model_->numberIterations()<checkScalingAfter_||
       (model_->specialOptions() & 0x03000000) != 0)
     return 0;
   if (model_->numberIterations()) {
