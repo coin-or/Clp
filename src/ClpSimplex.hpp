@@ -1795,6 +1795,7 @@ protected:
   /// For computing whether to re-factorize
   double alphaAccuracy_;
   /// Dual bound
+#define CLP_DEFAULT_DUAL_BOUND 1.0e8
   double dualBound_;
   /// Alpha (pivot element)
   double alpha_;

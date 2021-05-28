@@ -58,7 +58,7 @@ ClpSimplex::ClpSimplex(bool emptyMessages)
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(1.0e10)
+  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -181,7 +181,7 @@ ClpSimplex::ClpSimplex(const ClpModel *rhs,
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(1.0e10)
+  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -337,7 +337,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex *rhs,
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(1.0e10)
+  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -2399,7 +2399,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs, int scalingMode)
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(1.0e10)
+  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -2508,7 +2508,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode)
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(1.0e10)
+  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -5007,7 +5007,7 @@ int ClpSimplex::tightenPrimalBounds(double factor, int doTight, bool tightIntege
   // If wanted compute a reasonable dualBound_
   if (factor == COIN_DBL_MAX) {
     factor = 0.0;
-    if (dualBound_ == 1.0e10) {
+    if (dualBound_ == CLP_DEFAULT_DUAL_BOUND) {
       // get largest scaled away from bound
       double largest = 1.0e-12;
       double largestScaled = 1.0e-12;
