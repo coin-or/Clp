@@ -29,10 +29,12 @@ public:
   /*! \name Constructors and destructors */
   //@{
 
-  /*! \brief Default constructor */
+  /*! \brief Constructors */
   ClpParameters();
 
   ClpParameters(int strategy);
+
+  void init(int strategy);
 
   /*! \brief Destructor */
   ~ClpParameters();

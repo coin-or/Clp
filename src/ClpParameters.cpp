@@ -19,12 +19,27 @@
   Constructor for settings class.
 */
 
-ClpParameters::ClpParameters() : ClpParameters(DefaultStrategy)
+ClpParameters::ClpParameters() : parameters_(ClpParam::LASTPARAM), model_(0)
 {
+
+   init(DefaultStrategy);
+
 }
    
+//###########################################################################
+//###########################################################################
+
 ClpParameters::ClpParameters(int strategy) :
   parameters_(ClpParam::LASTPARAM), model_(0) {
+
+   init(strategy);
+
+}
+
+//###########################################################################
+//###########################################################################
+
+void ClpParameters::init(int strategy){
 
   for (int i = 0; i < parameters_.size(); i++){
      parameters_[i] = new ClpParam();
@@ -34,6 +49,7 @@ ClpParameters::ClpParameters(int strategy) :
 
   addClpParams();
   setDefaults(strategy);
+
 }
 
 //###########################################################################
