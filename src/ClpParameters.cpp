@@ -749,9 +749,9 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::BIASLU]->setup(
       "biasLU", "Whether factorization biased towards U", "",
       CoinParam::displayPriorityNone);
-  parameters_[ClpParam::BIASLU]->appendKwd("LX");
-  parameters_[ClpParam::BIASLU]->appendKwd("UX");
   parameters_[ClpParam::BIASLU]->appendKwd("UU");
+  parameters_[ClpParam::BIASLU]->appendKwd("UX");
+  parameters_[ClpParam::BIASLU]->appendKwd("LX");
   parameters_[ClpParam::BIASLU]->appendKwd("LL");
 
   parameters_[ClpParam::BARRIERSCALE]->setup(
@@ -958,12 +958,21 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::INTPRINT]->appendKwd("fixint");
   parameters_[ClpParam::INTPRINT]->appendKwd("fixall");
 
-  parameters_[ClpParam::SCALING]->setup("scal!ing", "Whether to scale problem",
-                                       "", CoinParam::displayPriorityLow);
-  parameters_[ClpParam::SCALING]->appendKwd("auto!matic");
+  parameters_[ClpParam::SCALING]->setup(
+      "scal!ing", "Whether to scale problem",
+      "Scaling can help in solving problems which might otherwise fail because of "
+      "lack of accuracy.  It can also reduce the number of iterations. "
+      "It is not applied if the range of elements is small.  When the solution "
+      "is evaluated in the unscaled problem, it is possible that small primal and/or "
+      "dual infeasibilities occur. \n"
+      " - 'equilibrium' uses the largest element for scaling. \n"
+      " - 'geometric' uses the squareroot of the product of largest and smallest element.\n"
+      " - 'auto' lets CLP choose a method that gives the best ratio of the largest element "
+      "to the smallest one.", CoinParam::displayPriorityLow);
   parameters_[ClpParam::SCALING]->appendKwd("off");
   parameters_[ClpParam::SCALING]->appendKwd("equi!librium");
   parameters_[ClpParam::SCALING]->appendKwd("geo!metric");
+  parameters_[ClpParam::SCALING]->appendKwd("auto!matic");
   parameters_[ClpParam::SCALING]->appendKwd("dynamic");
   parameters_[ClpParam::SCALING]->appendKwd("rows!only");
 

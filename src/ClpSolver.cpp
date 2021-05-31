@@ -506,8 +506,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       }
     } else if (param->type() == CoinParam::paramDbl) {
       // get next field as double
-      status = CoinParamUtils::getValue(inputQueue, dValue);
-      if (!status) {
+      if (status = CoinParamUtils::getValue(inputQueue, dValue)){
+        buffer.str("");
+        buffer << param->name() << " has value " << param->dblVal()
+               << std::endl;
+        printGeneralMessage(models, buffer.str());
+      } else {
 #if 0 
 	if (paramCode == ClpParam::DUALTOLERANCE)
 	  thisModel->setDualTolerance(dValue);
@@ -532,21 +536,15 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
 #endif
         param->setVal(dValue, &message);
         printGeneralMessage(models, message);
-      } else if (status == 1) {
-        buffer.str("");
-        buffer << "is illegal for double parameter " << param->name()
-               << " value remains " << param->dblVal() << std::endl;
-        printGeneralMessage(models, buffer.str());
-      } else {
-        buffer.str("");
-        buffer << param->name() << " has value " << param->dblVal()
-               << std::endl;
-        printGeneralMessage(models, buffer.str());
       }
     } else if (param->type() == CoinParam::paramInt) {
       // get next field as int
-      status = CoinParamUtils::getValue(inputQueue, iValue);
-      if (!status) {
+      if (status = CoinParamUtils::getValue(inputQueue, iValue)){
+        buffer.str("");
+        buffer << param->name() << " has value " << param->intVal()
+               << std::endl;
+        printGeneralMessage(models, buffer.str());
+      } else {
         if (paramCode == ClpParam::PRESOLVEPASS)
           preSolve = iValue;
         else if (paramCode == ClpParam::IDIOT)
@@ -587,17 +585,15 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
 #endif
         param->setVal(iValue, &message);
         printGeneralMessage(models, message);
-      } else if (status == 1) {
-        std::cout << " is illegal for integer parameter " << param->name()
-                  << " value remains " << param->intVal() << std::endl;
-      } else {
-        std::cout << param->name() << " has value " << param->intVal()
-                  << std::endl;
       }
     } else if (param->type() == CoinParam::paramKwd) {
       // one of several strings
-      status = CoinParamUtils::getValue(inputQueue, field);
-      if (param->setVal(field, &message)) {
+      if (status = CoinParamUtils::getValue(inputQueue, field)){
+        buffer.str("");
+        buffer << param->name() << " has value " << param->kwdVal()
+               << std::endl;
+        printGeneralMessage(models, buffer.str());
+      }else if (!param->setVal(field, &message)) {
         printGeneralMessage(models, message);
         int mode = param->modeVal();
         // TODO this should be part of the push method
