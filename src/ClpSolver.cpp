@@ -512,6 +512,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                << std::endl;
         printGeneralMessage(models, buffer.str());
       } else {
+        if (param->setVal(dValue, &message)){
+           printGeneralMessage(models, message);
+           continue;
+        }
 #if 0 
 	if (paramCode == ClpParam::DUALTOLERANCE)
 	  thisModel->setDualTolerance(dValue);
@@ -534,8 +538,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
 	else if (paramCode == ClpParam::PROGRESS)
 	  thisModel->setMinIntervalProgressUpdate(dValue);
 #endif
-        param->setVal(dValue, &message);
-        printGeneralMessage(models, message);
       }
     } else if (param->type() == CoinParam::paramInt) {
       // get next field as int
@@ -545,6 +547,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                << std::endl;
         printGeneralMessage(models, buffer.str());
       } else {
+        if (param->setVal(iValue, &message)){
+           printGeneralMessage(models, message);
+           continue;
+        }
         if (paramCode == ClpParam::PRESOLVEPASS)
           preSolve = iValue;
         else if (paramCode == ClpParam::IDIOT)
@@ -583,8 +589,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         else if (paramCode == ClpParam::VECTOR_MODE)
 	  thisModel->setVectorMode(iValue);
 #endif
-        param->setVal(iValue, &message);
-        printGeneralMessage(models, message);
       }
     } else if (param->type() == CoinParam::paramKwd) {
       // one of several strings
@@ -593,10 +597,13 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         buffer << param->name() << " has value " << param->kwdVal()
                << std::endl;
         printGeneralMessage(models, buffer.str());
-      }else if (!param->setVal(field, &message)) {
-        printGeneralMessage(models, message);
-        int mode = param->modeVal();
-        // TODO this should be part of the push method
+      }else {
+         if (param->setVal(field, &message)) {
+            printGeneralMessage(models, message);
+            continue;
+         }
+         int mode = param->modeVal();
+         // TODO this should be part of the push method
         switch (paramCode) {
         case ClpParam::DIRECTION:
           if (mode == 0) {
