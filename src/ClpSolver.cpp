@@ -506,105 +506,97 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       }
     } else if (param->type() == CoinParam::paramDbl) {
       // get next field as double
-      if (status = CoinParamUtils::getValue(inputQueue, dValue)){
-        buffer.str("");
-        buffer << param->name() << " has value " << param->dblVal()
-               << std::endl;
-        printGeneralMessage(models, buffer.str());
-      } else {
-        if (param->setVal(dValue, &message)){
-           printGeneralMessage(models, message);
-           continue;
-        }
-#if 0 
-	if (paramCode == ClpParam::DUALTOLERANCE)
-	  thisModel->setDualTolerance(dValue);
-	else if (paramCode == ClpParam::PRIMALTOLERANCE)
-	  thisModel->setPrimalTolerance(dValue);
-	else if (paramCode == ClpParam::ZEROTOLERANCE)
-	  thisModel->setSmallElementValue(dValue);
-	else if (paramCode == ClpParam::DUALBOUND)
-	  thisModel->setDualBound(dValue);
-	else if (paramCode == ClpParam::PRIMALWEIGHT)
-	  thisModel->setInfeasibilityCost(dValue);
-	else if (paramCode == ClpParam::TIMELIMIT)
-	  thisModel->setMaximumSeconds(dValue);
-	else if (paramCode == ClpParam::OBJSCALE)
-	  thisModel->setObjectiveScale(dValue);
-	else if (paramCode == ClpParam::RHSSCALE)
-	  thisModel->setRhsScale(dValue);
-	else if (paramCode == ClpParam::PRESOLVETOLERANCE)
-	  thisModel->setDblParam(ClpPresolveTolerance, dValue);
-	else if (paramCode == ClpParam::PROGRESS)
-	  thisModel->setMinIntervalProgressUpdate(dValue);
-#endif
+      if (status = param->readValue(inputQueue, dValue, &message)){
+        printGeneralMessage(models, message);
+        continue;
       }
+      if (param->setVal(dValue, &message)){
+         printGeneralMessage(models, message);
+         continue;
+      }
+#if 0 
+      if (paramCode == ClpParam::DUALTOLERANCE)
+         thisModel->setDualTolerance(dValue);
+      else if (paramCode == ClpParam::PRIMALTOLERANCE)
+         thisModel->setPrimalTolerance(dValue);
+      else if (paramCode == ClpParam::ZEROTOLERANCE)
+         thisModel->setSmallElementValue(dValue);
+      else if (paramCode == ClpParam::DUALBOUND)
+         thisModel->setDualBound(dValue);
+      else if (paramCode == ClpParam::PRIMALWEIGHT)
+         thisModel->setInfeasibilityCost(dValue);
+      else if (paramCode == ClpParam::TIMELIMIT)
+         thisModel->setMaximumSeconds(dValue);
+      else if (paramCode == ClpParam::OBJSCALE)
+         thisModel->setObjectiveScale(dValue);
+      else if (paramCode == ClpParam::RHSSCALE)
+         thisModel->setRhsScale(dValue);
+      else if (paramCode == ClpParam::PRESOLVETOLERANCE)
+         thisModel->setDblParam(ClpPresolveTolerance, dValue);
+      else if (paramCode == ClpParam::PROGRESS)
+         thisModel->setMinIntervalProgressUpdate(dValue);
+#endif
     } else if (param->type() == CoinParam::paramInt) {
       // get next field as int
-      if (status = CoinParamUtils::getValue(inputQueue, iValue)){
-        buffer.str("");
-        buffer << param->name() << " has value " << param->intVal()
-               << std::endl;
-        printGeneralMessage(models, buffer.str());
-      } else {
-        if (param->setVal(iValue, &message)){
-           printGeneralMessage(models, message);
-           continue;
-        }
-        if (paramCode == ClpParam::PRESOLVEPASS)
-          preSolve = iValue;
-        else if (paramCode == ClpParam::IDIOT)
-          doIdiot = iValue;
-        else if (paramCode == ClpParam::SPRINT)
-          doSprint = iValue;
-        else if (paramCode == ClpParam::OUTPUTFORMAT)
-          outputFormat = iValue;
-        else if (paramCode == ClpParam::SLPVALUE)
-          slpValue = iValue;
-        else if (paramCode == ClpParam::CPP)
-          cppValue = iValue;
-        else if (paramCode == ClpParam::PRESOLVEOPTIONS)
-          presolveOptions = iValue;
-        else if (paramCode == ClpParam::PRINTOPTIONS)
-          printOptions = iValue;
-        else if (paramCode == ClpParam::SUBSTITUTION)
-          substitution = iValue;
-        else if (paramCode == ClpParam::DUALIZE)
-          dualize = iValue;
-        else if (paramCode == ClpParam::VERBOSE)
-          verbose = iValue;
-#if 0
-        else if (paramCode == ClpParam::MAXFACTOR)
-	  thisModel->factorization()->maximumPivots(iValue);
-        else if (paramCode == ClpParam::PERTVALUE)
-	  thisModel->setPerturbation(iValue);
-        else if (paramCode == ClpParam::MAXITERATION)
-	  thisModel->setMaximumIterations(iValue);
-        else if (paramCode == ClpParam::SPECIALOPTIONS)
-	  thisModel->setSpecialOptions(iValue);
-        else if (paramCode == ClpParam::RANDOMSEED)
-	  thisModel->setRandomSeed(iValue);
-        else if (paramCode == ClpParam::MORESPECIALOPTIONS)
-	  thisModel->setMoreSpecialOptions(iValue);
-        else if (paramCode == ClpParam::VECTOR_MODE)
-	  thisModel->setVectorMode(iValue);
-#endif
+       if (status = param->readValue(inputQueue, iValue, &message)){
+        printGeneralMessage(models, message);
+        continue;
       }
+      if (param->setVal(iValue, &message)){
+         printGeneralMessage(models, message);
+         continue;
+      }
+      if (paramCode == ClpParam::PRESOLVEPASS)
+         preSolve = iValue;
+      else if (paramCode == ClpParam::IDIOT)
+         doIdiot = iValue;
+      else if (paramCode == ClpParam::SPRINT)
+         doSprint = iValue;
+      else if (paramCode == ClpParam::OUTPUTFORMAT)
+         outputFormat = iValue;
+      else if (paramCode == ClpParam::SLPVALUE)
+         slpValue = iValue;
+      else if (paramCode == ClpParam::CPP)
+         cppValue = iValue;
+      else if (paramCode == ClpParam::PRESOLVEOPTIONS)
+         presolveOptions = iValue;
+      else if (paramCode == ClpParam::PRINTOPTIONS)
+         printOptions = iValue;
+      else if (paramCode == ClpParam::SUBSTITUTION)
+         substitution = iValue;
+      else if (paramCode == ClpParam::DUALIZE)
+         dualize = iValue;
+      else if (paramCode == ClpParam::VERBOSE)
+         verbose = iValue;
+#if 0
+      else if (paramCode == ClpParam::MAXFACTOR)
+         thisModel->factorization()->maximumPivots(iValue);
+      else if (paramCode == ClpParam::PERTVALUE)
+         thisModel->setPerturbation(iValue);
+      else if (paramCode == ClpParam::MAXITERATION)
+         thisModel->setMaximumIterations(iValue);
+      else if (paramCode == ClpParam::SPECIALOPTIONS)
+         thisModel->setSpecialOptions(iValue);
+      else if (paramCode == ClpParam::RANDOMSEED)
+         thisModel->setRandomSeed(iValue);
+      else if (paramCode == ClpParam::MORESPECIALOPTIONS)
+         thisModel->setMoreSpecialOptions(iValue);
+      else if (paramCode == ClpParam::VECTOR_MODE)
+         thisModel->setVectorMode(iValue);
+#endif
     } else if (param->type() == CoinParam::paramKwd) {
       // one of several strings
-      if (status = CoinParamUtils::getValue(inputQueue, field)){
-        buffer.str("");
-        buffer << param->name() << " has value " << param->kwdVal()
-               << std::endl;
-        printGeneralMessage(models, buffer.str());
-      }else {
-         if (param->setVal(field, &message)) {
-            printGeneralMessage(models, message);
-            continue;
-         }
-         int mode = param->modeVal();
-         // TODO this should be part of the push method
-        switch (paramCode) {
+      if (status = param->readValue(inputQueue, field, &message)){
+        printGeneralMessage(models, message);
+        continue;
+      }
+      if (param->setVal(field, &message)) {
+         printGeneralMessage(models, message);
+         continue;
+      }
+      int mode = param->modeVal();
+      // TODO this should be part of the push method
+      switch (paramCode) {
         case ClpParam::DIRECTION:
           if (mode == 0) {
             models[iModel].setOptimizationDirection(1);
@@ -789,7 +781,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         default:
           // abort();
           break;
-        }
       }
     } else {
       // action
@@ -1409,7 +1400,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         break;
       case ClpParam::IMPORT: {
         // get next field
-        status = CoinParamUtils::getValue(inputQueue, field);
+        status = param->readValue(inputQueue, field);
         if (field == "$") {
           field = param->strVal();
         } else if (field == "EOL") {
@@ -1599,7 +1590,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                                               models[iModel].objectiveOffset());
           }
           // get next field
-          status = CoinParamUtils::getValue(inputQueue, field);
+          status = param->readValue(inputQueue, field);
           if (field == "$") {
             field = param->strVal();
           } else if (field == "EOL") {
@@ -1757,7 +1748,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         break;
       case ClpParam::BASISIN:
         if (goodModels[iModel]) {
-          status = CoinParamUtils::getValue(inputQueue, field);
+          status = param->readValue(inputQueue, field);
           if (field == "$") {
             field = param->strVal();
           } else if (field == "EOL") {
@@ -1810,7 +1801,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }
         break;
       case ClpParam::PRINTMASK:
-        if (!CoinParamUtils::getValue(inputQueue, field)) {
+        if (!param->readValue(inputQueue, field)) {
           param->setVal(field);
           printMask = field;
         } else {
@@ -1819,7 +1810,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         break;
       case ClpParam::BASISOUT:
         if (goodModels[iModel]) {
-          status = CoinParamUtils::getValue(inputQueue, field);
+          status = param->readValue(inputQueue, field);
           if (field == "$") {
             field = param->strVal();
           } else if (field == "EOL") {
@@ -1865,7 +1856,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         break;
       case ClpParam::PARAMETRICS:
         if (goodModels[iModel]) {
-          status = CoinParamUtils::getValue(inputQueue, field);
+          status = param->readValue(inputQueue, field);
           if (field == "$") {
             field = param->strVal();
           } else if (field == "EOL") {
@@ -1897,7 +1888,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }
         break;
       case ClpParam::SAVE: {
-        status = CoinParamUtils::getValue(inputQueue, field);
+        status = param->readValue(inputQueue, field);
         if (field == "$") {
           field = param->strVal();
         } else if (field == "EOL") {
@@ -1973,7 +1964,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }
       } break;
       case ClpParam::RESTORE: {
-        status = CoinParamUtils::getValue(inputQueue, field);
+        status = param->readValue(inputQueue, field);
         if (field == "$") {
           field = param->strVal();
         } else if (field == "EOL") {
@@ -2059,7 +2050,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }
         break;
       case ClpParam::DIRECTORY: {
-        if (!CoinParamUtils::getValue(inputQueue, field)) {
+        if (!param->readValue(inputQueue, field)) {
           size_t length = field.length();
           if (length > 0 && field[length - 1] == dirsep) {
             directory = field;
@@ -2072,7 +2063,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }
       } break;
       case ClpParam::DIRSAMPLE: {
-        if (!CoinParamUtils::getValue(inputQueue, field)) {
+        if (!param->readValue(inputQueue, field)) {
           size_t length = field.length();
           if (length > 0 && field[length - 1] == dirsep) {
             dirSample = field;
@@ -2085,7 +2076,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }
       } break;
       case ClpParam::DIRNETLIB: {
-        if (!CoinParamUtils::getValue(inputQueue, field)) {
+        if (!param->readValue(inputQueue, field)) {
           size_t length = field.length();
           if (length > 0 && field[length - 1] == dirsep) {
             dirNetlib = field;
@@ -2098,7 +2089,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }
       } break;
       case ClpParam::DIRMIPLIB: {
-        if (!CoinParamUtils::getValue(inputQueue, field)) {
+        if (!param->readValue(inputQueue, field)) {
           size_t length = field.length();
           if (length > 0 && field[length - 1] == dirsep) {
             dirMiplib = field;
@@ -2252,39 +2243,37 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       case ClpParam::FAKEBOUND:
         if (goodModels[iModel]) {
           // get bound
-          status = CoinParamUtils::getValue(inputQueue, dValue);
-          if (!status) {
-            buffer.str("");
-            buffer << "Setting " << param->name() << " to DEBUG " << dValue
-                   << std::endl;
-            printGeneralMessage(models, buffer.str());
-            int iRow;
-            int numberRows = models[iModel].numberRows();
-            double *rowLower = models[iModel].rowLower();
-            double *rowUpper = models[iModel].rowUpper();
-            for (iRow = 0; iRow < numberRows; iRow++) {
-              // leave free ones for now
-              if (rowLower[iRow] > -1.0e20 || rowUpper[iRow] < 1.0e20) {
+          if (status = param->readValue(inputQueue, dValue, &message)){
+             std::cout << "Must enter value for " << param->name()
+                       << std::endl;
+             continue;
+          }
+          buffer.str("");
+          buffer << "Setting " << param->name() << " to DEBUG " << dValue
+                 << std::endl;
+          printGeneralMessage(models, buffer.str());
+          int iRow;
+          int numberRows = models[iModel].numberRows();
+          double *rowLower = models[iModel].rowLower();
+          double *rowUpper = models[iModel].rowUpper();
+          for (iRow = 0; iRow < numberRows; iRow++) {
+             // leave free ones for now
+             if (rowLower[iRow] > -1.0e20 || rowUpper[iRow] < 1.0e20) {
                 rowLower[iRow] = CoinMax(rowLower[iRow], -dValue);
                 rowUpper[iRow] = CoinMin(rowUpper[iRow], dValue);
-              }
-            }
-            int iColumn;
-            int numberColumns = models[iModel].numberColumns();
-            double *columnLower = models[iModel].columnLower();
-            double *columnUpper = models[iModel].columnUpper();
-            for (iColumn = 0; iColumn < numberColumns; iColumn++) {
-              // leave free ones for now
-              if (columnLower[iColumn] > -1.0e20 ||
-                  columnUpper[iColumn] < 1.0e20) {
+             }
+          }
+          int iColumn;
+          int numberColumns = models[iModel].numberColumns();
+          double *columnLower = models[iModel].columnLower();
+          double *columnUpper = models[iModel].columnUpper();
+          for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+             // leave free ones for now
+             if (columnLower[iColumn] > -1.0e20 ||
+                 columnUpper[iColumn] < 1.0e20) {
                 columnLower[iColumn] = CoinMax(columnLower[iColumn], -dValue);
                 columnUpper[iColumn] = CoinMin(columnUpper[iColumn], dValue);
-              }
-            }
-          } else if (status == 1) {
-            abort();
-          } else {
-            std::cout << "enter value for " << param->name() << std::endl;
+             }
           }
         }
         break;
@@ -2325,7 +2314,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
       case ClpParam::GMPL_SOLUTION:
         if (goodModels[iModel]) {
           // get next field
-          status = CoinParamUtils::getValue(inputQueue, field);
+          status = param->readValue(inputQueue, field);
           bool append = false;
           if (field == "append$") {
             field = "$";
@@ -2923,7 +2912,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
       case ClpParam::SAVESOL:
         if (goodModels[iModel]) {
           // get next field
-          status = CoinParamUtils::getValue(inputQueue, field);
+          status = param->readValue(inputQueue, field);
           if (field == "$") {
             field = param->strVal();
           } else if (field == "EOL") {
