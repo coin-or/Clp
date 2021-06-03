@@ -424,18 +424,25 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       types.push_back("Integer parameters:");
       types.push_back("Double parameters:");
       types.push_back("String parameters:");
+      types.push_back("Directory parameters:");
+      types.push_back("File parameters:");
       types.push_back("Keyword parameters:");
       std::cout << "#### Clp Parameters ###" << std::endl;
-      for (int type = 1; type < 6; type++) {
+      // correct types
+      for (int type = 1; type < 8; type++) {
 	int across = 0;
-	int lengthLine = 0; 
-	std::cout << types[type] << std::endl;
+	int lengthLine = 0;
+	bool first = true;
 	for (int iParam = ClpParam::FIRSTPARAM + 1; iParam < ClpParam::LASTPARAM;
 	     iParam++) {
 	  ClpParam *p = parameters[iParam];
 	  if (p->type() != type ||  
 	      p->getDisplayPriority() <= commandPrintLevel) 
 	    continue;
+	  if (first) {
+	    std::cout << types[type] << std::endl;
+	    first = false;
+	  }
           int length = p->lengthMatchName() + 1;
           if (lengthLine + length > 80) {
             std::cout << std::endl;

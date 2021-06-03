@@ -462,6 +462,12 @@ void ClpParameters::addClpActionParams() {
       "can also use the parameters 'direction minimize'.",
       CoinParam::displayPriorityHigh);
 
+  parameters_[ClpParam::MAXIMIZE]->setup(
+      "max!imize", "Set optimization direction to maximize",
+      "The default is minimize - use 'maximize' for maximization.\n"
+      "You can also use the parameters 'direction maximize'.",
+      CoinParam::displayPriorityHigh);
+
   parameters_[ClpParam::NETLIB_EITHER]->setup(
       "netlib", "Solve entire netlib test set",
       "This exercises the unit test for clp and then solves the netlib test "
