@@ -30,9 +30,9 @@ public:
   //@{
 
   /*! \brief Constructors */
-  ClpParameters();
+  ClpParameters(bool cbcMode = false);
 
-  ClpParameters(int strategy);
+  ClpParameters(int strategy, bool cbcMode = false);
 
   void init(int strategy);
 
@@ -157,9 +157,13 @@ public:
 
   /*! \brief Get Clp model */
   inline ClpSimplex *getModel() const { return (model_); }
+
+  /*! \brief Say whether in CbcMode */
+  inline void setCbcMode(bool yesNo) { cbcMode_ = yesNo; }
 #ifdef CBC_CLUMSY_CODING
   /*! \brief Synchronize Clp model - Int and Dbl */
   void synchronizeModel();
+
 #endif
   //@{
 
@@ -177,6 +181,9 @@ private:
 
   /*! \brief A pointer to the current ClpSimplex object */
   ClpSimplex *model_;
+
+  /*! \brief To say if in Cbc mode */
+  bool cbcMode_;
 
 };
 

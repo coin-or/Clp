@@ -19,19 +19,20 @@
   Constructor for settings class.
 */
 
-ClpParameters::ClpParameters() : parameters_(ClpParam::LASTPARAM), model_(0)
+ClpParameters::ClpParameters(bool cbcMode)
+  : parameters_(ClpParam::LASTPARAM), model_(0)
 {
-
+   cbcMode_ = cbcMode;
    init(DefaultStrategy);
-
 }
    
 //###########################################################################
 //###########################################################################
 
-ClpParameters::ClpParameters(int strategy) :
+ClpParameters::ClpParameters(int strategy, bool cbcMode) :
   parameters_(ClpParam::LASTPARAM), model_(0) {
 
+   cbcMode_ = cbcMode;
    init(strategy);
 
 }
@@ -351,10 +352,12 @@ void ClpParameters::addClpHelpParams() {
     getParam(code)->setPushFunc(ClpParamUtils::doHelpParam);
     getParam(code)->setType(CoinParam::paramAct);
   }
-  parameters_[ClpParam::GENERALQUERY]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::GENERALQUERY]->setup(
       "?", "Print a list of commands", "", CoinParam::displayPriorityNone);
 
-  parameters_[ClpParam::FULLGENERALQUERY]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::FULLGENERALQUERY]->setup(
       "???", "Print a list with *all* commands, even those hidden with `?'", "",
       CoinParam::displayPriorityNone);
 }
@@ -397,7 +400,8 @@ void ClpParameters::addClpActionParams() {
       "pivot method, fake bound on variables and dual and primal tolerances.",
       CoinParam::displayPriorityHigh);
 
-  parameters_[ClpParam::SOLVECONTINUOUS]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::SOLVECONTINUOUS]->setup(
       "initialS!olve", "Solve to continuous",
       "This just solves the problem to continuous - without adding any cuts",
       CoinParam::displayPriorityHigh);
@@ -409,36 +413,40 @@ void ClpParameters::addClpActionParams() {
       "model.",
       CoinParam::displayPriorityHigh);
 
-  parameters_[ClpParam::SOLVE]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::SOLVE]->setup(
       "solv!e", "Do dual or primal simplex algorithm", 
       "This command solves the continuous relaxation of the current model "
       "using the dual or primal algorithm, based on a dubious analysis of "
       "model.",
       CoinParam::displayPriorityHigh);
 
-  parameters_[ClpParam::ENVIRONMENT]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::ENVIRONMENT]->setup(
       "environ!ment", "Read commands from environment",
       "This starts reading from environment variable CLP_ENVIRONMENT.",
       CoinParam::displayPriorityNone);
 
-  parameters_[ClpParam::END]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::END]->setup(
       "end", "Stops clp execution",
       "This stops execution ; end, exit, quit and stop are synonyms",
       CoinParam::displayPriorityHigh);
 
-#if 1
-  parameters_[ClpParam::QUIT]->setup("quit", "Stops clp execution",
+  if (!cbcMode_)
+    parameters_[ClpParam::QUIT]->setup("quit", "Stops clp execution",
       "This stops the execution of Clp, end, exit, quit and stop are synonyms",
       CoinParam::displayPriorityHigh);
 
-  parameters_[ClpParam::EXIT]->setup("exit", "Stops clp execution",
+  if (!cbcMode_)
+    parameters_[ClpParam::EXIT]->setup("exit", "Stops clp execution",
       "This stops the execution of Clp, end, exit, quit and stop are synonyms",
       CoinParam::displayPriorityHigh);
 
+  if (!cbcMode_)
   parameters_[ClpParam::STOP]->setup("stop", "Stops clp execution",
       "This stops the execution of Clp, end, exit, quit and stop are synonyms",
       CoinParam::displayPriorityHigh);
-#endif
 
   parameters_[ClpParam::GMPL_SOLUTION]->setup(
       "gsolu!tion", "Puts glpk solution to file",
@@ -455,14 +463,16 @@ void ClpParameters::addClpActionParams() {
       "parameters which may help you to think of possibilities.",
       CoinParam::displayPriorityHigh);
 
-  parameters_[ClpParam::MINIMIZE]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::MINIMIZE]->setup(
       "min!imize", "Set optimization direction to minimize",
       "The default is minimize - use 'maximize' for maximization.\n This "
       "should only be necessary if you have previously set maximization You "
       "can also use the parameters 'direction minimize'.",
       CoinParam::displayPriorityHigh);
 
-  parameters_[ClpParam::MAXIMIZE]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::MAXIMIZE]->setup(
       "max!imize", "Set optimization direction to maximize",
       "The default is minimize - use 'maximize' for maximization.\n"
       "You can also use the parameters 'direction maximize'.",
@@ -513,7 +523,8 @@ void ClpParameters::addClpActionParams() {
       "probably not be as fast as a specialized network code.",
       CoinParam::displayPriorityNone);
 
-  parameters_[ClpParam::OUTDUPROWS]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::OUTDUPROWS]->setup(
       "outDup!licates", "takes duplicate rows etc out of integer model", "",
       CoinParam::displayPriorityNone);
 
@@ -560,18 +571,21 @@ void ClpParameters::addClpActionParams() {
                                             "Scales model in place", "",
                                             CoinParam::displayPriorityNone);
 
-  parameters_[ClpParam::REVERSE]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::REVERSE]->setup(
       "reverse", "Reverses sign of objective",
       "Useful for testing if maximization works correctly",
       CoinParam::displayPriorityHigh);
 
-  parameters_[ClpParam::DUMMY]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::DUMMY]->setup(
       "sleep", "for debug",
       "If passed to solver fom ampl, then ampl will wait so that you can copy "
       ".nl file for debug.",
       CoinParam::displayPriorityHigh);
 
-  parameters_[ClpParam::STATISTICS]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::STATISTICS]->setup(
       "stat!istics", "Print some statistics",
       "This command prints some statistics for the current model. If log level "
       ">1 then more is printed. These are for presolved model if presolve on "
@@ -582,7 +596,8 @@ void ClpParameters::addClpActionParams() {
                                        "Poor person's preSolve for now", "",
                                        CoinParam::displayPriorityNone);
 
-  parameters_[ClpParam::UNITTEST]->setup("unitTest", "Do unit test",
+  if (!cbcMode_)
+    parameters_[ClpParam::UNITTEST]->setup("unitTest", "Do unit test",
                                         "This exercises the unit test for clp",
                                         CoinParam::displayPriorityLow);
 
@@ -621,19 +636,22 @@ void ClpParameters::addClpStrParams() {
       "'default.bas'.",
       CoinParam::displayPriorityHigh);
   
-  parameters_[ClpParam::DIRECTORY]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::DIRECTORY]->setup(
       "directory", "Set Default directory for import etc.", 
       "This sets the directory which import, export, saveModel, restoreModel "
       "etc. will use. It is initialized to the current directory.");
 
-  parameters_[ClpParam::DIRSAMPLE]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::DIRSAMPLE]->setup(
       "dirSample", "Set directory where the COIN-OR sample problems are.",
       "This sets the directory where the COIN-OR sample problems reside. It is "
       "used only when -unitTest is passed to clp. clp will pick up the test "
       "problems from this directory. It is initialized to '../../Data/Sample'",
       CoinParam::displayPriorityLow);
 
-  parameters_[ClpParam::DIRNETLIB]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::DIRNETLIB]->setup(
       "dirNetlib", "Set directory where the netlib problems are.",
       "This sets the directory where the netlib problems reside. One can get "
       "the netlib problems from COIN-OR or from the main netlib site. This "
@@ -643,7 +661,8 @@ void ClpParameters::addClpStrParams() {
       "'../../Data/Netlib'",
       CoinParam::displayPriorityLow);
 
-  parameters_[ClpParam::DIRMIPLIB]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::DIRMIPLIB]->setup(
       "dirMiplib", "Set directory where the miplib 2003 problems are.",
       "This sets the directory where the miplib 2003 problems reside. One can "
       "get the miplib problems from COIN-OR or from the main miplib site. This "
@@ -653,7 +672,8 @@ void ClpParameters::addClpStrParams() {
       "'../../Data/miplib3'",
       CoinParam::displayPriorityLow);
 
-  parameters_[ClpParam::EXPORT]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::EXPORT]->setup(
       "export", "Export model as mps file", 
       "This will write an MPS format file to the given file name.  It will use "
       "the default directory given by 'directory'.  A name of '$' will use the "
@@ -663,7 +683,8 @@ void ClpParameters::addClpStrParams() {
       "before importing mps file.",
       CoinParam::displayPriorityHigh);
   
-  parameters_[ClpParam::IMPORT]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::IMPORT]->setup(
       "import", "Import model from mps file", 
       "This will read an MPS format file from the given file name.  It will "
       "use the default directory given by 'directory'.  A name of '$' will use "
@@ -673,7 +694,8 @@ void ClpParameters::addClpStrParams() {
       "dropped -> Rnnnnnnn and Cnnnnnnn.",
       CoinParam::displayPriorityHigh);
   
-  parameters_[ClpParam::PRINTMASK]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::PRINTMASK]->setup(
       "printM!ask", "Control printing of solution with a regular expression",
       "If set then only those names which match mask are printed in a "
       "solution. '?' matches any character and '*' matches any set of "
@@ -1150,8 +1172,9 @@ void ClpParameters::addClpIntParams() {
       "simplex algorithm.  It can be set to -1 when the code decides for "
       "itself whether to use it, 0 to switch off, or n > 0 to do n passes.");
 
-  parameters_[ClpParam::LOGLEVEL]->setup(
-      "log!Level", "Level of detail in Coin branch and Cut output", -63, 63,
+  if (!cbcMode_)
+    parameters_[ClpParam::LOGLEVEL]->setup(
+      "log!Level", "Level of detailin Clp output", -63, 63,
       "If 0 then there should be no output in normal circumstances.  1 is "
       "probably the best value for most uses, while 2 and 3 give more "
       "information.");
@@ -1175,7 +1198,8 @@ void ClpParameters::addClpIntParams() {
       COIN_INT_MAX, 
       "See ClpSimplex.hpp.");
 
-  parameters_[ClpParam::OUTPUTFORMAT]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::OUTPUTFORMAT]->setup(
       "output!Format", "Which output format to use", 1, 6,
       "Normally export will be done using normal representation for numbers "
       "and two values per line.  You may want to do just one per line (for "
@@ -1198,7 +1222,8 @@ void ClpParameters::addClpIntParams() {
                                          -5000, 102, "",
                                          CoinParam::displayPriorityLow);
 
-  parameters_[ClpParam::PRINTOPTIONS]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::PRINTOPTIONS]->setup(
       "pO!ptions", "Dubious print options", 0, COIN_INT_MAX,
       "If this is > 0 then presolve will give more information and branch and "
       "cut will give statistics",
@@ -1253,7 +1278,8 @@ void ClpParameters::addClpIntParams() {
       "200+n use threads for root cuts, 400+n threads used in sub-trees.");
 #endif
 
-  parameters_[ClpParam::VERBOSE]->setup(
+  if (!cbcMode_)
+    parameters_[ClpParam::VERBOSE]->setup(
       "verbose", "Switches on longer help on single ?", 0, 31,
       "Set to 1 to get short help with ? list, 2 to get long help, 3 for both. "
       " (add 4 to just get ampl ones).",
