@@ -376,7 +376,7 @@ void ClpParameters::addClpActionParams() {
       "allS!lack", "Set basis back to all slack and reset solution",
       "Mainly useful for tuning purposes.  Normally the first dual or primal "
       "will be using an all slack basis anyway.",
-      CoinParam::displayPriorityNone);
+      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::BARRIER]->setup(
       "barr!ier", "Solve using primal dual predictor corrector algorithm",
@@ -400,7 +400,7 @@ void ClpParameters::addClpActionParams() {
       "pivot method, fake bound on variables and dual and primal tolerances.",
       CoinParam::displayPriorityHigh);
 
-  if (!cbcMode_)
+  if (false)
     parameters_[ClpParam::SOLVECONTINUOUS]->setup(
       "initialS!olve", "Solve to continuous",
       "This just solves the problem to continuous - without adding any cuts",
@@ -521,12 +521,7 @@ void ClpParameters::addClpActionParams() {
       "matrix operations may be a bit faster with more efficient storage, but "
       "the main advantage comes from using a network factorization. It will "
       "probably not be as fast as a specialized network code.",
-      CoinParam::displayPriorityNone);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::OUTDUPROWS]->setup(
-      "outDup!licates", "takes duplicate rows etc out of integer model", "",
-      CoinParam::displayPriorityNone);
+      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::PARAMETRICS]->setup(
       "para!metrics", "Import data from file and do parametrics",
@@ -556,7 +551,7 @@ void ClpParameters::addClpActionParams() {
       "elements are not stored and are known to be unit.  The main advantage "
       "is memory use.  Clp may automatically see if it can convert the problem "
       "so you should not need to use this.",
-      CoinParam::displayPriorityNone);
+      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::PRIMALSIMPLEX]->setup(
       "primalS!implex", "Do primal simplex algorithm",
@@ -569,20 +564,20 @@ void ClpParameters::addClpActionParams() {
 
   parameters_[ClpParam::REALLY_SCALE]->setup("reallyS!cale",
                                             "Scales model in place", "",
-                                            CoinParam::displayPriorityNone);
+                                            CoinParam::displayPriorityLow);
 
   if (!cbcMode_)
     parameters_[ClpParam::REVERSE]->setup(
       "reverse", "Reverses sign of objective",
       "Useful for testing if maximization works correctly",
-      CoinParam::displayPriorityHigh);
+      CoinParam::displayPriorityLow);
 
   if (!cbcMode_)
     parameters_[ClpParam::DUMMY]->setup(
       "sleep", "for debug",
       "If passed to solver fom ampl, then ampl will wait so that you can copy "
       ".nl file for debug.",
-      CoinParam::displayPriorityHigh);
+      CoinParam::displayPriorityLow);
 
   if (!cbcMode_)
     parameters_[ClpParam::STATISTICS]->setup(
@@ -661,7 +656,7 @@ void ClpParameters::addClpStrParams() {
       "'../../Data/Netlib'",
       CoinParam::displayPriorityLow);
 
-  if (!cbcMode_)
+  if (false)
     parameters_[ClpParam::DIRMIPLIB]->setup(
       "dirMiplib", "Set directory where the miplib 2003 problems are.",
       "This sets the directory where the miplib 2003 problems reside. One can "
@@ -1008,7 +1003,7 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::VECTOR]->setup(
       "vector", "Whether to use vector? Form of matrix in simplex", 
       "If this is on ClpPackedMatrix uses extra column copy in odd format.",
-      CoinParam::displayPriorityNone);
+      CoinParam::displayPriorityLow);
   parameters_[ClpParam::VECTOR]->appendKwd("off");
   parameters_[ClpParam::VECTOR]->appendKwd("on");
 #else
@@ -1018,7 +1013,7 @@ void ClpParameters::addClpKwdParams() {
       "avx2 or avx512 instructions. Uses different storage for matrix - can be "
       "of benefit without instruction set on some problems. I may add pool to "
       "switch on a pool matrix",
-      CoinParam::displayPriorityNone);
+      CoinParam::displayPriorityLow);
   parameters_[ClpParam::VECTOR]->appendKwd("off");
   parameters_[ClpParam::VECTOR]->appendKwd("on");
   parameters_[ClpParam::VECTOR]->appendKwd("ones");
@@ -1054,7 +1049,8 @@ void ClpParameters::addClpDblParams() {
   parameters_[ClpParam::DUALTOLERANCE]->setup("dualT!olerance", "For an optimal solution no dual infeasibility may exceed this value", 1.0e-20, COIN_DBL_MAX, "Normally the default tolerance is fine, but one may want to increase it a bit if the dual simplex algorithm seems to be having a hard time. One method which can be faster is to use a large tolerance e.g. 1.0e-4 and the dual simplex algorithm and then to clean up the problem using the primal simplex algorithm with the correct tolerance (remembering to switch off presolve for this final short clean up phase).");
                                          
   parameters_[ClpParam::FAKEBOUND]->setup(
-      "fakeB!ound", "All bounds <= this value - DEBUG", 1.0, 1.0e15);
+	  "fakeB!ound", "All bounds <= this value - DEBUG", 1.0, 1.0e15,
+	   "",CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::OBJSCALE]->setup(
       "objective!Scale", "Scale factor to apply to objective", -COIN_DBL_MAX,
@@ -1106,7 +1102,7 @@ Code donated by Jeremy Omer.  See Towhidi, M., Desrosiers, J., Soumis, F., The p
       "reallyO!bjectiveScale", "Scale factor to apply to objective in place",
       -COIN_DBL_MAX, COIN_DBL_MAX, 
       "You can set this to -1.0 to test maximization or other to stress code",
-      CoinParam::displayPriorityNone);
+      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::RHSSCALE]->setup(
       "rhs!Scale", "Scale factor to apply to rhs and bounds", -COIN_DBL_MAX,
@@ -1114,7 +1110,7 @@ Code donated by Jeremy Omer.  See Towhidi, M., Desrosiers, J., Soumis, F., The p
       "If the rhs or bounds have some very large meaningful values, you may "
       "wish to scale them internally by this amount.  It can also be set by "
       "autoscale.  This should not be needed.",
-      CoinParam::displayPriorityNone);
+      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::TIMELIMIT]->setup(
       "sec!onds", "Maximum seconds", -1.0, COIN_DBL_MAX, 
@@ -1250,7 +1246,7 @@ void ClpParameters::addClpIntParams() {
 
   parameters_[ClpParam::SPECIALOPTIONS]->setup(
       "special!Options", "Dubious options for Simplex - see ClpSimplex.hpp", 0,
-      COIN_INT_MAX, "", CoinParam::displayPriorityNone);
+      COIN_INT_MAX, "", CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::SPRINT]->setup(
       "sprint!Crash", "Whether to try sprint crash", -1, COIN_INT_MAX, 
