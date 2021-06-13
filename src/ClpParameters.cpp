@@ -113,20 +113,26 @@ void ClpParameters::addClpParams() {
 
 void ClpParameters::setDefaults(int strategy) {
 
-   // First, set up the psrameters that have no strategy implications
-   for (int code = ClpParam::FIRSTSTRINGPARAM + 1;
-        code < ClpParam::LASTSTRINGPARAM; code++) {
-      getParam(code)->setDefault(dfltDirectory_);
+   if (!cbcMode_){
+      // First, set up the psrameters that have no strategy implications
+      for (int code = ClpParam::FIRSTDIRECTORYPARAM + 1;
+           code < ClpParam::LASTDIRECTORYPARAM; code++) {
+         getParam(code)->setDefault(dfltDirectory_);
+      }
    }
+   
    parameters_[ClpParam::BASISFILE]->setDefault(std::string("default.bas"));
-   parameters_[ClpParam::EXPORTFILE]->setDefault(std::string("default.mps"));
-   parameters_[ClpParam::GMPLSOLFILE]->setDefault(std::string("gmpl.sol"));
-   parameters_[ClpParam::IMPORTFILE]->setDefault(std::string("default.mps"));
    parameters_[ClpParam::PARAMETRICSFILE]->setDefault(std::string("default.mps"));
-   parameters_[ClpParam::PRINTMASK]->setDefault("");
-   parameters_[ClpParam::MODELFILE]->setDefault(std::string("default.prob"));
-   parameters_[ClpParam::SOLUTIONFILE]->setDefault(std::string("solution.sln"));
-   parameters_[ClpParam::SOLUTIONBINARYFILE]->setDefault(std::string("solution.file"));
+
+   if (!cbcMode_){
+      parameters_[ClpParam::EXPORTFILE]->setDefault(std::string("default.mps"));
+      parameters_[ClpParam::GMPLSOLFILE]->setDefault(std::string("gmpl.sol"));
+      parameters_[ClpParam::IMPORTFILE]->setDefault(std::string("default.mps"));
+      parameters_[ClpParam::PRINTMASK]->setDefault("");
+      parameters_[ClpParam::MODELFILE]->setDefault(std::string("default.prob"));
+      parameters_[ClpParam::SOLUTIONFILE]->setDefault(std::string("solution.sln"));
+      parameters_[ClpParam::SOLUTIONBINARYFILE]->setDefault(std::string("solution.file"));
+   }
 
    // Now set up  parameters according to overall strategies
    switch (strategy) {
@@ -171,14 +177,11 @@ void ClpParameters::setDefaults(int strategy) {
       parameters_[ClpParam::DENSE]->setDefault(-1);
       parameters_[ClpParam::DUALIZE]->setDefault(0);
       parameters_[ClpParam::IDIOT]->setDefault(0);
-      parameters_[ClpParam::LOGLEVEL]->setDefault(1);
       parameters_[ClpParam::MAXFACTOR]->setDefault(0);
       parameters_[ClpParam::MAXITERATION]->setDefault(0);
       parameters_[ClpParam::MORESPECIALOPTIONS]->setDefault(0);
-      parameters_[ClpParam::OUTPUTFORMAT]->setDefault(0);
       parameters_[ClpParam::PRESOLVEPASS]->setDefault(0);
       parameters_[ClpParam::PERTVALUE]->setDefault(0);
-      parameters_[ClpParam::PRINTOPTIONS]->setDefault(0);
       parameters_[ClpParam::RANDOMSEED]->setDefault(1234567);
       parameters_[ClpParam::SLPVALUE]->setDefault(0);
       parameters_[ClpParam::SMALLFACT]->setDefault(-1);
@@ -188,7 +191,6 @@ void ClpParameters::setDefaults(int strategy) {
 #ifdef CLP_THREAD
       parameters_[ClpParam::SUBSTITUTION]->setDefault(3);
 #endif
-      parameters_[ClpParam::VERBOSE]->setDefault(0);
       parameters_[ClpParam::AUTOSCALE]->setDefault("off");
       parameters_[ClpParam::BUFFER_MODE]->setDefault("on");
       parameters_[ClpParam::ERRORSALLOWED]->setDefault("off");
@@ -198,6 +200,12 @@ void ClpParameters::setDefaults(int strategy) {
       parameters_[ClpParam::PERTURBATION]->setDefault("on");
       parameters_[ClpParam::PFI]->setDefault("off");
       parameters_[ClpParam::SPARSEFACTOR]->setDefault("on");
+      if (!cbcMode_){
+         parameters_[ClpParam::LOGLEVEL]->setDefault(1);
+         parameters_[ClpParam::OUTPUTFORMAT]->setDefault(0);
+         parameters_[ClpParam::PRINTOPTIONS]->setDefault(0);
+         parameters_[ClpParam::VERBOSE]->setDefault(0);
+      }
       break; 
 
     default:
