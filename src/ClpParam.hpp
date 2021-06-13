@@ -41,7 +41,7 @@ public:
    enum ClpParamCode {
       FIRSTPARAM = 0,
       
-      // Help and Information Parameters
+      // Help and Information Parameters (none of these are used in Cbc mode)
       FIRSTHELPPARAM,
       GENERALQUERY,
       FULLGENERALQUERY,
@@ -51,69 +51,87 @@ public:
       // ActionParameters
       FIRSTACTIONPARAM,
       ALLSLACK,
-      BAB,
       BARRIER,
+      BASISIN,
+      BASISOUT,
       CLEARCUTS,
       DUALSIMPLEX,
-      DUMMY,
       EITHERSIMPLEX,
-      ENVIRONMENT,
-      EXIT,
-      END,
       GUESS,
-      GMPL_SOLUTION,
-      MAXIMIZE,
-      MINIMIZE,
-      MODELIN,
       NETLIB_BARRIER,
       NETLIB_DUAL,
       NETLIB_EITHER,
       NETLIB_PRIMAL,
       NETLIB_TUNE,
       NETWORK,
-      OUTDUPROWS,
       PARAMETRICS,
       PLUSMINUS,
       PRIMALSIMPLEX,
-      QUIT,
       REALLY_SCALE,
       REVERSE,
-      SOLVE,
-      SOLVECONTINUOUS,
-      STATISTICS,
       STDIN,
-      STOP,
       TIGHTEN,
+      USERCLP, 
+      LASTCLPACTIONPARAM,
+      // The remaining actions are duplicates of those in Cbc and not used
+      // in Cbc mode.
+      DUMMY,
+      END,
+      EXIT,
+      STOP,
+      QUIT,
+      ENVIRONMENT,
+      EXPORT,
+      IMPORT,
+      MAXIMIZE,
+      MINIMIZE,
+      OUTDUPROWS,
+      PRINTSOL,
+      PRINTVERSION,
+      READMODEL,
+      READSOL,
+      SOLVE,
+      STATISTICS,
       UNITTEST,
-      USERCLP,
-      VERSION,
+      WRITEGMPLSOL,
+      WRITEMODEL,
+      WRITESOL,
+      WRITESOLBINARY,
       LASTACTIONPARAM,
-      
-      FIRSTSTRINGPARAM,
-      // Begin used in Cbc
+
+      // File Parameters
+      FIRSTFILEPARAM,
+      BASISFILE,
+      PARAMETRICSFILE,
+      LASTCLPFILEPARAM,
+      // The remaining parameters are duplicates of those in Cbc and not used
+      // in Cbc mode.
+      EXPORTFILE,
+      GMPLSOLFILE,
+      IMPORTFILE,
+      MODELFILE,
+      SOLUTIONFILE,
+      SOLUTIONBINARYFILE,
+      LASTFILEPARAM,
+
+      // Directory Paramaters (none of these are used in Cbc mode)
+      FIRSTDIRECTORYPARAM,
       DIRECTORY,
       DIRSAMPLE,
       DIRNETLIB,
       DIRMIPLIB,
-      IMPORT,
-      EXPORT,
+      LASTDIRECTORYPARAM,
+
+      //String Parameters (none of these are used in Cbc mode)
+      FIRSTSTRINGPARAM,
       PRINTMASK,
-      RESTORE,
-      SAVE,
-      SAVESOL,
-      SOLUTION,
-      // End used in Cbc
-      BASISIN,
-      BASISOUT,
       LASTSTRINGPARAM,
       
       // On/Off Parameters
       FIRSTBOOLPARAM,
       AUTOSCALE,
       BUFFER_MODE,
-      // Begin used in Cbc
       ERRORSALLOWED,
-      // End used in Cbc
       KEEPNAMES,
       KKT,
       MESSAGES,
@@ -149,15 +167,12 @@ public:
       DENSE,
       DUALIZE,
       IDIOT,
-      LOGLEVEL,
       MAXFACTOR,
       MAXITERATION,
       MORESPECIALOPTIONS,
-      OUTPUTFORMAT,
       PERTVALUE,
       PRESOLVEPASS,
       PRESOLVEOPTIONS,
-      PRINTOPTIONS,
       RANDOMSEED,
       SPRINT,
       SLPVALUE,
@@ -166,6 +181,12 @@ public:
       SUBSTITUTION,
       THREADS,
       VECTOR_MODE,
+      LASTCLPINTPARAM,
+      // The remaining parameters are duplicates of those in Cbc and not used
+      // in Cbc mode.
+      LOGLEVEL,
+      OUTPUTFORMAT,
+      PRINTOPTIONS,
       VERBOSE,
       LASTINTPARAM,
       
@@ -211,7 +232,7 @@ public:
     */
   ClpParam(int code, std::string name, std::string help,
            double lower = -COIN_DBL_MAX, double upper = COIN_DBL_MAX,
-           double defaultValue = 0.0, std::string longHelp = "",
+           std::string longHelp = "",
            CoinDisplayPriority displayPriority = CoinParam::displayPriorityHigh);
   
   /*! \brief Constructor for a parameter with an integer value
@@ -220,37 +241,18 @@ public:
   */
   ClpParam(int code, std::string name, std::string help,
            int lower = -COIN_INT_MAX, int upper = COIN_INT_MAX,
-           int defaultValue = 0, std::string longHelp = "",
-           CoinDisplayPriority displayPriority = CoinParam::displayPriorityHigh);
-  
-  /*! \brief Constructor for a parameter with keyword values
-
-      The string supplied as \p firstValue becomes the first keyword.
-      Additional keywords can be added using appendKwd(). Keywords are numbered
-      from zero. It's necessary to specify both the first keyword (\p
-      firstValue) and the default keyword index (\p dflt) in order to
-      distinguish this constructor from the string and action parameter
-      constructors.
-    */
-  ClpParam(int code, std::string name, std::string help,
-           std::string defaultKwd, int defaultMode,
            std::string longHelp = "",
            CoinDisplayPriority displayPriority = CoinParam::displayPriorityHigh);
   
-  /*! \brief Constructor for a string parameter
+  /*! \brief Constructor for a parameter with string values (or no value)
+    Type is not optional to resolve ambiguity.
 
-      The default string value must be specified explicitly to distinguish
-      a string constructor from an action parameter constructor.
-    */
-  ClpParam(int code, std::string name, std::string help,
-           std::string defaultValue, std::string longHelp = "",
+    The default value is "" for all such parameter types
+  */
+  ClpParam(int code, std::string name, CoinParam::CoinParamType type,
+           std::string help, std::string longHelp = "",
            CoinDisplayPriority displayPriority = CoinParam::displayPriorityHigh);
-
-  /*! \brief Constructor for an action parameter */
-  // No defaults to resolve ambiguity
-  ClpParam(int code, std::string name, std::string help,
-           std::string longHelp, CoinDisplayPriority displayPriority);
-
+  
   /*! \brief Copy constructor */
   ClpParam(const ClpParam &orig);
 

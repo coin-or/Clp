@@ -90,6 +90,8 @@ int ClpParameters::matches(std::string field, int &numberMatches) {
 void ClpParameters::addClpParams() {
 
   addClpStrParams();
+  addClpDirParams();
+  addClpFileParams();
   addClpHelpParams();
   addClpActionParams();
   addClpKwdParams();
@@ -116,15 +118,15 @@ void ClpParameters::setDefaults(int strategy) {
         code < ClpParam::LASTSTRINGPARAM; code++) {
       getParam(code)->setDefault(dfltDirectory_);
    }
-   parameters_[ClpParam::BASISIN]->setDefault(std::string("default.bas"));
-   parameters_[ClpParam::BASISIN]->setDefault(std::string("default.bas"));
-   parameters_[ClpParam::EXPORT]->setDefault(std::string("default.mps"));
-   parameters_[ClpParam::IMPORT]->setDefault(std::string("default.mps"));
+   parameters_[ClpParam::BASISFILE]->setDefault(std::string("default.bas"));
+   parameters_[ClpParam::EXPORTFILE]->setDefault(std::string("default.mps"));
+   parameters_[ClpParam::GMPLSOLFILE]->setDefault(std::string("gmpl.sol"));
+   parameters_[ClpParam::IMPORTFILE]->setDefault(std::string("default.mps"));
+   parameters_[ClpParam::PARAMETRICSFILE]->setDefault(std::string("default.mps"));
    parameters_[ClpParam::PRINTMASK]->setDefault("");
-   parameters_[ClpParam::RESTORE]->setDefault(std::string("default.prob"));
-   parameters_[ClpParam::SAVE]->setDefault(std::string("default.prob"));
-   parameters_[ClpParam::SAVESOL]->setDefault(std::string("solution.sln"));
-   parameters_[ClpParam::SOLUTION]->setDefault(std::string("stdout"));
+   parameters_[ClpParam::MODELFILE]->setDefault(std::string("default.prob"));
+   parameters_[ClpParam::SOLUTIONFILE]->setDefault(std::string("solution.sln"));
+   parameters_[ClpParam::SOLUTIONBINARYFILE]->setDefault(std::string("solution.file"));
 
    // Now set up  parameters according to overall strategies
    switch (strategy) {
@@ -203,16 +205,6 @@ void ClpParameters::setDefaults(int strategy) {
       break;
    }
 
-   // Set all parameters values to their defaults to begin with
-   
-   for (int code = ClpParam::FIRSTPARAM + 1;
-        code < ClpParam::LASTPARAM; code++) {
-      if (getParam(code)->type() != CoinParam::paramInvalid &&
-          getParam(code)->type() != CoinParam::paramAct){ 
-         getParam(code)->restoreDefault();
-      }
-   }
-   
 }
 
 //###########################################################################
@@ -347,17 +339,22 @@ void ClpParameters::synchronizeModel() {
 //###########################################################################
 
 void ClpParameters::addClpHelpParams() {
+
+  // All these parameters duplicate ones in Cbc 
+  if (cbcMode_){
+     return;
+  }
+   
   for (int code = ClpParam::FIRSTHELPPARAM + 1; code < ClpParam::LASTHELPPARAM;
        code++) {
     getParam(code)->setPushFunc(ClpParamUtils::doHelpParam);
     getParam(code)->setType(CoinParam::paramAct);
   }
-  if (!cbcMode_)
-    parameters_[ClpParam::GENERALQUERY]->setup(
+  
+  parameters_[ClpParam::GENERALQUERY]->setup(
       "?", "Print a list of commands", "", CoinParam::displayPriorityNone);
 
-  if (!cbcMode_)
-    parameters_[ClpParam::FULLGENERALQUERY]->setup(
+  parameters_[ClpParam::FULLGENERALQUERY]->setup(
       "???", "Print a list with *all* commands, even those hidden with `?'", "",
       CoinParam::displayPriorityNone);
 }
@@ -367,8 +364,9 @@ void ClpParameters::addClpHelpParams() {
 
 void ClpParameters::addClpActionParams() {
 
+  // First, we add the parameters that are unique to Cbc
   for (int code = ClpParam::FIRSTACTIONPARAM + 1;
-       code < ClpParam::LASTACTIONPARAM; code++) {
+       code < ClpParam::LASTCLPACTIONPARAM; code++) {
     getParam(code)->setType(CoinParam::paramAct);
   }
 
@@ -385,25 +383,29 @@ void ClpParameters::addClpActionParams() {
       "and factorization. It will also solve models with quadratic objectives.",
       CoinParam::displayPriorityHigh);
 
-  // TODO What is this actually doing?
-  parameters_[ClpParam::BAB]->setup("branch!AndCut", "Do Branch and Cut", "",
-#if 0
-     "This does branch and cut.  There are many parameters which can affect the performance. First just try with default settings and look carefully at the log file.  Did cuts help?  Did they take too long? Look at output to see which cuts were effective and then do some tuning.  You will see that the options for cuts are off, on, root and ifmove, forceon.  Off is obvious. " CUTS_LONGHELP " For probing, forceonbut just does fixing probing in tree - not strengthening etc. If pre-processing reduced the size of the problem or strengthened many coefficients then it is probably wise to leave it on.  Switch off heuristics which did not provide solutions.  The other major area to look at is the search.  Hopefully good solutions were obtained fairly early in the search so the important point is to select the best variable to branch on. See whether strong branching did a good job - or did it just take a lot of iterations.  Adjust the strongBranching and trustPseudoCosts parameters.  If cuts did a good job, then you may wish to have more rounds of cuts - see passC!uts and passT!ree.",
-#endif
-                                   CoinParam::displayPriorityHigh);
-
+  parameters_[ClpParam::BASISIN]->setup(
+      "basisI!n", "Import basis from bas file", 
+      "This will read an MPS format basis file from the given file name.  It "
+      "will use the default directory given by 'directory'.  A name of '$' "
+      "will use the previous value for the name. This is initialized to '', "
+      "i.e. it must be set.  If you have libz then it can read compressed "
+      "files 'xxxxxxxx.gz' or xxxxxxxx.bz2.",
+      CoinParam::displayPriorityHigh);
+  
+  parameters_[ClpParam::BASISOUT]->setup(
+      "basisO!ut", "Export basis as bas file", 
+      "This will write an MPS format basis file to the given file name.  It "
+      "will use the default directory given by 'directory'.  A name of '$' "
+      "will use the previous value for the name.  This is initialized to "
+      "'default.bas'.",
+      CoinParam::displayPriorityHigh);
+  
   parameters_[ClpParam::DUALSIMPLEX]->setup(
       "dualS!implex", "Do dual simplex algorithm",
       "This command solves the continuous relaxation of the current model "
       "using the dual steepest edge algorithm. The time and iterations may be "
       "affected by settings such as presolve, scaling, crash and also by dual "
       "pivot method, fake bound on variables and dual and primal tolerances.",
-      CoinParam::displayPriorityHigh);
-
-  if (false)
-    parameters_[ClpParam::SOLVECONTINUOUS]->setup(
-      "initialS!olve", "Solve to continuous",
-      "This just solves the problem to continuous - without adding any cuts",
       CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::EITHERSIMPLEX]->setup(
@@ -413,69 +415,10 @@ void ClpParameters::addClpActionParams() {
       "model.",
       CoinParam::displayPriorityHigh);
 
-  if (!cbcMode_)
-    parameters_[ClpParam::SOLVE]->setup(
-      "solv!e", "Do dual or primal simplex algorithm", 
-      "This command solves the continuous relaxation of the current model "
-      "using the dual or primal algorithm, based on a dubious analysis of "
-      "model.",
-      CoinParam::displayPriorityHigh);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::ENVIRONMENT]->setup(
-      "environ!ment", "Read commands from environment",
-      "This starts reading from environment variable CLP_ENVIRONMENT.",
-      CoinParam::displayPriorityNone);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::END]->setup(
-      "end", "Stops clp execution",
-      "This stops execution ; end, exit, quit and stop are synonyms",
-      CoinParam::displayPriorityHigh);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::QUIT]->setup("quit", "Stops clp execution",
-      "This stops the execution of Clp, end, exit, quit and stop are synonyms",
-      CoinParam::displayPriorityHigh);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::EXIT]->setup("exit", "Stops clp execution",
-      "This stops the execution of Clp, end, exit, quit and stop are synonyms",
-      CoinParam::displayPriorityHigh);
-
-  if (!cbcMode_)
-  parameters_[ClpParam::STOP]->setup("stop", "Stops clp execution",
-      "This stops the execution of Clp, end, exit, quit and stop are synonyms",
-      CoinParam::displayPriorityHigh);
-
-  parameters_[ClpParam::GMPL_SOLUTION]->setup(
-      "gsolu!tion", "Puts glpk solution to file",
-      "Will write a glpk solution file to the given file name.  It will use "
-      "the default directory given by 'directory'.  A name of '$' will use the "
-      "previous value for the name.  This is initialized to 'stdout' (this "
-      "defaults to ordinary solution if stdout). If problem created from gmpl "
-      "model - will do any reports.",
-      CoinParam::displayPriorityHigh);
-
   parameters_[ClpParam::GUESS]->setup(
       "guess", "Guesses at good parameters",
       "This looks at model statistics and does an initial solve setting some "
       "parameters which may help you to think of possibilities.",
-      CoinParam::displayPriorityHigh);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::MINIMIZE]->setup(
-      "min!imize", "Set optimization direction to minimize",
-      "The default is minimize - use 'maximize' for maximization.\n This "
-      "should only be necessary if you have previously set maximization You "
-      "can also use the parameters 'direction minimize'.",
-      CoinParam::displayPriorityHigh);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::MAXIMIZE]->setup(
-      "max!imize", "Set optimization direction to maximize",
-      "The default is minimize - use 'maximize' for maximization.\n"
-      "You can also use the parameters 'direction maximize'.",
       CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::NETLIB_EITHER]->setup(
@@ -566,35 +509,14 @@ void ClpParameters::addClpActionParams() {
                                             "Scales model in place", "",
                                             CoinParam::displayPriorityLow);
 
-  if (!cbcMode_)
-    parameters_[ClpParam::REVERSE]->setup(
-      "reverse", "Reverses sign of objective",
+  parameters_[ClpParam::REVERSE]->setup("reverse",
+      "Reverses sign of objective",
       "Useful for testing if maximization works correctly",
       CoinParam::displayPriorityLow);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::DUMMY]->setup(
-      "sleep", "for debug",
-      "If passed to solver fom ampl, then ampl will wait so that you can copy "
-      ".nl file for debug.",
-      CoinParam::displayPriorityLow);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::STATISTICS]->setup(
-      "stat!istics", "Print some statistics",
-      "This command prints some statistics for the current model. If log level "
-      ">1 then more is printed. These are for presolved model if presolve on "
-      "(and unscaled).",
-      CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::TIGHTEN]->setup("tightLP",
                                        "Poor person's preSolve for now", "",
                                        CoinParam::displayPriorityNone);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::UNITTEST]->setup("unitTest", "Do unit test",
-                                        "This exercises the unit test for clp",
-                                        CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::USERCLP]->setup(
       "userClp", "Hand coded Clp stuff",
@@ -602,73 +524,47 @@ void ClpParameters::addClpActionParams() {
       "something unusual. Look for USERCLP in main driver and modify sample "
       "code.",
       CoinParam::displayPriorityNone);
-}
 
-//###########################################################################
-//###########################################################################
-
-void ClpParameters::addClpStrParams() {
-
-  for (int code = ClpParam::FIRSTSTRINGPARAM + 1;
-       code < ClpParam::LASTSTRINGPARAM; code++) {
-    getParam(code)->setType(CoinParam::paramStr);
+  if (cbcMode_){
+     // Remaining parameters are duplicates and don't get added in Cbc mode.
+     return;
   }
 
-  parameters_[ClpParam::BASISIN]->setup(
-      "basisI!n", "Import basis from bas file", 
-      "This will read an MPS format basis file from the given file name.  It "
-      "will use the default directory given by 'directory'.  A name of '$' "
-      "will use the previous value for the name. This is initialized to '', "
-      "i.e. it must be set.  If you have libz then it can read compressed "
-      "files 'xxxxxxxx.gz' or xxxxxxxx.bz2.",
+  // Add remaining parameters now
+  for (int code = ClpParam::LASTCLPACTIONPARAM + 1;
+       code < ClpParam::LASTACTIONPARAM; code++) {
+    getParam(code)->setType(CoinParam::paramAct);
+  }
+
+  parameters_[ClpParam::DUMMY]->setup(
+      "sleep", "for debug",
+      "If passed to solver fom ampl, then ampl will wait so that you can copy "
+      ".nl file for debug.",
+      CoinParam::displayPriorityLow);
+
+  parameters_[ClpParam::END]->setup(
+      "end", "Stops clp execution",
+      "This stops execution ; end, exit, quit and stop are synonyms",
       CoinParam::displayPriorityHigh);
-  
-  parameters_[ClpParam::BASISOUT]->setup(
-      "basisO!ut", "Export basis as bas file", 
-      "This will write an MPS format basis file to the given file name.  It "
-      "will use the default directory given by 'directory'.  A name of '$' "
-      "will use the previous value for the name.  This is initialized to "
-      "'default.bas'.",
+
+  parameters_[ClpParam::QUIT]->setup("quit", "Stops clp execution",
+      "This stops the execution of Clp, end, exit, quit and stop are synonyms",
       CoinParam::displayPriorityHigh);
-  
-  if (!cbcMode_)
-    parameters_[ClpParam::DIRECTORY]->setup(
-      "directory", "Set Default directory for import etc.", 
-      "This sets the directory which import, export, saveModel, restoreModel "
-      "etc. will use. It is initialized to the current directory.");
 
-  if (!cbcMode_)
-    parameters_[ClpParam::DIRSAMPLE]->setup(
-      "dirSample", "Set directory where the COIN-OR sample problems are.",
-      "This sets the directory where the COIN-OR sample problems reside. It is "
-      "used only when -unitTest is passed to clp. clp will pick up the test "
-      "problems from this directory. It is initialized to '../../Data/Sample'",
-      CoinParam::displayPriorityLow);
+  parameters_[ClpParam::EXIT]->setup("exit", "Stops clp execution",
+      "This stops the execution of Clp, end, exit, quit and stop are synonyms",
+      CoinParam::displayPriorityHigh);
 
-  if (!cbcMode_)
-    parameters_[ClpParam::DIRNETLIB]->setup(
-      "dirNetlib", "Set directory where the netlib problems are.",
-      "This sets the directory where the netlib problems reside. One can get "
-      "the netlib problems from COIN-OR or from the main netlib site. This "
-      "parameter is used only when -netlib is passed to cbc. cbc will pick up "
-      "the netlib problems from this directory. If clp is built without zlib "
-      "support then the problems must be uncompressed. It is initialized to "
-      "'../../Data/Netlib'",
-      CoinParam::displayPriorityLow);
+  parameters_[ClpParam::STOP]->setup("stop", "Stops clp execution",
+      "This stops the execution of Clp, end, exit, quit and stop are synonyms",
+      CoinParam::displayPriorityHigh);
 
-  if (false)
-    parameters_[ClpParam::DIRMIPLIB]->setup(
-      "dirMiplib", "Set directory where the miplib 2003 problems are.",
-      "This sets the directory where the miplib 2003 problems reside. One can "
-      "get the miplib problems from COIN-OR or from the main miplib site. This "
-      "parameter is used only when -miplib is passed to cbc. cbc will pick up "
-      "the miplib problems from this directory. If cbc is built without zlib "
-      "support then the problems must be uncompressed. It is initialized to "
-      "'../../Data/miplib3'",
-      CoinParam::displayPriorityLow);
+  parameters_[ClpParam::ENVIRONMENT]->setup(
+      "environ!ment", "Read commands from environment",
+      "This starts reading from environment variable CLP_ENVIRONMENT.",
+      CoinParam::displayPriorityNone);
 
-  if (!cbcMode_)
-    parameters_[ClpParam::EXPORT]->setup(
+  parameters_[ClpParam::EXPORT]->setup(
       "export", "Export model as mps file", 
       "This will write an MPS format file to the given file name.  It will use "
       "the default directory given by 'directory'.  A name of '$' will use the "
@@ -678,8 +574,7 @@ void ClpParameters::addClpStrParams() {
       "before importing mps file.",
       CoinParam::displayPriorityHigh);
   
-  if (!cbcMode_)
-    parameters_[ClpParam::IMPORT]->setup(
+  parameters_[ClpParam::IMPORT]->setup(
       "import", "Import model from mps file", 
       "This will read an MPS format file from the given file name.  It will "
       "use the default directory given by 'directory'.  A name of '$' will use "
@@ -688,47 +583,284 @@ void ClpParameters::addClpStrParams() {
       "'xxxxxxxx.gz' or 'xxxxxxxx.bz2'. If 'keepnames' is off, then names are "
       "dropped -> Rnnnnnnn and Cnnnnnnn.",
       CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::MINIMIZE]->setup(
+      "min!imize", "Set optimization direction to minimize",
+      "The default is minimize - use 'maximize' for maximization.\n This "
+      "should only be necessary if you have previously set maximization You "
+      "can also use the parameters 'direction minimize'.",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::MAXIMIZE]->setup(
+      "max!imize", "Set optimization direction to maximize",
+      "The default is minimize - use 'maximize' for maximization.\n"
+      "You can also use the parameters 'direction maximize'.",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::OUTDUPROWS]->setup(
+      "outDup!licates", "takes duplicate rows etc out of integer model", "",
+      CoinParam::displayPriorityNone);
+
+  parameters_[ClpParam::PRINTSOL]->setup(
+      "printS!olution", "writes solution to file (or stdout)",
+      "This will write a binary solution file to the file set by solutionFile.",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::PRINTVERSION]->setup(
+      "version", "Print version", "", CoinParam::displayPriorityHigh);
   
-  if (!cbcMode_)
-    parameters_[ClpParam::PRINTMASK]->setup(
+  parameters_[ClpParam::READMODEL]->setup(
+      "readM!odel", "Reads problem from a binary save file", 
+      "This will read the problem saved by 'writeModel' from the file name "
+      "set by 'modelFile'.",
+      CoinParam::displayPriorityHigh);
+
+  // For backward compatibility
+  parameters_[ClpParam::READMODEL]->setup(
+      "restoreM!odel", "Reads problem from a binary save file (synonym for "
+      "readModel)", 
+      "This will read the problem saved by 'writeModel' from the file name "
+      "set by 'modelFile'.",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::SOLVE]->setup(
+      "solv!e", "Do dual or primal simplex algorithm", 
+      "This command solves the continuous relaxation of the current model "
+      "using the dual or primal algorithm, based on a dubious analysis of "
+      "model.",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::STATISTICS]->setup(
+      "stat!istics", "Print some statistics",
+      "This command prints some statistics for the current model. If log level "
+      ">1 then more is printed. These are for presolved model if presolve on "
+      "(and unscaled).",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::UNITTEST]->setup("unitTest", "Do unit test",
+                                         "This exercises the unit test for clp",
+                                         CoinParam::displayPriorityLow);
+
+  parameters_[ClpParam::WRITEGMPLSOL]->setup(
+      "writeGSolu!tion", "Puts glpk solution to file",
+      "Will write a glpk solution file to the given file name.  It will use "
+      "the default directory given by 'directory'.  A name of '$' will use the "
+      "previous value for the name.  This is initialized to 'stdout' (this "
+      "defaults to ordinary solution if stdout). If problem created from gmpl "
+      "model - will do any reports.",
+      CoinParam::displayPriorityHigh);
+
+  // For backward compatibility
+  parameters_[ClpParam::WRITEGMPLSOL]->setup(
+      "gsolu!tion", "Puts glpk solution to file (synonym for writeGSolu!tion)",
+      "Will write a glpk solution file to the given file name.  It will use "
+      "the default directory given by 'directory'.  A name of '$' will use the "
+      "previous value for the name.  This is initialized to 'stdout' (this "
+      "defaults to ordinary solution if stdout). If problem created from gmpl "
+      "model - will do any reports.",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::WRITEMODEL]->setup(
+      "writeM!odel", "save model to binary file", 
+      "This will write the problem in binary foramt to the file name set by "
+      "'modelFile' for future use by readModel.",
+      CoinParam::displayPriorityHigh);
+
+  // For backward compatibility
+  parameters_[ClpParam::WRITEMODEL]->setup(
+      "saveM!odel", "save model to binary file (synonym for writeModel)", 
+      "This will write the problem in binary foramt to the file name set by "
+      "'modelFile' for future use by readModel.",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::WRITESOL]->setup(
+      "writeS!olution", "writes solution to file (or stdout)",
+      "This will write a primitive solution file to the file set by "
+      "'solutionFile'. The amount of output can be varied using "
+      "'printingOptions' or 'printMask'.",
+      CoinParam::displayPriorityHigh);
+
+  // For backward compatibility
+  parameters_[ClpParam::WRITESOL]->setup(
+      "solu!tion", "writes solution to file (or stdout) (synonym for "
+      "writeSolution).",
+      "This will write a primitive solution file to the file set by "
+      "'solutionFile'. The amount of output can be varied using "
+      "'printingOptions' or 'printMask'.",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::WRITESOLBINARY]->setup(
+      "writeSolB!inary", "writes solution to file in binary format",
+      "This will write a binary solution file to the file set by "
+      "'solutionBinaryFile'. To read the file use fread(int) twice to pick up "
+      "number of rows and columns, then fread(double) to pick up objective "
+      "value, then pick up row activities, row duals, column activities and "
+      "reduced costs - see bottom of ClpParamUtils.cpp for code that reads or "
+      "writes file. If name contains '_fix_read_', then does not write but "
+      "reads and will fix all variables",
+      CoinParam::displayPriorityHigh);
+
+  // For backward compatibility
+  parameters_[ClpParam::WRITESOLBINARY]->setup(
+      "saveS!olution", "writes solution to file in binary format (synonym for "
+      "writeSolBinary",
+      "This will write a binary solution file to the file set by "
+      "'solutionBinaryFile'. To read the file use fread(int) twice to pick up "
+      "number of rows and columns, then fread(double) to pick up objective "
+      "value, then pick up row activities, row duals, column activities and "
+      "reduced costs - see bottom of ClpParamUtils.cpp for code that reads or "
+      "writes file. If name contains '_fix_read_', then does not write but "
+      "reads and will fix all variables",
+      CoinParam::displayPriorityHigh);
+}
+
+//###########################################################################
+//###########################################################################
+
+void ClpParameters::addClpFileParams() {
+
+  for (int code = ClpParam::FIRSTFILEPARAM + 1;
+       code < ClpParam::LASTCLPFILEPARAM; code++) {
+    getParam(code)->setType(CoinParam::paramFile);
+  }
+
+  parameters_[ClpParam::BASISFILE]->setup(
+      "basisF!ile", "sets the name for file for reading/writing the basis", 
+      "This will read an MPS format basis file from the given file name.  It "
+      "will use the default directory given by 'directory'.  If no name is "
+      "specified, the previous value will be used. This is initialized to '', "
+      "i.e. it must be set.  If you have libz then it can read compressed "
+      "files 'xxxxxxxx.gz' or xxxxxxxx.bz2.",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::PARAMETRICSFILE]->setup(
+      "paramF!ile", "set name of file to import parametrics data from",
+      "This will read a file with parametric data from the given file name and "
+      "then do parametrics. It will use the default directory given by "
+      "'directory'. A name of '$' will use the previous value for the name. "
+      "This is initialized to '', i.e. it must be set.  This can not read from "
+      "compressed files. File is in modified csv format - a line ROWS will be "
+      "followed by rows data while a line COLUMNS will be followed by column "
+      "data.  The last line should be ENDATA. The ROWS line must exist and is "
+      "in the format ROWS, inital theta, final theta, interval theta, n where "
+      "n is 0 to get CLPI0062 message at interval or at each change of theta "
+      "and 1 to get CLPI0063 message at each iteration.  If interval theta is "
+      "0.0 or >= final theta then no interval reporting.  n may be missed out "
+      "when it is taken as 0.  If there is Row data then there is a headings "
+      "line with allowed headings - name, number, lower(rhs change), upper(rhs "
+      "change), rhs(change).  Either the lower and upper fields should be "
+      "given or the rhs field. The optional COLUMNS line is followed by a "
+      "headings line with allowed headings - name, number, objective(change), "
+      "lower(change), upper(change). Exactly one of name and number must be "
+      "given for either section and missing ones have value 0.0.",
+      CoinParam::displayPriorityHigh);
+
+  // Remaining parameters are duplicates
+  if (cbcMode_){
+     return;
+  }
+
+  for (int code = ClpParam::LASTCLPFILEPARAM + 1;
+       code < ClpParam::LASTFILEPARAM; code++) {
+    getParam(code)->setType(CoinParam::paramFile);
+  }
+
+  parameters_[ClpParam::EXPORTFILE]->setup(
+      "exportF!ile", "sets name for file to export model to",
+      "This will set the name of the model will be written to and read from. "
+      "This is initialized to 'export.mps'. ",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::GMPLSOLFILE]->setup(
+      "gmplSolutionF!ile", "sets name for file to store GMPL solution in",
+      "This will set the name the GMPL solution will be written to and read "
+      "from. This is initialized to 'gmpl.sol'. ",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::IMPORTFILE]->setup(
+      "importF!ile", "sets name for file to import model from",
+      "This will set the name of the model to be read in with the import "
+      "command. This is initialized to 'import.mps'",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::MODELFILE]->setup(
+      "modelF!ile", "sets name for file to store model in",
+      "This will set the name the model will be written to and read from. "
+      "This is initialized to 'prob.mod'. ",
+      CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::SOLUTIONBINARYFILE]->setup(
+      "solutionBinaryF!ile",
+      "sets name for file to store solution in binary format",
+      "This will set the name the solution will be saved to and read from. "
+      "By default, binary solutions are written to 'solution.file'." 
+      "use printSolution.", CoinParam::displayPriorityHigh);
+
+  parameters_[ClpParam::SOLUTIONFILE]->setup(
+      "solutionF!ile", "sets name for file to store solution in",
+      "This will set the name the solution will be saved to and read from. "
+      "By default, solutions are written to 'opt.sol'. To print to stdout, "
+      "use printSolution.", CoinParam::displayPriorityHigh);
+}
+
+//###########################################################################
+//###########################################################################
+
+void ClpParameters::addClpDirParams() {
+
+  if (cbcMode_){
+     return;
+  }
+   
+  for (int code = ClpParam::FIRSTDIRECTORYPARAM + 1;
+       code < ClpParam::LASTDIRECTORYPARAM; code++) {
+    getParam(code)->setType(CoinParam::paramDir);
+  }
+
+  parameters_[ClpParam::DIRECTORY]->setup(
+      "directory", "Set Default directory for import etc.", 
+      "This sets the directory which import, export, saveModel, restoreModel "
+      "etc. will use. It is initialized to the current directory.");
+
+  parameters_[ClpParam::DIRSAMPLE]->setup(
+      "dirSample", "Set directory where the COIN-OR sample problems are.",
+      "This sets the directory where the COIN-OR sample problems reside. It is "
+      "used only when -unitTest is passed to clp. clp will pick up the test "
+      "problems from this directory. It is initialized to '../../Data/Sample'",
+      CoinParam::displayPriorityLow);
+
+  parameters_[ClpParam::DIRNETLIB]->setup(
+      "dirNetlib", "Set directory where the netlib problems are.",
+      "This sets the directory where the netlib problems reside. One can get "
+      "the netlib problems from COIN-OR or from the main netlib site. This "
+      "parameter is used only when -netlib is passed to cbc. cbc will pick up "
+      "the netlib problems from this directory. If clp is built without zlib "
+      "support then the problems must be uncompressed. It is initialized to "
+      "'../../Data/Netlib'",
+      CoinParam::displayPriorityLow);
+
+}
+
+//###########################################################################
+//###########################################################################
+
+void ClpParameters::addClpStrParams() {
+
+  if (cbcMode_){
+     return;
+  }
+   
+  for (int code = ClpParam::FIRSTSTRINGPARAM + 1;
+       code < ClpParam::LASTSTRINGPARAM; code++) {
+    getParam(code)->setType(CoinParam::paramStr);
+  }
+
+  parameters_[ClpParam::PRINTMASK]->setup(
       "printM!ask", "Control printing of solution with a regular expression",
       "If set then only those names which match mask are printed in a "
       "solution. '?' matches any character and '*' matches any set of "
       "characters.  The default is '' (unset) so all variables are printed. "
       "This is only active if model has names.");
-  
-  parameters_[ClpParam::RESTORE]->setup(
-      "restore!Model", "Restore model from binary file",
-      "This reads data save by saveModel from the given file.  It will use the "
-      "default directory given by 'directory'.  A name of '$' will use the "
-      "previous value for the name.  This is initialized to 'default.prob'.",
-      CoinParam::displayPriorityHigh);
-  
-  parameters_[ClpParam::SAVE]->setup(
-      "saveM!odel", "Save model to binary file", 
-      "This will save the problem to the given file name for future use by "
-      "restoreModel. It will use the default directory given by 'directory'.  "
-      "A name of '$' will use the previous value for the name.  This is "
-      "initialized to 'default.prob'.");
-  
-  parameters_[ClpParam::SAVESOL]->setup(
-      "saveS!olution", "saves solution to file", 
-      "This will write a binary solution file to the given file name.  It will "
-      "use the default directory given by 'directory'.  A name of '$' will use "
-      "the previous value for the name.  This is initialized to "
-      "'solution.file'.  To read the file use fread(int) twice to pick up "
-      "number of rows and columns, then fread(double) to pick up objective "
-      "value, then pick up row activities, row duals, column activities and "
-      "reduced costs - see bottom of parameters_[ClpParam::]->setup(.cpp for "
-      "code that reads or writes file. If name contains '_fix_read_' then does "
-      "not write but reads and will fix all variables");
-  
-  parameters_[ClpParam::SOLUTION]->setup("solu!tion", "Prints solution to file", 
-      "This will write a primitive solution file to the given file name.  It "
-      "will use the default directory given by 'directory'.  A name of '$' "
-      "will use the previous value for the name.  This is initialized to "
-      "'stdout'.  The amount of output can be varied using printi!ngOptions or "
-      "printMask.");
   
 }
 
@@ -1129,7 +1261,7 @@ Code donated by Jeremy Omer.  See Towhidi, M., Desrosiers, J., Soumis, F., The p
 //###########################################################################
 
 void ClpParameters::addClpIntParams() {
-  for (int code = ClpParam::FIRSTINTPARAM + 1; code < ClpParam::LASTINTPARAM;
+  for (int code = ClpParam::FIRSTINTPARAM + 1; code < ClpParam::LASTCLPINTPARAM;
        code++) {
     getParam(code)->setPushFunc(ClpParamUtils::pushClpIntParam);
     getParam(code)->setType(CoinParam::paramInt);
@@ -1168,13 +1300,6 @@ void ClpParameters::addClpIntParams() {
       "simplex algorithm.  It can be set to -1 when the code decides for "
       "itself whether to use it, 0 to switch off, or n > 0 to do n passes.");
 
-  if (!cbcMode_)
-    parameters_[ClpParam::LOGLEVEL]->setup(
-      "log!Level", "Level of detailin Clp output", -63, 63,
-      "If 0 then there should be no output in normal circumstances.  1 is "
-      "probably the best value for most uses, while 2 and 3 give more "
-      "information.");
-
   parameters_[ClpParam::MAXFACTOR]->setup(
       "maxF!actor", "Maximum number of iterations between refactorizations", 1,
       COIN_INT_MAX, 
@@ -1194,18 +1319,6 @@ void ClpParameters::addClpIntParams() {
       COIN_INT_MAX, 
       "See ClpSimplex.hpp.");
 
-  if (!cbcMode_)
-    parameters_[ClpParam::OUTPUTFORMAT]->setup(
-      "output!Format", "Which output format to use", 1, 6,
-      "Normally export will be done using normal representation for numbers "
-      "and two values per line.  You may want to do just one per line (for "
-      "grep or suchlike) and you may wish to save with absolute accuracy using "
-      "a coded version of the IEEE value. A value of 2 is normal. otherwise "
-      "odd values gives one value per line, even two.  Values 1,2 give normal "
-      "format, 3,4 gives greater precision, while 5,6 give IEEE values.  When "
-      "used for exporting a basis 1 does not save values, 2 saves values, 3 "
-      "with greater accuracy and 4 in IEEE.");
-
   parameters_[ClpParam::PRESOLVEPASS]->setup(
       "passP!resolve", "How many passes in presolve", -200, 100,
       "Normally Presolve does 10 passes but you may want to do less to make it "
@@ -1217,13 +1330,6 @@ void ClpParameters::addClpIntParams() {
   parameters_[ClpParam::PERTVALUE]->setup("pertV!alue", "Method of perturbation",
                                          -5000, 102, "",
                                          CoinParam::displayPriorityLow);
-
-  if (!cbcMode_)
-    parameters_[ClpParam::PRINTOPTIONS]->setup(
-      "pO!ptions", "Dubious print options", 0, COIN_INT_MAX,
-      "If this is > 0 then presolve will give more information and branch and "
-      "cut will give statistics",
-      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::RANDOMSEED]->setup(
       "randomS!eed", "Random seed for Clp", 0, COIN_INT_MAX, 
@@ -1274,8 +1380,40 @@ void ClpParameters::addClpIntParams() {
       "200+n use threads for root cuts, 400+n threads used in sub-trees.");
 #endif
 
-  if (!cbcMode_)
-    parameters_[ClpParam::VERBOSE]->setup(
+  if (cbcMode_){
+     return;
+  }
+
+  for (int code = ClpParam::LASTCLPINTPARAM + 1;
+       code < ClpParam::LASTINTPARAM; code++) {
+    getParam(code)->setPushFunc(ClpParamUtils::pushClpIntParam);
+    getParam(code)->setType(CoinParam::paramInt);
+  }
+  
+  parameters_[ClpParam::LOGLEVEL]->setup(
+      "log!Level", "Level of detailin Clp output", -63, 63,
+      "If 0 then there should be no output in normal circumstances.  1 is "
+      "probably the best value for most uses, while 2 and 3 give more "
+      "information.");
+
+  parameters_[ClpParam::OUTPUTFORMAT]->setup(
+      "output!Format", "Which output format to use", 1, 6,
+      "Normally export will be done using normal representation for numbers "
+      "and two values per line.  You may want to do just one per line (for "
+      "grep or suchlike) and you may wish to save with absolute accuracy using "
+      "a coded version of the IEEE value. A value of 2 is normal. otherwise "
+      "odd values gives one value per line, even two.  Values 1,2 give normal "
+      "format, 3,4 gives greater precision, while 5,6 give IEEE values.  When "
+      "used for exporting a basis 1 does not save values, 2 saves values, 3 "
+      "with greater accuracy and 4 in IEEE.");
+
+  parameters_[ClpParam::PRINTOPTIONS]->setup(
+      "pO!ptions", "Dubious print options", 0, COIN_INT_MAX,
+      "If this is > 0 then presolve will give more information and branch and "
+      "cut will give statistics",
+      CoinParam::displayPriorityLow);
+
+  parameters_[ClpParam::VERBOSE]->setup(
       "verbose", "Switches on longer help on single ?", 0, 31,
       "Set to 1 to get short help with ? list, 2 to get long help, 3 for both. "
       " (add 4 to just get ampl ones).",

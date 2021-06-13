@@ -40,13 +40,13 @@ ClpParam::ClpParam()
 
 /*
   Constructor for double parameter
+
+  The default value is 0.
 */
 ClpParam::ClpParam(int code, std::string name,
                    std::string help, double lower, double upper,
-                   double defaultValue, std::string longHelp,
-                   CoinDisplayPriority displayPriority)
-   : CoinParam(name, help, lower, upper, defaultValue, longHelp,
-               displayPriority),
+                   std::string longHelp, CoinDisplayPriority displayPriority)
+   : CoinParam(name, help, lower, upper, longHelp, displayPriority),
      paramCode_(code), parameters_(0) {
    /* Nothing to be done here */
 }
@@ -56,13 +56,13 @@ ClpParam::ClpParam(int code, std::string name,
 
 /*
   Constructor for integer parameter
+
+  The default value is 0.
 */
 ClpParam::ClpParam(int code, std::string name,
                    std::string help, int lower, int upper,
-                   int defaultValue, std::string longHelp,
-                   CoinDisplayPriority displayPriority)
-    : CoinParam(name, help, lower, upper, defaultValue, longHelp,
-                displayPriority),
+                   std::string longHelp, CoinDisplayPriority displayPriority)
+    : CoinParam(name, help, lower, upper, longHelp, displayPriority),
       paramCode_(code), parameters_(0) {
   /* Nothing to be done here */
 }
@@ -71,43 +71,17 @@ ClpParam::ClpParam(int code, std::string name,
 //###########################################################################
 
 /*
-  Constructor for keyword parameter.
+  Constructor for parameters with a string (or no) value (all others).
+  Type is not optional to resolve ambiguity.
+
+  The default value is "" for all such parameter types
 */
 ClpParam::ClpParam(int code, std::string name,
-                   std::string help, std::string defaultKwd,
-                   int defaultMode, std::string longHelp,
-                   CoinDisplayPriority displayPriority)
-    : CoinParam(name, help, defaultKwd, defaultMode, longHelp, displayPriority),
-      paramCode_(code), parameters_(0) {
-  /* Nothing to be done here */
-}
-
-//###########################################################################
-//###########################################################################
-
-/*
-  Constructor for string parameter.
-*/
-ClpParam::ClpParam(int code, std::string name,
-                   std::string help, std::string defaultValue,
-                   std::string longHelp,
-                   CoinDisplayPriority displayPriority)
-    : CoinParam(name, help, defaultValue, longHelp, displayPriority),
-      paramCode_(code), parameters_(0) {
-  /* Nothing to be done here */
-}
-
-//###########################################################################
-//###########################################################################
-
-/*
-  Constructor for action parameter.
-*/
-ClpParam::ClpParam(int code, std::string name,
+                   CoinParam::CoinParamType type,
                    std::string help, std::string longHelp,
                    CoinDisplayPriority displayPriority)
-    : CoinParam(name, help, longHelp, displayPriority), paramCode_(code),
-      parameters_(0) {
+   : CoinParam(name, type, help, longHelp, displayPriority),
+      paramCode_(code), parameters_(0) {
   /* Nothing to be done here */
 }
 

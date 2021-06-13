@@ -90,6 +90,8 @@ public:
   /*! set up the solver parameter vector */
   void addClpParams();
   void addClpStrParams();
+  void addClpDirParams();
+  void addClpFileParams();
   void addClpHelpParams();
   void addClpActionParams();
   void addClpKwdParams();

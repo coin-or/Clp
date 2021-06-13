@@ -147,6 +147,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
              ampl_info *info)
 #endif
 {
+  std::ostringstream buffer;
+  std::string field, message, fileName;
+  FILE *fp;
+  
   // Set up all non-standard stuff
   // int numberModels=1;
 #ifdef CLP_USEFUL_PRINTOUT
@@ -194,55 +198,14 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
   int preSolve = DEFAULT_PRESOLVE_PASSES;
   bool preSolveFile = false;
   const char dirsep = CoinFindDirSeparator();
-  std::string directory;
-  std::string dirSample;
-  std::string dirNetlib;
-  std::string dirMiplib;
-  if (dirsep == '/') {
-    directory = "./";
-    dirSample = "../../Data/Sample/";
-    dirNetlib = "../../Data/Netlib/";
-    dirMiplib = "../../Data/miplib3/";
-  } else {
-    directory = ".\\";
-#ifdef COIN_MSVS
-    // Visual Studio builds are deeper
-    dirSample = "..\\..\\..\\..\\Data\\Sample\\";
-    dirNetlib = "..\\..\\..\\..\\Data\\Netlib\\";
-    dirMiplib = "..\\..\\..\\..\\Data\\miplib3\\";
-#else
-    dirSample = "..\\..\\Data\\Sample\\";
-    dirNetlib = "..\\..\\Data\\Netlib\\";
-    dirMiplib = "..\\..\\Data\\miplib3\\";
-#endif
-  }
-  std::string defaultDirectory = directory;
-  std::string importFile = "";
-  std::string exportFile = "default.mps";
-  std::string importBasisFile = "";
   int basisHasValues = 0;
   int substitution = 3;
   int dualize = 3; // dualize if looks promising
-  std::string exportBasisFile = "default.bas";
-  std::string saveFile = "default.prob";
-  std::string restoreFile = "default.prob";
-  std::string solutionFile = "stdout";
-  std::string solutionSaveFile = "solution.file";
-  std::string printMask = "";
   ClpParameters parameters;
   parameters.setModel(models);
-  parameters[ClpParam::BASISIN]->setVal(importBasisFile);
-  parameters[ClpParam::BASISOUT]->setVal(exportBasisFile);
-  parameters[ClpParam::PRINTMASK]->setVal(printMask);
-  parameters[ClpParam::DIRECTORY]->setVal(directory);
-  parameters[ClpParam::DIRSAMPLE]->setVal(dirSample);
-  parameters[ClpParam::DIRNETLIB]->setVal(dirNetlib);
-  parameters[ClpParam::DIRMIPLIB]->setVal(dirMiplib);
   parameters[ClpParam::DUALBOUND]->setVal(models->dualBound());
   parameters[ClpParam::DUALTOLERANCE]->setVal(models->dualTolerance());
-  parameters[ClpParam::EXPORT]->setVal(exportFile);
   parameters[ClpParam::IDIOT]->setVal(doIdiot);
-  parameters[ClpParam::IMPORT]->setVal(importFile);
   parameters[ClpParam::LOGLEVEL]->setVal(models->logLevel());
   parameters[ClpParam::MAXFACTOR]->setVal(models->factorizationFrequency());
   parameters[ClpParam::MAXITERATION]->setVal(models->maximumIterations());
@@ -251,11 +214,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
   parameters[ClpParam::PERTVALUE]->setVal(models->perturbation());
   parameters[ClpParam::PRIMALTOLERANCE]->setVal(models->primalTolerance());
   parameters[ClpParam::PRIMALWEIGHT]->setVal(models->infeasibilityCost());
-  parameters[ClpParam::RESTORE]->setVal(restoreFile);
-  parameters[ClpParam::SAVE]->setVal(saveFile);
   parameters[ClpParam::TIMELIMIT]->setVal(models->maximumSeconds());
-  parameters[ClpParam::SOLUTION]->setVal(solutionFile);
-  parameters[ClpParam::SAVESOL]->setVal(solutionSaveFile);
   parameters[ClpParam::SPRINT]->setVal(doSprint);
   parameters[ClpParam::SUBSTITUTION]->setVal(substitution);
   parameters[ClpParam::DUALIZE]->setVal(dualize);
@@ -291,7 +250,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
   int scaleBarrier = 2;
   int doKKT = 0;
   int crossover = 2; // do crossover unless quadratic
-  bool interactiveMode = false;
+  bool interactiveMode = false, canOpen;
 
   int iModel = 0;
   // models[0].scaling(1);
@@ -301,8 +260,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
   // models[0].setDualRowPivotAlgorithm(steep);
   // ClpPrimalColumnSteepest steepP;
   // models[0].setPrimalColumnPivotAlgorithm(steepP);
-  std::string field, message;
-  std::ostringstream buffer;
   int status, iValue;
   double dValue;
   std::string prompt = "Clp: ";
@@ -344,40 +301,52 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
 
     // These are some special case we deal with separately
     // (only in non-interactive mode)
-    if (!interactiveMode) {
-      if (field == "-") {
-        std::cout << "Switching to line mode" << std::endl;
-        interactiveMode = true;
-        while (!inputQueue.empty()){
-          inputQueue.pop_front();
-        }
-	field = CoinParamUtils::getNextField(inputQueue, interactiveMode, prompt);
-      } else {
-        if (field != "--") {
-          // take off -
-          field = field.substr(1);
-        } else {
-          // special dispensation - taken as -import --
-          field = "-import";
-        }
-      }
+    if (!interactiveMode){
+       if (field == "-") {
+          std::cout << "Switching to line mode" << std::endl;
+          interactiveMode = true;
+          while (!inputQueue.empty())
+             inputQueue.pop_front();
+          field = CoinParamUtils::getNextField(inputQueue, interactiveMode, prompt);
+       } else if (field[0] != '-') {
+          // special dispensation - taken as -import name, put name back on queue
+          inputQueue.push_front(field);
+          field = "import";
+       } else {
+          if (field != "--") {
+             // take off -
+             field = field.substr(1);
+          } else {
+             // special dispensation - taken as -import --
+             field = "import";
+          }
+       }
     }
 
     int numberMatches(0), numberShortMatches(0), numberQuery(0);
 
     // find out if valid command
-    int paramCode = CoinParamUtils::lookupParam(
-        field, parameters.paramVec(), &numberMatches, &numberShortMatches,
-        &numberQuery);
+    int paramCode = CoinParamUtils::lookupParam(field,
+                                                parameters.paramVec(),
+                                                &numberMatches,
+                                                &numberShortMatches,
+                                                &numberQuery);
 
-    if (paramCode < 0) {
-      if (!numberMatches)
-	std::cout << "No match for " << field << " - ? for list of commands"
-		  << std::endl;
-      continue;
+    if (numberQuery > 0 || (numberShortMatches > 0 && !numberMatches)){
+       continue;
     }
-    if (numberMatches > 1 || numberShortMatches == 1 || numberQuery > 0) {
-      continue;
+    if (!numberMatches) {
+       if (!interactiveMode){
+          std::cout << "Unrecognized parameter - " << field
+          << ", exiting..."
+          << std::endl;
+          paramCode = ClpParam::EXIT;
+       } else {
+          std::cout << "Unrecognized parameter - " << field
+                    << " - enter valid command or end to exit"
+                    << std::endl;
+          continue;
+       }
     }
 
     ClpParam *param = parameters[paramCode];
@@ -789,6 +758,24 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           // abort();
           break;
       }
+    } else if (param->type() == CoinParam::paramDir){
+       if (status = param->readValue(inputQueue, field, &message)){
+          printGeneralMessage(models, message);
+          continue;
+       }
+       if (param->setVal(field, &message)){
+          printGeneralMessage(models, message);
+          continue;
+       }
+    } else if (param->type() == CoinParam::paramFile){
+       if (status = param->readValue(inputQueue, field, &message)){
+          printGeneralMessage(models, message);
+          continue;
+       }
+       if (param->setVal(field, &message)){
+          printGeneralMessage(models, message);
+          continue;
+       }
     } else {
       // action
       if (paramCode == ClpParam::EXIT ||
@@ -812,10 +799,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       case ClpParam::PRIMALSIMPLEX:
       case ClpParam::EITHERSIMPLEX:
       case ClpParam::SOLVE:
-      case ClpParam::SOLVECONTINUOUS:
       case ClpParam::BARRIER:
-        // synonym for dual
-      case ClpParam::BAB:
         if (goodModels[iModel]) {
 #ifndef ABC_INHERIT
           ClpSimplex *clpModel = models + iModel;
@@ -850,8 +834,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
             }
           }
           if (paramCode == ClpParam::EITHERSIMPLEX ||
-              paramCode == ClpParam::BAB || paramCode == ClpParam::SOLVE ||
-              paramCode == ClpParam::SOLVECONTINUOUS) {
+              paramCode == ClpParam::SOLVE) {
             models[iModel].setMoreSpecialOptions(
                 16384 | models[iModel].moreSpecialOptions());
             paramCode = ClpParam::EITHERSIMPLEX;
@@ -968,8 +951,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
             presolveType = ClpSolve::presolveOff;
           }
           solveOptions.setPresolveType(presolveType, preSolve);
-          if (paramCode == ClpParam::DUALSIMPLEX ||
-              paramCode == ClpParam::BAB) {
+          if (paramCode == ClpParam::DUALSIMPLEX) {
             method = ClpSolve::useDual;
           } else if (paramCode == ClpParam::PRIMALSIMPLEX) {
             method = ClpSolve::usePrimalorSprint;
@@ -1068,7 +1050,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           int status;
           if (cppValue >= 0) {
             // generate code
-            FILE *fp = fopen("user_driver.cpp", "w");
+            fp = fopen("user_driver.cpp", "w");
             if (fp) {
               // generate enough to do solveOptions
               model2->generateCpp(fp);
@@ -1407,17 +1389,20 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         break;
       case ClpParam::IMPORT: {
         // get next field
-        status = param->readValue(inputQueue, field);
-        if (field == "$") {
-          field = param->strVal();
-        } else if (field == "EOL") {
-          param->printString();
-          break;
-        } else {
-          param->setVal(field);
+        status = param->readValue(inputQueue, fileName, &message);
+        canOpen = false;
+        bool absolutePath = true;
+        CoinParamUtils::processFile(fileName,
+                             parameters[ClpParam::DIRECTORY]->dirName());
+        if (fileName == ""){
+           fileName = parameters[ClpParam::IMPORTFILE]->fileName();
+        }else{
+           parameters[ClpParam::IMPORTFILE]->setFileName(fileName);
         }
-        std::string fileName;
-        bool canOpen = false;
+        if (fileName[0] != '/' && fileName[0] != '\\' &&
+            !strchr(fileName.c_str(), ':')) {
+           absolutePath = false;
+        }
         // See if gmpl file
         int gmpl = 0;
         std::string gmplData;
@@ -1429,73 +1414,41 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
             gmpl = -1;
         } else {
           // See if .lp
-          {
-            const char *c_name = field.c_str();
-            size_t length = strlen(c_name);
-            if ((length > 3 && !strncmp(c_name + length - 3, ".lp", 3)) ||
-                (length > 6 && !strncmp(c_name + length - 6, ".lp.gz", 6)) ||
-                (length > 7 && !strncmp(c_name + length - 7, ".lp.bz2", 7)))
-              gmpl = -1; // .lp
+          const char *c_name = field.c_str();
+          size_t length = strlen(c_name);
+          if ((length > 3 && !strncmp(c_name + length - 3, ".lp", 3)) ||
+              (length > 6 && !strncmp(c_name + length - 6, ".lp.gz", 6)) ||
+              (length > 7 && !strncmp(c_name + length - 7, ".lp.bz2", 7))){
+             gmpl = -1; // .lp
           }
-          bool absolutePath;
-          if (dirsep == '/') {
-            // non Windows (or cygwin)
-            absolutePath = (field[0] == '/');
-          } else {
-            // Windows (non cycgwin)
-            absolutePath = (field[0] == '\\');
-            // but allow for :
-            if (strchr(field.c_str(), ':'))
-              absolutePath = true;
+          length = fileName.size();
+          size_t percent = fileName.find('%');
+          if (percent < length && percent > 0) {
+#ifdef COINUTILS_HAS_GLPK
+             gmpl = 1;
+             fileName = fileName.substr(0, percent);
+             gmplData = fileName.substr(percent + 1);
+             if (!absolutePath){
+                fileName = parameters[ClpParam::DIRECTORY]->dirName() +
+                   fileName;
+                gmplData = parameters[ClpParam::DIRECTORY]->dirName() +
+                   fileName;
+             }
+             gmpl = (percent < length - 1) ? 2 : 1;
+             printf("GMPL model file %s and data file %s\n",
+                    fileName.c_str(), gmplData.c_str());
+#else
+             printf("Clp was not built with GMPL support. Exiting.\n");
+             // This is surely not the right thing to do here. Should we
+             // throw an exceptioon? Exit?
+             abort();
+#endif
           }
-          if (absolutePath) {
-            fileName = field;
-            size_t length = field.size();
-            size_t percent = field.find('%');
-            if (percent < length && percent > 0) {
-              gmpl = 1;
-              fileName = field.substr(0, percent);
-              gmplData = field.substr(percent + 1);
-              if (percent < length - 1) {
-                gmpl = 2; // two files
-              }
-              buffer.str("");
-              buffer << "GMPL model file " << fileName << " and data file "
-                     << gmplData << std::endl;
-              printGeneralMessage(models, buffer.str());
-            }
-          } else if (field[0] == '~') {
-            char *environVar = getenv("HOME");
-            if (environVar) {
-              std::string home(environVar);
-              field = field.erase(0, 1);
-              fileName = home + field;
-            } else {
-              fileName = field;
-            }
-          } else {
-            fileName = directory + field;
-            // See if gmpl (model & data) - or even lp file
-            size_t length = field.size();
-            size_t percent = field.find('%');
-            if (percent < length && percent > 0) {
-              gmpl = 1;
-              fileName = directory + field.substr(0, percent);
-              gmplData = directory + field.substr(percent + 1);
-              if (percent < length - 1)
-                gmpl = 2; // two files
-              buffer.str("");
-              buffer << "GMPL model file " << fileName << " and data file "
-                     << gmplData << std::endl;
-              printGeneralMessage(models, buffer.str());
-            }
-          }
-          std::string name = fileName;
-          if (fileCoinReadable(name)) {
+          if (fileCoinReadable(fileName)) {
             // can open - lets go for it
             canOpen = true;
             if (gmpl == 2) {
-              FILE *fp;
+              fp;
               fp = fopen(gmplData.c_str(), "r");
               if (fp) {
                 fclose(fp);
@@ -1504,72 +1457,72 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                 buffer.str("");
                 buffer << "Unable to open file " << gmplData << std::endl;
                 printGeneralWarning(models, buffer.str());
+                continue;
               }
             }
           } else {
             buffer.str("");
             buffer << "Unable to open file " << gmplData << std::endl;
             printGeneralWarning(models, buffer.str());
+            continue;
           }
         }
-        if (canOpen) {
-          int status;
+        int status;
 #ifdef CLP_USEFUL_PRINTOUT
-          mpsFile = fileName;
+        mpsFile = fileName;
 #endif
-          if (!gmpl) {
-            status = models[iModel].readMps(
+        if (!gmpl) {
+           status = models[iModel].readMps(
                 fileName.c_str(), keepImportNames != 0, allowImportErrors != 0);
-          } else if (gmpl > 0) {
+        } else if (gmpl > 0) {
 #ifdef COINUTILS_HAS_GLPK
-            status = models[iModel].readGMPL(
+           status = models[iModel].readGMPL(
                 fileName.c_str(), (gmpl == 2) ? gmplData.c_str() : NULL,
                 keepImportNames != 0, &coin_glp_tran, &coin_glp_prob);
 #else
-            printGeneralWarning(
+           printGeneralWarning(
                 models, "Clp was not built with GMPL support. Exiting.\n");
             // This is surely not the right thing to do here. Should we
             // throw an exceptioon? Exit?
-            abort();
+           abort();
 #endif
-          } else {
+        } else {
 #ifdef KILL_ZERO_READLP
-            status = models[iModel].readLp(
+           status = models[iModel].readLp(
                 fileName.c_str(), models[iModel].getSmallElementValue());
 #else
-            status = models[iModel].readLp(fileName.c_str(), 1.0e-12);
+           status = models[iModel].readLp(fileName.c_str(), 1.0e-12);
 #endif
-          }
-          if (!status || (status > 0 && allowImportErrors)) {
-            goodModels[iModel] = true;
-            // sets to all slack (not necessary?)
-            thisModel->createStatus();
-            // Go to canned file if just input file
-            if (inputQueue.empty()) {
+        }
+        if (!status || (status > 0 && allowImportErrors)) {
+           goodModels[iModel] = true;
+           // sets to all slack (not necessary?)
+           thisModel->createStatus();
+           // Go to canned file if just input file
+           if (inputQueue.empty()) {
               // only if ends .mps
               char *find = const_cast<char *>(strstr(fileName.c_str(), ".mps"));
               if (find && find[4] == '\0') {
-                find[1] = 'p';
-                find[2] = 'a';
-                find[3] = 'r';
-                std::ifstream ifs(fileName.c_str());
-                if (ifs.is_open()) {
-                  CoinParamUtils::readFromStream(inputQueue, ifs);
-                } else {
-                  buffer.str("");
-                  buffer << "No parameter file " << fileName << " found"
-                         << std::endl;
-                  printGeneralMessage(models, buffer.str());
-                }
+                 find[1] = 'p';
+                 find[2] = 'a';
+                 find[3] = 'r';
+                 std::ifstream ifs(fileName.c_str());
+                 if (ifs.is_open()) {
+                    CoinParamUtils::readFromStream(inputQueue, ifs);
+                 } else {
+                    buffer.str("");
+                    buffer << "No parameter file " << fileName << " found"
+                           << std::endl;
+                    printGeneralMessage(models, buffer.str());
+                 }
               }
-            }
-          } else {
-            // errors
-            buffer.str("");
-            buffer << "There were " << status << " errors on input"
-                   << std::endl;
-            printGeneralMessage(models, buffer.str());
-          }
+           }
+        } else {
+           // errors
+           buffer.str("");
+           buffer << "There were " << status << " errors on input"
+                  << std::endl;
+           printGeneralMessage(models, buffer.str());
         }
       } break;
       case ClpParam::EXPORT:
@@ -1597,212 +1550,165 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                                               models[iModel].objectiveOffset());
           }
           // get next field
-          status = param->readValue(inputQueue, field);
-          if (field == "$") {
-            field = param->strVal();
-          } else if (field == "EOL") {
-            param->printString();
-            break;
-          } else {
-            param->setVal(field);
+          param->readValue(inputQueue, fileName, &message);
+          CoinParamUtils::processFile(fileName,
+                                 parameters[ClpParam::DIRECTORY]->dirName());
+          if (fileName == ""){
+             fileName = parameters[ClpParam::EXPORTFILE]->fileName();
+          }else{
+             parameters[ClpParam::EXPORTFILE]->setFileName(fileName);
           }
-          std::string fileName;
-          bool canOpen = false;
-          if (field[0] == '/' || field[0] == '\\') {
-            fileName = field;
-          } else if (field[0] == '~') {
-            char *environVar = getenv("HOME");
-            if (environVar) {
-              std::string home(environVar);
-              field = field.erase(0, 1);
-              fileName = home + field;
-            } else {
-              fileName = field;
-            }
-          } else {
-            fileName = directory + field;
-          }
-          FILE *fp = fopen(fileName.c_str(), "w");
+          fp = fopen(fileName.c_str(), "w");
           if (fp) {
             // can open - lets go for it
             fclose(fp);
-            canOpen = true;
           } else {
             buffer.str("");
             buffer << "Unable to open file " << fileName << std::endl;
             printGeneralWarning(models, buffer.str());
+            continue;
           }
-          if (canOpen) {
-            // If presolve on then save presolved
-            bool deleteModel2 = false;
-            ClpSimplex *model2 = models + iModel;
-            if (dualize && dualize < 3) {
-              model2 = static_cast<ClpSimplexOther *>(model2)->dualOfModel();
-              buffer.str("");
-              buffer << "Dual of model has " << model2->numberRows()
-                     << " rows and " << model2->numberColumns() << " columns"
-                     << std::endl;
-              printGeneralMessage(models, buffer.str());
-              model2->setOptimizationDirection(1.0);
-              preSolve = 0; // as picks up from model
-            }
-            if (preSolve) {
-              ClpPresolve pinfo;
-              int presolveOptions2 = presolveOptions & ~0x40000000;
-              if ((presolveOptions2 & 0xfffff) != 0)
+          // If presolve on then save presolved
+          bool deleteModel2 = false;
+          ClpSimplex *model2 = models + iModel;
+          if (dualize && dualize < 3) {
+             model2 = static_cast<ClpSimplexOther *>(model2)->dualOfModel();
+             buffer.str("");
+             buffer << "Dual of model has " << model2->numberRows()
+                    << " rows and " << model2->numberColumns() << " columns"
+                    << std::endl;
+             printGeneralMessage(models, buffer.str());
+             model2->setOptimizationDirection(1.0);
+             preSolve = 0; // as picks up from model
+          }
+          if (preSolve) {
+             ClpPresolve pinfo;
+             int presolveOptions2 = presolveOptions & ~0x40000000;
+             if ((presolveOptions2 & 0xfffff) != 0)
                 pinfo.setPresolveActions(presolveOptions2);
-              pinfo.setSubstitution(substitution);
-              if ((printOptions & 1) != 0)
+             pinfo.setSubstitution(substitution);
+             if ((printOptions & 1) != 0)
                 pinfo.statistics();
-              double presolveTolerance =
-                  parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
-              model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
-                                            true, preSolve, false, false);
-              if (model2) {
+             double presolveTolerance =
+                parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
+             model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
+                                           true, preSolve, false, false);
+             if (model2) {
                 buffer.str("");
                 buffer << "Saving presolved model on " << fileName << std::endl;
                 printGeneralMessage(models, buffer.str());
                 deleteModel2 = true;
-              } else {
+             } else {
                 buffer.str("");
                 buffer
-                    << "Presolved model looks infeasible - saving original on "
-                    << fileName << std::endl;
+                   << "Presolved model looks infeasible - saving original on "
+                   << fileName << std::endl;
                 printGeneralMessage(models, buffer.str());
                 deleteModel2 = false;
                 model2 = models + iModel;
-              }
-            } else {
-              buffer.str("");
-              buffer << "Saving model on " << fileName << std::endl;
-              printGeneralMessage(models, buffer.str());
-            }
-#if 0
-              // Convert names
-              int iRow;
-              int numberRows = model2->numberRows();
-              int iColumn;
-              int numberColumns = model2->numberColumns();
-              
-              char ** rowNames = NULL;
-              char ** columnNames = NULL;
-              if (model2->lengthNames()) {
-                 rowNames = new char * [numberRows];
-                 for (iRow = 0; iRow < numberRows; iRow++) {
-                    rowNames[iRow] =
-                       CoinStrdup(model2->rowName(iRow).c_str());
-#ifdef STRIPBLANKS
-                    char * xx = rowNames[iRow];
-                    int i;
-                    int length = strlen(xx);
-                    int n = 0;
-                    for (i = 0; i < length; i++) {
-                       if (xx[i] != ' ')
-                          xx[n++] = xx[i];
-                    }
-                    xx[n] = '\0';
-#endif
-                 }
-                 
-                 columnNames = new char * [numberColumns];
-                 for (iColumn = 0; iColumn < numberColumns; iColumn++) {
-                    columnNames[iColumn] =
-                       CoinStrdup(model2->columnName(iColumn).c_str());
-#ifdef STRIPBLANKS
-                    char * xx = columnNames[iColumn];
-                    int i;
-                    int length = strlen(xx);
-                    int n = 0;
-                    for (i = 0; i < length; i++) {
-                       if (xx[i] != ' ')
-                          xx[n++] = xx[i];
-                    }
-                    xx[n] = '\0';
-#endif
-                 }
-              }
-              CoinMpsIO writer;
-              writer.setMpsData(*model2->matrix(), COIN_DBL_MAX,
-                                model2->getColLower(), model2->getColUpper(),
-                                model2->getObjCoefficients(),
-                                (const char*) 0 /*integrality*/,
-                                model2->getRowLower(), model2->getRowUpper(),
-                                columnNames, rowNames);
-              // Pass in array saying if each variable integer
-              writer.copyInIntegerInformation(model2->integerInformation());
-              writer.setObjectiveOffset(model2->objectiveOffset());
-              writer.writeMps(fileName.c_str(), 0, 1, 1);
-              if (rowNames) {
-                 for (iRow = 0; iRow < numberRows; iRow++) {
-                    free(rowNames[iRow]);
-                 }
-                 delete [] rowNames;
-                 for (iColumn = 0; iColumn < numberColumns; iColumn++) {
-                    free(columnNames[iColumn]);
-                 }
-                 delete [] columnNames;
-              }
-#else
-            model2->writeMps(fileName.c_str(), (outputFormat - 1) / 2,
-                             1 + ((outputFormat - 1) & 1));
-#endif
-            if (deleteModel2)
-              delete model2;
+             }
+          } else {
+             buffer.str("");
+             buffer << "Saving model on " << fileName << std::endl;
+             printGeneralMessage(models, buffer.str());
           }
+#if 0
+          // Convert names
+          int iRow;
+          int numberRows = model2->numberRows();
+          int iColumn;
+          int numberColumns = model2->numberColumns();
+          
+          char ** rowNames = NULL;
+          char ** columnNames = NULL;
+          if (model2->lengthNames()) {
+             rowNames = new char * [numberRows];
+             for (iRow = 0; iRow < numberRows; iRow++) {
+                rowNames[iRow] =
+                   CoinStrdup(model2->rowName(iRow).c_str());
+#ifdef STRIPBLANKS
+                char * xx = rowNames[iRow];
+                int i;
+                int length = strlen(xx);
+                int n = 0;
+                for (i = 0; i < length; i++) {
+                   if (xx[i] != ' ')
+                      xx[n++] = xx[i];
+                }
+                xx[n] = '\0';
+#endif
+             }
+             
+             columnNames = new char * [numberColumns];
+             for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+                columnNames[iColumn] =
+                   CoinStrdup(model2->columnName(iColumn).c_str());
+#ifdef STRIPBLANKS
+                char * xx = columnNames[iColumn];
+                int i;
+                int length = strlen(xx);
+                int n = 0;
+                for (i = 0; i < length; i++) {
+                   if (xx[i] != ' ')
+                      xx[n++] = xx[i];
+                }
+                xx[n] = '\0';
+#endif
+             }
+          }
+          CoinMpsIO writer;
+          writer.setMpsData(*model2->matrix(), COIN_DBL_MAX,
+                            model2->getColLower(), model2->getColUpper(),
+                            model2->getObjCoefficients(),
+                            (const char*) 0 /*integrality*/,
+                            model2->getRowLower(), model2->getRowUpper(),
+                            columnNames, rowNames);
+          // Pass in array saying if each variable integer
+          writer.copyInIntegerInformation(model2->integerInformation());
+          writer.setObjectiveOffset(model2->objectiveOffset());
+          writer.writeMps(fileName.c_str(), 0, 1, 1);
+          if (rowNames) {
+             for (iRow = 0; iRow < numberRows; iRow++) {
+                free(rowNames[iRow]);
+             }
+             delete [] rowNames;
+             for (iColumn = 0; iColumn < numberColumns; iColumn++) {
+                free(columnNames[iColumn]);
+             }
+             delete [] columnNames;
+          }
+#else
+          model2->writeMps(fileName.c_str(), (outputFormat - 1) / 2,
+                           1 + ((outputFormat - 1) & 1));
+#endif
+          if (deleteModel2)
+             delete model2;
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+           printGeneralWarning(models, "** Current model not valid\n");
         }
         break;
       case ClpParam::BASISIN:
         if (goodModels[iModel]) {
-          status = param->readValue(inputQueue, field);
-          if (field == "$") {
-            field = param->strVal();
-          } else if (field == "EOL") {
-            param->printString();
-            break;
-          } else {
-            param->setVal(field);
+          param->readValue(inputQueue, fileName, &message);
+          CoinParamUtils::processFile(fileName,
+                                parameters[ClpParam::DIRECTORY]->dirName(),
+                                      &canOpen);
+          if (!canOpen) {
+             buffer.str("");
+             buffer << "Unable to open file " << fileName.c_str();
+             printGeneralMessage(models, buffer.str());
+             continue;
           }
-          std::string fileName;
-          bool canOpen = false;
-          if (field == "-") {
-            // stdin
-            canOpen = true;
-            fileName = "-";
-          } else {
-            if (field[0] == '/' || field[0] == '\\') {
-              fileName = field;
-            } else if (field[0] == '~') {
-              char *environVar = getenv("HOME");
-              if (environVar) {
-                std::string home(environVar);
-                field = field.erase(0, 1);
-                fileName = home + field;
-              } else {
-                fileName = field;
-              }
-            } else {
-              fileName = directory + field;
-            }
-            FILE *fp = fopen(fileName.c_str(), "r");
-            if (fp) {
-              // can open - lets go for it
-              fclose(fp);
-              canOpen = true;
-            } else {
-              buffer.str("");
-              buffer << "Unable to open file " << fileName << std::endl;
-              printGeneralWarning(models, buffer.str());
-            }
+          if (fileName == ""){
+             fileName = parameters[ClpParam::BASISFILE]->fileName();
+          }else{
+             parameters[ClpParam::BASISFILE]->setFileName(fileName);
           }
-          if (canOpen) {
-            int values = thisModel->readBasis(fileName.c_str());
-            if (values == 0)
-              basisHasValues = -1;
-            else
-              basisHasValues = 1;
-          }
+          int values = thisModel->readBasis(fileName.c_str());
+          if (values == 0)
+             basisHasValues = -1;
+          else
+             basisHasValues = 1;
         } else {
           printGeneralWarning(models, "** Current model not valid\n");
         }
@@ -1810,39 +1716,22 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       case ClpParam::PRINTMASK:
         if (!param->readValue(inputQueue, field)) {
           param->setVal(field);
-          printMask = field;
         } else {
           param->printString();
         }
         break;
       case ClpParam::BASISOUT:
         if (goodModels[iModel]) {
-          status = param->readValue(inputQueue, field);
-          if (field == "$") {
-            field = param->strVal();
-          } else if (field == "EOL") {
-            param->printString();
-            break;
-          } else {
-            param->setVal(field);
+          param->readValue(inputQueue, fileName, &message);
+          CoinParamUtils::processFile(fileName,
+                                parameters[ClpParam::DIRECTORY]->dirName());
+          if (fileName == ""){
+             fileName = parameters[ClpParam::BASISFILE]->fileName();
+          }else{
+             parameters[ClpParam::BASISFILE]->setFileName(fileName);
           }
-          std::string fileName;
-          bool canOpen = false;
-          if (field[0] == '/' || field[0] == '\\') {
-            fileName = field;
-          } else if (field[0] == '~') {
-            char *environVar = getenv("HOME");
-            if (environVar) {
-              std::string home(environVar);
-              field = field.erase(0, 1);
-              fileName = home + field;
-            } else {
-              fileName = field;
-            }
-          } else {
-            fileName = directory + field;
-          }
-          FILE *fp = fopen(fileName.c_str(), "w");
+          canOpen = false;
+          fp = fopen(fileName.c_str(), "w");
           if (fp) {
             // can open - lets go for it
             fclose(fp);
@@ -1851,42 +1740,31 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
             buffer.str("");
             buffer << "Unable to open file " << fileName << std::endl;
             printGeneralWarning(models, buffer.str());
+            continue;
           }
-          if (canOpen) {
-            ClpSimplex *model2 = models + iModel;
-            model2->writeBasis(fileName.c_str(), outputFormat > 1,
-                               outputFormat - 2);
-          }
+          ClpSimplex *model2 = models + iModel;
+          model2->writeBasis(fileName.c_str(), outputFormat > 1,
+                             outputFormat - 2);
         } else {
           printGeneralWarning(models, "** Current model not valid\n");
         }
         break;
       case ClpParam::PARAMETRICS:
         if (goodModels[iModel]) {
-          status = param->readValue(inputQueue, field);
-          if (field == "$") {
-            field = param->strVal();
-          } else if (field == "EOL") {
-            param->printString();
-            break;
-          } else {
-            param->setVal(field);
+          param->readValue(inputQueue, fileName, &message);
+          CoinParamUtils::processFile(fileName,
+                                parameters[ClpParam::DIRECTORY]->dirName(),
+                                      &canOpen);
+          if (!canOpen) {
+             buffer.str("");
+             buffer << "Unable to open file " << fileName.c_str();
+             printGeneralMessage(models, buffer.str());
+             continue;
           }
-          std::string fileName;
-          // bool canOpen = false;
-          if (field[0] == '/' || field[0] == '\\') {
-            fileName = field;
-          } else if (field[0] == '~') {
-            char *environVar = getenv("HOME");
-            if (environVar) {
-              std::string home(environVar);
-              field = field.erase(0, 1);
-              fileName = home + field;
-            } else {
-              fileName = field;
-            }
-          } else {
-            fileName = directory + field;
+          if (fileName == ""){
+             fileName = parameters[ClpParam::EXPORTFILE]->fileName();
+          }else{
+             parameters[ClpParam::EXPORTFILE]->setFileName(fileName);
           }
           ClpSimplex *model2 = models + iModel;
           static_cast<ClpSimplexOther *>(model2)->parametrics(fileName.c_str());
@@ -1894,33 +1772,18 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           printGeneralWarning(models, "** Current model not valid\n");
         }
         break;
-      case ClpParam::SAVE: {
+      case ClpParam::WRITEMODEL: {
+        param->readValue(inputQueue, fileName, &message);
+        CoinParamUtils::processFile(fileName,
+                                    parameters[ClpParam::DIRECTORY]->dirName());
+        if (fileName == ""){
+           fileName = parameters[ClpParam::MODELFILE]->fileName();
+        }else{
+           parameters[ClpParam::MODELFILE]->setFileName(fileName);
+        }
         status = param->readValue(inputQueue, field);
-        if (field == "$") {
-          field = param->strVal();
-        } else if (field == "EOL") {
-          param->printString();
-          break;
-        } else {
-          param->setVal(field);
-        }
-        std::string fileName;
-        bool canOpen = false;
-        if (field[0] == '/' || field[0] == '\\') {
-          fileName = field;
-        } else if (field[0] == '~') {
-          char *environVar = getenv("HOME");
-          if (environVar) {
-            std::string home(environVar);
-            field = field.erase(0, 1);
-            fileName = home + field;
-          } else {
-            fileName = field;
-          }
-        } else {
-          fileName = directory + field;
-        }
-        FILE *fp = fopen(fileName.c_str(), "wb");
+        canOpen = false;
+        fp = fopen(fileName.c_str(), "wb");
         if (fp) {
           // can open - lets go for it
           fclose(fp);
@@ -1929,91 +1792,68 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           buffer.str("");
           buffer << "Unable to open file " << fileName << std::endl;
           printGeneralWarning(models, buffer.str());
+          continue;
         }
-        if (canOpen) {
-          int status;
-          // If presolve on then save presolved
-          bool deleteModel2 = false;
-          ClpSimplex *model2 = models + iModel;
-          if (preSolve) {
-            ClpPresolve pinfo;
-            double presolveTolerance =
-                parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
-            model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
-                                          false, preSolve);
-            if (model2) {
+        int status;
+        // If presolve on then save presolved
+        bool deleteModel2 = false;
+        ClpSimplex *model2 = models + iModel;
+        if (preSolve) {
+           ClpPresolve pinfo;
+           double presolveTolerance =
+              parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
+           model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
+                                         false, preSolve);
+           if (model2) {
               buffer.str("");
               buffer << "Saving presolved model on " << fileName << std::endl;
               printGeneralMessage(models, buffer.str());
               deleteModel2 = true;
-            } else {
+           } else {
               buffer.str("");
               buffer << "Presolved model looks infeasible - saving original on "
                      << fileName << std::endl;
               printGeneralMessage(models, buffer.str());
               deleteModel2 = false;
               model2 = models + iModel;
-            }
-          } else {
-            buffer.str("");
-            buffer << "Saving model on " << fileName << std::endl;
-            printGeneralMessage(models, buffer.str());
-          }
-          status = model2->saveModel(fileName.c_str());
-          if (deleteModel2)
-            delete model2;
-          if (!status) {
-            goodModels[iModel] = true;
-          } else {
-            // errors
-            printGeneralWarning(models, "There were errors on output\n");
-          }
+           }
+        } else {
+           buffer.str("");
+           buffer << "Saving model on " << fileName << std::endl;
+           printGeneralMessage(models, buffer.str());
+        }
+        status = model2->saveModel(fileName.c_str());
+        if (deleteModel2)
+           delete model2;
+        if (!status) {
+           goodModels[iModel] = true;
+        } else {
+           // errors
+           printGeneralWarning(models, "There were errors on output\n");
         }
       } break;
-      case ClpParam::RESTORE: {
-        status = param->readValue(inputQueue, field);
-        if (field == "$") {
-          field = param->strVal();
-        } else if (field == "EOL") {
-          param->printString();
-          break;
-        } else {
-          param->setVal(field);
+      case ClpParam::READMODEL: {
+        param->readValue(inputQueue, fileName, &message);
+        CoinParamUtils::processFile(fileName,
+                                    parameters[ClpParam::DIRECTORY]->dirName(),
+                                    &canOpen);
+        if (!canOpen) {
+           buffer.str("");
+           buffer << "Unable to open file " << fileName.c_str();
+           printGeneralMessage(models, buffer.str());
+           continue;
         }
-        std::string fileName;
-        bool canOpen = false;
-        if (field[0] == '/' || field[0] == '\\') {
-          fileName = field;
-        } else if (field[0] == '~') {
-          char *environVar = getenv("HOME");
-          if (environVar) {
-            std::string home(environVar);
-            field = field.erase(0, 1);
-            fileName = home + field;
-          } else {
-            fileName = field;
-          }
-        } else {
-          fileName = directory + field;
+        if (fileName == ""){
+           fileName = parameters[ClpParam::MODELFILE]->fileName();
+        }else{
+           parameters[ClpParam::MODELFILE]->setFileName(fileName);
         }
-        FILE *fp = fopen(fileName.c_str(), "rb");
-        if (fp) {
-          // can open - lets go for it
-          fclose(fp);
-          canOpen = true;
+        int status = models[iModel].restoreModel(fileName.c_str());
+        if (!status) {
+           goodModels[iModel] = true;
         } else {
-          buffer.str("");
-          buffer << "Unable to open file " << fileName << std::endl;
-          printGeneralWarning(models, buffer.str());
-        }
-        if (canOpen) {
-          int status = models[iModel].restoreModel(fileName.c_str());
-          if (!status) {
-            goodModels[iModel] = true;
-          } else {
-            // errors
-            printGeneralWarning(models, "There were errors on output\n");
-          }
+           // errors
+           printGeneralWarning(models, "There were errors on output\n");
         }
       } break;
       case ClpParam::MAXIMIZE:
@@ -2056,58 +1896,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           models[iModel].setObjectiveOffset(-models[iModel].objectiveOffset());
         }
         break;
-      case ClpParam::DIRECTORY: {
-        if (!param->readValue(inputQueue, field)) {
-          size_t length = field.length();
-          if (length > 0 && field[length - 1] == dirsep) {
-            directory = field;
-          } else {
-            directory = field + dirsep;
-          }
-          param->setVal(directory);
-        } else {
-          param->printString();
-        }
-      } break;
-      case ClpParam::DIRSAMPLE: {
-        if (!param->readValue(inputQueue, field)) {
-          size_t length = field.length();
-          if (length > 0 && field[length - 1] == dirsep) {
-            dirSample = field;
-          } else {
-            dirSample = field + dirsep;
-          }
-          param->setVal(dirSample);
-        } else {
-          param->printString();
-        }
-      } break;
-      case ClpParam::DIRNETLIB: {
-        if (!param->readValue(inputQueue, field)) {
-          size_t length = field.length();
-          if (length > 0 && field[length - 1] == dirsep) {
-            dirNetlib = field;
-          } else {
-            dirNetlib = field + dirsep;
-          }
-          param->setVal(dirNetlib);
-        } else {
-          param->printString();
-        }
-      } break;
-      case ClpParam::DIRMIPLIB: {
-        if (!param->readValue(inputQueue, field)) {
-          size_t length = field.length();
-          if (length > 0 && field[length - 1] == dirsep) {
-            dirMiplib = field;
-          } else {
-            dirMiplib = field + dirsep;
-          }
-          param->setVal(dirMiplib);
-        } else {
-          param->printString();
-        }
-      } break;
       case ClpParam::STDIN:
         interactiveMode = true;
         while (!inputQueue.empty())
@@ -2123,10 +1911,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         int nFields = 4;
         fields[0] = "fake main from unitTest";
         std::string mpsfield = "-dirSample=";
-        mpsfield += dirSample.c_str();
+        mpsfield += parameters[ClpParam::DIRSAMPLE]->dirName();
         fields[1] = mpsfield.c_str();
         std::string netfield = "-dirNetlib=";
-        netfield += dirNetlib.c_str();
+        netfield += parameters[ClpParam::DIRNETLIB]->dirName();
         fields[2] = netfield.c_str();
         fields[3] = "-netlib";
         int algorithm;
@@ -2225,7 +2013,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         int nFields = 2;
         fields[0] = "fake main from unitTest";
         std::string dirfield = "-dirSample=";
-        dirfield += dirSample.c_str();
+        dirfield += parameters[ClpParam::DIRSAMPLE]->dirName();
         fields[1] = dirfield.c_str();
         int specialOptions = models[iModel].specialOptions();
         models[iModel].setSpecialOptions(0);
@@ -2317,57 +2105,68 @@ You can switch to interactive mode at any time so\n\
 clp watson.mps -scaling off -primalsimplex\nis the same as\n\
 clp watson.mps -\nscaling off\nprimalsimplex");
         break;
-      case ClpParam::SOLUTION:
-      case ClpParam::GMPL_SOLUTION:
+      case ClpParam::PRINTSOL:
+      case ClpParam::WRITESOL:
+      case ClpParam::WRITEGMPLSOL:
         if (goodModels[iModel]) {
-          // get next field
-          status = param->readValue(inputQueue, field);
+          fp = NULL;
           bool append = false;
-          if (field == "append$") {
-            field = "$";
-            append = true;
-          }
-          if (field == "$") {
-            field = param->strVal();
-          } else if (field == "EOL") {
-            param->printString();
-            break;
+          canOpen = false;
+          if (paramCode == ClpParam::PRINTSOL){ 
+             fp = stdout;
+             fprintf(fp, "\n");
           } else {
-            param->setVal(field);
+             param->readValue(inputQueue, fileName, &message);
+             if (fileName == "append"){
+                switch (paramCode){
+                 case ClpParam::WRITESOL:
+                   fileName = parameters[ClpParam::SOLUTIONFILE]->fileName();
+                   break;
+                 case ClpParam::WRITEGMPLSOL:
+                   fileName = parameters[ClpParam::GMPLSOLFILE]->fileName();
+                   break;
+                }
+                CoinParamUtils::processFile(fileName,
+                                  parameters[ClpParam::DIRECTORY]->dirName(),
+                                            &canOpen);
+                if (!canOpen) {
+                   buffer.str("");
+                   buffer << "Unable to open file " << fileName.c_str();
+                   printGeneralMessage(models, buffer.str());
+                   continue;
+                }
+                append = true;
+             } else if (paramCode == ClpParam::WRITESOL) {
+                CoinParamUtils::processFile(fileName,
+                                 parameters[ClpParam::DIRECTORY]->dirName());
+                if (fileName == ""){
+                   fileName = parameters[ClpParam::SOLUTIONFILE]->fileName();
+                }else{
+                   parameters[ClpParam::SOLUTIONFILE]->setFileName(fileName);
+                }
+             } else if (paramCode == ClpParam::WRITEGMPLSOL) {
+                CoinParamUtils::processFile(fileName,
+                                 parameters[ClpParam::DIRECTORY]->dirName());
+                if (fileName == ""){
+                   fileName = parameters[ClpParam::GMPLSOLFILE]->fileName();
+                }else{
+                   parameters[ClpParam::GMPLSOLFILE]->setFileName(fileName);
+                }
+             }
+
+             if (!append) {
+                fp = fopen(fileName.c_str(), "w");
+             } else {
+                fp = fopen(fileName.c_str(), "a");
+             }
+             if (!fp){
+                buffer.str("");
+                buffer << "Unable to open file " << fileName << std::endl;
+                printGeneralWarning(models, buffer.str());
+             }
           }
-          std::string fileName;
-          FILE *fp = NULL;
-          if (field == "-" || field == "EOL" || field == "stdout") {
-            // stdout
-            fp = stdout;
-            fprintf(fp, "\n");
-          } else if (field == "stderr") {
-            // stderr
-            fp = stderr;
-            fprintf(fp, "\n");
-          } else {
-            if (field[0] == '/' || field[0] == '\\') {
-              fileName = field;
-            } else if (field[0] == '~') {
-              char *environVar = getenv("HOME");
-              if (environVar) {
-                std::string home(environVar);
-                field = field.erase(0, 1);
-                fileName = home + field;
-              } else {
-                fileName = field;
-              }
-            } else {
-              fileName = directory + field;
-            }
-            if (!append)
-              fp = fopen(fileName.c_str(), "w");
-            else
-              fp = fopen(fileName.c_str(), "a");
-          }
-          if (fp) {
             // See if Glpk
-            if (paramCode == ClpParam::GMPL_SOLUTION) {
+            if (paramCode == ClpParam::WRITEGMPLSOL) {
               int numberRows = models[iModel].getNumRows();
               int numberColumns = models[iModel].getNumCols();
               int numberGlpkRows = numberRows + 1;
@@ -2575,13 +2374,15 @@ clp watson.mps -\nscaling off\nprimalsimplex");
             double *rowLower = models[iModel].rowLower();
             double *rowUpper = models[iModel].rowUpper();
             double primalTolerance = models[iModel].primalTolerance();
-            bool doMask = (printMask != "" && lengthName);
+            bool doMask = (parameters[ClpParam::PRINTMASK]->strVal() != "" &&
+                           lengthName);
             int *maskStarts = NULL;
             int maxMasks = 0;
             char **masks = NULL;
             if (doMask) {
               int nAst = 0;
-              const char *pMask2 = printMask.c_str();
+              const char *pMask2 =
+                 parameters[ClpParam::PRINTMASK]->strVal().c_str();
               char pMask[100];
               size_t lengthMask = strlen(pMask2);
               assert(lengthMask < 100);
@@ -2906,46 +2707,25 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 delete[] masks[i];
               delete[] masks;
             }
-          } else {
-            buffer.str("");
-            buffer << "Unable to open file " << fileName << std::endl;
-            printGeneralWarning(models, buffer.str());
-          }
         } else {
           printGeneralWarning(models, "** Current model not valid\n");
         }
 
         break;
-      case ClpParam::SAVESOL:
+      case ClpParam::WRITESOLBINARY:
         if (goodModels[iModel]) {
           // get next field
-          status = param->readValue(inputQueue, field);
-          if (field == "$") {
-            field = param->strVal();
-          } else if (field == "EOL") {
-            param->printString();
-            break;
-          } else {
-            param->setVal(field);
-          }
-          std::string fileName;
-          if (field[0] == '/' || field[0] == '\\') {
-            fileName = field;
-          } else if (field[0] == '~') {
-            char *environVar = getenv("HOME");
-            if (environVar) {
-              std::string home(environVar);
-              field = field.erase(0, 1);
-              fileName = home + field;
-            } else {
-              fileName = field;
-            }
-          } else {
-            fileName = directory + field;
-          }
-          ClpParamUtils::saveSolution(models + iModel, fileName);
+           param->readValue(inputQueue, fileName, &message);
+           CoinParamUtils::processFile(fileName,
+                                 parameters[ClpParam::DIRECTORY]->dirName());
+           if (fileName == ""){
+              fileName = parameters[ClpParam::SOLUTIONBINARYFILE]->fileName();
+           }else{
+              parameters[ClpParam::SOLUTIONBINARYFILE]->setFileName(fileName);
+           }
+           ClpParamUtils::saveSolution(models + iModel, fileName);
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+           printGeneralWarning(models, "** Current model not valid\n");
         }
         break;
       case ClpParam::ENVIRONMENT: {
@@ -3032,6 +2812,8 @@ int clpReadAmpl(ampl_info * info, int argc, char **argv, ClpSimplex *models)
 int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models)
 #endif
 {
+
+   std::ostringstream buffer;
    memset(&info, 0, sizeof(info));
    bool noPrinting = true;
    for (int i = 1; i < argc; i++) {
@@ -3074,7 +2856,7 @@ int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models)
       models->messageHandler()->setLogLevel(0);
     }
     if (!noPrinting) {
-      std::ostringstream buffer;
+      buffer.str(""); 
       buffer << info->numberRows << " rows, " << info->numberColumns
              << " columns and " << info->numberElements << " elements"
              << std::endl;
@@ -3110,7 +2892,6 @@ int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models)
     models->setOptimizationDirection(info->direction);
     models->setObjectiveOffset(-info->offset);
     if (info->offset) {
-      std::ostringstream buffer;
       buffer.str("");
       buffer << "Ampl objective offset is " << info->offset << std::endl;
       printGeneralMessage(models, buffer.str());
