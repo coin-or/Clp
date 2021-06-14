@@ -790,8 +790,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
       case ClpParam::PRIMALSIMPLEX:
       case ClpParam::EITHERSIMPLEX:
       case ClpParam::SOLVE:
-      case ClpParam::BARRIER:
-        if (goodModel) {
+      case ClpParam::BARRIER:{
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
+        }
           // openblas_set_num_threads(4);
           // deal with positive edge
           double psi = parameters[ClpParam::PSI]->dblVal();
@@ -1273,12 +1276,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           }
           if (status >= 0)
             basisHasValues = 1;
-        } else {
+        } break;
+      case ClpParam::STATISTICS:{
+        if (!goodModel){
           printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
         }
-        break;
-      case ClpParam::STATISTICS:
-        if (goodModel) {
           // If presolve on look at presolved
           bool deleteModel2 = false;
           ClpSimplex *model2 = &model_;
@@ -1310,22 +1313,23 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           statistics(&model_, model2);
           if (deleteModel2)
             delete model2;
-        } else {
-          printGeneralWarning(model_, "** Current model not valid\n");
-        }
+        } 
         break;
-      case ClpParam::TIGHTEN:
-        if (goodModel) {
+      case ClpParam::TIGHTEN:{
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
+        }
           int numberInfeasibilities = model_.tightenPrimalBounds();
           if (numberInfeasibilities)
             printGeneralWarning(model_,
                                 "** Analysis indicates model infeasible\n");
-        } else {
+        } break;
+      case ClpParam::PLUSMINUS:{
+        if (!goodModel){
           printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
         }
-        break;
-      case ClpParam::PLUSMINUS:
-        if (goodModel) {
           ClpMatrixBase *saveMatrix = model_.clpMatrix();
           ClpPackedMatrix *clpMatrix =
               dynamic_cast<ClpPackedMatrix *>(saveMatrix);
@@ -1344,12 +1348,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           } else {
             printGeneralWarning(model_, "Matrix not a ClpPackedMatrix\n");
           }
-        } else {
+        } break;
+      case ClpParam::NETWORK: {
+        if (!goodModel){
           printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
         }
-        break;
-      case ClpParam::NETWORK:
-        if (goodModel) {
           ClpMatrixBase *saveMatrix = model_.clpMatrix();
           ClpPackedMatrix *clpMatrix =
               dynamic_cast<ClpPackedMatrix *>(saveMatrix);
@@ -1368,10 +1372,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           } else {
             printGeneralWarning(model_, "Matrix not a ClpPackedMatrix\n");
           }
-        } else {
-          printGeneralWarning(model_, "** Current model not valid\n");
-        }
-        break;
+        } break;
       case ClpParam::IMPORT: {
         // get next field
         status = param->readValue(inputQueue, fileName, &message);
@@ -1509,9 +1510,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
                   << std::endl;
            printGeneralMessage(model_, buffer.str());
         }
-      } break;
-      case ClpParam::EXPORT:
-        if (goodModel) {
+        } break;
+      case ClpParam::EXPORT:{
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
+        }
           double objScale = parameters[ClpParam::OBJSCALE2]->dblVal();
           if (objScale != 1.0) {
             int iColumn;
@@ -1668,12 +1672,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
 #endif
           if (deleteModel2)
              delete model2;
-        } else {
-           printGeneralWarning(model_, "** Current model not valid\n");
+        } break;
+      case ClpParam::BASISIN:{
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
         }
-        break;
-      case ClpParam::BASISIN:
-        if (goodModel) {
           param->readValue(inputQueue, fileName, &message);
           CoinParamUtils::processFile(fileName,
                                 parameters[ClpParam::DIRECTORY]->dirName(),
@@ -1694,10 +1698,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
              basisHasValues = -1;
           else
              basisHasValues = 1;
-        } else {
-          printGeneralWarning(model_, "** Current model not valid\n");
-        }
-        break;
+        } break;
       case ClpParam::PRINTMASK:
         if (status = param->readValue(inputQueue, field, &message)){
            printGeneralMessage(model_, message);
@@ -1708,8 +1709,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
            continue;
         }
         break;
-      case ClpParam::BASISOUT:
-        if (goodModel) {
+      case ClpParam::BASISOUT:{
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
+        }
           param->readValue(inputQueue, fileName, &message);
           CoinParamUtils::processFile(fileName,
                                 parameters[ClpParam::DIRECTORY]->dirName());
@@ -1733,12 +1737,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           ClpSimplex *model2 = &model_;
           model2->writeBasis(fileName.c_str(), outputFormat > 1,
                              outputFormat - 2);
-        } else {
+        } break;
+      case ClpParam::PARAMETRICS:{
+        if (!goodModel){
           printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
         }
-        break;
-      case ClpParam::PARAMETRICS:
-        if (goodModel) {
           param->readValue(inputQueue, fileName, &message);
           CoinParamUtils::processFile(fileName,
                                 parameters[ClpParam::DIRECTORY]->dirName(),
@@ -1756,10 +1760,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           }
           ClpSimplex *model2 = &model_;
           static_cast<ClpSimplexOther *>(model2)->parametrics(fileName.c_str());
-        } else {
-          printGeneralWarning(model_, "** Current model not valid\n");
-        }
-        break;
+        } break;
       case ClpParam::WRITEMODEL: {
         param->readValue(inputQueue, fileName, &message);
         CoinParamUtils::processFile(fileName,
@@ -1862,8 +1863,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
         model_.allSlackBasis();
 #endif
         break;
-      case ClpParam::REVERSE:
-        if (goodModel) {
+      case ClpParam::REVERSE:{
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
+        }
           int iColumn;
           int numberColumns = model_.numberColumns();
           double *dualColumnSolution = model_.dualColumnSolution();
@@ -1882,8 +1886,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
             dualRowSolution[iRow] = -dualRowSolution[iRow];
           }
           model_.setObjectiveOffset(-model_.objectiveOffset());
-        }
-        break;
+        } break;
       case ClpParam::STDIN:
         interactiveMode = true;
         while (!inputQueue.empty())
@@ -1979,6 +1982,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
                    << std::endl;
             printGeneralMessage(model_, buffer.str());
           }
+        }
 #endif
           // for moment then back to model_
 #ifndef ABC_INHERIT
@@ -1993,8 +1997,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
         mainTest(nFields, fields, algorithm, model_, solveOptions, 0,
                  doVector != 0);
 #endif
-        }
-        break;
+        } break;
       case ClpParam::UNITTEST: {
         // create fields for unitTest
         const char *fields[2];
@@ -2023,8 +2026,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
                  specialOptions, doVector != 0);
 #endif
       } break;
-      case ClpParam::FAKEBOUND:
-        if (goodModel) {
+      case ClpParam::FAKEBOUND:{
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
+        }
           // get bound
           if (status = param->readValue(inputQueue, dValue, &message)){
              std::cout << "Must enter value for " << param->name()
@@ -2058,15 +2064,16 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
                 columnUpper[iColumn] = CoinMin(columnUpper[iColumn], dValue);
              }
           }
+      } break;
+      case ClpParam::REALLY_SCALE:{
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
         }
-        break;
-      case ClpParam::REALLY_SCALE:
-        if (goodModel) {
           ClpSimplex newModel(model_, model_.scalingFlag());
           printGeneralMessage(model_, "model really really scaled\n");
           model_ = newModel;
-        }
-        break;
+        } break;
       case ClpParam::USERCLP:
         // Replace the sample code by whatever you want
         if (goodModel) {
@@ -2095,8 +2102,11 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         break;
       case ClpParam::PRINTSOL:
       case ClpParam::WRITESOL:
-      case ClpParam::WRITEGMPLSOL:
-        if (goodModel) {
+      case ClpParam::WRITEGMPLSOL:{
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
+        }
           fp = NULL;
           bool append = false;
           canOpen = false;
@@ -2695,13 +2705,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 delete[] masks[i];
               delete[] masks;
             }
-        } else {
+        } break;
+      case ClpParam::WRITESOLBINARY: {
+        if (!goodModel){
           printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
         }
-
-        break;
-      case ClpParam::WRITESOLBINARY:
-        if (goodModel) {
           // get next field
            param->readValue(inputQueue, fileName, &message);
            CoinParamUtils::processFile(fileName,
@@ -2712,10 +2721,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               parameters[ClpParam::SOLUTIONBINARYFILE]->setFileName(fileName);
            }
            ClpParamUtils::saveSolution(&model_, fileName);
-        } else {
-           printGeneralWarning(model_, "** Current model not valid\n");
-        }
-        break;
+        } break;
       case ClpParam::ENVIRONMENT: {
 #if !defined(_MSC_VER) && !defined(__MSVCRT__)
         // Don't think it will work with Visual Studio
@@ -2735,7 +2741,10 @@ clp watson.mps -\nscaling off\nprimalsimplex");
       }
       case ClpParam::GUESS: {
 #ifndef ABC_INHERIT
-        if (goodModel) {
+        if (!goodModel){
+          printGeneralWarning(model_, "** Current model not valid\n");
+          continue;
+        }
           ClpSimplexOther *model2 =
               static_cast<ClpSimplexOther *>(&model_);
           std::string input = model2->guess(0);
@@ -2749,16 +2758,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
             printGeneralWarning(model_,
                                 "** Guess unable to generate commands\n");
           }
-        } else {
-          printGeneralWarning(model_, "** Guess needs a valid model\n");
-        }
 #else
         printGeneralWarning(
             model_, "** Can'tmake a gues in this build configuration\n");
 #endif
 
-        break;
-      }
+      }  break;
       default:
         abort();
       }
