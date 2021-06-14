@@ -85,13 +85,13 @@
 //#############################################################################
 
 #ifndef ABC_INHERIT
-void printGeneralMessage(ClpSimplex *model, std::string message, int type)
+void printGeneralMessage(ClpSimplex &model, std::string message, int type)
 #else
-void printGeneralMessage(AbcSimplex *model, std::string message, int type)
+void printGeneralMessage(AbcSimplex &model, std::string message, int type)
 #endif
 {
   if (message.length()) {
-    model->messageHandler()->message(type, model->messages())
+    model.messageHandler()->message(type, model.messages())
         << message << CoinMessageEol;
   }
 }
@@ -100,13 +100,13 @@ void printGeneralMessage(AbcSimplex *model, std::string message, int type)
 //#############################################################################
 
 #ifndef ABC_INHERIT
-void printGeneralWarning(ClpSimplex *model, std::string message, int type)
+void printGeneralWarning(ClpSimplex &model, std::string message, int type)
 #else
-   void printGeneralWarning(AbcSimplex *model, std::string message, int type)
+   void printGeneralWarning(AbcSimplex &model, std::string message, int type)
 #endif
 {
   if (message.length()) {
-    model->messageHandler()->message(type, model->messages())
+    model.messageHandler()->message(type, model.messages())
         << message << CoinMessageEol;
   }
 }
@@ -120,17 +120,17 @@ void printGeneralWarning(ClpSimplex *model, std::string message, int type)
 
 #ifndef ABC_INHERIT
 CLPLIB_EXPORT
-void ClpMain0(ClpSimplex *models)
+void ClpMain0(ClpSimplex &model)
 #else
 CLPLIB_EXPORT
-void ClpMain0(AbcSimplex *models)
+void ClpMain0(AbcSimplex &model)
 #endif
 {
-  models->setPerturbation(50);
-  models->messageHandler()->setPrefix(false);
+  model.setPerturbation(50);
+  model.messageHandler()->setPrefix(false);
 #if CLP_INHERIT_MODE > 1
-  models->setDualTolerance(1.0e-6);
-  models->setPrimalTolerance(1.0e-6);
+  model.setDualTolerance(1.0e-6);
+  model.setPrimalTolerance(1.0e-6);
 #endif
 }
 
@@ -139,17 +139,18 @@ void ClpMain0(AbcSimplex *models)
 
 #ifndef ABC_INHERIT
 CLPLIB_EXPORT
-int ClpMain1(std::deque<std::string> inputQueue, ClpSimplex *models,
+int ClpMain1(std::deque<std::string> inputQueue, ClpSimplex &model,
              ampl_info *info)
 #else
 CLPLIB_EXPORT
-int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
+int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
              ampl_info *info)
 #endif
 {
   std::ostringstream buffer;
   std::string field, message, fileName;
   FILE *fp;
+  ClpSimplex &model_ = model;
   
   // Set up all non-standard stuff
   // int numberModels=1;
@@ -164,13 +165,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
   //__cilkrts_end_cilk();
   __cilkrts_set_param("nworkers", "1");
   // abcState_=1;
-#endif
-#if 0
-#ifndef ABC_INHERIT
-          ClpSimplex * models = new ClpSimplex[1];
-#else
-          AbcSimplex * models = new AbcSimplex[1];
-#endif
 #endif
 #ifdef COINUTILS_HAS_GLPK
   glp_tran *coin_glp_tran;
@@ -202,19 +196,19 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
   int substitution = 3;
   int dualize = 3; // dualize if looks promising
   ClpParameters parameters;
-  parameters.setModel(models);
-  parameters[ClpParam::DUALBOUND]->setVal(models->dualBound());
-  parameters[ClpParam::DUALTOLERANCE]->setVal(models->dualTolerance());
+  parameters.setModel(&model);
+  parameters[ClpParam::DUALBOUND]->setVal(model_.dualBound());
+  parameters[ClpParam::DUALTOLERANCE]->setVal(model_.dualTolerance());
   parameters[ClpParam::IDIOT]->setVal(doIdiot);
-  parameters[ClpParam::LOGLEVEL]->setVal(models->logLevel());
-  parameters[ClpParam::MAXFACTOR]->setVal(models->factorizationFrequency());
-  parameters[ClpParam::MAXITERATION]->setVal(models->maximumIterations());
+  parameters[ClpParam::LOGLEVEL]->setVal(model_.logLevel());
+  parameters[ClpParam::MAXFACTOR]->setVal(model_.factorizationFrequency());
+  parameters[ClpParam::MAXITERATION]->setVal(model_.maximumIterations());
   parameters[ClpParam::OUTPUTFORMAT]->setVal(outputFormat);
   parameters[ClpParam::PRESOLVEPASS]->setVal(preSolve);
-  parameters[ClpParam::PERTVALUE]->setVal(models->perturbation());
-  parameters[ClpParam::PRIMALTOLERANCE]->setVal(models->primalTolerance());
-  parameters[ClpParam::PRIMALWEIGHT]->setVal(models->infeasibilityCost());
-  parameters[ClpParam::TIMELIMIT]->setVal(models->maximumSeconds());
+  parameters[ClpParam::PERTVALUE]->setVal(model_.perturbation());
+  parameters[ClpParam::PRIMALTOLERANCE]->setVal(model_.primalTolerance());
+  parameters[ClpParam::PRIMALWEIGHT]->setVal(model_.infeasibilityCost());
+  parameters[ClpParam::TIMELIMIT]->setVal(model_.maximumSeconds());
   parameters[ClpParam::SPRINT]->setVal(doSprint);
   parameters[ClpParam::SUBSTITUTION]->setVal(substitution);
   parameters[ClpParam::DUALIZE]->setVal(dualize);
@@ -223,24 +217,23 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
 
   // total number of commands read
   int numberGoodCommands = 0;
-  bool *goodModels = new bool[1];
-  goodModels[0] = false;
-  if (models[0].numberRows() || models[0].numberColumns()) {
+  bool goodModel = false;
+  if (model_.numberRows() || model_.numberColumns()) {
     // model already built
-    goodModels[0] = true;
+    goodModel = true;
     numberGoodCommands = 1;
   }
 
   bool usingAmpl = false;
-  CoinMessageHandler *generalMessageHandler = models->messageHandler();
+  CoinMessageHandler *generalMessageHandler = model_.messageHandler();
   generalMessageHandler->setPrefix(false);
-  CoinMessages generalMessages = models->messages();
+  CoinMessages generalMessages = model_.messages();
 
   if (info) {
     // We're using AMPL
     usingAmpl = true;
     parameters[ClpParam::LOGLEVEL]->setVal(info->logLevel);
-    goodModels[0] = true;
+    goodModel = true;
   }
 
   // Hidden stuff for barrier
@@ -252,14 +245,13 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
   int crossover = 2; // do crossover unless quadratic
   bool interactiveMode = false, canOpen;
 
-  int iModel = 0;
-  // models[0].scaling(1);
-  // models[0].setDualBound(1.0e6);
-  // models[0].setDualTolerance(1.0e-7);
+  // model_.scaling(1);
+  // model_.setDualBound(1.0e6);
+  // model_.setDualTolerance(1.0e-7);
   // ClpDualRowSteepest steep;
-  // models[0].setDualRowPivotAlgorithm(steep);
+  // model_.setDualRowPivotAlgorithm(steep);
   // ClpPrimalColumnSteepest steepP;
-  // models[0].setPrimalColumnPivotAlgorithm(steepP);
+  // model_.setPrimalColumnPivotAlgorithm(steepP);
   int status, iValue;
   double dValue;
   std::string prompt = "Clp: ";
@@ -291,7 +283,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
 
     // exit if null or similar
     if (!field.length()) {
-      if (numberGoodCommands == 1 && goodModels[0]) {
+      if (numberGoodCommands == 1 && goodModel) {
         // we just had file name - do dual or primal
         field = "-either";
       } else {
@@ -350,7 +342,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
     }
 
     ClpParam *param = parameters[paramCode];
-    ClpSimplex *thisModel = models + iModel;
 
     int status;
     numberGoodCommands++;
@@ -483,43 +474,43 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
     } else if (param->type() == CoinParam::paramDbl) {
       // get next field as double
       if (status = param->readValue(inputQueue, dValue, &message)){
-        printGeneralMessage(models, message);
+        printGeneralMessage(model_, message);
         continue;
       }
       if (param->setVal(dValue, &message)){
-         printGeneralMessage(models, message);
+         printGeneralMessage(model_, message);
          continue;
       }
 #if 0 
       if (paramCode == ClpParam::DUALTOLERANCE)
-         thisModel->setDualTolerance(dValue);
+         model_.setDualTolerance(dValue);
       else if (paramCode == ClpParam::PRIMALTOLERANCE)
-         thisModel->setPrimalTolerance(dValue);
+         model_.setPrimalTolerance(dValue);
       else if (paramCode == ClpParam::ZEROTOLERANCE)
-         thisModel->setSmallElementValue(dValue);
+         model_.setSmallElementValue(dValue);
       else if (paramCode == ClpParam::DUALBOUND)
-         thisModel->setDualBound(dValue);
+         model_.setDualBound(dValue);
       else if (paramCode == ClpParam::PRIMALWEIGHT)
-         thisModel->setInfeasibilityCost(dValue);
+         model_.setInfeasibilityCost(dValue);
       else if (paramCode == ClpParam::TIMELIMIT)
-         thisModel->setMaximumSeconds(dValue);
+         model_.setMaximumSeconds(dValue);
       else if (paramCode == ClpParam::OBJSCALE)
-         thisModel->setObjectiveScale(dValue);
+         model_.setObjectiveScale(dValue);
       else if (paramCode == ClpParam::RHSSCALE)
-         thisModel->setRhsScale(dValue);
+         model_.setRhsScale(dValue);
       else if (paramCode == ClpParam::PRESOLVETOLERANCE)
-         thisModel->setDblParam(ClpPresolveTolerance, dValue);
+         model_.setDblParam(ClpPresolveTolerance, dValue);
       else if (paramCode == ClpParam::PROGRESS)
-         thisModel->setMinIntervalProgressUpdate(dValue);
+         model_.setMinIntervalProgressUpdate(dValue);
 #endif
     } else if (param->type() == CoinParam::paramInt) {
       // get next field as int
        if (status = param->readValue(inputQueue, iValue, &message)){
-        printGeneralMessage(models, message);
+        printGeneralMessage(model_, message);
         continue;
       }
       if (param->setVal(iValue, &message)){
-         printGeneralMessage(models, message);
+         printGeneralMessage(model_, message);
          continue;
       }
       if (paramCode == ClpParam::PRESOLVEPASS)
@@ -546,28 +537,28 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
          verbose = iValue;
 #if 0
       else if (paramCode == ClpParam::MAXFACTOR)
-         thisModel->factorization()->maximumPivots(iValue);
+         model_.factorization()->maximumPivots(iValue);
       else if (paramCode == ClpParam::PERTVALUE)
-         thisModel->setPerturbation(iValue);
+         model_.setPerturbation(iValue);
       else if (paramCode == ClpParam::MAXITERATION)
-         thisModel->setMaximumIterations(iValue);
+         model_.setMaximumIterations(iValue);
       else if (paramCode == ClpParam::SPECIALOPTIONS)
-         thisModel->setSpecialOptions(iValue);
+         model_.setSpecialOptions(iValue);
       else if (paramCode == ClpParam::RANDOMSEED)
-         thisModel->setRandomSeed(iValue);
+         model_.setRandomSeed(iValue);
       else if (paramCode == ClpParam::MORESPECIALOPTIONS)
-         thisModel->setMoreSpecialOptions(iValue);
+         model_.setMoreSpecialOptions(iValue);
       else if (paramCode == ClpParam::VECTOR_MODE)
-         thisModel->setVectorMode(iValue);
+         model_.setVectorMode(iValue);
 #endif
     } else if (param->type() == CoinParam::paramKwd) {
       // one of several strings
       if (status = param->readValue(inputQueue, field, &message)){
-        printGeneralMessage(models, message);
+        printGeneralMessage(model_, message);
         continue;
       }
       if (param->setVal(field, &message)) {
-         printGeneralMessage(models, message);
+         printGeneralMessage(model_, message);
          continue;
       }
       int mode = param->modeVal();
@@ -575,121 +566,121 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       switch (paramCode) {
         case ClpParam::DIRECTION:
           if (mode == 0) {
-            models[iModel].setOptimizationDirection(1);
+            model_.setOptimizationDirection(1);
 #ifdef ABC_INHERIT
-            thisModel->setOptimizationDirection(1);
+            model_.setOptimizationDirection(1);
 #endif
           } else if (mode == 1) {
-            models[iModel].setOptimizationDirection(-1);
+            model_.setOptimizationDirection(-1);
 #ifdef ABC_INHERIT
-            thisModel->setOptimizationDirection(-1);
+            model_.setOptimizationDirection(-1);
 #endif
           } else {
-            models[iModel].setOptimizationDirection(0);
+            model_.setOptimizationDirection(0);
 #ifdef ABC_INHERIT
-            thisModel->setOptimizationDirection(0);
+            model_.setOptimizationDirection(0);
 #endif
           }
           break;
         case ClpParam::DUALPIVOT:
           if (mode == 0) {
             ClpDualRowSteepest steep(3);
-            thisModel->setDualRowPivotAlgorithm(steep);
+            model_.setDualRowPivotAlgorithm(steep);
 #ifdef ABC_INHERIT
             AbcDualRowSteepest steep2(3);
-            models[iModel].setDualRowPivotAlgorithm(steep2);
+            model_.setDualRowPivotAlgorithm(steep2);
 #endif
           } else if (mode == 1) {
             // ClpDualRowDantzig dantzig;
             ClpDualRowDantzig dantzig;
-            thisModel->setDualRowPivotAlgorithm(dantzig);
+            model_.setDualRowPivotAlgorithm(dantzig);
 #ifdef ABC_INHERIT
             AbcDualRowDantzig dantzig2;
-            models[iModel].setDualRowPivotAlgorithm(dantzig2);
+            model_.setDualRowPivotAlgorithm(dantzig2);
 #endif
           } else if (mode == 2) {
             // partial steep
             ClpDualRowSteepest steep(2);
-            thisModel->setDualRowPivotAlgorithm(steep);
+            model_.setDualRowPivotAlgorithm(steep);
 #ifdef ABC_INHERIT
             AbcDualRowSteepest steep2(2);
-            models[iModel].setDualRowPivotAlgorithm(steep2);
+            model_.setDualRowPivotAlgorithm(steep2);
 #endif
           } else if (mode == 3) {
             ClpDualRowSteepest steep;
-            thisModel->setDualRowPivotAlgorithm(steep);
+            model_.setDualRowPivotAlgorithm(steep);
 #ifdef ABC_INHERIT
             AbcDualRowSteepest steep2;
-            models[iModel].setDualRowPivotAlgorithm(steep2);
+            model_.setDualRowPivotAlgorithm(steep2);
 #endif
           } else if (mode == 4) {
             // Positive edge steepest
             ClpPEDualRowSteepest p(fabs(parameters[ClpParam::PSI]->dblVal()));
-            thisModel->setDualRowPivotAlgorithm(p);
+            model_.setDualRowPivotAlgorithm(p);
           } else if (mode == 5) {
             // Positive edge Dantzig
             ClpPEDualRowDantzig p(fabs(parameters[ClpParam::PSI]->dblVal()));
-            thisModel->setDualRowPivotAlgorithm(p);
+            model_.setDualRowPivotAlgorithm(p);
           }
           break;
         case ClpParam::PRIMALPIVOT:
           if (mode == 0) {
             ClpPrimalColumnSteepest steep(3);
-            thisModel->setPrimalColumnPivotAlgorithm(steep);
+            model_.setPrimalColumnPivotAlgorithm(steep);
           } else if (mode == 1) {
             ClpPrimalColumnSteepest steep(0);
-            thisModel->setPrimalColumnPivotAlgorithm(steep);
+            model_.setPrimalColumnPivotAlgorithm(steep);
           } else if (mode == 2) {
             ClpPrimalColumnDantzig dantzig;
-            thisModel->setPrimalColumnPivotAlgorithm(dantzig);
+            model_.setPrimalColumnPivotAlgorithm(dantzig);
           } else if (mode == 3) {
             ClpPrimalColumnSteepest steep(4);
-            thisModel->setPrimalColumnPivotAlgorithm(steep);
+            model_.setPrimalColumnPivotAlgorithm(steep);
           } else if (mode == 4) {
             ClpPrimalColumnSteepest steep(1);
-            thisModel->setPrimalColumnPivotAlgorithm(steep);
+            model_.setPrimalColumnPivotAlgorithm(steep);
           } else if (mode == 5) {
             ClpPrimalColumnSteepest steep(2);
-            thisModel->setPrimalColumnPivotAlgorithm(steep);
+            model_.setPrimalColumnPivotAlgorithm(steep);
           } else if (mode == 6) {
             ClpPrimalColumnSteepest steep(10);
-            thisModel->setPrimalColumnPivotAlgorithm(steep);
+            model_.setPrimalColumnPivotAlgorithm(steep);
           } else if (mode == 7) {
             // Positive edge steepest
             ClpPEPrimalColumnSteepest p(
                 fabs(parameters[ClpParam::PSI]->dblVal()));
-            thisModel->setPrimalColumnPivotAlgorithm(p);
+            model_.setPrimalColumnPivotAlgorithm(p);
           } else if (mode == 8) {
             // Positive edge Dantzig
             ClpPEPrimalColumnDantzig p(
                 fabs(parameters[ClpParam::PSI]->dblVal()));
-            thisModel->setPrimalColumnPivotAlgorithm(p);
+            model_.setPrimalColumnPivotAlgorithm(p);
           }
           break;
         case ClpParam::SCALING:
-          thisModel->scaling(mode);
+          model_.scaling(mode);
           break;
         case ClpParam::AUTOSCALE:
-          thisModel->setAutomaticScaling(mode != 0);
+          model_.setAutomaticScaling(mode != 0);
           break;
         case ClpParam::SPARSEFACTOR:
-          thisModel->setSparseFactorization((1 - mode) != 0);
+          model_.setSparseFactorization((1 - mode) != 0);
           break;
         case ClpParam::BIASLU:
-          thisModel->factorization()->setBiasLU(mode);
+          model_.factorization()->setBiasLU(mode);
           break;
         case ClpParam::PERTURBATION:
           if (mode == 0)
-            thisModel->setPerturbation(50);
+            model_.setPerturbation(50);
           else
-            thisModel->setPerturbation(100);
+            model_.setPerturbation(100);
           break;
         case ClpParam::ERRORSALLOWED:
           allowImportErrors = mode;
           break;
         case ClpParam::ABCWANTED:
 #ifdef ABC_INHERIT
-          models[iModel].setAbcState(mode);
+          model_.setAbcState(mode);
 #elif ABOCA_LITE
           setAbcState(mode);
           {
@@ -719,12 +710,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
             preSolveFile = true;
           break;
         case ClpParam::PFI:
-          thisModel->factorization()->setForrestTomlin(mode == 0);
+          model_.factorization()->setForrestTomlin(mode == 0);
           break;
         case ClpParam::FACTORIZATION:
-          models[iModel].factorization()->forceOtherFactorization(mode);
+          model_.factorization()->forceOtherFactorization(mode);
 #ifdef ABC_INHERIT
-          thisModel->factorization()->forceOtherFactorization(mode);
+          model_.factorization()->forceOtherFactorization(mode);
 #endif
           break;
         case ClpParam::CRASH:
@@ -734,9 +725,9 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           doVector = mode;
           break;
         case ClpParam::MESSAGES:
-          models[iModel].messageHandler()->setPrefix(mode != 0);
+          model_.messageHandler()->setPrefix(mode != 0);
 #ifdef ABC_INHERIT
-          thisModel->messageHandler()->setPrefix(mode != 0);
+          model_.messageHandler()->setPrefix(mode != 0);
 #endif
           break;
         case ClpParam::CHOLESKY:
@@ -760,20 +751,20 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       }
     } else if (param->type() == CoinParam::paramDir){
        if (status = param->readValue(inputQueue, field, &message)){
-          printGeneralMessage(models, message);
+          printGeneralMessage(model_, message);
           continue;
        }
        if (param->setVal(field, &message)){
-          printGeneralMessage(models, message);
+          printGeneralMessage(model_, message);
           continue;
        }
     } else if (param->type() == CoinParam::paramFile){
        if (status = param->readValue(inputQueue, field, &message)){
-          printGeneralMessage(models, message);
+          printGeneralMessage(model_, message);
           continue;
        }
        if (param->setVal(field, &message)){
-          printGeneralMessage(models, message);
+          printGeneralMessage(model_, message);
           continue;
        }
     } else {
@@ -800,51 +791,46 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
       case ClpParam::EITHERSIMPLEX:
       case ClpParam::SOLVE:
       case ClpParam::BARRIER:
-        if (goodModels[iModel]) {
-#ifndef ABC_INHERIT
-          ClpSimplex *clpModel = models + iModel;
-#else
-          ClpSimplex *clpModel = static_cast<ClpSimplex *>(models + iModel);
-#endif
+        if (goodModel) {
           // openblas_set_num_threads(4);
           // deal with positive edge
           double psi = parameters[ClpParam::PSI]->dblVal();
           if (psi > 0.0) {
-            ClpDualRowPivot *dualp = clpModel->dualRowPivot();
+            ClpDualRowPivot *dualp = model_.dualRowPivot();
             ClpDualRowSteepest *d1 = dynamic_cast<ClpDualRowSteepest *>(dualp);
             ClpDualRowDantzig *d2 = dynamic_cast<ClpDualRowDantzig *>(dualp);
             if (d1) {
               ClpPEDualRowSteepest p(psi, d1->mode());
-              clpModel->setDualRowPivotAlgorithm(p);
+              model_.setDualRowPivotAlgorithm(p);
             } else if (d2) {
               ClpPEDualRowDantzig p(psi);
-              clpModel->setDualRowPivotAlgorithm(p);
+              model_.setDualRowPivotAlgorithm(p);
             }
-            ClpPrimalColumnPivot *primalp = clpModel->primalColumnPivot();
+            ClpPrimalColumnPivot *primalp = model_.primalColumnPivot();
             ClpPrimalColumnSteepest *p1 =
                 dynamic_cast<ClpPrimalColumnSteepest *>(primalp);
             ClpPrimalColumnDantzig *p2 =
                 dynamic_cast<ClpPrimalColumnDantzig *>(primalp);
             if (p1) {
               ClpPEPrimalColumnSteepest p(psi, p1->mode());
-              clpModel->setPrimalColumnPivotAlgorithm(p);
+              model_.setPrimalColumnPivotAlgorithm(p);
             } else if (p2) {
               ClpPEPrimalColumnDantzig p(psi);
-              clpModel->setPrimalColumnPivotAlgorithm(p);
+              model_.setPrimalColumnPivotAlgorithm(p);
             }
           }
           if (paramCode == ClpParam::EITHERSIMPLEX ||
               paramCode == ClpParam::SOLVE) {
-            models[iModel].setMoreSpecialOptions(
-                16384 | models[iModel].moreSpecialOptions());
+            model_.setMoreSpecialOptions(
+                16384 | model_.moreSpecialOptions());
             paramCode = ClpParam::EITHERSIMPLEX;
           }
           double objScale = parameters[ClpParam::OBJSCALE2]->dblVal();
           if (objScale != 1.0) {
             int iColumn;
-            int numberColumns = models[iModel].numberColumns();
-            double *dualColumnSolution = models[iModel].dualColumnSolution();
-            ClpObjective *obj = models[iModel].objectiveAsObject();
+            int numberColumns = model_.numberColumns();
+            double *dualColumnSolution = model_.dualColumnSolution();
+            ClpObjective *obj = model_.objectiveAsObject();
             assert(dynamic_cast<ClpLinearObjective *>(obj));
             double offset;
             double *objective = obj->gradient(NULL, NULL, offset, true);
@@ -854,20 +840,20 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
               ;
             }
             int iRow;
-            int numberRows = models[iModel].numberRows();
-            double *dualRowSolution = models[iModel].dualRowSolution();
+            int numberRows = model_.numberRows();
+            double *dualRowSolution = model_.dualRowSolution();
             for (iRow = 0; iRow < numberRows; iRow++)
               dualRowSolution[iRow] *= objScale;
-            models[iModel].setObjectiveOffset(objScale *
-                                              models[iModel].objectiveOffset());
+            model_.setObjectiveOffset(objScale *
+                                              model_.objectiveOffset());
           }
           ClpSolve::SolveType method;
           ClpSolve::PresolveType presolveType;
           ClpSolve solveOptions;
 #ifndef ABC_INHERIT
-          ClpSimplex *model2 = models + iModel;
+          ClpSimplex *model2 = &model_;
 #else
-          AbcSimplex *model2 = models + iModel;
+          AbcSimplex *model2 = &model_;
 #endif
           if (paramCode == ClpParam::EITHERSIMPLEX)
             solveOptions.setSpecialOption(3, 0); // allow +-1
@@ -895,17 +881,16 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
               }
             }
             if (tryIt) {
-              ClpSimplex *thisModel = model2;
-              thisModel =
-                  static_cast<ClpSimplexOther *>(thisModel)->dualOfModel(
+              ClpSimplex *thisModel =
+                  static_cast<ClpSimplexOther *>(model2)->dualOfModel(
                       fractionRow, fractionColumn);
               if (thisModel) {
                 buffer.str("");
-                buffer << "Dual of model has " << thisModel->numberRows()
-                       << " rows and " << thisModel->numberColumns()
+                buffer << "Dual of model has " << model_.numberRows()
+                       << " rows and " << model_.numberColumns()
                        << " columns" << std::endl;
-                printGeneralMessage(models, buffer.str());
-                thisModel->setOptimizationDirection(1.0);
+                printGeneralMessage(model_, buffer.str());
+                model_.setOptimizationDirection(1.0);
 #ifndef ABC_INHERIT
                 model2 = thisModel;
 #else
@@ -915,7 +900,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                 delete thisModel;
 #endif
               } else {
-                thisModel = models + iModel;
+                thisModel = &model;
                 dualize = 0;
               }
             } else {
@@ -943,7 +928,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
               buffer << "Doing " << preSolve
                      << " presolve passes - picking up non-costed slacks"
                      << std::endl;
-              printGeneralMessage(models, buffer.str());
+              printGeneralMessage(model_, buffer.str());
             }
           } else if (preSolve) {
             presolveType = ClpSolve::presolveOn;
@@ -970,7 +955,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
             if (crossover == 1) {
               method = ClpSolve::useBarrierNoCross;
             } else if (crossover == 2) {
-              ClpObjective *obj = models[iModel].objectiveAsObject();
+              ClpObjective *obj = model_.objectiveAsObject();
               if (obj->type() > 1) {
                 method = ClpSolve::useBarrierNoCross;
                 presolveType = ClpSolve::presolveOff;
@@ -981,8 +966,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           solveOptions.setSolveType(method);
           solveOptions.setSpecialOption(5, printOptions & 1);
           if (doVector) {
-            models[iModel].setVectorMode(doVector);
-            ClpMatrixBase *matrix = models[iModel].clpMatrix();
+            model_.setVectorMode(doVector);
+            ClpMatrixBase *matrix = model_.clpMatrix();
             if (dynamic_cast<ClpPackedMatrix *>(matrix)) {
               ClpPackedMatrix *clpMatrix =
                   dynamic_cast<ClpPackedMatrix *>(matrix);
@@ -1059,7 +1044,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
               // now call generate code
               generateCode("user_driver.cpp", cppValue);
             } else {
-              printGeneralMessage(models,
+              printGeneralMessage(model_,
                                   "Unable to open file user_driver.cpp\n");
             }
           }
@@ -1227,7 +1212,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                     buffer.str("");
                     buffer << "Large rhs row " << i << " " << effectiveRhs[i]
                            << " after" << std::endl;
-                    printGeneralWarning(models, buffer.str());
+                    printGeneralWarning(model_, buffer.str());
                   }
                 }
                 simplex->times(-1.0, bound, effectiveRhs);
@@ -1238,14 +1223,14 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                     buffer.str("");
                     buffer << "Large rhs row " << i << " " << effectiveRhs[i]
                            << " after" << std::endl;
-                    printGeneralWarning(models, buffer.str());
+                    printGeneralWarning(model_, buffer.str());
                   }
                 }
                 if ((numberBad || bSum > 1.0e-6) && printBad) {
                   buffer.str("");
                   buffer << "Bad infeasibility ray " << bSum << "  - "
                          << numberBad << " bad" << std::endl;
-                  printGeneralWarning(models, buffer.str());
+                  printGeneralWarning(model_, buffer.str());
                 } else {
                   // printf("Good ray - infeasibility %g\n",
                   //     -bSum);
@@ -1264,7 +1249,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
             status = -1;
           }
           if (dualize) {
-            ClpSimplex *thisModel = models + iModel;
+            ClpSimplex *thisModel = &model_;
             int returnCode =
                 static_cast<ClpSimplexOther *>(thisModel)->restoreFromDual(
                     model2);
@@ -1272,31 +1257,31 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
               returnCode = 0;
             delete model2;
             if (returnCode && dualize != 2) {
-              currentModel = models + iModel;
+              currentModel = &model_;
               // register signal handler
               signal(SIGINT, signal_handler);
-              thisModel->primal(1);
+              model_.primal(1);
               currentModel = NULL;
             }
             buffer.str("");
             buffer
                 << "After translating dual back to primal - objective value is "
-                << thisModel->objectiveValue();
-            printGeneralMessage(models, buffer.str());
+                << model_.objectiveValue();
+            printGeneralMessage(model_, buffer.str());
             // switch off (user can switch back on)
             parameters[ClpParam::DUALIZE]->setVal(dualize);
           }
           if (status >= 0)
             basisHasValues = 1;
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+          printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::STATISTICS:
-        if (goodModels[iModel]) {
+        if (goodModel) {
           // If presolve on look at presolved
           bool deleteModel2 = false;
-          ClpSimplex *model2 = models + iModel;
+          ClpSimplex *model2 = &model_;
           if (preSolve) {
             ClpPresolve pinfo;
             int presolveOptions2 = presolveOptions & ~0x40000000;
@@ -1307,84 +1292,84 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
               pinfo.statistics();
             double presolveTolerance =
                 parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
-            model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
+            model2 = pinfo.presolvedModel(model_, presolveTolerance,
                                           true, preSolve);
             if (model2) {
-              printGeneralMessage(models, "Statistics for presolved model\n");
+              printGeneralMessage(model_, "Statistics for presolved model\n");
               deleteModel2 = true;
             } else {
-              printGeneralMessage(models,
+              printGeneralMessage(model_,
                                   "Presolved model looks infeasible - will use "
                                   "unpresolved\n");
-              model2 = models + iModel;
+              model2 = &model_;
             }
           } else {
-            printGeneralMessage(models, "Statistics for unpresolved model\n");
-            model2 = models + iModel;
+            printGeneralMessage(model_, "Statistics for unpresolved model\n");
+            model2 = &model_;
           }
-          statistics(models + iModel, model2);
+          statistics(&model_, model2);
           if (deleteModel2)
             delete model2;
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+          printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::TIGHTEN:
-        if (goodModels[iModel]) {
-          int numberInfeasibilities = models[iModel].tightenPrimalBounds();
+        if (goodModel) {
+          int numberInfeasibilities = model_.tightenPrimalBounds();
           if (numberInfeasibilities)
-            printGeneralWarning(models,
+            printGeneralWarning(model_,
                                 "** Analysis indicates model infeasible\n");
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+          printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::PLUSMINUS:
-        if (goodModels[iModel]) {
-          ClpMatrixBase *saveMatrix = models[iModel].clpMatrix();
+        if (goodModel) {
+          ClpMatrixBase *saveMatrix = model_.clpMatrix();
           ClpPackedMatrix *clpMatrix =
               dynamic_cast<ClpPackedMatrix *>(saveMatrix);
           if (clpMatrix) {
             ClpPlusMinusOneMatrix *newMatrix =
                 new ClpPlusMinusOneMatrix(*(clpMatrix->matrix()));
             if (newMatrix->getIndices()) {
-              models[iModel].replaceMatrix(newMatrix);
+              model_.replaceMatrix(newMatrix);
               delete saveMatrix;
-              printGeneralMessage(models,
+              printGeneralMessage(model_,
                                   "Matrix converted to +- one matrix\n");
             } else {
               printGeneralWarning(
-                  models, "Matrix cannot be converted to +- 1 matrix\n");
+                  model_, "Matrix cannot be converted to +- 1 matrix\n");
             }
           } else {
-            printGeneralWarning(models, "Matrix not a ClpPackedMatrix\n");
+            printGeneralWarning(model_, "Matrix not a ClpPackedMatrix\n");
           }
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+          printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::NETWORK:
-        if (goodModels[iModel]) {
-          ClpMatrixBase *saveMatrix = models[iModel].clpMatrix();
+        if (goodModel) {
+          ClpMatrixBase *saveMatrix = model_.clpMatrix();
           ClpPackedMatrix *clpMatrix =
               dynamic_cast<ClpPackedMatrix *>(saveMatrix);
           if (clpMatrix) {
             ClpNetworkMatrix *newMatrix =
                 new ClpNetworkMatrix(*(clpMatrix->matrix()));
             if (newMatrix->getIndices()) {
-              models[iModel].replaceMatrix(newMatrix);
+              model_.replaceMatrix(newMatrix);
               delete saveMatrix;
-              printGeneralMessage(models,
+              printGeneralMessage(model_,
                                   "Matrix converted to network matrix\n");
             } else {
               printGeneralWarning(
-                  models, "Matrix can not be converted to network matrix\n");
+                  model_, "Matrix can not be converted to network matrix\n");
             }
           } else {
-            printGeneralWarning(models, "Matrix not a ClpPackedMatrix\n");
+            printGeneralWarning(model_, "Matrix not a ClpPackedMatrix\n");
           }
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+          printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::IMPORT: {
@@ -1456,14 +1441,14 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                 canOpen = false;
                 buffer.str("");
                 buffer << "Unable to open file " << gmplData << std::endl;
-                printGeneralWarning(models, buffer.str());
+                printGeneralWarning(model_, buffer.str());
                 continue;
               }
             }
           } else {
             buffer.str("");
             buffer << "Unable to open file " << gmplData << std::endl;
-            printGeneralWarning(models, buffer.str());
+            printGeneralWarning(model_, buffer.str());
             continue;
           }
         }
@@ -1472,32 +1457,32 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         mpsFile = fileName;
 #endif
         if (!gmpl) {
-           status = models[iModel].readMps(
+           status = model_.readMps(
                 fileName.c_str(), keepImportNames != 0, allowImportErrors != 0);
         } else if (gmpl > 0) {
 #ifdef COINUTILS_HAS_GLPK
-           status = models[iModel].readGMPL(
+           status = model_.readGMPL(
                 fileName.c_str(), (gmpl == 2) ? gmplData.c_str() : NULL,
                 keepImportNames != 0, &coin_glp_tran, &coin_glp_prob);
 #else
            printGeneralWarning(
-                models, "Clp was not built with GMPL support. Exiting.\n");
+                model_, "Clp was not built with GMPL support. Exiting.\n");
             // This is surely not the right thing to do here. Should we
             // throw an exceptioon? Exit?
            abort();
 #endif
         } else {
 #ifdef KILL_ZERO_READLP
-           status = models[iModel].readLp(
-                fileName.c_str(), models[iModel].getSmallElementValue());
+           status = model_.readLp(
+                fileName.c_str(), model_.getSmallElementValue());
 #else
-           status = models[iModel].readLp(fileName.c_str(), 1.0e-12);
+           status = model_.readLp(fileName.c_str(), 1.0e-12);
 #endif
         }
         if (!status || (status > 0 && allowImportErrors)) {
-           goodModels[iModel] = true;
+           goodModel = true;
            // sets to all slack (not necessary?)
-           thisModel->createStatus();
+           model_.createStatus();
            // Go to canned file if just input file
            if (inputQueue.empty()) {
               // only if ends .mps
@@ -1513,7 +1498,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                     buffer.str("");
                     buffer << "No parameter file " << fileName << " found"
                            << std::endl;
-                    printGeneralMessage(models, buffer.str());
+                    printGeneralMessage(model_, buffer.str());
                  }
               }
            }
@@ -1522,17 +1507,17 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
            buffer.str("");
            buffer << "There were " << status << " errors on input"
                   << std::endl;
-           printGeneralMessage(models, buffer.str());
+           printGeneralMessage(model_, buffer.str());
         }
       } break;
       case ClpParam::EXPORT:
-        if (goodModels[iModel]) {
+        if (goodModel) {
           double objScale = parameters[ClpParam::OBJSCALE2]->dblVal();
           if (objScale != 1.0) {
             int iColumn;
-            int numberColumns = models[iModel].numberColumns();
-            double *dualColumnSolution = models[iModel].dualColumnSolution();
-            ClpObjective *obj = models[iModel].objectiveAsObject();
+            int numberColumns = model_.numberColumns();
+            double *dualColumnSolution = model_.dualColumnSolution();
+            ClpObjective *obj = model_.objectiveAsObject();
             assert(dynamic_cast<ClpLinearObjective *>(obj));
             double offset;
             double *objective = obj->gradient(NULL, NULL, offset, true);
@@ -1542,12 +1527,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
               ;
             }
             int iRow;
-            int numberRows = models[iModel].numberRows();
-            double *dualRowSolution = models[iModel].dualRowSolution();
+            int numberRows = model_.numberRows();
+            double *dualRowSolution = model_.dualRowSolution();
             for (iRow = 0; iRow < numberRows; iRow++)
               dualRowSolution[iRow] *= objScale;
-            models[iModel].setObjectiveOffset(objScale *
-                                              models[iModel].objectiveOffset());
+            model_.setObjectiveOffset(objScale *
+                                              model_.objectiveOffset());
           }
           // get next field
           param->readValue(inputQueue, fileName, &message);
@@ -1565,19 +1550,19 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           } else {
             buffer.str("");
             buffer << "Unable to open file " << fileName << std::endl;
-            printGeneralWarning(models, buffer.str());
+            printGeneralWarning(model_, buffer.str());
             continue;
           }
           // If presolve on then save presolved
           bool deleteModel2 = false;
-          ClpSimplex *model2 = models + iModel;
+          ClpSimplex *model2 = &model_;
           if (dualize && dualize < 3) {
              model2 = static_cast<ClpSimplexOther *>(model2)->dualOfModel();
              buffer.str("");
              buffer << "Dual of model has " << model2->numberRows()
                     << " rows and " << model2->numberColumns() << " columns"
                     << std::endl;
-             printGeneralMessage(models, buffer.str());
+             printGeneralMessage(model_, buffer.str());
              model2->setOptimizationDirection(1.0);
              preSolve = 0; // as picks up from model
           }
@@ -1591,26 +1576,26 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
                 pinfo.statistics();
              double presolveTolerance =
                 parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
-             model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
+             model2 = pinfo.presolvedModel(model_, presolveTolerance,
                                            true, preSolve, false, false);
              if (model2) {
                 buffer.str("");
                 buffer << "Saving presolved model on " << fileName << std::endl;
-                printGeneralMessage(models, buffer.str());
+                printGeneralMessage(model_, buffer.str());
                 deleteModel2 = true;
              } else {
                 buffer.str("");
                 buffer
                    << "Presolved model looks infeasible - saving original on "
                    << fileName << std::endl;
-                printGeneralMessage(models, buffer.str());
+                printGeneralMessage(model_, buffer.str());
                 deleteModel2 = false;
-                model2 = models + iModel;
+                model2 = &model_;
              }
           } else {
              buffer.str("");
              buffer << "Saving model on " << fileName << std::endl;
-             printGeneralMessage(models, buffer.str());
+             printGeneralMessage(model_, buffer.str());
           }
 #if 0
           // Convert names
@@ -1684,11 +1669,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           if (deleteModel2)
              delete model2;
         } else {
-           printGeneralWarning(models, "** Current model not valid\n");
+           printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::BASISIN:
-        if (goodModels[iModel]) {
+        if (goodModel) {
           param->readValue(inputQueue, fileName, &message);
           CoinParamUtils::processFile(fileName,
                                 parameters[ClpParam::DIRECTORY]->dirName(),
@@ -1696,7 +1681,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           if (!canOpen) {
              buffer.str("");
              buffer << "Unable to open file " << fileName.c_str();
-             printGeneralMessage(models, buffer.str());
+             printGeneralMessage(model_, buffer.str());
              continue;
           }
           if (fileName == ""){
@@ -1704,24 +1689,27 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           }else{
              parameters[ClpParam::BASISFILE]->setFileName(fileName);
           }
-          int values = thisModel->readBasis(fileName.c_str());
+          int values = model_.readBasis(fileName.c_str());
           if (values == 0)
              basisHasValues = -1;
           else
              basisHasValues = 1;
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+          printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::PRINTMASK:
-        if (!param->readValue(inputQueue, field)) {
-          param->setVal(field);
-        } else {
-          param->printString();
+        if (status = param->readValue(inputQueue, field, &message)){
+           printGeneralMessage(model_, message);
+           continue;
+        }
+        if (param->setVal(field, &message)){
+           printGeneralMessage(model_, message);
+           continue;
         }
         break;
       case ClpParam::BASISOUT:
-        if (goodModels[iModel]) {
+        if (goodModel) {
           param->readValue(inputQueue, fileName, &message);
           CoinParamUtils::processFile(fileName,
                                 parameters[ClpParam::DIRECTORY]->dirName());
@@ -1739,18 +1727,18 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           } else {
             buffer.str("");
             buffer << "Unable to open file " << fileName << std::endl;
-            printGeneralWarning(models, buffer.str());
+            printGeneralWarning(model_, buffer.str());
             continue;
           }
-          ClpSimplex *model2 = models + iModel;
+          ClpSimplex *model2 = &model_;
           model2->writeBasis(fileName.c_str(), outputFormat > 1,
                              outputFormat - 2);
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+          printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::PARAMETRICS:
-        if (goodModels[iModel]) {
+        if (goodModel) {
           param->readValue(inputQueue, fileName, &message);
           CoinParamUtils::processFile(fileName,
                                 parameters[ClpParam::DIRECTORY]->dirName(),
@@ -1758,7 +1746,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           if (!canOpen) {
              buffer.str("");
              buffer << "Unable to open file " << fileName.c_str();
-             printGeneralMessage(models, buffer.str());
+             printGeneralMessage(model_, buffer.str());
              continue;
           }
           if (fileName == ""){
@@ -1766,10 +1754,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           }else{
              parameters[ClpParam::EXPORTFILE]->setFileName(fileName);
           }
-          ClpSimplex *model2 = models + iModel;
+          ClpSimplex *model2 = &model_;
           static_cast<ClpSimplexOther *>(model2)->parametrics(fileName.c_str());
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+          printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::WRITEMODEL: {
@@ -1791,45 +1779,45 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         } else {
           buffer.str("");
           buffer << "Unable to open file " << fileName << std::endl;
-          printGeneralWarning(models, buffer.str());
+          printGeneralWarning(model_, buffer.str());
           continue;
         }
         int status;
         // If presolve on then save presolved
         bool deleteModel2 = false;
-        ClpSimplex *model2 = models + iModel;
+        ClpSimplex *model2 = &model_;
         if (preSolve) {
            ClpPresolve pinfo;
            double presolveTolerance =
               parameters[ClpParam::PRESOLVETOLERANCE]->dblVal();
-           model2 = pinfo.presolvedModel(models[iModel], presolveTolerance,
+           model2 = pinfo.presolvedModel(model_, presolveTolerance,
                                          false, preSolve);
            if (model2) {
               buffer.str("");
               buffer << "Saving presolved model on " << fileName << std::endl;
-              printGeneralMessage(models, buffer.str());
+              printGeneralMessage(model_, buffer.str());
               deleteModel2 = true;
            } else {
               buffer.str("");
               buffer << "Presolved model looks infeasible - saving original on "
                      << fileName << std::endl;
-              printGeneralMessage(models, buffer.str());
+              printGeneralMessage(model_, buffer.str());
               deleteModel2 = false;
-              model2 = models + iModel;
+              model2 = &model_;
            }
         } else {
            buffer.str("");
            buffer << "Saving model on " << fileName << std::endl;
-           printGeneralMessage(models, buffer.str());
+           printGeneralMessage(model_, buffer.str());
         }
         status = model2->saveModel(fileName.c_str());
         if (deleteModel2)
            delete model2;
         if (!status) {
-           goodModels[iModel] = true;
+           goodModel = true;
         } else {
            // errors
-           printGeneralWarning(models, "There were errors on output\n");
+           printGeneralWarning(model_, "There were errors on output\n");
         }
       } break;
       case ClpParam::READMODEL: {
@@ -1840,7 +1828,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         if (!canOpen) {
            buffer.str("");
            buffer << "Unable to open file " << fileName.c_str();
-           printGeneralMessage(models, buffer.str());
+           printGeneralMessage(model_, buffer.str());
            continue;
         }
         if (fileName == ""){
@@ -1848,38 +1836,38 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }else{
            parameters[ClpParam::MODELFILE]->setFileName(fileName);
         }
-        int status = models[iModel].restoreModel(fileName.c_str());
+        int status = model_.restoreModel(fileName.c_str());
         if (!status) {
-           goodModels[iModel] = true;
+           goodModel = true;
         } else {
            // errors
-           printGeneralWarning(models, "There were errors on output\n");
+           printGeneralWarning(model_, "There were errors on output\n");
         }
       } break;
       case ClpParam::MAXIMIZE:
-        models[iModel].setOptimizationDirection(-1);
+        model_.setOptimizationDirection(-1);
 #ifdef ABC_INHERIT
-        thisModel->setOptimizationDirection(-1);
+        model_.setOptimizationDirection(-1);
 #endif
         break;
       case ClpParam::MINIMIZE:
-        models[iModel].setOptimizationDirection(1);
+        model_.setOptimizationDirection(1);
 #ifdef ABC_INHERIT
-        thisModel->setOptimizationDirection(1);
+        model_.setOptimizationDirection(1);
 #endif
         break;
       case ClpParam::ALLSLACK:
-        thisModel->allSlackBasis(true);
+        model_.allSlackBasis(true);
 #ifdef ABC_INHERIT
-        models[iModel].allSlackBasis();
+        model_.allSlackBasis();
 #endif
         break;
       case ClpParam::REVERSE:
-        if (goodModels[iModel]) {
+        if (goodModel) {
           int iColumn;
-          int numberColumns = models[iModel].numberColumns();
-          double *dualColumnSolution = models[iModel].dualColumnSolution();
-          ClpObjective *obj = models[iModel].objectiveAsObject();
+          int numberColumns = model_.numberColumns();
+          double *dualColumnSolution = model_.dualColumnSolution();
+          ClpObjective *obj = model_.objectiveAsObject();
           assert(dynamic_cast<ClpLinearObjective *>(obj));
           double offset;
           double *objective = obj->gradient(NULL, NULL, offset, true);
@@ -1888,12 +1876,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
             objective[iColumn] = -objective[iColumn];
           }
           int iRow;
-          int numberRows = models[iModel].numberRows();
-          double *dualRowSolution = models[iModel].dualRowSolution();
+          int numberRows = model_.numberRows();
+          double *dualRowSolution = model_.dualRowSolution();
           for (iRow = 0; iRow < numberRows; iRow++) {
             dualRowSolution[iRow] = -dualRowSolution[iRow];
           }
-          models[iModel].setObjectiveOffset(-models[iModel].objectiveOffset());
+          model_.setObjectiveOffset(-model_.objectiveOffset());
         }
         break;
       case ClpParam::STDIN:
@@ -1921,8 +1909,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         if (paramCode == ClpParam::NETLIB_DUAL) {
           std::cerr << "Doing netlib with dual algorithm" << std::endl;
           algorithm = 0;
-          models[iModel].setMoreSpecialOptions(
-              models[iModel].moreSpecialOptions() | 32768);
+          model_.setMoreSpecialOptions(
+              model_.moreSpecialOptions() | 32768);
         } else if (paramCode == ClpParam::NETLIB_BARRIER) {
           std::cerr << "Doing netlib with barrier algorithm" << std::endl;
           algorithm = 2;
@@ -1939,8 +1927,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           std::cerr << "Doing netlib with primal algorithm" << std::endl;
           algorithm = 1;
         }
-        // int specialOptions = models[iModel].specialOptions();
-        models[iModel].setSpecialOptions(0);
+        // int specialOptions = model_.specialOptions();
+        model_.setSpecialOptions(0);
         ClpSolve solveOptions;
         ClpSolve::PresolveType presolveType;
         if (preSolve){
@@ -1989,20 +1977,20 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
             buffer.str("");
             buffer << "Solving problems " << loSizeX << "<= and <" << hiSizeX
                    << std::endl;
-            printGeneralMessage(models, buffer.str());
+            printGeneralMessage(model_, buffer.str());
           }
 #endif
-          // for moment then back to models[iModel]
+          // for moment then back to model_
 #ifndef ABC_INHERIT
-          int specialOptions = models[iModel].specialOptions();
-          mainTest(nFields, fields, algorithm, *thisModel, solveOptions,
+          int specialOptions = model_.specialOptions();
+          mainTest(nFields, fields, algorithm, model_, solveOptions,
                    specialOptions, doVector != 0);
 #else
         // if (!processTune) {
         // specialOptions=0;
-        // models->setSpecialOptions(models->specialOptions()&~65536);
+        // model_.setSpecialOptions(model_.specialOptions()&~65536);
         // }
-        mainTest(nFields, fields, algorithm, *models, solveOptions, 0,
+        mainTest(nFields, fields, algorithm, model_, solveOptions, 0,
                  doVector != 0);
 #endif
         }
@@ -2015,10 +2003,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         std::string dirfield = "-dirSample=";
         dirfield += parameters[ClpParam::DIRSAMPLE]->dirName();
         fields[1] = dirfield.c_str();
-        int specialOptions = models[iModel].specialOptions();
-        models[iModel].setSpecialOptions(0);
+        int specialOptions = model_.specialOptions();
+        model_.setSpecialOptions(0);
         int algorithm = -1;
-        if (models[iModel].numberRows())
+        if (model_.numberRows())
           algorithm = 7;
         ClpSolve solveOptions;
         ClpSolve::PresolveType presolveType;
@@ -2028,15 +2016,15 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           presolveType = ClpSolve::presolveOff;
         solveOptions.setPresolveType(presolveType, 5);
 #ifndef ABC_INHERIT
-        mainTest(nFields, fields, algorithm, *thisModel, solveOptions,
+        mainTest(nFields, fields, algorithm, model_, solveOptions,
                  specialOptions, doVector != 0);
 #else
-        mainTest(nFields, fields, algorithm, *models, solveOptions,
+        mainTest(nFields, fields, algorithm, model_, solveOptions,
                  specialOptions, doVector != 0);
 #endif
       } break;
       case ClpParam::FAKEBOUND:
-        if (goodModels[iModel]) {
+        if (goodModel) {
           // get bound
           if (status = param->readValue(inputQueue, dValue, &message)){
              std::cout << "Must enter value for " << param->name()
@@ -2046,11 +2034,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
           buffer.str("");
           buffer << "Setting " << param->name() << " to DEBUG " << dValue
                  << std::endl;
-          printGeneralMessage(models, buffer.str());
+          printGeneralMessage(model_, buffer.str());
           int iRow;
-          int numberRows = models[iModel].numberRows();
-          double *rowLower = models[iModel].rowLower();
-          double *rowUpper = models[iModel].rowUpper();
+          int numberRows = model_.numberRows();
+          double *rowLower = model_.rowLower();
+          double *rowUpper = model_.rowUpper();
           for (iRow = 0; iRow < numberRows; iRow++) {
              // leave free ones for now
              if (rowLower[iRow] > -1.0e20 || rowUpper[iRow] < 1.0e20) {
@@ -2059,9 +2047,9 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
              }
           }
           int iColumn;
-          int numberColumns = models[iModel].numberColumns();
-          double *columnLower = models[iModel].columnLower();
-          double *columnUpper = models[iModel].columnUpper();
+          int numberColumns = model_.numberColumns();
+          double *columnLower = model_.columnLower();
+          double *columnUpper = model_.columnUpper();
           for (iColumn = 0; iColumn < numberColumns; iColumn++) {
              // leave free ones for now
              if (columnLower[iColumn] > -1.0e20 ||
@@ -2073,28 +2061,28 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *models,
         }
         break;
       case ClpParam::REALLY_SCALE:
-        if (goodModels[iModel]) {
-          ClpSimplex newModel(models[iModel], models[iModel].scalingFlag());
-          printGeneralMessage(models, "model really really scaled\n");
-          models[iModel] = newModel;
+        if (goodModel) {
+          ClpSimplex newModel(model_, model_.scalingFlag());
+          printGeneralMessage(model_, "model really really scaled\n");
+          model_ = newModel;
         }
         break;
       case ClpParam::USERCLP:
         // Replace the sample code by whatever you want
-        if (goodModels[iModel]) {
-          ClpSimplex *thisModel = &models[iModel];
+        if (goodModel) {
+          ClpSimplex *thisModel = &model_;
           buffer.str("");
-          buffer << "Dummy user code - model has " << thisModel->numberRows()
-                 << " rows and " << thisModel->numberColumns() << " columns"
+          buffer << "Dummy user code - model has " << model_.numberRows()
+                 << " rows and " << model_.numberColumns() << " columns"
                  << std::endl;
-          printGeneralMessage(models, buffer.str());
+          printGeneralMessage(model_, buffer.str());
         }
         break;
       case ClpParam::HELP:
         std::cout << "Coin LP version " << CLP_VERSION << ", build " << __DATE__
                   << std::endl;
         std::cout << "Non default values:-" << std::endl;
-        std::cout << "Perturbation " << models[0].perturbation()
+        std::cout << "Perturbation " << model_.perturbation()
                   << " (default 100)" << std::endl;
         CoinParamUtils::printString("Presolve being done with 5 passes\n\
 Dual steepest edge steep/partial on matrix shape and factorization density\n\
@@ -2108,7 +2096,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
       case ClpParam::PRINTSOL:
       case ClpParam::WRITESOL:
       case ClpParam::WRITEGMPLSOL:
-        if (goodModels[iModel]) {
+        if (goodModel) {
           fp = NULL;
           bool append = false;
           canOpen = false;
@@ -2132,7 +2120,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 if (!canOpen) {
                    buffer.str("");
                    buffer << "Unable to open file " << fileName.c_str();
-                   printGeneralMessage(models, buffer.str());
+                   printGeneralMessage(model_, buffer.str());
                    continue;
                 }
                 append = true;
@@ -2162,13 +2150,13 @@ clp watson.mps -\nscaling off\nprimalsimplex");
              if (!fp){
                 buffer.str("");
                 buffer << "Unable to open file " << fileName << std::endl;
-                printGeneralWarning(models, buffer.str());
+                printGeneralWarning(model_, buffer.str());
              }
           }
             // See if Glpk
             if (paramCode == ClpParam::WRITEGMPLSOL) {
-              int numberRows = models[iModel].getNumRows();
-              int numberColumns = models[iModel].getNumCols();
+              int numberRows = model_.getNumRows();
+              int numberColumns = model_.getNumCols();
               int numberGlpkRows = numberRows + 1;
 #ifdef COINUTILS_HAS_GLPK
               if (coin_glp_prob) {
@@ -2178,12 +2166,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                   buffer.str("");
                   buffer << "Mismatch - cbc " << numberRows << " rows, glpk "
                          << numberGlpkRows << std::endl;
-                  printGeneralMessage(models, buffer.str());
+                  printGeneralMessage(model_, buffer.str());
                 }
               }
 #endif
               fprintf(fp, "%d %d\n", numberGlpkRows, numberColumns);
-              int iStat = models[iModel].status();
+              int iStat = model_.status();
               int iStat2 = GLP_UNDEF;
               if (iStat == 0) {
                 // optimal
@@ -2198,7 +2186,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 iStat2 = GLP_FEAS;
               }
               double objValue =
-                  models[iModel].getObjValue() * models[iModel].getObjSense();
+                  model_.getObjValue() * model_.getObjSense();
               fprintf(fp, "%d 2 %g\n", iStat2, objValue);
               if (numberGlpkRows > numberRows) {
                 // objective as row
@@ -2206,20 +2194,20 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               }
               int lookup[6] = {4, 1, 3, 2, 4, 5};
               const double *primalRowSolution =
-                  models[iModel].primalRowSolution();
-              const double *dualRowSolution = models[iModel].dualRowSolution();
+                  model_.primalRowSolution();
+              const double *dualRowSolution = model_.dualRowSolution();
               for (int i = 0; i < numberRows; i++) {
                 fprintf(fp, "%d %g %g\n",
-                        lookup[models[iModel].getRowStatus(i)],
+                        lookup[model_.getRowStatus(i)],
                         primalRowSolution[i], dualRowSolution[i]);
               }
               const double *primalColumnSolution =
-                  models[iModel].primalColumnSolution();
+                  model_.primalColumnSolution();
               const double *dualColumnSolution =
-                  models[iModel].dualColumnSolution();
+                  model_.dualColumnSolution();
               for (int i = 0; i < numberColumns; i++) {
                 fprintf(fp, "%d %g %g\n",
-                        lookup[models[iModel].getColumnStatus(i)],
+                        lookup[model_.getColumnStatus(i)],
                         primalColumnSolution[i], dualColumnSolution[i]);
               }
               fclose(fp);
@@ -2240,8 +2228,8 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               break;
             }
             // Write solution header (suggested by Luigi Poderico)
-            double objValue = models[iModel].getObjValue();
-            int iStat = models[iModel].status();
+            double objValue = model_.getObjValue();
+            int iStat = model_.status();
             if (iStat == 0) {
               fprintf(fp, "Optimal");
             } else if (iStat == 1) {
@@ -2265,11 +2253,11 @@ clp watson.mps -\nscaling off\nprimalsimplex");
             fprintf(fp, printFormat, objValue);
             if (printMode == 9) {
               // just statistics
-              int numberRows = models[iModel].numberRows();
-              double *dualRowSolution = models[iModel].dualRowSolution();
-              double *primalRowSolution = models[iModel].primalRowSolution();
-              double *rowLower = models[iModel].rowLower();
-              double *rowUpper = models[iModel].rowUpper();
+              int numberRows = model_.numberRows();
+              double *dualRowSolution = model_.dualRowSolution();
+              double *primalRowSolution = model_.primalRowSolution();
+              double *rowLower = model_.rowLower();
+              double *rowUpper = model_.rowUpper();
               double highestPrimal;
               double lowestPrimal;
               double highestDual;
@@ -2313,13 +2301,13 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                      << highestPrimal << " most away " << largestAway
                      << " - highest dual " << highestDual << " lowest "
                      << lowestDual << std::endl;
-              printGeneralMessage(models, buffer.str());
-              int numberColumns = models[iModel].numberColumns();
-              double *dualColumnSolution = models[iModel].dualColumnSolution();
+              printGeneralMessage(model_, buffer.str());
+              int numberColumns = model_.numberColumns();
+              double *dualColumnSolution = model_.dualColumnSolution();
               double *primalColumnSolution =
-                  models[iModel].primalColumnSolution();
-              double *columnLower = models[iModel].columnLower();
-              double *columnUpper = models[iModel].columnUpper();
+                  model_.primalColumnSolution();
+              double *columnLower = model_.columnLower();
+              double *columnUpper = model_.columnUpper();
               highestPrimal = -COIN_DBL_MAX;
               lowestPrimal = COIN_DBL_MAX;
               highestDual = -COIN_DBL_MAX;
@@ -2355,25 +2343,25 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                      << highestPrimal << " most away " << largestAway
                      << " - highest dual " << highestDual << " lowest "
                      << lowestDual << std::endl;
-              printGeneralMessage(models, buffer.str());
+              printGeneralMessage(model_, buffer.str());
               break;
             }
             // make fancy later on
             int iRow;
-            int numberRows = models[iModel].numberRows();
-            int lengthName = models[iModel].lengthNames(); // 0 if no names
+            int numberRows = model_.numberRows();
+            int lengthName = model_.lengthNames(); // 0 if no names
             int lengthPrint = CoinMax(lengthName, 8);
             // in general I don't want to pass around massive
             // amounts of data but seems simpler here
-            std::vector<std::string> rowNames = *(models[iModel].rowNames());
+            std::vector<std::string> rowNames = *(model_.rowNames());
             std::vector<std::string> columnNames =
-                *(models[iModel].columnNames());
+                *(model_.columnNames());
 
-            double *dualRowSolution = models[iModel].dualRowSolution();
-            double *primalRowSolution = models[iModel].primalRowSolution();
-            double *rowLower = models[iModel].rowLower();
-            double *rowUpper = models[iModel].rowUpper();
-            double primalTolerance = models[iModel].primalTolerance();
+            double *dualRowSolution = model_.dualRowSolution();
+            double *primalRowSolution = model_.primalRowSolution();
+            double *rowLower = model_.rowLower();
+            double *rowUpper = model_.rowUpper();
+            double primalTolerance = model_.primalTolerance();
             bool doMask = (parameters[ClpParam::PRINTMASK]->strVal() != "" &&
                            lengthName);
             int *maskStarts = NULL;
@@ -2390,7 +2378,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 if (pMask2[lengthMask - 1] != '"') {
                   buffer.str("");
                   buffer << "mismatched \" in mask " << pMask2 << std::endl;
-                  printGeneralWarning(models, buffer.str());
+                  printGeneralWarning(model_, buffer.str());
                   break;
                 } else {
                   strcpy(pMask, pMask2 + 1);
@@ -2400,7 +2388,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 if (pMask2[lengthMask - 1] != '\'') {
                   buffer.str("");
                   buffer << "mismatched ' in mask " << pMask2 << std::endl;
-                  printGeneralWarning(models, buffer.str());
+                  printGeneralWarning(model_, buffer.str());
                   break;
                 } else {
                   strcpy(pMask, pMask2 + 1);
@@ -2413,7 +2401,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 buffer.str("");
                 buffer << "mask " << pMask << " too long - skipping"
                        << std::endl;
-                printGeneralWarning(models, buffer.str());
+                printGeneralWarning(model_, buffer.str());
                 break;
               }
               maxMasks = 1;
@@ -2484,7 +2472,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               delete[] newMasks;
             }
             if (printMode > 5) {
-              int numberColumns = models[iModel].numberColumns();
+              int numberColumns = model_.numberColumns();
               // column length unless rhs ranging
               int number = numberColumns;
               switch (printMode) {
@@ -2519,7 +2507,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                   if (n) {
                     number = n;
                   } else {
-                    printGeneralWarning(models, "No names match - doing all\n");
+                    printGeneralWarning(model_, "No names match - doing all\n");
                     for (int i = 0; i < number; i++)
                       which[i] = i;
                   }
@@ -2537,7 +2525,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                   if (n) {
                     number = n;
                   } else {
-                    printGeneralWarning(models, "No names match - doing all\n");
+                    printGeneralWarning(model_, "No names match - doing all\n");
                     for (int i = 0; i < number; i++)
                       which[i] = i + numberColumns;
                   }
@@ -2551,13 +2539,13 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               // bound or rhs ranging
               case 6:
               case 7:
-                models[iModel].primalRanging(numberRows, which, valueIncrease,
+                model_.primalRanging(numberRows, which, valueIncrease,
                                              sequenceIncrease, valueDecrease,
                                              sequenceDecrease);
                 break;
               // objective ranging
               case 8:
-                models[iModel].dualRanging(number, which, valueIncrease,
+                model_.dualRanging(number, which, valueIncrease,
                                            sequenceIncrease, valueDecrease,
                                            sequenceDecrease);
                 break;
@@ -2662,12 +2650,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               }
             }
             int iColumn;
-            int numberColumns = models[iModel].numberColumns();
-            double *dualColumnSolution = models[iModel].dualColumnSolution();
+            int numberColumns = model_.numberColumns();
+            double *dualColumnSolution = model_.dualColumnSolution();
             double *primalColumnSolution =
-                models[iModel].primalColumnSolution();
-            double *columnLower = models[iModel].columnLower();
-            double *columnUpper = models[iModel].columnUpper();
+                model_.primalColumnSolution();
+            double *columnLower = model_.columnLower();
+            double *columnUpper = model_.columnUpper();
             for (iColumn = 0; iColumn < numberColumns; iColumn++) {
               int type = (printMode > 3) ? 1 : 0;
               if (primalColumnSolution[iColumn] >
@@ -2708,12 +2696,12 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               delete[] masks;
             }
         } else {
-          printGeneralWarning(models, "** Current model not valid\n");
+          printGeneralWarning(model_, "** Current model not valid\n");
         }
 
         break;
       case ClpParam::WRITESOLBINARY:
-        if (goodModels[iModel]) {
+        if (goodModel) {
           // get next field
            param->readValue(inputQueue, fileName, &message);
            CoinParamUtils::processFile(fileName,
@@ -2723,9 +2711,9 @@ clp watson.mps -\nscaling off\nprimalsimplex");
            }else{
               parameters[ClpParam::SOLUTIONBINARYFILE]->setFileName(fileName);
            }
-           ClpParamUtils::saveSolution(models + iModel, fileName);
+           ClpParamUtils::saveSolution(&model_, fileName);
         } else {
-           printGeneralWarning(models, "** Current model not valid\n");
+           printGeneralWarning(model_, "** Current model not valid\n");
         }
         break;
       case ClpParam::ENVIRONMENT: {
@@ -2741,15 +2729,15 @@ clp watson.mps -\nscaling off\nprimalsimplex");
         }
 #else
         printGeneralWarning(
-            models, "** Parameter not valid on Windows with Visual Studio\n");
+            model_, "** Parameter not valid on Windows with Visual Studio\n");
 #endif
         break;
       }
       case ClpParam::GUESS: {
 #ifndef ABC_INHERIT
-        if (goodModels[iModel]) {
+        if (goodModel) {
           ClpSimplexOther *model2 =
-              static_cast<ClpSimplexOther *>(models + iModel);
+              static_cast<ClpSimplexOther *>(&model_);
           std::string input = model2->guess(0);
           if (input != "") {
             while (!inputQueue.empty()){
@@ -2758,15 +2746,15 @@ clp watson.mps -\nscaling off\nprimalsimplex");
             std::istringstream inputStream(input);
             CoinParamUtils::readFromStream(inputQueue, inputStream);
           } else {
-            printGeneralWarning(models,
+            printGeneralWarning(model_,
                                 "** Guess unable to generate commands\n");
           }
         } else {
-          printGeneralWarning(models, "** Guess needs a valid model\n");
+          printGeneralWarning(model_, "** Guess needs a valid model\n");
         }
 #else
         printGeneralWarning(
-            models, "** Can'tmake a gues in this build configuration\n");
+            model_, "** Can'tmake a gues in this build configuration\n");
 #endif
 
         break;
@@ -2776,7 +2764,6 @@ clp watson.mps -\nscaling off\nprimalsimplex");
       }
     }
   }
-  delete[] goodModels;
 #ifdef COINTUILS_HAS_GLPK
   if (coin_glp_prob) {
     // free up as much as possible
@@ -2807,9 +2794,9 @@ clp watson.mps -\nscaling off\nprimalsimplex");
 }
 
 #ifndef ABC_INHERIT
-int clpReadAmpl(ampl_info * info, int argc, char **argv, ClpSimplex *models)
+int clpReadAmpl(ampl_info * info, int argc, char **argv, ClpSimplex &model)
 #else
-int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models)
+int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex &model)
 #endif
 {
 
@@ -2841,7 +2828,7 @@ int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models)
    }
    if (info->numberBinary + info->numberIntegers + info->numberSos &&
        !info->starts) {
-      printGeneralWarning(models, "Unable to handle integer problems\n");
+      printGeneralWarning(model, "Unable to handle integer problems\n");
       return 1;
    }
    // see if log in list (including environment)
@@ -2853,33 +2840,33 @@ int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models)
       }
     }
     if (noPrinting) {
-      models->messageHandler()->setLogLevel(0);
+      model.messageHandler()->setLogLevel(0);
     }
     if (!noPrinting) {
       buffer.str(""); 
       buffer << info->numberRows << " rows, " << info->numberColumns
              << " columns and " << info->numberElements << " elements"
              << std::endl;
-      printGeneralMessage(models, buffer.str());
+      printGeneralMessage(model, buffer.str());
     }
     if (!coinModelStart.model) {
       // linear
-      models->loadProblem(info->numberColumns, info->numberRows,
+      model.loadProblem(info->numberColumns, info->numberRows,
                           reinterpret_cast<const CoinBigIndex *>(info->starts),
                           info->rows, info->elements, info->columnLower,
                           info->columnUpper, info->objective, info->rowLower,
                           info->rowUpper);
     } else {
       // QP
-      models->loadProblem(*(coinModelStart.model));
+      model.loadProblem(*(coinModelStart.model));
     }
     // If we had a solution use it
     if (info->primalSolution) {
-      models->setColSolution(info->primalSolution);
+      model.setColSolution(info->primalSolution);
     }
     // status
     if (info->rowStatus) {
-      unsigned char *statusArray = models->statusArray();
+      unsigned char *statusArray = model.statusArray();
       int i;
       for (i = 0; i < info->numberColumns; i++)
         statusArray[i] = static_cast<unsigned char>(info->columnStatus[i]);
@@ -2889,12 +2876,12 @@ int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models)
     }
     freeArrays1(info);
     // modify objective if necessary
-    models->setOptimizationDirection(info->direction);
-    models->setObjectiveOffset(-info->offset);
+    model.setOptimizationDirection(info->direction);
+    model.setObjectiveOffset(-info->offset);
     if (info->offset) {
       buffer.str("");
       buffer << "Ampl objective offset is " << info->offset << std::endl;
-      printGeneralMessage(models, buffer.str());
+      printGeneralMessage(model, buffer.str());
     }
   }
 

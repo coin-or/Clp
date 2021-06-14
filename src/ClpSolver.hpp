@@ -69,36 +69,36 @@ int mainTest(int argc, const char *argv[], int algorithm,
 
 #ifndef ABC_INHERIT
 CLPLIB_EXPORT
-void ClpMain0(ClpSimplex *models);
+void ClpMain0(ClpSimplex &model);
 CLPLIB_EXPORT
-int ClpMain1(std::deque<std::string> inputQueue, ClpSimplex *model,
+int ClpMain1(std::deque<std::string> inputQueue, ClpSimplex &model,
              ampl_info *info = NULL);
 #else
 CLPLIB_EXPORT
-void ClpMain0(AbcSimplex *models);
+void ClpMain0(AbcSimplex &model);
 CLPLIB_EXPORT
-int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex *model,
+int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
              ampl_info *info = NULL);
 #endif
 
 #ifndef ABC_INHERIT
-void printGeneralMessage(ClpSimplex *model, std::string message, int type = CLP_GENERAL);
+void printGeneralMessage(ClpSimplex &model, std::string message, int type = CLP_GENERAL);
 #else
-void printGeneralMessage(AbcSimplex *model, std::string message, int type = CLP_GENERAL);
+void printGeneralMessage(AbcSimplex &model, std::string message, int type = CLP_GENERAL);
 #endif
 
 #ifndef ABC_INHERIT
-void printGeneralWarning(ClpSimplex *model, std::string message, int type = CLP_GENERAL_WARNING);
+void printGeneralWarning(ClpSimplex &model, std::string message, int type = CLP_GENERAL_WARNING);
 #else
-void printGeneralWarning(AbcSimplex *model, std::string message, int type = CLP_GENERAL_WARNING);
+void printGeneralWarning(AbcSimplex &model, std::string message, int type = CLP_GENERAL_WARNING);
 #endif
 
 #ifndef ABC_INHERIT
 CLPLIB_EXPORT
-int clpReadAmpl(ampl_info *info, int argc, char **argv, ClpSimplex *models);
+int clpReadAmpl(ampl_info *info, int argc, char **argv, ClpSimplex &model);
 #else
 CLPLIB_EXPORT
-int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex *models);
+int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex &odel);
 #endif
 static void statistics(ClpSimplex *originalModel, ClpSimplex *model);
 static void generateCode(const char *fileName, int type);

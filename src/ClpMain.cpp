@@ -284,9 +284,9 @@ main(int argc, const char *argv[])
   return 0;
 #endif
 #ifndef ABC_INHERIT
-  ClpSimplex *models = new ClpSimplex[1];
+  ClpSimplex model;
 #else
-  AbcSimplex *models = new AbcSimplex[1];
+  AbcSimplex model;
 #endif
   std::cout << "Coin LP version " << CLP_VERSION
             << ", build " << __DATE__ << std::endl;
@@ -297,14 +297,14 @@ main(int argc, const char *argv[])
       printf("%s ", argv[i]);
     printf("\n");
   }
-  ClpMain0(models);
+  ClpMain0(model);
 
   int returnCode;
   std::deque<std::string> inputQueue;
   
   if (argc > 2 && !strcmp(argv[2], "-AMPL")) {
      ampl_info info;
-     returnCode = clpReadAmpl(&info, argc, const_cast< char ** >(argv), models);
+     returnCode = clpReadAmpl(&info, argc, const_cast< char ** >(argv), model);
      if (!returnCode) {
         // Put arguments into a queue.
         // This should be moved to constructor of ClpSolver
@@ -312,14 +312,13 @@ main(int argc, const char *argv[])
         // We don't need to first two arguments from here on
         inputQueue.pop_front();
         inputQueue.pop_front();
-        returnCode = ClpMain1(inputQueue, models, &info);
+        returnCode = ClpMain1(inputQueue, model, &info);
      }
   } else {
      // Put arguments into a queue.
      formInputQueue(inputQueue, argc, const_cast< char ** >(argv));
-     returnCode = ClpMain1(inputQueue, models);
+     returnCode = ClpMain1(inputQueue, model);
   }     
-  delete[] models;
   return returnCode;
 }
 
