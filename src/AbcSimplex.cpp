@@ -2,15 +2,21 @@
 // Corporation and others, Copyright (C) 2012, FasterCoin.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
+#include <math.h>
+#include <cfloat>
+#include <string>
+#include <stdio.h>
+#include <iostream>
+
+#include "CoinUtilsConfig.h"
 #include "ClpConfig.h"
 
-#include "CoinPragma.hpp"
-#include <math.h>
 //#define ABC_DEBUG 2
 
 #if SLIM_CLP == 2
 #define SLIM_NOIO
 #endif
+#include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinFloatEqual.hpp"
 #include "ClpSimplex.hpp"
@@ -31,11 +37,11 @@
 #include "CoinAbcHelperFunctions.hpp"
 #include "CoinModel.hpp"
 #include "CoinLpIO.hpp"
-#include <cfloat>
 
-#include <string>
-#include <stdio.h>
-#include <iostream>
+#ifdef COINUTILS_HAS_GLPK
+#include "glpk.h"
+#endif
+
 //#############################################################################
 AbcSimplex::AbcSimplex(bool emptyMessages)
   :
@@ -4383,15 +4389,19 @@ AbcSimplex::readMps(const char *filename,
   translate(DO_SCALE_AND_MATRIX|DO_BASIS_AND_ORDER|DO_STATUS|DO_SOLUTION);
   return status;
 }
+
+#ifdef COINUTILS_HAS_GLPK
 // Read GMPL files from the given filenames
 int
-AbcSimplex::readGMPL(const char *filename, const char * dataName,
-                     bool keepNames)
+AbcSimplex::readGMPL(const char *filename, const char * dataName, bool keepNames,
+                     glp_tran **coin_glp_tran, glp_prob **coin_glp_prob)
 {
-  int status = ClpSimplex::readGMPL(filename, dataName, keepNames);
+   int status = ClpSimplex::readGMPL(filename, dataName, keepNames, coin_glp_tran,
+                                     coin_glp_prob);
   translate(DO_SCALE_AND_MATRIX|DO_BASIS_AND_ORDER|DO_STATUS|DO_SOLUTION);
   return status;
 }
+#endif
 // Read file in LP format from file with name filename.
 int
 AbcSimplex::readLp(const char *filename, const double epsilon )

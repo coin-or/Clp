@@ -2,48 +2,35 @@
 // Corporation and others.  All Rights Reserved.
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
+#include "ClpConfig.h"
+
+#include <deque>
+
+#include "CoinModel.hpp"
 #include "CoinPragma.hpp"
 
-#include "AbcCommon.hpp"
-#include "ClpSimplex.hpp"
-#ifdef ABC_INHERIT
-#include "AbcSimplex.hpp"
-#endif
-#ifndef ABC_INHERIT
-CLPLIB_EXPORT
-void ClpMain0(ClpSimplex *models);
-CLPLIB_EXPORT
-int ClpMain1(int argc, const char *argv[], ClpSimplex *model);
-#else
-CLPLIB_EXPORT
-void ClpMain0(AbcSimplex *models);
-CLPLIB_EXPORT
-int ClpMain1(int argc, const char *argv[], AbcSimplex *model);
-#endif
+#include "ClpSolver.hpp"
+
 //#define CILK_TEST
 #ifdef CILK_TEST
 static void cilkTest();
 #endif
+
+//#############################################################################
+//#############################################################################
+
 //#define LAPACK_TEST
-/*
-  Somehow with some BLAS we get multithreaded by default
-  For 99.99% of problems this is not a good idea.
-  The openblas_set_num_threads(1) seems to work even with other blas
- */
-#if CLP_USE_OPENBLAS
-extern "C" {
-void openblas_set_num_threads(int num_threads);
-}
-#endif
 #ifdef LAPACK_TEST
 #include "/include/lapacke.h"
 #ifndef COIN_FACTORIZATION_DENSE_CODE
 #define COIN_FACTORIZATION_DENSE_CODE 1
 #endif
+
+//#############################################################################
+
 #if COIN_FACTORIZATION_DENSE_CODE == 1
 // using simple lapack interface
 extern "C" {
-void openblas_set_num_threads(int num_threads);
 #if 0
   /** LAPACK Fortran subroutine DGETRF. */
   void LAPACK_dgetrf(int * m, int *n,
@@ -56,6 +43,9 @@ void openblas_set_num_threads(int num_threads);
   //	LAPACK_dgetrf(&N, &N, m, &LDA,ipiv, &info);
 #endif
 }
+
+//#############################################################################
+
 int test_lapack(int n)
 {
   int *ipiv;
@@ -109,7 +99,11 @@ int test_lapack(int n)
   free(ipiv);
   return 0;
 }
+
+//#############################################################################
+
 #elif COIN_FACTORIZATION_DENSE_CODE == 2
+
 // C interface
 enum CBLAS_ORDER { CblasRowMajor = 101,
   CblasColMajor = 102 };
@@ -123,6 +117,9 @@ int clapack_dgetrs(const enum CBLAS_ORDER Order,
   const double *A, const int lda, const int *ipiv, double *B,
   const int ldb);
 }
+
+//#############################################################################
+
 int test_lapack(int n)
 {
   int *ipiv;
@@ -176,6 +173,10 @@ int test_lapack(int n)
 }
 #endif
 #endif
+
+//#############################################################################
+//#############################################################################
+
 //#define CLP_MALLOC_STATISTICS
 #ifdef CLP_MALLOC_STATISTICS
 #include <malloc.h>
@@ -187,6 +188,9 @@ static int malloc_amount[] = { 0, 32, 128, 256, 1024, 4096, 16384, 65536, 262144
 static int malloc_n = 10;
 double malloc_counts[10] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 bool malloc_counts_on = true;
+
+//#############################################################################
+
 void *operator new(size_t size) throw(std::bad_alloc)
 {
   malloc_times++;
@@ -204,10 +208,16 @@ void *operator new(size_t size) throw(std::bad_alloc)
   void *p = malloc(size);
   return p;
 }
+
+//#############################################################################
+
 void operator delete(void *p) throw()
 {
   free(p);
 }
+
+//#############################################################################
+
 static void malloc_stats2()
 {
   double average = malloc_total / malloc_times;
@@ -221,12 +231,35 @@ static void malloc_stats2()
   // print results
 }
 #endif //CLP_MALLOC_STATISTICS
+
+//#############################################################################
+//#############################################################################
+
+void formInputQueue(std::deque<std::string> &inputQueue,
+                    int argc, char **argv)
+{
+   for (int i = 1; i < argc; i++){
+      std::string tmp(argv[i]);
+      std::string::size_type found = tmp.find('=');
+      if (found != std::string::npos) {
+         inputQueue.push_back(tmp.substr(0, found));
+         inputQueue.push_back(tmp.substr(found + 1));
+      } else {
+         inputQueue.push_back(tmp);
+      }
+   }
+}
+
+//#############################################################################
+//#############################################################################
+
 int
 #if defined(_MSC_VER)
   __cdecl
 #endif // _MSC_VER
-  main(int argc, const char *argv[])
+main(int argc, const char *argv[])
 {
+
 #ifdef CILK_TEST
   cilkTest();
 #endif
@@ -251,9 +284,9 @@ int
   return 0;
 #endif
 #ifndef ABC_INHERIT
-  ClpSimplex *models = new ClpSimplex[1];
+  ClpSimplex model;
 #else
-  AbcSimplex *models = new AbcSimplex[1];
+  AbcSimplex model;
 #endif
   std::cout << "Coin LP version " << CLP_VERSION
             << ", build " << __DATE__ << std::endl;
@@ -264,11 +297,34 @@ int
       printf("%s ", argv[i]);
     printf("\n");
   }
-  ClpMain0(models);
-  int returnCode = ClpMain1(argc, argv, models);
-  delete[] models;
+  ClpMain0(model);
+
+  int returnCode;
+  std::deque<std::string> inputQueue;
+  
+  if (argc > 2 && !strcmp(argv[2], "-AMPL")) {
+     ampl_info info;
+     returnCode = clpReadAmpl(&info, argc, const_cast< char ** >(argv), model);
+     if (!returnCode) {
+        // Put arguments into a queue.
+        // This should be moved to constructor of ClpSolver
+        formInputQueue(inputQueue, info.numberArguments, info.arguments);
+        // We don't need to first two arguments from here on
+        inputQueue.pop_front();
+        inputQueue.pop_front();
+        returnCode = ClpMain1(inputQueue, model, &info);
+     }
+  } else {
+     // Put arguments into a queue.
+     formInputQueue(inputQueue, argc, const_cast< char ** >(argv));
+     returnCode = ClpMain1(inputQueue, model);
+  }     
   return returnCode;
 }
+
+//#############################################################################
+//#############################################################################
+
 /*
   Version 1.00.00 October 13 2004.
   1.00.01 October 18.  Added basis handling helped/prodded by Thorsten Koch.
@@ -290,6 +346,10 @@ int
   1.05.00 June 27 2007.  This is trunk so when gets to stable will be 1.5
   1.11.00 November 5 2009 (Guy Fawkes) - OSL factorization and better ordering
  */
+
+//#############################################################################
+//#############################################################################
+
 #ifdef CILK_TEST
 // -*- C++ -*-
 
@@ -324,6 +384,8 @@ int
 // cilk_for granularity.
 #define CILK_FOR_GRAINSIZE 128
 
+//#############################################################################
+
 double dowork(double i)
 {
   // Waste time:
@@ -335,6 +397,9 @@ double dowork(double i)
 
   return k;
 }
+
+//#############################################################################
+
 static void doSomeWork(double *a, int low, int high)
 {
   if (high - low > 300) {
@@ -348,6 +413,8 @@ static void doSomeWork(double *a, int low, int high)
     }
   }
 }
+
+//#############################################################################
 
 void cilkTest()
 {
@@ -402,5 +469,8 @@ void cilkTest()
 
   exit(0);
 }
+
+//#############################################################################
+
 #endif
 

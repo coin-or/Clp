@@ -2963,9 +2963,11 @@ int ClpModel::readMps(const char *fileName,
 
   return status;
 }
+
+#ifdef COINUTILS_HAS_GLPK
 // Read GMPL files from the given filenames
-int ClpModel::readGMPL(const char *fileName, const char *dataName,
-  bool keepNames)
+int ClpModel::readGMPL(const char *fileName, const char *dataName, bool keepNames,
+                       glp_tran **coin_glp_tran, glp_prob **coin_glp_prob)
 {
   FILE *fp = fopen(fileName, "r");
   if (fp) {
@@ -2992,7 +2994,7 @@ int ClpModel::readGMPL(const char *fileName, const char *dataName,
   bool savePrefix = m.messageHandler()->prefix();
   m.messageHandler()->setPrefix(handler_->prefix());
   double time1 = CoinCpuTime(), time2;
-  int status = m.readGMPL(fileName, dataName, keepNames);
+  int status = m.readGMPL(fileName, dataName, keepNames, coin_glp_tran, coin_glp_prob);
   m.messageHandler()->setPrefix(savePrefix);
   if (!status) {
     loadProblem(*m.getMatrixByCol(),
@@ -3046,6 +3048,8 @@ int ClpModel::readGMPL(const char *fileName, const char *dataName,
   return status;
 }
 #endif
+#endif
+
 bool ClpModel::isPrimalObjectiveLimitReached() const
 {
   double limit = 0.0;

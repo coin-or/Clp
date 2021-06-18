@@ -63,12 +63,12 @@ void ClpPredictorCorrector::saveSolution(std::string fileName)
 }
 #endif
 // Could change on CLP_LONG_CHOLESKY or COIN_LONG_WORK?
-static CoinWorkDouble eScale = 1.0e27;
-static CoinWorkDouble eBaseCaution = 1.0e-12;
-static CoinWorkDouble eBase = 1.0e-12;
-static CoinWorkDouble eDiagonal = 1.0e25;
-static CoinWorkDouble eDiagonalCaution = 1.0e18;
-static CoinWorkDouble eExtra = 1.0e-12;
+const static CoinWorkDouble eScale = 1.0e27;
+const static CoinWorkDouble eBaseCaution = 1.0e-12;
+const static CoinWorkDouble eBase = 1.0e-12;
+const static CoinWorkDouble eDiagonal = 1.0e25;
+const static CoinWorkDouble eDiagonalCaution = 1.0e18;
+const static CoinWorkDouble eExtra = 1.0e-12;
 
 // main function
 

@@ -1486,6 +1486,10 @@ void ClpPresolve::postsolve(CoinPostsolveMatrix &prob)
 
     double *csol = prob.sol_;
     int nrows = prob.nrows_;
+    // point to original model
+    prob.originalRowLower_ = originalModel()->rowLower();
+    prob.originalRowUpper_ = originalModel()->rowUpper();
+
 
     int colx;
 

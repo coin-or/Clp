@@ -6,6 +6,7 @@
 #define ClpNode_H
 
 #include "CoinPragma.hpp"
+#include "CoinMessageHandler.hpp"
 
 // This implements all stuff for Clp fathom
 /** This contains what is in a Clp "node"

@@ -1,4 +1,4 @@
-# Clp
+# Clp refactor
 
 [![A COIN-OR Project](https://coin-or.github.io/coin-or-badge.png)](https://www.coin-or.org)
 
@@ -29,7 +29,7 @@ Clp is written in C++ and is released as open source under the [Eclipse Public L
 
 It is distributed under the auspices of the [COIN-OR Foundation](https://www.coin-or.org)
 
-The Clp development site is https://github.com/coin-or/Clp.
+The Clp website is https://github.com/coin-or/Clp.
 
 ## CITE
 
@@ -37,9 +37,9 @@ The Clp development site is https://github.com/coin-or/Clp.
 
 ## CURRENT BUILD STATUS
 
-[![Build Status](https://travis-ci.com/coin-or/Clp.svg?branch=master)](https://travis-ci.com/coin-or/Clp)
+[![Build Status](https://travis-ci.com/coin-or/Clp.svg?branch=refactor)](https://travis-ci.com/coin-or/Clp)
 
-[![Build status](https://ci.appveyor.com/api/projects/status/h3daf7woiig6n176/branch/master?svg=true)](https://ci.appveyor.com/project/coin-or/Clp/branch/master)
+[![Build status](https://ci.appveyor.com/api/projects/status/h3daf7woiig6n176/branch/refactor?svg=true)](https://ci.appveyor.com/project/coin-or/Clp/branch/refactor)
 
 ## DOWNLOAD
 
@@ -47,18 +47,14 @@ The Clp development site is https://github.com/coin-or/Clp.
 
 There is a Docker image that provides Clp, as well as other projects
 in the [COIN-OR Optimization
-Suite](https://github.com/coin-or/COIN-OR-OptimizationSuite) [here](https://hub.docker.com/repository/docker/coinor/coin-or-optimization-suite)
+Suite](https://github.com/coin-or/COIN-OR-OptimizationSuite)[here](https://hub.docker.com/repository/docker/coinor/coin-or-optimization-suite)
 
 ### Binaries
 
-For newer releases, binaries will be made available as assets attached to
-releases in Github
-[here](https://github.com/coin-or/Clp/releases). Older binaries
-are archived as part of Clp
-[here](https://www.coin-or.org/download/binary/Clp).
+Binaries for most platforms are available as part of [Clp](https://bintray.com/coin-or/download/Clp). 
 
  * *Linux*: On Debian/Ubuntu, Clp is available in the package `coinor-clp` and can be installed with apt. On Fedora, Clp is available in the package `coin-or-Clp`.
- * *Windows*: The easiest way to get Clp on Windows is to download an archive as described above.
+ * *Windows*: The easiest way to get Clp on Windows is to download from *[Bintray](https://bintray.com/coin-or/download/Clp)*.
  * *Mac OS X*: The easiest way to get Cbc on Mac OS X is through [Homebrew](https://brew.sh).
    * `brew tap coin-or-tools/coinor`
    * `brew install coin-or-tools/coinor/clp`
@@ -66,9 +62,7 @@ are archived as part of Clp
 Due to license incompatibilities, pre-compiled binaries lack some functionality.
 If binaries are not available for your platform for the latest version and you would like to request them to be built and posted, feel free to let us know on the mailing list.
 
-### Source
-
-Source code can be obtained either by
+*Source code* can be obtained either by
 
  * Downloading a snapshot of the source code for the latest release version of Clp from the
  [releases](https://github.com/coin-or/Clp/releases) page.
@@ -89,7 +83,7 @@ To build CoinUtils from source, obtain the `coinbrew` script, do
 ```
 wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew
 chmod u+x coinbrew
-./coinbrew fetch Clp@master
+./coinbrew fetch Clp@refactor
 ./coinbrew build Clp
 ```
 For more detailed instructions on coinbrew, see https://coin-or.github.io/coinbrew.
@@ -152,7 +146,7 @@ works well.
 There are examples in [examples](examples).  To create an executable, build 
 with `coinbrew` as above and then do
 ```
-cd build/Cbc/master/examples
+cd build/Cbc/refactor/examples
 make DRIVER=minimum #build the driver minimum.cpp
 ```
 or whichever driver you want.  A list is in [Makefile](Makefile.in).
@@ -176,7 +170,7 @@ If you have `Doxygen` available, you can build a HTML documentation by typing
 `make doxygen-docs` 
 
 in the build directory. If Clp was built via `coinbrew`, then the build
-directory will be `./build/Clp/master` by default. The doxygen documentation main file
+directory will be `./build/Clp/refactor` by default. The doxygen documentation main file
 is found at `<build-dir>/doxydoc/html/index.html`.
 
 If you don't have `doxygen` installed locally, you can use also find the
@@ -185,7 +179,7 @@ documentation [here](http://coin-or.github.io/Clp/Doxygen).
 ## Project Links
 
 Help:
- * [Discussion forum](https://github.com/coin-or/Clp/discussions)
+ * [mailing list](http://list.coin-or.org/mailman/listinfo/clp)
  * [Report a bug](https://github.com/coin-or/Clp/issues/new)
  
 Documentation:

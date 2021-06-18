@@ -12,14 +12,16 @@
 
 #include <iostream>
 #include <cfloat>
+
 #include "ClpModel.hpp"
 #include "ClpMatrixBase.hpp"
 #include "CoinIndexedVector.hpp"
 #include "AbcCommon.hpp"
-class AbcSimplex;
 #include "ClpSolve.hpp"
 #include "CoinAbcCommon.hpp"
 #include "ClpSimplex.hpp"
+
+class AbcSimplex;
 class AbcDualRowPivot;
 class AbcPrimalColumnPivot;
 class AbcSimplexFactorization;
