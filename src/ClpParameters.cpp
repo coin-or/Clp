@@ -628,7 +628,7 @@ void ClpParameters::addClpActionParams() {
       "readModel)", 
       "This will read the problem saved by 'writeModel' from the file name "
       "set by 'modelFile'.",
-      CoinParam::displayPriorityLow);
+      CoinParam::displayPriorityNone);
 
   parameters_[ClpParam::SOLVE]->setup(
       "solv!e", "Do dual or primal simplex algorithm", 
@@ -665,7 +665,7 @@ void ClpParameters::addClpActionParams() {
       "previous value for the name.  This is initialized to 'stdout' (this "
       "defaults to ordinary solution if stdout). If problem created from gmpl "
       "model - will do any reports.",
-      CoinParam::displayPriorityLow);
+      CoinParam::displayPriorityNone);
 
   parameters_[ClpParam::WRITEMODEL]->setup(
       "writeM!odel", "save model to binary file", 
@@ -678,7 +678,7 @@ void ClpParameters::addClpActionParams() {
       "saveM!odel", "save model to binary file (synonym for writeModel)", 
       "This will write the problem in binary foramt to the file name set by "
       "'modelFile' for future use by readModel.",
-      CoinParam::displayPriorityLow);
+      CoinParam::displayPriorityNone);
 
   parameters_[ClpParam::WRITESOL]->setup(
       "writeS!olution", "writes solution to file (or stdout)",
@@ -694,7 +694,7 @@ void ClpParameters::addClpActionParams() {
       "This will write a primitive solution file to the file set by "
       "'solutionFile'. The amount of output can be varied using "
       "'printingOptions' or 'printMask'.",
-      CoinParam::displayPriorityLow);
+      CoinParam::displayPriorityNone);
 
   parameters_[ClpParam::WRITESOLBINARY]->setup(
       "writeSolB!inary", "writes solution to file in binary format",
@@ -718,7 +718,7 @@ void ClpParameters::addClpActionParams() {
       "reduced costs - see bottom of ClpParamUtils.cpp for code that reads or "
       "writes file. If name contains '_fix_read_', then does not write but "
       "reads and will fix all variables",
-      CoinParam::displayPriorityLow);
+      CoinParam::displayPriorityNone);
 }
 
 //###########################################################################
@@ -773,38 +773,38 @@ void ClpParameters::addClpFileParams() {
   }
 
   parameters_[ClpParam::EXPORTFILE]->setup(
-      "exportF!ile", "sets name for file to export model to",
+      "exportF!ile", "Sets name for file to export model to",
       "This will set the name of the model will be written to and read from. "
       "This is initialized to 'export.mps'. ",
       CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::GMPLSOLFILE]->setup(
-      "gmplSolutionF!ile", "sets name for file to store GMPL solution in",
+      "gmplSolutionF!ile", "Sets name for file to store GMPL solution in",
       "This will set the name the GMPL solution will be written to and read "
       "from. This is initialized to 'gmpl.sol'. ",
       CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::IMPORTFILE]->setup(
-      "importF!ile", "sets name for file to import model from",
+      "importF!ile", "Sets name for file to import model from",
       "This will set the name of the model to be read in with the import "
       "command. This is initialized to 'import.mps'",
       CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::MODELFILE]->setup(
-      "modelF!ile", "sets name for file to store model in",
+      "modelF!ile", "Sets name for file to store model in",
       "This will set the name the model will be written to and read from. "
       "This is initialized to 'prob.mod'. ",
       CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::SOLUTIONBINARYFILE]->setup(
       "solutionBinaryF!ile",
-      "sets name for file to store solution in binary format",
+      "Sets name for file to store solution in binary format",
       "This will set the name the solution will be saved to and read from. "
       "By default, binary solutions are written to 'solution.file'." 
       "use printSolution.", CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::SOLUTIONFILE]->setup(
-      "solutionF!ile", "sets name for file to store solution in",
+      "solutionF!ile", "Sets name for file to store solution in",
       "This will set the name the solution will be saved to and read from. "
       "By default, solutions are written to 'opt.sol'. To print to stdout, "
       "use printSolution.", CoinParam::displayPriorityHigh);
@@ -1233,7 +1233,7 @@ void ClpParameters::addClpDblParams() {
 Code donated by Jeremy Omer.  See Towhidi, M., Desrosiers, J., Soumis, F., The positive edge criterion within COIN-OR's CLP; Omer, J., Towhidi, M., Soumis, F., The positive edge pricing rule for the dual simplex."); // Until this settles down it is only implemented in CLP.
 
   parameters_[ClpParam::PROGRESS]->setup(
-      "progress!(Interval)", "Time interval for printing progress",
+      "progress!Interval", "Time interval for printing progress",
       -COIN_DBL_MAX, COIN_DBL_MAX,
       "This sets a minimum interval for some printing - elapsed seconds");
 

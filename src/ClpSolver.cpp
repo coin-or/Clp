@@ -392,7 +392,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
                 << "abcd without value gives current value (for parameters).\n"
                 << "abcd 'value' sets value (for parameters)\n"
                 << std::endl
-                << "Commands are:" << std::endl << std::endl;
+                << "Commands are:" << std::endl;
       int maxAcross = 10;
       // bool evenHidden = false;
       int commandPrintLevel =
@@ -483,6 +483,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
 	  std::cout << std::endl;
         }
       }
+      std::cout << std::endl;
       continue;
     }
 

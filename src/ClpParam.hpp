@@ -87,13 +87,13 @@ public:
       MINIMIZE,
       OUTDUPROWS,
       PRINTSOL,
-      PRINTVERSION,
       READMODEL,
       READMODEL_OLD, // For backward compatibility
       READSOL,
       SOLVE,
       STATISTICS,
       UNITTEST,
+      PRINTVERSION,
       WRITEGMPLSOL,
       WRITEGMPLSOL_OLD, // For backward compatibility
       WRITEMODEL,
