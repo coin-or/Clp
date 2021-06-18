@@ -903,7 +903,7 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::COMMANDPRINTLEVEL]->setup(
       "allC!ommands", "What priority level of commands to print", 
       "For the sake of your sanity, only the more useful and simple commands "
-      "are printed out on ?.",
+      "are printed out on ?.");
   parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("all");
   parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("more");
   parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("important");
