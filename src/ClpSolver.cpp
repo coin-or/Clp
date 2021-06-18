@@ -341,26 +341,58 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
        }
     }
 
+    // Do some translation for backwards compatibility
+    switch (paramCode){
+     case ClpParam::READMODEL_OLD:
+       paramCode = ClpParam::READMODEL;
+       break;
+     case ClpParam::WRITEGMPLSOL_OLD:
+       paramCode = ClpParam::WRITEGMPLSOL;
+       break;
+     case ClpParam::WRITEMODEL_OLD:
+       paramCode = ClpParam::WRITEMODEL;
+       break;
+     case ClpParam::WRITESOL_OLD:
+       paramCode = ClpParam::WRITESOL;
+       break;
+     case ClpParam::WRITESOLBINARY_OLD:
+       paramCode = ClpParam::WRITESOLBINARY;
+       break;
+     default:
+       break;
+    }
+    
     ClpParam *param = parameters[paramCode];
-
+    
     int status;
     numberGoodCommands++;
     if (paramCode == ClpParam::GENERALQUERY ||
 	paramCode == ClpParam::FULLGENERALQUERY) {
       // TODO Make this a method in the settings class
-      std::cout << "In argument list keywords have leading - "
-                   ", -stdin or just - switches to stdin"
-                << std::endl;
-      std::cout << "One command per line (and no -)" << std::endl;
-      std::cout
-          << "abcd? gives list of possibilities, if only one + explanation"
-          << std::endl;
-      std::cout << "abcd?? adds explanation, if only one fuller help"
-                << std::endl;
-      std::cout << "abcd without value (where expected) gives current value"
-                << std::endl;
-      std::cout << "abcd value sets value" << std::endl;
-      std::cout << "Commands are:" << std::endl;
+      std::cout << std::endl
+                << "Commands either invoke actions or set parameter values.\n"
+                << "When specifying multiple commands on one command line,\n"
+                << "parameter/action names should be prepended with a '-',\n"
+                << "followed by a value (some actions don't accept values as\n"
+                << "arguments). Specifying -stdin at anytime switches to stdin.\n"
+                << std::endl
+                << "In interactive mode, specify one command per line and\n"
+                << "don't prepend command names with '-'.\n"
+                << std::endl
+                << "Some actions take file names as arguments. If no file name\n"
+                << "is provided, then the previous name (or initial default)\n"
+                << "will be used.\n"
+                << std::endl
+                << "abcd? will list commands starting with 'abcd'.\n"
+                << "If there is only one match, a short explanation is given.\n"
+                << std::endl
+                << "abcd?? will list commands with explanations.\n"
+                << "If there is only one match, fuller help is given.\n"
+                << std::endl
+                << "abcd without value gives current value (for parameters).\n"
+                << "abcd 'value' sets value (for parameters)\n"
+                << std::endl
+                << "Commands are:" << std::endl << std::endl;
       int maxAcross = 10;
       // bool evenHidden = false;
       int commandPrintLevel =
@@ -374,10 +406,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
         // evenHidden = true;
         verbose &= ~8;
       }
-      if (verbose < 4 && usingAmpl)
+      if (verbose < 4 && usingAmpl){
         verbose += 4;
-      if (verbose)
+      }
+      if (verbose){
         maxAcross = 1;
+      }
       std::vector<std::string> types;
       types.push_back("Invalid parameters:");
       types.push_back("Action parameters:");
@@ -387,7 +421,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
       types.push_back("Directory parameters:");
       types.push_back("File parameters:");
       types.push_back("Keyword parameters:");
-      std::cout << "#### Clp Parameters ###" << std::endl;
       // correct types
       for (int type = 1; type < 8; type++) {
 	int across = 0;
@@ -397,81 +430,63 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
 	     iParam++) {
 	  ClpParam *p = parameters[iParam];
 	  if (p->type() != type ||  
-	      p->getDisplayPriority() <= commandPrintLevel) 
+	      p->getDisplayPriority() < commandPrintLevel){
 	    continue;
+          }
 	  if (first) {
-	    std::cout << types[type] << std::endl;
+             std::cout << std::endl
+                       << "*** " << types[type] << " ***"
+                       << std::endl << std::endl;
 	    first = false;
 	  }
-          int length = p->lengthMatchName() + 1;
+          int length = p->matchName().length();
           if (lengthLine + length > 80) {
             std::cout << std::endl;
             across = 0;
             lengthLine = 0;
           }
-          if (!across && (verbose & 2) != 0)
+          if (!across && (verbose & 2) != 0){
 	    std::cout << "Command ";
-          std::cout << p->matchName() << " ";
+          }
+          std::cout << p->matchName();
           lengthLine += length;
           across++;
 	  if (verbose) {
 	    // put out description as well
-	    if ((verbose & 1) != 0)
+            if ((verbose & 1) != 0){
+              if (length < 8){
+                 std::cout << "\t\t\t";
+              } else if (length < 16) {
+                 std::cout << "\t\t";
+              } else {
+                 std::cout << "\t";
+              }
 	      std::cout << p->shortHelp();
-	    std::cout << std::endl;
-	    if ((verbose & 2) != 0) {
+	      std::cout << std::endl;
+            } else if ((verbose & 2) != 0) {
 	      std::cout << "---- description" << std::endl;
 	      p->printLongHelp();
 	      std::cout << "----" << std::endl << std::endl;
 	    }
             across = 0;
             lengthLine = 0;
-	  }
+	  } else {
+            std::cout << " ";
+          }
           if (across == maxAcross) {
             across = 0;
             lengthLine = 0;
 	    std::cout << std::endl;
           }
         }
-	if (across)
+        if (across){
 	  std::cout << std::endl;
-      }
-    } else if (paramCode == ClpParam::FULLGENERALQUERY) {
-      // TODO Make this a method in the settings class
-      std::cout << "Full list of commands is:" << std::endl;
-      int maxAcross = 5;
-      std::vector<std::string> types;
-      types.push_back("Invalid parameters:");
-      types.push_back("Action parameters:");
-      types.push_back("Integer parameters:");
-      types.push_back("Double parameters:");
-      types.push_back("String parameters:");
-      types.push_back("Keyword parameters:");
-      int across = 0;
-      int type = -1;
-      ClpParam *p;
-      std::cout << "#### Clp Parameters ###" << std::endl;
-      for (int iParam = ClpParam::FIRSTPARAM + 1; iParam < ClpParam::LASTPARAM;
-           iParam++) {
-        if (parameters[iParam]->type() == CoinParam::paramInvalid) {
-          continue;
-        } else {
-          p = parameters[iParam];
-        }
-        if (p->type() != type) {
-          type = p->type();
-          std::cout << types[type] << std::endl;
-        }
-        if (!across)
-          std::cout << "  ";
-        std::cout << p->matchName() << "  ";
-        across++;
-        if (across == maxAcross) {
-          std::cout << std::endl;
-          across = 0;
         }
       }
-    } else if (param->type() == CoinParam::paramDbl) {
+      continue;
+    }
+
+    if (param->type() == CoinParam::paramDbl) {
       // get next field as double
       if (status = param->readValue(inputQueue, dValue, &message)){
         printGeneralMessage(model_, message);

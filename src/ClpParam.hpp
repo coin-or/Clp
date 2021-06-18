@@ -89,14 +89,19 @@ public:
       PRINTSOL,
       PRINTVERSION,
       READMODEL,
+      READMODEL_OLD, // For backward compatibility
       READSOL,
       SOLVE,
       STATISTICS,
       UNITTEST,
       WRITEGMPLSOL,
+      WRITEGMPLSOL_OLD, // For backward compatibility
       WRITEMODEL,
+      WRITEMODEL_OLD, // For backward compatibility
       WRITESOL,
+      WRITESOL_OLD, // For backward compatibility
       WRITESOLBINARY,
+      WRITESOLBINARY_OLD, // For backward compatibility
       LASTACTIONPARAM,
 
       // File Parameters

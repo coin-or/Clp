@@ -140,8 +140,7 @@ void ClpParameters::setDefaults(int strategy) {
 #if CLP_HAS_ABC
       parameters_[ClpParam::ABCWANTED]->setDefault("off");
 #endif
-      parameters_[ClpParam::COMMANDPRINTLEVEL]->setDefault("no");
-      parameters_[ClpParam::COMMANDPRINTLEVEL]->setDefault("no");
+      parameters_[ClpParam::COMMANDPRINTLEVEL]->setDefault("more");
       parameters_[ClpParam::BARRIERSCALE]->setDefault("off");
       parameters_[ClpParam::CHOLESKY]->setDefault("native");
       parameters_[ClpParam::CRASH]->setDefault("off");
@@ -610,7 +609,7 @@ void ClpParameters::addClpActionParams() {
       CoinParam::displayPriorityNone);
 
   parameters_[ClpParam::PRINTSOL]->setup(
-      "printS!olution", "writes solution to file (or stdout)",
+      "printS!olution", "prints solution to stdout",
       "This will write a binary solution file to the file set by solutionFile.",
       CoinParam::displayPriorityHigh);
 
@@ -624,12 +623,12 @@ void ClpParameters::addClpActionParams() {
       CoinParam::displayPriorityHigh);
 
   // For backward compatibility
-  parameters_[ClpParam::READMODEL]->setup(
+  parameters_[ClpParam::READMODEL_OLD]->setup(
       "restoreM!odel", "Reads problem from a binary save file (synonym for "
       "readModel)", 
       "This will read the problem saved by 'writeModel' from the file name "
       "set by 'modelFile'.",
-      CoinParam::displayPriorityHigh);
+      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::SOLVE]->setup(
       "solv!e", "Do dual or primal simplex algorithm", 
@@ -659,14 +658,14 @@ void ClpParameters::addClpActionParams() {
       CoinParam::displayPriorityHigh);
 
   // For backward compatibility
-  parameters_[ClpParam::WRITEGMPLSOL]->setup(
+  parameters_[ClpParam::WRITEGMPLSOL_OLD]->setup(
       "gsolu!tion", "Puts glpk solution to file (synonym for writeGSolu!tion)",
       "Will write a glpk solution file to the given file name.  It will use "
       "the default directory given by 'directory'.  A name of '$' will use the "
       "previous value for the name.  This is initialized to 'stdout' (this "
       "defaults to ordinary solution if stdout). If problem created from gmpl "
       "model - will do any reports.",
-      CoinParam::displayPriorityHigh);
+      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::WRITEMODEL]->setup(
       "writeM!odel", "save model to binary file", 
@@ -675,11 +674,11 @@ void ClpParameters::addClpActionParams() {
       CoinParam::displayPriorityHigh);
 
   // For backward compatibility
-  parameters_[ClpParam::WRITEMODEL]->setup(
+  parameters_[ClpParam::WRITEMODEL_OLD]->setup(
       "saveM!odel", "save model to binary file (synonym for writeModel)", 
       "This will write the problem in binary foramt to the file name set by "
       "'modelFile' for future use by readModel.",
-      CoinParam::displayPriorityHigh);
+      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::WRITESOL]->setup(
       "writeS!olution", "writes solution to file (or stdout)",
@@ -689,13 +688,13 @@ void ClpParameters::addClpActionParams() {
       CoinParam::displayPriorityHigh);
 
   // For backward compatibility
-  parameters_[ClpParam::WRITESOL]->setup(
+  parameters_[ClpParam::WRITESOL_OLD]->setup(
       "solu!tion", "writes solution to file (or stdout) (synonym for "
       "writeSolution).",
       "This will write a primitive solution file to the file set by "
       "'solutionFile'. The amount of output can be varied using "
       "'printingOptions' or 'printMask'.",
-      CoinParam::displayPriorityHigh);
+      CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::WRITESOLBINARY]->setup(
       "writeSolB!inary", "writes solution to file in binary format",
@@ -709,7 +708,7 @@ void ClpParameters::addClpActionParams() {
       CoinParam::displayPriorityHigh);
 
   // For backward compatibility
-  parameters_[ClpParam::WRITESOLBINARY]->setup(
+  parameters_[ClpParam::WRITESOLBINARY_OLD]->setup(
       "saveS!olution", "writes solution to file in binary format (synonym for "
       "writeSolBinary",
       "This will write a binary solution file to the file set by "
@@ -719,7 +718,7 @@ void ClpParameters::addClpActionParams() {
       "reduced costs - see bottom of ClpParamUtils.cpp for code that reads or "
       "writes file. If name contains '_fix_read_', then does not write but "
       "reads and will fix all variables",
-      CoinParam::displayPriorityHigh);
+      CoinParam::displayPriorityLow);
 }
 
 //###########################################################################
@@ -902,12 +901,12 @@ void ClpParameters::addClpKwdParams() {
 #endif
 
   parameters_[ClpParam::COMMANDPRINTLEVEL]->setup(
-      "allC!ommands", "Whether to print less used commands", 
+      "allC!ommands", "What priority level of commands to print", 
       "For the sake of your sanity, only the more useful and simple commands "
-      "are printed out on ?.");
-  parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("no");
-  parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("more");
+      "are printed out on ?.",
   parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("all");
+  parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("more");
+  parameters_[ClpParam::COMMANDPRINTLEVEL]->appendKwd("important");
 
   parameters_[ClpParam::BIASLU]->setup(
       "biasLU", "Whether factorization biased towards U", "",
