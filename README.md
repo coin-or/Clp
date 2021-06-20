@@ -1,4 +1,4 @@
-# Clp
+# Clp gh-actions
 
 [![A COIN-OR Project](https://coin-or.github.io/coin-or-badge.png)](https://www.coin-or.org)
 
@@ -6,7 +6,8 @@
 
 _This file is auto-generated from [config.yml](.coin-or/config.yml) using the 
 [generate_readme](.coin-or/generate_readme) script.
-To make changes, please edit [config.yml](.coin-or/config.yml) or the generation script._
+To make changes, please edit [config.yml](.coin-or/config.yml) or the generation scripts
+[here](.coin-or/generate_readme) and [here](https://github.com/coin-or/coinbrew/blob/master/scripts/generate_readme)._
 
 Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
 It is primarily meant to be used as a callable library, but a basic, stand-alone executable version is also available.
@@ -37,9 +38,9 @@ The Clp development site is https://github.com/coin-or/Clp.
 
 ## CURRENT BUILD STATUS
 
-[![Build Status](https://travis-ci.com/coin-or/Clp.svg?branch=master)](https://travis-ci.com/coin-or/Clp)
+[![Windows Builds](https://github.com/coin-or/Clp/actions/workflows/windows-ci.yml/badge.svg?branch=gh-actions)](https://github.com/coin-or/Clp/actions/workflows/windows-ci.yml?query=branch%3Agh-actions)
 
-[![Build status](https://ci.appveyor.com/api/projects/status/h3daf7woiig6n176/branch/master?svg=true)](https://ci.appveyor.com/project/coin-or/Clp/branch/master)
+[![Linux and MacOS Builds](https://github.com/coin-or/Clp/actions/workflows/linux-ci.yml/badge.svg?branch=gh-actions)](https://github.com/coin-or/Clp/actions/workflows/linux-ci.yml?query=branch%3Agh-actions)
 
 ## DOWNLOAD
 
@@ -59,7 +60,7 @@ are archived as part of Clp
 
  * *Linux*: On Debian/Ubuntu, Clp is available in the package `coinor-clp` and can be installed with apt. On Fedora, Clp is available in the package `coin-or-Clp`.
  * *Windows*: The easiest way to get Clp on Windows is to download an archive as described above.
- * *Mac OS X*: The easiest way to get Cbc on Mac OS X is through [Homebrew](https://brew.sh).
+ * *Mac OS X*: The easiest way to get Clp on Mac OS X is through [Homebrew](https://brew.sh).
    * `brew tap coin-or-tools/coinor`
    * `brew install coin-or-tools/coinor/clp`
 
@@ -85,11 +86,11 @@ The quick start assumes you are in a bash shell.
 
 ### Using `coinbrew`
 
-To build CoinUtils from source, obtain the `coinbrew` script, do
+To build Clp from source, obtain the `coinbrew` script, do
 ```
 wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew
 chmod u+x coinbrew
-./coinbrew fetch Clp@master
+./coinbrew fetch Clp@gh-actions
 ./coinbrew build Clp
 ```
 For more detailed instructions on coinbrew, see https://coin-or.github.io/coinbrew.
@@ -152,7 +153,7 @@ works well.
 There are examples in [examples](examples).  To create an executable, build 
 with `coinbrew` as above and then do
 ```
-cd build/Cbc/master/examples
+cd build/Cbc/gh-actions/examples
 make DRIVER=minimum #build the driver minimum.cpp
 ```
 or whichever driver you want.  A list is in [Makefile](Makefile.in).
@@ -176,7 +177,7 @@ If you have `Doxygen` available, you can build a HTML documentation by typing
 `make doxygen-docs` 
 
 in the build directory. If Clp was built via `coinbrew`, then the build
-directory will be `./build/Clp/master` by default. The doxygen documentation main file
+directory will be `./build/Clp/gh-actions` by default. The doxygen documentation main file
 is found at `<build-dir>/doxydoc/html/index.html`.
 
 If you don't have `doxygen` installed locally, you can use also find the
