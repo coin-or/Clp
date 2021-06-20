@@ -7,6 +7,7 @@
 #include <deque>
 
 #include "CoinModel.hpp"
+#include "CoinParam.hpp"
 #include "CoinPragma.hpp"
 
 #include "ClpSolver.hpp"
@@ -235,24 +236,6 @@ static void malloc_stats2()
 //#############################################################################
 //#############################################################################
 
-void formInputQueue(std::deque<std::string> &inputQueue,
-                    int argc, char **argv)
-{
-   for (int i = 1; i < argc; i++){
-      std::string tmp(argv[i]);
-      std::string::size_type found = tmp.find('=');
-      if (found != std::string::npos) {
-         inputQueue.push_back(tmp.substr(0, found));
-         inputQueue.push_back(tmp.substr(found + 1));
-      } else {
-         inputQueue.push_back(tmp);
-      }
-   }
-}
-
-//#############################################################################
-//#############################################################################
-
 int
 #if defined(_MSC_VER)
   __cdecl
@@ -308,7 +291,7 @@ main(int argc, const char *argv[])
      if (!returnCode) {
         // Put arguments into a queue.
         // This should be moved to constructor of ClpSolver
-        formInputQueue(inputQueue, info.numberArguments, info.arguments);
+        CoinParamUtils::formInputQueue(inputQueue, info.numberArguments, info.arguments);
         // We don't need to first two arguments from here on
         inputQueue.pop_front();
         inputQueue.pop_front();
@@ -316,7 +299,7 @@ main(int argc, const char *argv[])
      }
   } else {
      // Put arguments into a queue.
-     formInputQueue(inputQueue, argc, const_cast< char ** >(argv));
+     CoinParamUtils::formInputQueue(inputQueue, argc, const_cast< char ** >(argv));
      returnCode = ClpMain1(inputQueue, model);
   }     
   return returnCode;

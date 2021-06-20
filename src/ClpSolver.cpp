@@ -136,7 +136,34 @@ void ClpMain0(AbcSimplex &model)
 
 //#############################################################################
 //#############################################################################
-
+// old way
+#ifndef ABC_INHERIT
+CLPLIB_EXPORT
+void ClpMain0(ClpSimplex *model)
+#else
+CLPLIB_EXPORT
+void ClpMain0(AbcSimplex *model)
+#endif
+{
+  model->setPerturbation(50);
+  model->messageHandler()->setPrefix(false);
+#if CLP_INHERIT_MODE > 1
+  model->setDualTolerance(1.0e-6);
+  model->setPrimalTolerance(1.0e-6);
+#endif
+}
+#ifndef ABC_INHERIT
+CLPLIB_EXPORT
+int ClpMain1(int argc, const char *argv[], ClpSimplex *model)
+#else
+CLPLIB_EXPORT
+int ClpMain1(int argc, const char *argv[], AbcSimplex *model)
+#endif
+{
+  std::deque<std::string> inputQueue;
+  CoinParamUtils::formInputQueue(inputQueue, argc, const_cast< char ** >(argv));
+  return ClpMain1(inputQueue,*model);
+}
 #ifndef ABC_INHERIT
 CLPLIB_EXPORT
 int ClpMain1(std::deque<std::string> inputQueue, ClpSimplex &model,

@@ -73,12 +73,16 @@ void ClpMain0(ClpSimplex &model);
 CLPLIB_EXPORT
 int ClpMain1(std::deque<std::string> inputQueue, ClpSimplex &model,
              ampl_info *info = NULL);
+CLPLIB_EXPORT
+int ClpMain1(int argc, const char *argv[], ClpSimplex *model);
 #else
 CLPLIB_EXPORT
 void ClpMain0(AbcSimplex &model);
 CLPLIB_EXPORT
 int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
              ampl_info *info = NULL);
+CLPLIB_EXPORT
+int ClpMain1(int argc, const char *argv[], AbcSimplex *model);
 #endif
 
 #ifndef ABC_INHERIT
