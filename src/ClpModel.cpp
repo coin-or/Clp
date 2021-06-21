@@ -2152,6 +2152,12 @@ int ClpModel::addRows(CoinModel &modelObject, bool tryPlusMinusOne, bool checkDu
       }
       assert(rowLower);
       addRows(numberRows2, rowLower, rowUpper, NULL, NULL, NULL);
+      // but resize matrix to numberRows
+      int * delRows = new int [numberRows2];
+      for (int i=0;i<numberRows2;i++)
+	delRows[i] = i+numberRows;
+      matrix_->deleteRows(numberRows2,delRows);
+      delete [] delRows;
 #ifndef SLIM_CLP
       if (!tryPlusMinusOne) {
 #endif
