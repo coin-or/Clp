@@ -1443,7 +1443,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
             gmpl = -1;
         } else {
           // See if .lp
-          const char *c_name = field.c_str();
+          const char *c_name = fileName.c_str();
           size_t length = strlen(c_name);
           if ((length > 3 && !strncmp(c_name + length - 3, ".lp", 3)) ||
               (length > 6 && !strncmp(c_name + length - 6, ".lp.gz", 6)) ||
