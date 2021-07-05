@@ -6,7 +6,8 @@
 
 _This file is auto-generated from [config.yml](.coin-or/config.yml) using the 
 [generate_readme](.coin-or/generate_readme) script.
-To make changes, please edit [config.yml](.coin-or/config.yml) or the generation script._
+To make changes, please edit [config.yml](.coin-or/config.yml) or the generation scripts
+[here](.coin-or/generate_readme) and [here](https://github.com/coin-or/coinbrew/blob/master/scripts/generate_readme)._
 
 Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
 It is primarily meant to be used as a callable library, but a basic, stand-alone executable version is also available.
@@ -37,9 +38,9 @@ The Clp development site is https://github.com/coin-or/Clp.
 
 ## CURRENT BUILD STATUS
 
-[![Build Status](https://travis-ci.com/coin-or/Clp.svg?branch=stable/1.17)](https://travis-ci.com/coin-or/Clp)
+[![Windows Builds](https://github.com/coin-or/Clp/actions/workflows/windows-ci.yml/badge.svg?branch=stable/1.17)](https://github.com/coin-or/Clp/actions/workflows/windows-ci.yml?query=branch%3Astable/1.17)
 
-[![Build status](https://ci.appveyor.com/api/projects/status/h3daf7woiig6n176/branch/stable/1.17?svg=true)](https://ci.appveyor.com/project/coin-or/Clp/branch/stable/1.17)
+[![Linux and MacOS Builds](https://github.com/coin-or/Clp/actions/workflows/linux-ci.yml/badge.svg?branch=stable/1.17)](https://github.com/coin-or/Clp/actions/workflows/linux-ci.yml?query=branch%3Astable/1.17)
 
 ## DOWNLOAD
 
@@ -59,7 +60,7 @@ are archived as part of Clp
 
  * *Linux*: On Debian/Ubuntu, Clp is available in the package `coinor-clp` and can be installed with apt. On Fedora, Clp is available in the package `coin-or-Clp`.
  * *Windows*: The easiest way to get Clp on Windows is to download an archive as described above.
- * *Mac OS X*: The easiest way to get Cbc on Mac OS X is through [Homebrew](https://brew.sh).
+ * *Mac OS X*: The easiest way to get Clp on Mac OS X is through [Homebrew](https://brew.sh).
    * `brew tap coin-or-tools/coinor`
    * `brew install coin-or-tools/coinor/clp`
 
@@ -85,7 +86,7 @@ The quick start assumes you are in a bash shell.
 
 ### Using `coinbrew`
 
-To build CoinUtils from source, obtain the `coinbrew` script, do
+To build Clp from source, obtain the `coinbrew` script, do
 ```
 wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew
 chmod u+x coinbrew
