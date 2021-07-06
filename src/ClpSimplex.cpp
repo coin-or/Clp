@@ -7753,7 +7753,16 @@ int ClpSimplex::readLp(const char *filename, const double epsilon)
   m.setEpsilon(epsilon);
   if (fp != stdin)
     fclose(fp);
-  m.readLp(filename);
+  CoinPackedMatrix * quadratic = NULL;
+  try {
+    m.readLp(filename);
+    
+    // See if quadratic objective
+    quadratic = m.getQuadraticObjective();
+  } catch (CoinError e) {
+    e.print();
+    return 1;
+  }
 
   // set problem name
   setStrParam(ClpProbName, m.getProblemName());
@@ -7772,6 +7781,12 @@ int ClpSimplex::readLp(const char *filename, const double epsilon)
     originalObj = CoinCopyOfArray(m.getObjCoefficients(),numberColumns);
     for (int i=0;i < numberColumns;i++)
       originalObj[i] = - originalObj[i];
+    if (quadratic) {
+      int numberElements = quadratic->getNumElements();
+      double *element = quadratic->getMutableElements();
+      for (int i=0;i<numberElements;i++)
+	element[i] = -element[i];
+    }
     setOptimizationDirection(-1.0);
     handler_->message(CLP_GENERAL, messages_)
       << "Switching back to maximization to get correct duals etc"
@@ -7791,6 +7806,13 @@ int ClpSimplex::readLp(const char *filename, const double epsilon)
     CoinMemcpyN(m.integerColumns(), numberColumns_, integerType_);
   } else {
     integerType_ = NULL;
+  }
+
+  if (quadratic) {
+    const CoinBigIndex * start = quadratic->getVectorStarts();
+    const int * column = quadratic->getIndices();
+    const double * element = quadratic->getElements();
+    loadQuadraticObjective(numberColumns_,start,column,element);
   }
   createStatus();
   unsigned int maxLength = 0;
@@ -7901,6 +7923,11 @@ void ClpSimplex::writeLp(const char *filename,
     getRowLower(), getRowUpper());
 
   writer.setLpDataRowAndColNames(rowNames, columnNames);
+  // see if quadratic
+  ClpQuadraticObjective * quadObj =
+    dynamic_cast<ClpQuadraticObjective *>(objectiveAsObject());
+  if (quadObj)
+    writer.setQuadraticObjective(quadObj->quadraticObjective());
 
   delete[] objective;
   delete[] integrality;
