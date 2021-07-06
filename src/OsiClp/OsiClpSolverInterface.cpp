@@ -19,6 +19,7 @@ extern int osi_hot;
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpDualRowDantzig.hpp"
+#include "ClpQuadraticObjective.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpObjective.hpp"
@@ -895,7 +896,7 @@ disaster:
   }
   modelPtr_->whatsChanged_ |= 0x30000;
   modelPtr_->setMoreSpecialOptions(saveMoreOptions);
-#ifdef OSICLP_TUNING
+#if OSICLP_TUNING
   specialOptions_ = saveSpecialOptions;
   setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
   setHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
@@ -1538,7 +1539,7 @@ disaster:
     modelPtr_->whatsChanged_ &= ~0xffff;
   modelPtr_->whatsChanged_ |= 0x30000;
   modelPtr_->setMoreSpecialOptions(saveMoreOptions);
-#ifdef OSICLP_TUNING
+#if OSICLP_TUNING
   specialOptions_ = saveSpecialOptions;
   setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
   setHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
@@ -6046,8 +6047,12 @@ int OsiClpSolverInterface::readLp(const char *filename, const double epsilon)
   CoinLpIO m;
   m.passInMessageHandler(modelPtr_->messageHandler());
   *m.messagesPointer() = modelPtr_->coinMessages();
+  CoinPackedMatrix * quadratic = NULL;
   try {
     m.readLp(filename, epsilon);
+    
+    // See if quadratic objective
+    quadratic = m.getQuadraticObjective();
   } catch (CoinError e) {
     printf("ERROR: %s::%s, %s\n",
       e.className().c_str(), e.methodName().c_str(), e.message().c_str());
@@ -6076,6 +6081,12 @@ int OsiClpSolverInterface::readLp(const char *filename, const double epsilon)
     originalObj = CoinCopyOfArray(m.getObjCoefficients(),numberColumns);
     for (int i=0;i < numberColumns;i++)
       originalObj[i] = - originalObj[i];
+    if (quadratic) {
+      int numberElements = quadratic->getNumElements();
+      double *element = quadratic->getMutableElements();
+      for (int i=0;i<numberElements;i++)
+	element[i] = -element[i];
+    }
     modelPtr_->setOptimizationDirection(-1.0);
     handler_->message(COIN_GENERAL_INFO, messages_)
       << "Switching back to maximization to get correct duals etc"
@@ -6108,6 +6119,12 @@ int OsiClpSolverInterface::readLp(const char *filename, const double epsilon)
       }
     }
     modelPtr_->copyInIntegerInformation(integer);
+  }
+  if (quadratic) {
+    const CoinBigIndex * start = quadratic->getVectorStarts();
+    const int * column = quadratic->getIndices();
+    const double * element = quadratic->getElements();
+    modelPtr_->loadQuadraticObjective(nCols,start,column,element);
   }
   // Always keep names
   int nameDiscipline;
@@ -6171,6 +6188,7 @@ void OsiClpSolverInterface::writeLp(const char *filename,
       fullname.c_str());
     exit(1);
   }
+  fclose(fp);
   writeLp(fp, epsilon, numberAcross,
     decimals, objSense, changeNameOnRange);
   fclose(fp);
@@ -6185,8 +6203,10 @@ void OsiClpSolverInterface::writeLp(FILE *fp,
   // get names
   const char *const *const rowNames = modelPtr_->rowNamesAsChar();
   const char *const *const columnNames = modelPtr_->columnNamesAsChar();
-  // check if odd integers
-  if (!numberSOS_ && (specialOptions_ & 8388608) == 0) {
+  // check if odd integers (or quadratic)
+  ClpQuadraticObjective * quadObj =
+    dynamic_cast<ClpQuadraticObjective *>(modelPtr_->objectiveAsObject());
+  if (!numberSOS_ && (specialOptions_ & 8388608) == 0 && !quadObj) {
     // Fall back on Osi version - possibly with names
     OsiSolverInterface::writeLpNative(fp,
       rowNames, columnNames, epsilon, numberAcross,
@@ -6233,7 +6253,11 @@ void OsiClpSolverInterface::writeLp(FILE *fp,
       objective, hasInteger ? integrality : 0,
       getRowLower(), getRowUpper());
 
-    writer.setLpDataRowAndColNames(rowNames, columnNames);
+    // if quadratic
+    if (quadObj)
+      writer.setQuadraticObjective(quadObj->quadraticObjective());
+
+   writer.setLpDataRowAndColNames(rowNames, columnNames);
 
     //writer.print();
     delete[] objective;

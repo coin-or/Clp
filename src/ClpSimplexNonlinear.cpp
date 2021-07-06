@@ -179,7 +179,9 @@ int ClpSimplexNonlinear::primal()
   }
   // correct objective value
   if (numberColumns_)
-    objectiveValue_ = nonLinearCost_->feasibleCost() + objective_->nonlinearOffset();
+    objectiveValue_ = (nonLinearCost_->feasibleCost()
+		       + objective_->nonlinearOffset())
+      * optimizationDirection_;
   objectiveValue_ /= (objectiveScale_ * rhsScale_);
   // clean up
   unflag();
@@ -337,7 +339,7 @@ void ClpSimplexNonlinear::statusOfProblemInPrimal(int &lastCleaned, int type,
   progressFlag_ = 0; //reset progress flag
 
   handler_->message(CLP_SIMPLEX_STATUS, messages_)
-    << numberIterations_ << nonLinearCost_->feasibleReportCost();
+    << numberIterations_ << nonLinearCost_->feasibleReportCost()*optimizationDirection_;
   handler_->printing(nonLinearCost_->numberInfeasibilities() > 0)
     << nonLinearCost_->sumInfeasibilities() << nonLinearCost_->numberInfeasibilities();
   handler_->printing(sumDualInfeasibilities_ > 0.0)

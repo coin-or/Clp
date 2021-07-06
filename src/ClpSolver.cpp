@@ -1710,8 +1710,29 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
              delete [] columnNames;
           }
 #else
-          model2->writeMps(fileName.c_str(), (outputFormat - 1) / 2,
-                           1 + ((outputFormat - 1) & 1));
+	  // see if extension lp
+	  bool writeLp = false;
+	  {
+	    int lengthName = strlen(fileName.c_str());
+	    if (lengthName > 3 &&
+		!strcmp(fileName.c_str() + lengthName - 3, ".lp"))
+	      writeLp = true;
+	  }
+	  if (!writeLp) {
+	    model2->writeMps(fileName.c_str(), (outputFormat - 1) / 2,
+			     1 + ((outputFormat - 1) & 1));
+	  } else {
+	    fp = fopen(fileName.c_str(), "w");
+	    if (!fp) {
+	      buffer.str("");
+	      buffer << "Unable to open file " << fileName.c_str();
+	      printGeneralMessage(model_, buffer.str());
+	      continue;
+	    }
+	    //OsiClpSolverInterface solver(model2);
+	    model2->writeLp(fileName.c_str(),"");
+	    fclose(fp);
+	  }
 #endif
           if (deleteModel2)
              delete model2;
@@ -2931,6 +2952,7 @@ int clpReadAmpl(ampl_info *info, int argc, char **argv, AbcSimplex &model)
       buffer << "Ampl objective offset is " << info->offset << std::endl;
       printGeneralMessage(model, buffer.str());
     }
+    return 0;
   }
 
   static void breakdown(const char *name, CoinBigIndex numberLook,
