@@ -262,6 +262,13 @@ void ClpParameters::synchronizeModel() {
       printf("changing ? from %d to %d at line %d\n",modelIntValue,intValue,__LINE__+1);
 #endif
     model_->setMoreSpecialOptions(intValue);
+    parameters_[ClpParam::LOGLEVEL]->getVal(intValue);
+#ifdef PRINT_CLP_CHANGES
+    modelIntValue = model_->logLevel();
+    if (intValue!=modelIntValue)
+      printf("changing ? from %d to %d at line %d\n",modelIntValue,intValue,__LINE__+1);
+#endif
+    model_->setLogLevel(intValue);
     // Double parameters
     double doubleValue;
     double modelDoubleValue;
