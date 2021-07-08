@@ -168,11 +168,11 @@ int doImportParam(CoinParam &param)
      need to do is correct to 0 (no error) if we're successful.
     */
   int retval;
-  if (CoinParamUtils::isInteractive()) {
-    retval = 1;
-  } else {
+  //if (CoinParamUtils::isInteractive()) {
+  //  retval = 1;
+  //} else {
     retval = -1;
-  }
+  //}
 
 #if 0
   // TODO This seems overly complicated

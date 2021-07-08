@@ -291,7 +291,7 @@ main(int argc, const char *argv[])
      if (!returnCode) {
         // Put arguments into a queue.
         // This should be moved to constructor of ClpSolver
-        CoinParamUtils::formInputQueue(inputQueue, info.numberArguments, info.arguments);
+        CoinParamUtils::formInputQueue(inputQueue, "clp", info.numberArguments, info.arguments);
         // We don't need to first two arguments from here on
         inputQueue.pop_front();
         inputQueue.pop_front();
@@ -299,7 +299,7 @@ main(int argc, const char *argv[])
      }
   } else {
      // Put arguments into a queue.
-     CoinParamUtils::formInputQueue(inputQueue, argc, const_cast< char ** >(argv));
+     CoinParamUtils::formInputQueue(inputQueue, "clp", argc, const_cast< char ** >(argv));
      returnCode = ClpMain1(inputQueue, model);
   }     
   return returnCode;

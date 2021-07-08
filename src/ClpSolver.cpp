@@ -161,7 +161,7 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *model)
 #endif
 {
   std::deque<std::string> inputQueue;
-  CoinParamUtils::formInputQueue(inputQueue, argc, const_cast< char ** >(argv));
+  CoinParamUtils::formInputQueue(inputQueue, "clp", argc, const_cast< char ** >(argv));
   return ClpMain1(inputQueue,*model);
 }
 #ifndef ABC_INHERIT
