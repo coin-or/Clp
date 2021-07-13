@@ -1539,10 +1539,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
                  if (ifs.is_open()) {
                     CoinParamUtils::readFromStream(inputQueue, ifs);
                  } else {
-                    buffer.str("");
-                    buffer << "No parameter file " << fileName << " found"
-                           << std::endl;
-                    printGeneralMessage(model_, buffer.str());
+		   // NOT an error
+		   //buffer.str("");
+		   //buffer << "No parameter file " << fileName << " found"
+		   //      << std::endl;
+		   //printGeneralMessage(model_, buffer.str());
                  }
               }
            }
