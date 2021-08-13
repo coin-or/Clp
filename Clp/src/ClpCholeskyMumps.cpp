@@ -13,14 +13,16 @@
 #define USE_COMM_WORLD -987654
 extern "C" {
 #include "dmumps_c.h"
+}
 // In newer ThirdParty/Mumps, mpi.h is renamed to mumps_mpi.h.
 // We get informed about this by having COIN_USE_MUMPS_MPI_H defined.
 #ifdef COIN_USE_MUMPS_MPI_H
+extern "C" {
 #include "mumps_mpi.h"
+}
 #else
 #include "mpi.h"
 #endif
-}
 
 #include "ClpCholeskyMumps.hpp"
 #include "ClpMessage.hpp"
