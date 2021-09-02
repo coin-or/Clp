@@ -1541,7 +1541,7 @@ void establishParams(std::vector< CbcOrClpParam > &parameters)
   "Value 'before' means use the heuristic only if option doHeuristics is used. " \
   "Value 'both' means to use the heuristic if option doHeuristics is used and during solve."
 
-#if CLP_HAS_ABC
+#if CLP_HAS_ABC || ABOCA_LITE
   CbcOrClpParam paramAboca("abc", "Whether to visit Aboca", "off", CLP_PARAM_STR_ABCWANTED, 7, 0);
   paramAboca.append("one");
   paramAboca.append("two");
