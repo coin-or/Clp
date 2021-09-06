@@ -1529,9 +1529,9 @@ CbcOrClpParam::optionIntField(std::string field, int *valid)
       field = "";
     }
     for (int i=0;i<field.length();i++) {
-      char x = field[i];
+      char x = thisPart[i];
       x = tolower(static_cast<unsigned char>(x));
-      field[i] = x;
+      thisPart[i] = x;
     }
     size_t current = 0;
     bool found = false;
@@ -1539,7 +1539,7 @@ CbcOrClpParam::optionIntField(std::string field, int *valid)
       size_t next = stringValue_.find_first_of('#',current);
       std::string temp = stringValue_.substr(current,next-current);
       int n = 0;
-      int shriek = temp.length();
+      size_t shriek = temp.find_first_of('[');
       for (int i=0;i<temp.length();i++) {
 	if (temp[i]!='!') { 
 	  char x = temp[i];
@@ -3049,8 +3049,8 @@ You can also use the parameters 'direction minimize'.");
     CbcOrClpParam p("more2!MipOptions", "More more dubious options for mip",
       -1, COIN_INT_MAX, CBC_PARAM_INT_MOREMOREMIPOPTIONS, 0);
     p.appendStringValue("nodezero1[8192][More strong branching at root node]#");
-    p.appendStringValue("nodezero1[16384][More strong branching at root node - more]#");
-    p.appendStringValue("nodezero1[24576][More strong branching at root node - yet more]#");
+    p.appendStringValue("nodezero2[16384][More strong branching at root node - more]#");
+    p.appendStringValue("nodezero3[24576][More strong branching at root node - yet more]#");
     p.appendStringValue("#+"); // + allowed
     p.setIntValue(0);
     parameters.push_back(p);
