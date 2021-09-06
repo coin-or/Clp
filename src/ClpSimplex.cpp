@@ -9279,15 +9279,6 @@ int ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     int totalNumberThrownOut = 0;
     problemStatus_ = -1;
     // see if we are re-using factorization
-#if 0
-    int n=0;
-    for (int i=0;i<numberRows_+numberColumns_;i++) {
-      if ((status_[i]&7)==1)
-	n++;
-    }
-    if (n!=numberRows_)
-      printf("zzzz %d basic - %d rows\n",n,numberRows_);
-#endif
     if (!useFactorization) {
       while (numberThrownOut) {
         int status = internalFactorize(ifValuesPass ? 10 : 0);
@@ -9378,9 +9369,6 @@ int ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
       handler_->message(CLP_SINGULARITIES, messages_)
         << totalNumberThrownOut
         << CoinMessageEol;
-    if (totalNumberThrownOut)
-      printf("zz %d thrownout %d rows startup alg %d\n",
-	     totalNumberThrownOut,numberRows_,algorithm_);
     // Switch back dense
     factorization_->setDenseThreshold(saveThreshold);
 
@@ -9665,8 +9653,6 @@ bool ClpSimplex::statusOfProblem(bool initial)
       handler_->message(CLP_SINGULARITIES, messages_)
         << totalNumberThrownOut
         << CoinMessageEol;
-    if (totalNumberThrownOut)
-      printf("zz %d thrownout %d rows b\n",totalNumberThrownOut,numberRows_);
   } else {
 #ifndef NDEBUG
     int returnCode = internalFactorize(1);

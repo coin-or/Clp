@@ -505,9 +505,9 @@ void CbcOrClpParam::printLongHelp() const
 	// print options
 	size_t last = stringValue_.find_last_of('#');
 	if (stringValue_[last+1]=='+')
-	  std::cout << "Keywords (optionally with + ) - " << std::endl;
+	  std::cout << "Also keywords (optionally with + ) - " << std::endl;
 	else
-	  std::cout << "Keywords - " << std::endl;
+	  std::cout << "Also keywords - " << std::endl;
 	size_t current = 0;
 	while (current<last) {
 	  size_t next = stringValue_.find_first_of('#',current);

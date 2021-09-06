@@ -1212,7 +1212,6 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
     else
       candidate = -1;
     dualRow(candidate);
-    bool noPivotFound = pivotRow_ < 0;
     if (pivotRow_ >= 0) {
 #if ABOCA_LITE_FACTORIZATION
       int numberThreads = abcState();
@@ -6836,7 +6835,6 @@ int ClpSimplexDual::strongBranching(int numberVariables, const int *variables,
       handler_->message(CLP_SINGULARITIES, messages_)
         << factorizationStatus
         << CoinMessageEol;
-      printf("zz %d thrownout %d rows duals\n",factorizationStatus,numberRows_);
     }
   }
   // save stuff
