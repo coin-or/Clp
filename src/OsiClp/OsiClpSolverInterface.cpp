@@ -2692,7 +2692,10 @@ void OsiClpSolverInterface::solveFromHotStart()
         modelPtr_->ray_ = NULL;
         smallModel_->ray_ = NULL;
       }
-      status = static_cast< ClpSimplexDual * >(smallModel_)->fastDual(alwaysFinish);
+      if (!alwaysFinish)
+	status = static_cast< ClpSimplexDual * >(smallModel_)->fastDual(alwaysFinish);
+      else
+	status = smallModel_->dual(0,7);
       if ((modelPtr_->specialOptions() & 0x011200000) == 0x11200000 && smallModel_->ray_) {
         if (smallModel_->sequenceOut_ < smallModel_->numberColumns_)
           modelPtr_->sequenceOut_ = whichColumn[smallModel_->sequenceOut_];
@@ -10986,4 +10989,21 @@ bool OsiClpHasNDEBUG()
 #else
   return false;
 #endif
+}
+#include "OsiPresolve.hpp"
+ClpSimplex * presolvedOsiModel(ClpSimplex * model, double tolerance,
+			       int nPasses)
+{
+  int presolveActions = 0x3ff;
+  OsiClpSolverInterface osiModel(model);
+  OsiSolverInterface *presolvedModel;
+  OsiPresolve *pinfo = new OsiPresolve();
+  pinfo->setPresolveActions(presolveActions);
+  presolvedModel = 
+    pinfo->presolvedModel(osiModel, tolerance,
+			  false, nPasses, NULL,true, NULL);
+  OsiClpSolverInterface *osi2 = dynamic_cast<OsiClpSolverInterface *>
+    (presolvedModel);
+  ClpSimplex *model2 = osi2->getModelPtr();
+  return model2;
 }

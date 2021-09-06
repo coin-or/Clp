@@ -2467,7 +2467,7 @@ bool CoinAbcTypeFactorization::pivotRowSingleton(CoinSimplexInt pivotRow,
 {
   //store pivot columns (so can easily compress)
   CoinBigIndex *COIN_RESTRICT startColumnU = startColumnUAddress_;
-  CoinBigIndex COIN_RESTRICT startColumn = startColumnU[pivotColumn];
+  CoinBigIndex startColumn = startColumnU[pivotColumn];
   CoinSimplexInt *COIN_RESTRICT numberInRow = numberInRowAddress_;
   CoinSimplexInt *COIN_RESTRICT numberInColumn = numberInColumnAddress_;
   CoinSimplexInt numberDoColumn = numberInColumn[pivotColumn] - 1;
@@ -3450,7 +3450,7 @@ bool CoinAbcTypeFactorization::pivotOneOtherRow(CoinSimplexInt pivotRow,
   CoinSimplexInt *COIN_RESTRICT numberInRow = numberInRowAddress_;
   CoinSimplexInt *COIN_RESTRICT numberInColumn = numberInColumnAddress_;
   CoinSimplexInt *COIN_RESTRICT numberInColumnPlus = numberInColumnPlusAddress_;
-  CoinSimplexInt COIN_RESTRICT numberInPivotRow = numberInRow[pivotRow] - 1;
+  CoinSimplexInt numberInPivotRow = numberInRow[pivotRow] - 1;
   CoinBigIndex *COIN_RESTRICT startRowU = startRowUAddress_;
   CoinBigIndex *COIN_RESTRICT startColumnU = startColumnUAddress_;
   CoinBigIndex startColumn = startColumnU[pivotColumn];

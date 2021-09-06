@@ -612,6 +612,11 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
       } else if (type < 201) {
         // get next field as int
         int value = CoinReadGetIntField(argc, argv, &valid);
+        if (valid == 1 && parameters[iParam].stringValue()!="") {
+	  // look further
+	  value =
+	    parameters[iParam].optionIntField(getCoinErrorField(), &valid);
+	}
         if (!valid) {
           if (parameters[iParam].type() == CLP_PARAM_INT_PRESOLVEPASS)
             preSolve = value;
@@ -637,7 +642,8 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
             verbose = value;
           parameters[iParam].setIntParameter(thisModel, value);
         } else if (valid == 1) {
-          std::cout << " is illegal for integer parameter " << parameters[iParam].name() << " value remains " << parameters[iParam].intValue() << std::endl;
+	  std::cout << "String of " << getCoinErrorField();
+	  std::cout << " is illegal for integer parameter " << parameters[iParam].name() << " value remains " << parameters[iParam].intValue() << std::endl;
         } else {
           std::cout << parameters[iParam].name() << " has value " << parameters[iParam].intValue() << std::endl;
         }
