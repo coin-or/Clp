@@ -1820,7 +1820,8 @@ void ClpModel::addRows(int number, const double *rowLower,
       matrix_->appendMatrix(number, 0, rowStarts, columns, elements);
     }
   }
-  synchronizeMatrix();
+  if (rowStarts)
+    synchronizeMatrix();
 }
 // Add rows
 void ClpModel::addRows(int number, const double *rowLower,
@@ -1900,14 +1901,15 @@ void ClpModel::addRows(int number, const double *rowLower,
   scaledMatrix_ = NULL;
   if (!matrix_)
     createEmptyMatrix();
-  if (rows)
+  if (rows) {
     matrix_->appendRows(number, rows);
+    synchronizeMatrix();
+  }
   setRowScale(NULL);
   setColumnScale(NULL);
   if (lengthNames_) {
     rowNames_.resize(numberRows_);
   }
-  synchronizeMatrix();
 }
 #endif
 #ifndef SLIM_CLP
@@ -1965,11 +1967,9 @@ int ClpModel::addRows(const CoinBuild &buildObject, bool tryPlusMinusOne, bool c
         numberElements += numberElementsThis;
         starts[iRow + 1] = numberElements;
       }
-      addRows(number, lower, upper, NULL);
       // make sure matrix has enough columns
       matrix_->setDimensions(-1, numberColumns_);
-      numberErrors = matrix_->appendMatrix(number, 0, starts, column, element,
-        checkDuplicates ? numberColumns_ : -1);
+      addRows(number, lower, upper, starts, column, element);
       delete[] starts;
       delete[] column;
       delete[] element;
@@ -2392,14 +2392,15 @@ void ClpModel::addColumns(int number, const double *columnLower,
   scaledMatrix_ = NULL;
   if (!matrix_)
     createEmptyMatrix();
-  if (columns)
+  if (columns) {
     matrix_->appendCols(number, columns);
+    synchronizeMatrix();
+  }
   setRowScale(NULL);
   setColumnScale(NULL);
   if (lengthNames_) {
     columnNames_.resize(numberColumns_);
   }
-  synchronizeMatrix();
 }
 #endif
 #ifndef SLIM_CLP
