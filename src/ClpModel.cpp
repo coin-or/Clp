@@ -1822,7 +1822,8 @@ void ClpModel::addRows(int number, const double *rowLower,
       matrix_->appendMatrix(number, 0, rowStarts, columns, elements);
     }
   }
-  synchronizeMatrix();
+  if (rowStarts)
+    synchronizeMatrix();
 }
 // Add rows
 void ClpModel::addRows(int number, const double *rowLower,
@@ -1902,14 +1903,15 @@ void ClpModel::addRows(int number, const double *rowLower,
   scaledMatrix_ = NULL;
   if (!matrix_)
     createEmptyMatrix();
-  if (rows)
+  if (rows) {
     matrix_->appendRows(number, rows);
+    synchronizeMatrix();
+  }
   setRowScale(NULL);
   setColumnScale(NULL);
   if (lengthNames_) {
     rowNames_.resize(numberRows_);
   }
-  synchronizeMatrix();
 }
 #endif
 #ifndef SLIM_CLP
@@ -2392,14 +2394,15 @@ void ClpModel::addColumns(int number, const double *columnLower,
   scaledMatrix_ = NULL;
   if (!matrix_)
     createEmptyMatrix();
-  if (columns)
+  if (columns) {
     matrix_->appendCols(number, columns);
+    synchronizeMatrix();
+  }
   setRowScale(NULL);
   setColumnScale(NULL);
   if (lengthNames_) {
     columnNames_.resize(numberColumns_);
   }
-  synchronizeMatrix();
 }
 #endif
 #ifndef SLIM_CLP
