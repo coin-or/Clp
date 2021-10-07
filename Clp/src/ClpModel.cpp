@@ -1968,7 +1968,8 @@ int ClpModel::addRows(const CoinBuild &buildObject, bool tryPlusMinusOne, bool c
         starts[iRow + 1] = numberElements;
       }
       // make sure matrix has enough columns
-      matrix_->setDimensions(-1, numberColumns_);
+      if (matrix_)
+	matrix_->setDimensions(-1, numberColumns_);
       addRows(number, lower, upper, starts, column, element);
       delete[] starts;
       delete[] column;
