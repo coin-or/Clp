@@ -1332,6 +1332,8 @@ void ClpParameters::addClpIntParams() {
       "moreS!pecialOptions", "Yet more dubious options for Simplex", 0,
       COIN_INT_MAX, 
       "See ClpSimplex.hpp.");
+  parameters_[ClpParam::MORESPECIALOPTIONS]->appendKwd("keep!DualOrPrimal#If you ask for dual you will always get dual (and for primal)",8192);
+  parameters_[ClpParam::MORESPECIALOPTIONS]->appendKwd("clean!Scaled#Make sure unscaled problem is feasible if scaled problem is feasible",134217728);
 
   parameters_[ClpParam::PRESOLVEPASS]->setup(
       "passP!resolve", "How many passes in presolve", -200, 100,
