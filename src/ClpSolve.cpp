@@ -3937,6 +3937,28 @@ int ClpSimplex::initialSolve(ClpSolve &options)
   handler_->printing(timeIdiot != 0.0)
     << timeIdiot;
   handler_->message() << CoinMessageEol;
+  if (finalStatus==0) {
+    if (secondaryStatus_>1 && secondaryStatus_<5) {
+      std::string scaledMessage[] = {
+	    "Unscaled problem has primal infeasibilities", 
+	    "Unscaled problem has dual infeasibilities", 
+	    "Unscaled problem has primal and dual infeasibilities"};
+      handler_->message(CLP_GENERAL,messages_)
+	<< scaledMessage[secondaryStatus_-2];
+      handler_->message() << CoinMessageEol;
+      if ((moreSpecialOptions_&134217728)!=0) {
+	// solve without scaling
+	scalingFlag_ = 0;
+	delete[] rowScale_;
+	delete[] columnScale_;
+	rowScale_ = NULL;
+	columnScale_ = NULL;
+	inverseRowScale_ = NULL;
+	inverseColumnScale_ = NULL;
+	primal(1);
+      }
+    }
+  }
   if (interrupt)
     signal(SIGINT, saveSignal);
   perturbation_ = savePerturbation;
@@ -4517,7 +4539,7 @@ void ClpSimplexProgress::reset()
 int
 ClpSimplexProgress::checkScalingEtc()
 { 
-  if (!model_||model_->numberIterations()<checkScalingAfter_||
+  if (model_->numberIterations()<checkScalingAfter_||
       (model_->specialOptions() & 0x03000000) != 0)
     return 0;
   if (model_->numberIterations()) {

@@ -4,18 +4,14 @@
 
 //#undef NDEBUG
 
-#include <math.h>
-#include <cfloat>
-#include <string>
-#include <stdio.h>
-#include <iostream>
-
 #include "ClpConfig.h"
+
+#include "CoinPragma.hpp"
+#include <math.h>
 
 #if SLIM_CLP == 2
 #define SLIM_NOIO
 #endif
-#include "CoinPragma.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinFloatEqual.hpp"
 #include "ClpSimplex.hpp"
@@ -35,10 +31,14 @@
 #include "ClpHelperFunctions.hpp"
 #include "CoinModel.hpp"
 #include "CoinLpIO.hpp"
+#include <cfloat>
 #if CLP_HAS_ABC
 #include "CoinAbcCommon.hpp"
 #endif
 
+#include <string>
+#include <stdio.h>
+#include <iostream>
 //#############################################################################
 
 ClpSimplex::ClpSimplex(bool emptyMessages)
@@ -58,7 +58,7 @@ ClpSimplex::ClpSimplex(bool emptyMessages)
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
+  , dualBound_(1.0e10)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -181,7 +181,7 @@ ClpSimplex::ClpSimplex(const ClpModel *rhs,
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
+  , dualBound_(1.0e10)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -337,7 +337,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex *rhs,
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
+  , dualBound_(1.0e10)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -2399,7 +2399,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs, int scalingMode)
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
+  , dualBound_(1.0e10)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -2508,7 +2508,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode)
   , largestPrimalError_(0.0)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
-  , dualBound_(CLP_DEFAULT_DUAL_BOUND)
+  , dualBound_(1.0e10)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -5007,7 +5007,7 @@ int ClpSimplex::tightenPrimalBounds(double factor, int doTight, bool tightIntege
   // If wanted compute a reasonable dualBound_
   if (factor == COIN_DBL_MAX) {
     factor = 0.0;
-    if (dualBound_ == CLP_DEFAULT_DUAL_BOUND) {
+    if (dualBound_ == 1.0e10) {
       // get largest scaled away from bound
       double largest = 1.0e-12;
       double largestScaled = 1.0e-12;
@@ -7729,10 +7729,10 @@ int ClpSimplex::readMps(const char *filename,
 #ifdef COINUTILS_HAS_GLPK
 // Read GMPL files from the given filenames
 int ClpSimplex::readGMPL(const char *filename, const char *dataName, bool keepNames,
-                         glp_tran **coin_glp_tran, glp_prob **coin_glp_prob)
+                          glp_tran **coin_glp_tran, glp_prob **coin_glp_prob)
 {
   int status = ClpModel::readGMPL(filename, dataName, keepNames, coin_glp_tran,
-                                  coin_glp_prob);
+				  coin_glp_prob);
   createStatus();
   return status;
 }

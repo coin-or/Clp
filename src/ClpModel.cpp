@@ -1822,7 +1822,8 @@ void ClpModel::addRows(int number, const double *rowLower,
       matrix_->appendMatrix(number, 0, rowStarts, columns, elements);
     }
   }
-  synchronizeMatrix();
+  if (rowStarts)
+    synchronizeMatrix();
 }
 // Add rows
 void ClpModel::addRows(int number, const double *rowLower,
@@ -1902,14 +1903,15 @@ void ClpModel::addRows(int number, const double *rowLower,
   scaledMatrix_ = NULL;
   if (!matrix_)
     createEmptyMatrix();
-  if (rows)
+  if (rows) {
     matrix_->appendRows(number, rows);
+    synchronizeMatrix();
+  }
   setRowScale(NULL);
   setColumnScale(NULL);
   if (lengthNames_) {
     rowNames_.resize(numberRows_);
   }
-  synchronizeMatrix();
 }
 #endif
 #ifndef SLIM_CLP
@@ -1968,7 +1970,8 @@ int ClpModel::addRows(const CoinBuild &buildObject, bool tryPlusMinusOne, bool c
         starts[iRow + 1] = numberElements;
       }
       // make sure matrix has enough columns
-      matrix_->setDimensions(-1, numberColumns_);
+      if (matrix_)
+	matrix_->setDimensions(-1, numberColumns_);
       addRows(number, lower, upper, starts,column,element);
       delete[] starts;
       delete[] column;
@@ -2152,12 +2155,6 @@ int ClpModel::addRows(CoinModel &modelObject, bool tryPlusMinusOne, bool checkDu
       }
       assert(rowLower);
       addRows(numberRows2, rowLower, rowUpper, NULL, NULL, NULL);
-      // but resize matrix to numberRows
-      int * delRows = new int [numberRows2];
-      for (int i=0;i<numberRows2;i++)
-	delRows[i] = i+numberRows;
-      matrix_->deleteRows(numberRows2,delRows);
-      delete [] delRows;
 #ifndef SLIM_CLP
       if (!tryPlusMinusOne) {
 #endif
@@ -2398,14 +2395,15 @@ void ClpModel::addColumns(int number, const double *columnLower,
   scaledMatrix_ = NULL;
   if (!matrix_)
     createEmptyMatrix();
-  if (columns)
+  if (columns) {
     matrix_->appendCols(number, columns);
+    synchronizeMatrix();
+  }
   setRowScale(NULL);
   setColumnScale(NULL);
   if (lengthNames_) {
     columnNames_.resize(numberColumns_);
   }
-  synchronizeMatrix();
 }
 #endif
 #ifndef SLIM_CLP
@@ -2969,11 +2967,11 @@ int ClpModel::readMps(const char *fileName,
 
   return status;
 }
-
 #ifdef COINUTILS_HAS_GLPK
 // Read GMPL files from the given filenames
-int ClpModel::readGMPL(const char *fileName, const char *dataName, bool keepNames,
-                       glp_tran **coin_glp_tran, glp_prob **coin_glp_prob)
+int ClpModel::readGMPL(const char *fileName, const char *dataName,
+		       bool keepNames,
+		       glp_tran **coin_glp_tran, glp_prob **coin_glp_prob)
 {
   FILE *fp = fopen(fileName, "r");
   if (fp) {
@@ -3055,7 +3053,6 @@ int ClpModel::readGMPL(const char *fileName, const char *dataName, bool keepName
 }
 #endif
 #endif
-
 bool ClpModel::isPrimalObjectiveLimitReached() const
 {
   double limit = 0.0;

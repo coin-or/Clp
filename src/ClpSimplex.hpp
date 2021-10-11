@@ -13,16 +13,11 @@
 #include <iostream>
 #include <cfloat>
 
-#include "CoinUtilsConfig.h"
 #include "ClpModel.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpSolve.hpp"
 #include "ClpConfig.h"
 #include "CoinIndexedVector.hpp"
-
-#ifdef COINUTILS_HAS_GLPK
-#include "glpk.h"
-#endif
 
 class ClpDualRowPivot;
 class ClpPrimalColumnPivot;
@@ -275,8 +270,9 @@ public:
     bool ignoreErrors = false);
 #ifdef COINUTILS_HAS_GLPK
   /// Read GMPL files from the given filenames
-  int readGMPL(const char *filename, const char *dataName, bool keepNames = false,
-               glp_tran **coin_glp_tran = NULL, glp_prob **coin_glp_prob = NULL);
+  int readGMPL(const char *filename, const char *dataName,
+	       bool keepNames = false,
+	       glp_tran **coin_glp_tran = NULL, glp_prob **coin_glp_prob = NULL);
 #endif
   /// Read file in LP format from file with name filename.
   /// See class CoinLpIO for description of this format.
@@ -1437,7 +1433,8 @@ public:
 	 16777216 bit - if factorization kept can still declare optimal at once
 	 33554432 bit - if singular at dual startup - go to primal
 	 67108864 bit - try sorted values pass
-     */
+	 134217728 bit - clean up problem if scaling feasible mismatch
+  */
   inline int moreSpecialOptions() const
   {
     return moreSpecialOptions_;
@@ -1795,7 +1792,6 @@ protected:
   /// For computing whether to re-factorize
   double alphaAccuracy_;
   /// Dual bound
-#define CLP_DEFAULT_DUAL_BOUND 1.0e8
   double dualBound_;
   /// Alpha (pivot element)
   double alpha_;
