@@ -523,6 +523,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
       if (param->setVal(dValue, &message)){
          printGeneralMessage(model_, message);
          continue;
+      } else {
+         printGeneralMessage(model_, message);
       }
 #if 0 
       if (paramCode == ClpParam::DUALTOLERANCE)
@@ -555,6 +557,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
       if (param->setVal(iValue, &message)){
          printGeneralMessage(model_, message);
          continue;
+      } else {
+         printGeneralMessage(model_, message);
       }
       if (paramCode == ClpParam::PRESOLVEPASS)
          preSolve = iValue;

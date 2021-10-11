@@ -617,7 +617,7 @@ void ClpParameters::addClpActionParams() {
 
   parameters_[ClpParam::PRINTSOL]->setup(
       "printS!olution", "prints solution to stdout",
-      "This will write a binary solution file to the file set by solutionFile.",
+      "This will write a binary solution file to the file set by solFile.",
       CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::PRINTVERSION]->setup(
@@ -690,7 +690,7 @@ void ClpParameters::addClpActionParams() {
   parameters_[ClpParam::WRITESOL]->setup(
       "writeS!olution", "writes solution to file (or stdout)",
       "This will write a primitive solution file to the file set by "
-      "'solutionFile'. The amount of output can be varied using "
+      "'solFile'. The amount of output can be varied using "
       "'printingOptions' or 'printMask'.",
       CoinParam::displayPriorityHigh);
 
@@ -699,14 +699,14 @@ void ClpParameters::addClpActionParams() {
       "solu!tion", "writes solution to file (or stdout) (synonym for "
       "writeSolution).",
       "This will write a primitive solution file to the file set by "
-      "'solutionFile'. The amount of output can be varied using "
+      "'solFile'. The amount of output can be varied using "
       "'printingOptions' or 'printMask'.",
-      CoinParam::displayPriorityNone);
+      CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::WRITESOLBINARY]->setup(
       "writeSolB!inary", "writes solution to file in binary format",
       "This will write a binary solution file to the file set by "
-      "'solutionBinaryFile'. To read the file use fread(int) twice to pick up "
+      "'solBinaryFile'. To read the file use fread(int) twice to pick up "
       "number of rows and columns, then fread(double) to pick up objective "
       "value, then pick up row activities, row duals, column activities and "
       "reduced costs - see bottom of ClpParamUtils.cpp for code that reads or "
@@ -719,7 +719,7 @@ void ClpParameters::addClpActionParams() {
       "saveS!olution", "writes solution to file in binary format (synonym for "
       "writeSolBinary",
       "This will write a binary solution file to the file set by "
-      "'solutionBinaryFile'. To read the file use fread(int) twice to pick up "
+      "'solBinaryFile'. To read the file use fread(int) twice to pick up "
       "number of rows and columns, then fread(double) to pick up objective "
       "value, then pick up row activities, row duals, column activities and "
       "reduced costs - see bottom of ClpParamUtils.cpp for code that reads or "
@@ -804,14 +804,14 @@ void ClpParameters::addClpFileParams() {
       CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::SOLUTIONBINARYFILE]->setup(
-      "solutionBinaryF!ile",
+      "solBinaryF!ile",
       "Sets name for file to store solution in binary format",
       "This will set the name the solution will be saved to and read from. "
       "By default, binary solutions are written to 'solution.file'." 
       "use printSolution.", CoinParam::displayPriorityHigh);
 
   parameters_[ClpParam::SOLUTIONFILE]->setup(
-      "solutionF!ile", "Sets name for file to store solution in",
+      "solF!ile", "Sets name for file to store solution in",
       "This will set the name the solution will be saved to and read from. "
       "By default, solutions are written to 'opt.sol'. To print to stdout, "
       "use printSolution.", CoinParam::displayPriorityHigh);
