@@ -1004,6 +1004,8 @@ public:
   virtual int writeBasisNative(const char *filename) const;
   /// Read file in LP format (with names)
   virtual int readLp(const char *filename, const double epsilon = 1e-5);
+  /// Read file in LP format (with names) for opened file
+  virtual int readLp(FILE *fp, const double epsilon = 1e-5);
   /** Write the problem into an Lp file of the given filename.
       If objSense is non zero then -1.0 forces the code to write a
       maximization objective and +1.0 to write a minimization one.
@@ -1251,13 +1253,10 @@ protected:
 
   /** Apply a column cut (adjust one or more bounds). */
   virtual void applyColCut(const OsiColCut &cc);
-  //@}
-
-  //---------------------------------------------------------------------------
-
-protected:
-  /**@name Protected methods */
-  //@{
+  
+  /** Read file in LP format (with names), helper for public functions */
+  int readLp(class CoinLpIO &m);
+  
   /// The real work of a copy constructor (used by copy and assignment)
   void gutsOfDestructor();
 

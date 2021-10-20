@@ -18,8 +18,8 @@ extern int osi_hot;
 #include "ClpDualRowSteepest.hpp"
 #include "ClpPrimalColumnSteepest.hpp"
 #include "ClpPackedMatrix.hpp"
-#include "ClpDualRowDantzig.hpp"
 #include "ClpQuadraticObjective.hpp"
+#include "ClpDualRowDantzig.hpp"
 #include "ClpPrimalColumnDantzig.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpObjective.hpp"
@@ -68,7 +68,7 @@ void OsiClpSolverInterface::initialSolve()
     getHintParam(OsiDoPresolveInResolve, takeHintPre[1], strengthPre[1]);
     getHintParam(OsiDoDualInInitial, takeHintPre[2], strengthPre[2]);
     getHintParam(OsiDoPresolveInInitial, takeHintPre[3], strengthPre[3]);
-    setHintParam(OsiDoDualInResolve, takeHintPre[2], OsiHintTry);
+    setHintParam(OsiDoDualInResolve, takeHintPre[2], OsiHintDo);
     setHintParam(OsiDoPresolveInResolve, takeHintPre[3], OsiHintTry);
     resolve();
     setHintParam(OsiDoDualInResolve, takeHintPre[0], strengthPre[0]);
@@ -189,7 +189,7 @@ void OsiClpSolverInterface::initialSolve()
       basis_ = getBasis(modelPtr_);
       memcpy(rowActivity,rowActivitySave,numberRows*sizeof(double));
       memcpy(columnActivity,columnActivitySave,numberColumns*sizeof(double));
-      setHintParam(OsiDoDualInResolve, false, OsiHintTry);
+      setHintParam(OsiDoDualInResolve, false, OsiHintDo);
     } else {
       // think ?
     }
@@ -1030,7 +1030,7 @@ void OsiClpSolverInterface::resolve()
       basis_ = getBasis(modelPtr_);
       memcpy(rowActivity,rowActivitySave,numberRows*sizeof(double));
       memcpy(columnActivity,columnActivitySave,numberColumns*sizeof(double));
-      setHintParam(OsiDoDualInResolve, false, OsiHintTry);
+      setHintParam(OsiDoDualInResolve, false, OsiHintDo);
     } else {
       // think ?
     }
@@ -2693,7 +2693,10 @@ void OsiClpSolverInterface::solveFromHotStart()
         modelPtr_->ray_ = NULL;
         smallModel_->ray_ = NULL;
       }
-      status = static_cast< ClpSimplexDual * >(smallModel_)->fastDual(alwaysFinish);
+      if (!alwaysFinish)
+	status = static_cast< ClpSimplexDual * >(smallModel_)->fastDual(alwaysFinish);
+      else
+	status = smallModel_->dual(0,7);
       if ((modelPtr_->specialOptions() & 0x011200000) == 0x11200000 && smallModel_->ray_) {
         if (smallModel_->sequenceOut_ < smallModel_->numberColumns_)
           modelPtr_->sequenceOut_ = whichColumn[smallModel_->sequenceOut_];
@@ -3440,6 +3443,8 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
           bSum, bSum2, numberBad, nNonzeroBasic);
 #endif
       } else {
+        if (numberColumns < 0)
+          debugMode = -numberColumns;
         if ((debugMode & 4) != 0) {
           int *tempC = new int[numberColumns];
           double *temp = new double[numberColumns];
@@ -4167,7 +4172,7 @@ void OsiClpSolverInterface::setColLower(const double *array)
 */
 void OsiClpSolverInterface::setColUpper(const double *array)
 {
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   modelPtr_->whatsChanged_ &= 0x1feff;
   CoinMemcpyN(array, modelPtr_->numberColumns(),
@@ -4176,7 +4181,7 @@ void OsiClpSolverInterface::setColUpper(const double *array)
 //-----------------------------------------------------------------------------
 void OsiClpSolverInterface::setColSolution(const double *cs)
 {
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   CoinDisjointCopyN(cs, modelPtr_->numberColumns(),
     modelPtr_->primalColumnSolution());
@@ -5304,7 +5309,7 @@ void OsiClpSolverInterface::applyRowCut(const OsiRowCut &rowCut)
 void OsiClpSolverInterface::applyRowCuts(int numberCuts, const OsiRowCut *cuts)
 {
   if (numberCuts) {
-    // Say can't gurantee optimal basis etc
+    // Say can't guarantee optimal basis etc
     lastAlgorithm_ = 999;
 
     // Thanks to js
@@ -5334,7 +5339,7 @@ void OsiClpSolverInterface::applyRowCuts(int numberCuts, const OsiRowCut **cuts)
   assert (!nameDiscipline);
 #endif
   freeCachedResults0();
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   int numberRows = modelPtr_->numberRows();
   modelPtr_->resize(numberRows + numberCuts, modelPtr_->numberColumns());
@@ -5550,7 +5555,7 @@ void OsiClpSolverInterface::deleteScaleFactors()
 void OsiClpSolverInterface::applyColCut(const OsiColCut &cc)
 {
   modelPtr_->whatsChanged_ &= (0x1ffff & ~(128 | 256));
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   double *lower = modelPtr_->columnLower();
   double *upper = modelPtr_->columnUpper();
@@ -5579,7 +5584,7 @@ void OsiClpSolverInterface::applyColCut(const OsiColCut &cc)
 
 void OsiClpSolverInterface::freeCachedResults() const
 {
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   delete[] rowsense_;
   delete[] rhs_;
@@ -5628,7 +5633,7 @@ void OsiClpSolverInterface::freeCachedResults0() const
 
 void OsiClpSolverInterface::freeCachedResults1() const
 {
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   delete matrixByRow_;
   matrixByRow_ = NULL;
@@ -5756,7 +5761,7 @@ OsiClpSolverInterface::getBasis(const unsigned char *statusArray) const
 void OsiClpSolverInterface::setBasis(const CoinWarmStartBasis &basis,
   ClpSimplex *model)
 {
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   // transform basis to status arrays
   int iRow, iColumn;
@@ -6047,17 +6052,35 @@ int OsiClpSolverInterface::readLp(const char *filename, const double epsilon)
   CoinLpIO m;
   m.passInMessageHandler(modelPtr_->messageHandler());
   *m.messagesPointer() = modelPtr_->coinMessages();
-  CoinPackedMatrix * quadratic = NULL;
   try {
     m.readLp(filename, epsilon);
-    
-    // See if quadratic objective
-    quadratic = m.getQuadraticObjective();
   } catch (CoinError e) {
     printf("ERROR: %s::%s, %s\n",
       e.className().c_str(), e.methodName().c_str(), e.message().c_str());
     return -1;
   }
+
+  return readLp(m);
+}
+
+int OsiClpSolverInterface::readLp(FILE *fp, const double epsilon)
+{
+  CoinLpIO m;
+  m.passInMessageHandler(modelPtr_->messageHandler());
+  *m.messagesPointer() = modelPtr_->coinMessages();
+  try {
+    m.readLp(fp, epsilon);
+  } catch (CoinError e) {
+    printf("ERROR: %s::%s, %s\n",
+      e.className().c_str(), e.methodName().c_str(), e.message().c_str());
+    return -1;
+  }
+
+  return readLp(m);
+}
+
+int OsiClpSolverInterface::readLp(class CoinLpIO &m)
+{
   freeCachedResults();
 
   // set objective function offest
@@ -6069,6 +6092,8 @@ int OsiClpSolverInterface::readLp(const char *filename, const double epsilon)
   // set objective name
   setObjName(m.getObjName());
 
+  // See if quadratic objective
+  CoinPackedMatrix * quadratic = m.getQuadraticObjective();
 #ifndef SWITCH_BACK_TO_MAXIMIZATION
 #define SWITCH_BACK_TO_MAXIMIZATION 1
 #endif
@@ -6188,7 +6213,6 @@ void OsiClpSolverInterface::writeLp(const char *filename,
       fullname.c_str());
     exit(1);
   }
-  fclose(fp);
   writeLp(fp, epsilon, numberAcross,
     decimals, objSense, changeNameOnRange);
   fclose(fp);
@@ -6370,7 +6394,7 @@ OsiClpSolverInterface::getObjValue() const
 void OsiClpSolverInterface::setObjCoeff(int elementIndex, double elementValue)
 {
   modelPtr_->whatsChanged_ &= (0xffff & ~(64));
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
 #ifndef NDEBUG
   int n = modelPtr_->numberColumns();
@@ -6395,7 +6419,7 @@ void OsiClpSolverInterface::setColLower(int index, double elementValue)
 #endif
   double currentValue = modelPtr_->columnActivity_[index];
   bool changed = (currentValue < elementValue - modelPtr_->primalTolerance() || index >= basis_.getNumStructural() || basis_.getStructStatus(index) == CoinWarmStartBasis::atLowerBound);
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   if (changed)
     lastAlgorithm_ = 999;
   if (!modelPtr_->lower_)
@@ -6416,7 +6440,7 @@ void OsiClpSolverInterface::setColUpper(int index, double elementValue)
 #endif
   double currentValue = modelPtr_->columnActivity_[index];
   bool changed = (currentValue > elementValue + modelPtr_->primalTolerance() || index >= basis_.getNumStructural() || basis_.getStructStatus(index) == CoinWarmStartBasis::atUpperBound);
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   if (changed)
     lastAlgorithm_ = 999;
   if (!modelPtr_->upper_)
@@ -6429,7 +6453,7 @@ void OsiClpSolverInterface::setColBounds(int elementIndex,
   double lower, double upper)
 {
   modelPtr_->whatsChanged_ &= 0x1ffff;
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
 #ifndef NDEBUG
   int n = modelPtr_->numberColumns();
@@ -6446,7 +6470,7 @@ void OsiClpSolverInterface::setColSetBounds(const int *indexFirst,
   const double *boundList)
 {
   modelPtr_->whatsChanged_ &= 0x1ffff;
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
 #ifndef NDEBUG
   int n = modelPtr_->numberColumns();
@@ -6465,7 +6489,7 @@ void OsiClpSolverInterface::setColSetBounds(const int *indexFirst,
    Use -DBL_MAX for -infinity. */
 void OsiClpSolverInterface::setRowLower(int elementIndex, double elementValue)
 {
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   modelPtr_->whatsChanged_ &= 0xffff;
 #ifndef NDEBUG
@@ -6510,7 +6534,7 @@ void OsiClpSolverInterface::setRowBounds(int elementIndex,
   double lower, double upper)
 {
   modelPtr_->whatsChanged_ &= 0xffff;
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
 #ifndef NDEBUG
   int n = modelPtr_->numberRows();
@@ -6531,7 +6555,7 @@ void OsiClpSolverInterface::setRowType(int i, char sense, double rightHandSide,
   double range)
 {
   modelPtr_->whatsChanged_ &= 0xffff;
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
 #ifndef NDEBUG
   int n = modelPtr_->numberRows();
@@ -6610,7 +6634,7 @@ void OsiClpSolverInterface::setRowSetBounds(const int *indexFirst,
   const double *boundList)
 {
   modelPtr_->whatsChanged_ &= 0xffff;
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
 #ifndef NDEBUG
   int n = modelPtr_->numberRows();
@@ -6642,7 +6666,7 @@ void OsiClpSolverInterface::setRowSetTypes(const int *indexFirst,
   const double *rangeList)
 {
   modelPtr_->whatsChanged_ &= 0xffff;
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
 #ifndef NDEBUG
   int n = modelPtr_->numberRows();
@@ -6889,7 +6913,7 @@ void OsiClpSolverInterface::getBasisStatus(int *cstat, int *rstat) const
 int OsiClpSolverInterface::setBasisStatus(const int *cstat, const int *rstat)
 {
   modelPtr_->whatsChanged_ &= 0xffff;
-  // Say can't gurantee optimal basis etc
+  // Say can't guarantee optimal basis etc
   lastAlgorithm_ = 999;
   modelPtr_->createStatus();
   int i, n;
@@ -7008,7 +7032,7 @@ void OsiClpSolverInterface::setColumnStatus(int iColumn, ClpSimplex::Status stat
 {
   if (status != modelPtr_->status_[iColumn]) {
     modelPtr_->whatsChanged_ &= 0xffff;
-    // Say can't gurantee optimal basis etc
+    // Say can't guarantee optimal basis etc
     lastAlgorithm_ = 999;
     modelPtr_->setColumnStatus(iColumn, status);
     switch (status) {
@@ -10993,4 +11017,21 @@ bool OsiClpHasNDEBUG()
 #else
   return false;
 #endif
+}
+#include "OsiPresolve.hpp"
+ClpSimplex * presolvedOsiModel(ClpSimplex * model, double tolerance,
+			       int nPasses)
+{
+  int presolveActions = 0x3ff;
+  OsiClpSolverInterface osiModel(model);
+  OsiSolverInterface *presolvedModel;
+  OsiPresolve *pinfo = new OsiPresolve();
+  pinfo->setPresolveActions(presolveActions);
+  presolvedModel = 
+    pinfo->presolvedModel(osiModel, tolerance,
+			  false, nPasses, NULL,true, NULL);
+  OsiClpSolverInterface *osi2 = dynamic_cast<OsiClpSolverInterface *>
+    (presolvedModel);
+  ClpSimplex *model2 = osi2->getModelPtr();
+  return model2;
 }
