@@ -9566,6 +9566,15 @@ ClpSimplex::checkScaling()
 	}
 	if (largestRhs > 1.0e9) {
 	  rhsScale_ = 1.0e8/largestRhs;
+	  // but can't make bounds too close
+	  double smallestGap = 1.0e100;
+	  for (int i=0;i<numberColumns_+numberRows_;i++) {
+	    if (lower_[i] > -1.0e80 && upper_[i] < 1.0e80) {
+	      if (lower_[i] != upper_[i]) 
+		smallestGap = CoinMin(smallestGap,upper_[i]-lower_[i]);
+	    }
+	  }
+	  rhsScale_ = CoinMax(rhsScale_,1.1*primalTolerance_/smallestGap);
 #if CLP_SCALING_PRINT 
 	  printf("scaling rhs %g\n",rhsScale_);
 #endif
