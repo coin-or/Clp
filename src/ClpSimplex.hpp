@@ -1434,6 +1434,7 @@ public:
 	 33554432 bit - if singular at dual startup - go to primal
 	 67108864 bit - try sorted values pass
 	 134217728 bit - clean up problem if scaling feasible mismatch
+	 268435456 bit - objective is piecewise linear
   */
   inline int moreSpecialOptions() const
   {
@@ -1471,6 +1472,8 @@ public:
 	 16777216 bit - if factorization kept can still declare optimal at once
 	 33554432 bit - if singular at dual startup - go to primal
 	 67108864 bit - try sorted values pass
+	 134217728 bit - clean up problem if scaling feasible mismatch
+	 268435456 bit - objective is piecewise linear
      */
   inline void setMoreSpecialOptions(int value)
   {
