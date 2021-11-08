@@ -857,6 +857,29 @@ void ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
       feasibleCost_ += thisFeasibleCost * solution[iSequence];
       //assert (iRange==whichRange_[iSequence]);
     }
+    if ((model_->moreSpecialOptions()&268435456)!=0) {
+      // adjust
+      double correctTotal = 0.0;
+      for (iSequence = 0; iSequence < numberColumns_; iSequence++) {
+	double lowerValue;
+	double upperValue;
+	double value = solution[iSequence];
+	int iRange = whichRange_[iSequence];
+	int start = start_[iSequence];
+	//if (start_[iSequence+1]-start>3 && iRange > start) 
+	  //printf("seq %d low %g %g value %g high %g %g\n",
+	  //	 iSequence,lower_[start],lower_[iRange],value,
+	  //	 lower_[iRange+1],lower_[start_[iSequence+1]-1]);
+	double correct = (value-lower_[iRange])*cost_[iRange];
+	assert (lower_[start+1]>-1.0e100);
+	correct += lower_[start+1]*cost_[start+1];
+	for (int i=start+1;i<iRange;i++) 
+	  correct += (lower_[i+1]-lower_[i])*cost_[i];
+	correctTotal += correct;
+	feasibleCost_ += correct - value*cost_[iRange];
+      }
+      feasibleCost_ = correctTotal;
+    }
   }
 #ifdef NONLIN_DEBUG
   double saveCost = feasibleCost_;
