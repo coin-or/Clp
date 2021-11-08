@@ -3757,6 +3757,7 @@ int ClpSimplexPrimal::pivotResult(int ifValuesPass)
     // refactorize here
     int lastCleaned = 0;
     ClpSimplexProgress dummyProgress;
+    dummyProgress.fillFromModel(this);
     if (saveStatus_)
       statusOfProblemInPrimal(lastCleaned, 1, &dummyProgress, true, ifValuesPass);
     else
