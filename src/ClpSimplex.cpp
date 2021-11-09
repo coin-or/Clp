@@ -4813,7 +4813,7 @@ void ClpSimplex::deleteRim(int getRidOfFactorizationData)
   }
   if (!rowObjective_ && problemStatus_ == 0 && objective_->type() == 1 && numberRows && numberColumns) {
     // Redo objective value
-    double objectiveValue;
+    double objectiveValue = 0.0;
     if (algorithm_!=1 || (moreSpecialOptions_&268435456) == 0) {
       const double *cost = objective();
       for (int i = 0; i < numberColumns; i++) {
