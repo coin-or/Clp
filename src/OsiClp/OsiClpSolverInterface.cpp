@@ -3028,6 +3028,54 @@ void OsiClpSolverInterface::unmarkHotStart()
     modelPtr_->whatsChanged_ &= ~0xffff;
   modelPtr_->specialOptions_ = saveData_.specialOptions_;
 }
+/* Do series of solves from hot start
+   - with options - initially 1 - just go to first re-factorization.
+   Returns number that can be fixed (negative if whole problem infeasible)
+*/
+int
+OsiClpSolverInterface::solvesFromHotStart(int numberLook, const int *which,
+					  int options)
+{
+  ClpSimplex * simplex = modelPtr_;
+  double * lower = simplex->columnLower();
+  double * upper = simplex->columnUpper();
+  int numberFixed = 0;
+  int saveOsiClpOptions = specialOptions_;
+  if ((options&1)!=0)
+    specialOptions_ |= 32;
+  for (int i=0;i<numberLook;i++) {
+    int iColumn = which[i];
+    assert(!lower[iColumn]);
+    assert(upper[iColumn]);
+    // down
+    upper[iColumn]=0.0;
+    solveFromHotStart();
+    upper[iColumn]=1.0;
+    if (simplex->problemStatus()==1) {
+      numberFixed++;
+      lower[iColumn]=1.0;
+      unmarkHotStart();
+      markHotStart();
+      if (simplex->problemStatus()) {
+	return -numberFixed;
+      }
+    } else {
+      // up
+      lower[iColumn]=1.0;
+      solveFromHotStart();
+      lower[iColumn]=0.0;
+      if (simplex->problemStatus()==1) {
+	numberFixed++;
+	upper[iColumn]=0.0;
+	unmarkHotStart();
+	markHotStart();
+	assert (simplex->problemStatus()==0); 
+      }
+    }
+  }
+  specialOptions_ = saveOsiClpOptions;
+  return numberFixed;
+}
 
 // Return a conflict analysis cut from small model
 OsiRowCut *
