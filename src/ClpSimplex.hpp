@@ -1099,6 +1099,8 @@ public:
   }
   /// value of incoming variable (in Dual)
   double valueIncomingDual() const;
+  /// Clean stuff
+  void cleanSolver();
   //@}
 
 #ifndef CLP_USER_DRIVEN

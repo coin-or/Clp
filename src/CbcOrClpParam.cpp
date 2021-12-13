@@ -4,12 +4,15 @@
 
 #include "CoinPragma.hpp"
 #include "CoinTime.hpp"
+//#define COIN_HAS_CBC
+#define COIN_HAS_CLP
 #include "CbcOrClpParam.hpp"
 #include "CoinHelperFunctions.hpp"
 
 #include <string>
 #include <iostream>
 #include <cassert>
+#include "CoinFinite.hpp"
 
 #ifdef COIN_HAS_CBC
 #ifdef COIN_HAS_CLP
@@ -499,8 +502,29 @@ void CbcOrClpParam::printLongHelp() const
       printf("<Range of values is %g to %g;\n\tcurrent %g>\n", lowerDoubleValue_, upperDoubleValue_, doubleValue_);
       assert(upperDoubleValue_ > lowerDoubleValue_);
     } else if (type_ < CLP_PARAM_STR_DIRECTION) {
-      printf("<Range of values is %d to %d;\n\tcurrent %d>\n", lowerIntValue_, upperIntValue_, intValue_);
+      printf("<Range of values is %d to %d; current %d>\n", lowerIntValue_, upperIntValue_, intValue_);
       assert(upperIntValue_ > lowerIntValue_);
+      if (stringValue_!="") {
+	// print options
+	size_t last = stringValue_.find_last_of('#');
+	if (stringValue_[last+1]=='+')
+	  std::cout << "Also keywords (optionally with + ) - " << std::endl;
+	else
+	  std::cout << "Also keywords - " << std::endl;
+	size_t current = 0;
+	while (current<last) {
+	  size_t next = stringValue_.find_first_of('#',current);
+	  std::string temp = stringValue_.substr(current,next-current);
+	  current=next+1;
+	  size_t end1 = temp.find_first_of('[');
+	  std::string name = temp.substr(0,end1);
+	  end1 = temp.find_first_of('[',1);
+	  end1 = temp.find_first_of('[',end1+1);
+	  std::string comment =
+	    temp.substr(end1+1,temp.find_first_of(']',end1)-end1-1);
+	  std::cout << name << " - " << comment << std::endl;
+	}
+      }
     } else if (type_ < CLP_PARAM_ACTION_DIRECTORY) {
       printOptions();
     }
@@ -887,8 +911,8 @@ CbcOrClpParam::setDoubleParameterWithMessage(CbcModel &model, double value, int 
       model.setDblParam(CbcModel::CbcMaximumSeconds, value);
       break;
     case CBC_PARAM_DBL_MAXSECONDSNIFS:
-      oldValue = model.getDblParam(CbcModel::CbcMaximumSecondsNotImprovingFeasSol);
-      model.setDblParam(CbcModel::CbcMaximumSecondsNotImprovingFeasSol, value);
+      oldValue = model.getDblParam(CbcModel::CbcMaxSecondsNotImproving);
+      model.setDblParam(CbcModel::CbcMaxSecondsNotImproving, value);
       break;
     case CLP_PARAM_DBL_DUALTOLERANCE:
     case CLP_PARAM_DBL_PRIMALTOLERANCE:
@@ -930,7 +954,7 @@ CbcOrClpParam::doubleParameter(CbcModel &model) const
     value = model.getDblParam(CbcModel::CbcMaximumSeconds);
     break;
   case CBC_PARAM_DBL_MAXSECONDSNIFS:
-    value = model.getDblParam(CbcModel::CbcMaximumSecondsNotImprovingFeasSol);
+    value = model.getDblParam(CbcModel::CbcMaxSecondsNotImproving);
     break;
 
   case CLP_PARAM_DBL_DUALTOLERANCE:
@@ -979,8 +1003,8 @@ CbcOrClpParam::setIntParameterWithMessage(CbcModel &model, int value, int &retur
       model.setIntParam(CbcModel::CbcMaxNumNode, value);
       break;
     case CBC_PARAM_INT_MAXNODESNOTIMPROVINGFS:
-      oldValue = model.getIntParam(CbcModel::CbcMaxNodesNotImprovingFeasSol);
-      model.setIntParam(CbcModel::CbcMaxNodesNotImprovingFeasSol, value);
+      oldValue = model.getIntParam(CbcModel::CbcMaxNodesNotImproving);
+      model.setIntParam(CbcModel::CbcMaxNodesNotImproving, value);
       break;
 
     case CBC_PARAM_INT_MAXSOLS:
@@ -1046,7 +1070,7 @@ int CbcOrClpParam::intParameter(CbcModel &model) const
     value = model.getIntParam(CbcModel::CbcMaxNumNode);
     break;
   case CBC_PARAM_INT_MAXNODESNOTIMPROVINGFS:
-    value = model.getIntParam(CbcModel::CbcMaxNodesNotImprovingFeasSol);
+    value = model.getIntParam(CbcModel::CbcMaxNodesNotImproving);
     break;
   case CBC_PARAM_INT_MAXSOLS:
     value = model.getIntParam(CbcModel::CbcMaxNumSol);
@@ -1222,6 +1246,10 @@ CbcOrClpParam::setDoubleValueWithMessage(double value)
 void CbcOrClpParam::setStringValue(std::string value)
 {
   stringValue_ = value;
+}
+void CbcOrClpParam::appendStringValue(std::string value)
+{
+  stringValue_ = stringValue_ + value;
 }
 static char line[1000];
 static char *where = NULL;
@@ -1439,6 +1467,7 @@ CoinReadGetString(int argc, const char *argv[])
   //std::cout<<field<<std::endl;
   return field;
 }
+static std::string errorField="";
 // valid 0 - okay, 1 bad, 2 not there
 int CoinReadGetIntField(int argc, const char *argv[], int *valid)
 {
@@ -1472,12 +1501,93 @@ int CoinReadGetIntField(int argc, const char *argv[], int *valid)
       *valid = 0;
     } else {
       *valid = 1;
-      std::cout << "String of " << field;
+      errorField = field;
+      //std::cout << "String of " << field;
     }
   } else {
     *valid = 2;
   }
   return static_cast< int >(value);
+}
+std::string getCoinErrorField()
+{
+  return errorField;
+}
+// Decodes options
+int
+CbcOrClpParam::optionIntField(std::string field, int *valid)
+{
+  size_t last = stringValue_.find_last_of('#');
+  char allowed = stringValue_[last+1];
+  *valid = 0;
+  int value = 0;
+  while (field.length()) {
+    std::string thisPart;
+    size_t findSep = field.find_first_of(allowed);
+    if (findSep != std::string::npos) {
+      thisPart = field.substr(0,findSep);
+      field = field.substr(findSep+1);
+    } else {
+      thisPart = field;
+      field = "";
+    }
+    for (int i=0;i<field.length();i++) {
+      char x = thisPart[i];
+      x = tolower(static_cast<unsigned char>(x));
+      thisPart[i] = x;
+    }
+    size_t current = 0;
+    bool found = false;
+    while (current<last) {
+      size_t next = stringValue_.find_first_of('#',current);
+      std::string temp = stringValue_.substr(current,next-current);
+      int n = 0;
+      size_t shriek = temp.find_first_of('[');
+      for (int i=0;i<temp.length();i++) {
+	if (temp[i]!='!') { 
+	  char x = temp[i];
+	  x = tolower(static_cast<unsigned char>(x));
+	  temp[n++] = x;
+	} else {
+	  shriek = n;
+	}
+      }
+      current=next+1;
+      bool foundThis = true;
+      for (int i=0;i<thisPart.length();i++) {
+	if (thisPart[i] != temp[i]) {
+	  foundThis = false;
+	  break;
+	}
+      }
+      if (thisPart.length()<shriek)
+	foundThis = false;
+      if (foundThis) {
+	found = true;
+	size_t end1 = temp.find_first_of('[');
+	size_t end2 = temp.find_first_of(']');
+	// must be better way
+	int thisValue = atoi(temp.substr(end1+1,end2-end1-1).c_str());
+	assert (allowed=='+'||allowed=='=');
+	if (allowed=='+') {
+	  value += thisValue;
+	} else {
+	  if (value) {
+	    std::cout << "Only one = item allowed" << std::endl;
+	    found = false;
+	  } else {
+	    value = thisValue;
+	  }
+	}
+	break;
+      }
+    }
+    if (!found) {
+      *valid = 1;
+      return -1;
+    }
+  }
+  return value;
 }
 double
 CoinReadGetDoubleField(int argc, const char *argv[], int *valid)
@@ -1541,7 +1651,7 @@ void establishParams(std::vector< CbcOrClpParam > &parameters)
   "Value 'before' means use the heuristic only if option doHeuristics is used. " \
   "Value 'both' means to use the heuristic if option doHeuristics is used and during solve."
 
-#if CLP_HAS_ABC
+#if CLP_HAS_ABC || ABOCA_LITE
   CbcOrClpParam paramAboca("abc", "Whether to visit Aboca", "off", CLP_PARAM_STR_ABCWANTED, 7, 0);
   paramAboca.append("one");
   paramAboca.append("two");
@@ -2941,6 +3051,11 @@ You can also use the parameters 'direction minimize'.");
   {
     CbcOrClpParam p("more2!MipOptions", "More more dubious options for mip",
       -1, COIN_INT_MAX, CBC_PARAM_INT_MOREMOREMIPOPTIONS, 0);
+    p.appendStringValue("nodezero1[8192][More strong branching at root node]#");
+    p.appendStringValue("nodezero2[16384][More strong branching at root node - more]#");
+    p.appendStringValue("nodezero3[24576][More strong branching at root node - yet more]#");
+    p.appendStringValue("lagrangean[234881024][lagrangean cuts at end of root cuts]#");
+    p.appendStringValue("#+"); // + allowed
     p.setIntValue(0);
     parameters.push_back(p);
   }
@@ -3024,7 +3139,10 @@ haroldo.santos@gmail.com. ");
 #endif
   {
     CbcOrClpParam p("moreS!pecialOptions", "Yet more dubious options for Simplex - see ClpSimplex.hpp",
-      0, COIN_INT_MAX, CLP_PARAM_INT_MORESPECIALOPTIONS, 0);
+		    0, COIN_INT_MAX, CLP_PARAM_INT_MORESPECIALOPTIONS, 0);
+    p.appendStringValue("keep!DualOrPrimal[8192][If you ask for dual you will always get dual (and for primal)]#");
+    p.appendStringValue("clean!Scaled[134217728][Make sure unscaled problem is feasible if scaled problem is feasible]#");
+    p.appendStringValue("#+"); // + allowed
     parameters.push_back(p);
   }
 #ifdef COIN_HAS_CBC
@@ -4149,6 +4267,9 @@ trust the pseudo costs and do not do any more strong branching.");
   {
     CbcOrClpParam p("tune!PreProcess", "Dubious tuning parameters for preprocessing",
       0, COIN_INT_MAX, CLP_PARAM_INT_PROCESSTUNE, 1);
+    p.appendStringValue("heavy!Probing[7][Do more probing]#");
+    p.appendStringValue("heavier!Probing[519][Do yet more probing]#");
+    p.appendStringValue("#="); // = allowed (so only one)
     p.setLonghelp(
       "Format aabbcccc - \n If aa then this is number of major passes (i.e. with presolve) \n \
 If bb and bb>0 then this is number of minor passes (if unset or 0 then 10) \n \

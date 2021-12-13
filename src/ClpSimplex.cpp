@@ -2864,6 +2864,14 @@ void ClpSimplex::gutsOfDelete(int type)
     primalColumnPivot_->clearArrays();
   }
 }
+// Clean solver
+void ClpSimplex::cleanSolver()
+{
+  delete [] rowScale_;
+  delete [] columnScale_;
+  rowScale_ = NULL;
+  columnScale_ = NULL;
+}
 // This sets largest infeasibility and most infeasible
 void ClpSimplex::checkPrimalSolution(const double *rowActivities,
   const double *columnActivities)
