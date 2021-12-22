@@ -3054,7 +3054,9 @@ You can also use the parameters 'direction minimize'.");
     p.appendStringValue("nodezero1[8192][More strong branching at root node]#");
     p.appendStringValue("nodezero2[16384][More strong branching at root node - more]#");
     p.appendStringValue("nodezero3[24576][More strong branching at root node - yet more]#");
-    p.appendStringValue("lagrangean[234881024][lagrangean cuts at end of root cuts]#");
+    p.appendStringValue("lagrangean1[234881024][lagrangean cuts at end of root cuts]#");
+    p.appendStringValue("lagrangean2[268435456][lagrangean cuts at end of root cuts -alt]#");
+    p.appendStringValue("lessused[536870912][less used cuts at beginning of root cuts]#");
     p.appendStringValue("#+"); // + allowed
     p.setIntValue(0);
     parameters.push_back(p);
@@ -3850,6 +3852,7 @@ way of using absolute value rather than fraction.");
       "off", CBC_PARAM_STR_REDSPLIT2CUTS);
     p.append("on");
     p.append("root");
+    p.append("ifmove");
     p.append("longOn");
     p.append("longRoot");
     p.setLonghelp("This switches on reduce and split  cuts (either at root or in entire tree). \
