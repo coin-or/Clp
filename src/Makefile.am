@@ -49,6 +49,7 @@ libClp_la_SOURCES = \
 	ClpPackedMatrix.cpp ClpPackedMatrix.hpp \
 	ClpParamUtils.cpp ClpParamUtils.hpp \
 	ClpParam.cpp ClpParam.hpp \
+	CbcOrClpParam.cpp CbcOrClpParam.hpp \
 	ClpParameters.cpp ClpParameters.hpp \
 	ClpModelParameters.hpp \
 	ClpPlusMinusOneMatrix.cpp ClpPlusMinusOneMatrix.hpp \
@@ -167,6 +168,10 @@ clp_LDADD = libClp.la $(CLPLIB_LFLAGS)
 
 AM_CPPFLAGS = $(CLPLIB_CFLAGS)
 
+# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
+# is built within Clp
+AM_CPPFLAGS += -DCOIN_HAS_CLP
+
 # Use additional libtool flags
 AM_LDFLAGS = $(LT_LDFLAGS)
 
@@ -228,7 +233,9 @@ includecoin_HEADERS = \
 	ClpPEPrimalColumnDantzig.hpp \
 	ClpPEPrimalColumnSteepest.hpp \
 	ClpPEDualRowDantzig.hpp \
-	ClpPEDualRowSteepest.hpp
+	ClpPEDualRowSteepest.hpp \
+	CbcOrClpParam.hpp \
+	CbcOrClpParam.cpp 
 
 if COIN_HAS_ABC
 includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
