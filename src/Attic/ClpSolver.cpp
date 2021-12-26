@@ -1517,16 +1517,23 @@ int ClpMain1(int argc, const char *argv[], AbcSimplex *models)
               status = models[iModel].readMps(fileName.c_str(),
                 keepImportNames != 0,
                 allowImportErrors != 0);
-            else if (gmpl > 0)
-              status = models[iModel].readGMPL(fileName.c_str(),
-                (gmpl == 2) ? gmplData.c_str() : NULL,
-                keepImportNames != 0);
-            else
+            else if (gmpl > 0){
+#ifdef COINUTILS_HAS_GLPK
+               status = models[iModel].readGMPL(fileName.c_str(),
+                 (gmpl == 2) ? gmplData.c_str() : NULL,
+                  keepImportNames != 0);
+#else
+               std::cout << "Clp was not built with GMPL support. Exiting.\n"
+                  << std::endl;
+                     abort();
+#endif
+            }else{
 #ifdef KILL_ZERO_READLP
               status = models[iModel].readLp(fileName.c_str(), models[iModel].getSmallElementValue());
 #else
               status = models[iModel].readLp(fileName.c_str(), 1.0e-12);
 #endif
+            }
             if (!status || (status > 0 && allowImportErrors)) {
               goodModels[iModel] = true;
               // sets to all slack (not necessary?)
