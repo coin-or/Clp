@@ -25,9 +25,7 @@ Description:
   License: Eclipse Public License 2.0
   LicenseURL: http://www.opensource.org/licenses/EPL-2.0
   Zenodo: 173496299
-  Appveyor:
-    Status: h3daf7woiig6n176
-  Bintray:
+  IncludedIn:
     Package: Clp
   Language:
     - C++
@@ -41,7 +39,7 @@ Dependencies:
     Required: Optional
   - Description: ThirdParty wrapper for building Mumps
     URL: https://github.com/coin-or-tools/ThirdParty-Mumps
-    Version: 2.1
+    Version: 3.0
     Required: Optional
   - Description: ThirdParty wrapper for building Glpk
     URL: https://github.com/coin-or-tools/ThirdParty-Glpk

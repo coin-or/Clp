@@ -1401,8 +1401,8 @@ long
     // No row copy check space
     CoinSimplexInt *COIN_RESTRICT indexRowR = indexRowRAddress_;
     CoinFactorizationDouble *COIN_RESTRICT elementR = elementRAddress_;
-    CoinBigIndex COIN_RESTRICT *deletedPosition = reinterpret_cast< CoinBigIndex * >(elementR + lengthR_);
-    CoinSimplexInt COIN_RESTRICT *deletedColumns = reinterpret_cast< CoinSimplexInt * >(indexRowR + lengthR_);
+    CoinBigIndex *deletedPosition = reinterpret_cast< CoinBigIndex * >(elementR + lengthR_);
+    CoinSimplexInt *deletedColumns = reinterpret_cast< CoinSimplexInt * >(indexRowR + lengthR_);
     nInRow = replaceColumnU(regionSparse, deletedPosition, deletedColumns, pivotRow);
 #endif
 #if ABC_SMALL < 2
@@ -1592,8 +1592,8 @@ long
     // No row copy check space
     CoinSimplexInt *COIN_RESTRICT indexRowR = indexRowRAddress_;
     CoinFactorizationDouble *COIN_RESTRICT elementR = elementRAddress_;
-    CoinBigIndex COIN_RESTRICT *deletedPosition = reinterpret_cast< CoinBigIndex * >(elementR + lengthR_);
-    CoinSimplexInt COIN_RESTRICT *deletedColumns = reinterpret_cast< CoinSimplexInt * >(indexRowR + lengthR_);
+    CoinBigIndex *deletedPosition = reinterpret_cast< CoinBigIndex * >(elementR + lengthR_);
+    CoinSimplexInt *deletedColumns = reinterpret_cast< CoinSimplexInt * >(indexRowR + lengthR_);
     nInRow = replaceColumnU(regionSparse, deletedPosition, deletedColumns, pivotRow);
 #endif
 #if ABC_SMALL < 2
@@ -2062,8 +2062,8 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
 #if ABC_SMALL >= 0
     assert(nInRow != 9999999); // ? what if ABC_SMALL==0 or ABC_SMALL==1
     // no row copy
-    CoinBigIndex COIN_RESTRICT *deletedPosition = reinterpret_cast< CoinBigIndex * >(elementR + lengthR_);
-    CoinSimplexInt COIN_RESTRICT *deletedColumns = reinterpret_cast< CoinSimplexInt * >(indexRowR + lengthR_);
+    CoinBigIndex *deletedPosition = reinterpret_cast< CoinBigIndex * >(elementR + lengthR_);
+    CoinSimplexInt *deletedColumns = reinterpret_cast< CoinSimplexInt * >(indexRowR + lengthR_);
     for (CoinSimplexInt i = 0; i < nInRow; i++) {
       CoinBigIndex j = deletedPosition[i];
       CoinSimplexInt jColumn = deletedColumns[i];
@@ -2747,8 +2747,8 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
 #if ABC_SMALL >= 0
     assert(nInRow != 9999999); // ? what if ABC_SMALL==0 or ABC_SMALL==1
     // no row copy
-    CoinBigIndex COIN_RESTRICT *deletedPosition = reinterpret_cast< CoinBigIndex * >(elementR + lengthR_);
-    CoinSimplexInt COIN_RESTRICT *deletedColumns = reinterpret_cast< CoinSimplexInt * >(indexRowR + lengthR_);
+    CoinBigIndex *deletedPosition = reinterpret_cast< CoinBigIndex * >(elementR + lengthR_);
+    CoinSimplexInt *deletedColumns = reinterpret_cast< CoinSimplexInt * >(indexRowR + lengthR_);
     for (CoinSimplexInt i = 0; i < nInRow; i++) {
       CoinBigIndex j = deletedPosition[i];
       CoinSimplexInt jColumn = deletedColumns[i];
@@ -3125,11 +3125,11 @@ int CoinAbcTypeFactorization::replaceColumnU(CoinIndexedVector *regionSparse,
   instrument_start("CoinAbcFactorizationReplaceColumnU", numberRows_);
   CoinSimplexDouble *COIN_RESTRICT region = regionSparse->denseVector();
   int *COIN_RESTRICT regionIndex = regionSparse->getIndices();
-  const CoinBigIndex COIN_RESTRICT *startColumn = startColumnUAddress_;
-  const CoinSimplexInt COIN_RESTRICT *indexRow = indexRowUAddress_;
-  CoinFactorizationDouble COIN_RESTRICT *element = elementUAddress_;
+  const CoinBigIndex *startColumn = startColumnUAddress_;
+  const CoinSimplexInt *indexRow = indexRowUAddress_;
+  CoinFactorizationDouble *element = elementUAddress_;
   int numberNonZero = 0;
-  const CoinSimplexInt COIN_RESTRICT *numberInColumn = numberInColumnAddress_;
+  const CoinSimplexInt *numberInColumn = numberInColumnAddress_;
   int nPut = 0;
   const CoinSimplexInt *COIN_RESTRICT pivotLinked = pivotLinkedForwardsAddress_;
   CoinSimplexInt jRow = pivotLinked[-1];
@@ -3169,14 +3169,14 @@ void CoinAbcTypeFactorization::updateColumnTransposeUByColumn(CoinIndexedVector 
 {
   instrument_start("CoinAbcFactorizationUpdateTransposeUByColumn", numberRows_);
   CoinSimplexDouble *COIN_RESTRICT region = regionSparse->denseVector();
-  const CoinBigIndex COIN_RESTRICT *startColumn = startColumnUAddress_;
-  const CoinSimplexInt COIN_RESTRICT *indexRow = indexRowUAddress_;
-  const CoinFactorizationDouble COIN_RESTRICT *element = elementUAddress_;
+  const CoinBigIndex *startColumn = startColumnUAddress_;
+  const CoinSimplexInt *indexRow = indexRowUAddress_;
+  const CoinFactorizationDouble *element = elementUAddress_;
 #if ABC_SMALL < 3
   int numberNonZero = 0;
   int *COIN_RESTRICT regionIndex = regionSparse->getIndices();
 #endif
-  const CoinSimplexInt COIN_RESTRICT *numberInColumn = numberInColumnAddress_;
+  const CoinSimplexInt *numberInColumn = numberInColumnAddress_;
   //const CoinFactorizationDouble COIN_RESTRICT *pivotRegion = pivotRegionAddress_;
   const CoinSimplexInt *COIN_RESTRICT pivotLinked = pivotLinkedForwardsAddress_;
   CoinSimplexInt jRow = smallestIndex;
