@@ -163,8 +163,8 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
         CoinMemcpyN(model->dualRowSolution(), numberRows, dualSolution_ + numberColumns);
       }
       pivotVariables_ = new int[maximumRows_];
-      if (model->pivotVariable() && model->numberRows() == numberRows)
-        CoinMemcpyN(model->pivotVariable(), numberRows, pivotVariables_);
+      if (model->pivotVariable() && model->numberRows() == numberRows) 
+	CoinMemcpyN(model->pivotVariable(), numberRows, pivotVariables_);
       else
         CoinFillN(pivotVariables_, numberRows, -1);
     }
@@ -781,7 +781,7 @@ ClpNodeStuff::operator=(const ClpNodeStuff &rhs)
     maximumNodes_ = rhs.maximumNodes_;
     numberBeforeTrust_ = rhs.numberBeforeTrust_;
     stateOfSearch_ = rhs.stateOfSearch_;
-    int n = maximumNodes();
+    int n = maximumSpace();
     if (n) {
       for (int i = 0; i < n; i++)
         delete nodeInfo_[i];
@@ -845,7 +845,7 @@ ClpNodeStuff::~ClpNodeStuff()
   delete[] numberUp_;
   delete[] numberDownInfeasible_;
   delete[] numberUpInfeasible_;
-  int n = maximumNodes();
+  int n = maximumSpace();
   if (n) {
     for (int i = 0; i < n; i++)
       delete nodeInfo_[i];

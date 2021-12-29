@@ -11652,6 +11652,7 @@ int ClpSimplex::fathom(void *stuff)
   (static_cast< ClpSimplexDual * >(this))->changeBounds(3, NULL, dummyChange);
   saveNumberFake = numberFake_;
   ClpNode **nodes = new ClpNode *[maxDepthSize];
+  memset(nodes,0,maxDepthSize*sizeof(ClpNode *));
   int numberTotal = numberRows_ + numberColumns_;
   double *saveLower = CoinCopyOfArray(columnLower_, numberColumns_);
   double *saveUpper = CoinCopyOfArray(columnUpper_, numberColumns_);
@@ -11864,7 +11865,7 @@ int ClpSimplex::fathom(void *stuff)
       abort();
     } else {
       // Create node
-      ClpNode *node;
+      ClpNode *node = NULL;
       computeDuals(NULL);
       if (depth > 0) {
         int way = nodes[depth - 1]->way();
