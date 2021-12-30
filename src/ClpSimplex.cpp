@@ -7621,6 +7621,17 @@ void ClpSimplex::allSlackBasis(bool resetSolution)
     }
   }
 }
+// Deletes rows (just ClpMode::deleteRows plus a bit)
+void
+ClpSimplex::deleteRows(int number, const int *which)
+{
+  if (number) {
+    // do more if necessary
+    delete [] pivotVariable_;
+    pivotVariable_=NULL;
+    ClpModel::deleteRows(number,which);
+  }
+}
 /* Loads a problem (the constraints on the
    rows are given by lower and upper bounds). If a pointer is 0 then the
    following values are the default:
@@ -9221,7 +9232,7 @@ int ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     if ((startFinishOptions & 1) != 0) {
       // User may expect user data - fill in as required
       if (numberRows_) {
-        if (!pivotVariable_)
+        if (!pivotVariable_) 
           pivotVariable_ = new int[numberRows_];
         CoinIotaN(pivotVariable_, numberRows_, numberColumns_);
       }
