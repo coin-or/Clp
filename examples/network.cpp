@@ -32,7 +32,7 @@ int main(int argc, const char *argv[])
      } else {
           fp = fopen("input.130", "r");
           if (!fp) {
-               fprintf(stderr, "Unable to open file input.l30 in Samples directory\n");
+               fprintf(stderr, "Unable to open file input.130 in Samples directory\n");
                exit(1);
           }
      }

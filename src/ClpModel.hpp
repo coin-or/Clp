@@ -5,6 +5,7 @@
 #ifndef ClpModel_H
 #define ClpModel_H
 
+#include "CoinUtilsConfig.h"
 #include "ClpConfig.h"
 
 #include <iostream>
@@ -20,8 +21,13 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinTypes.h"
 #include "CoinFinite.hpp"
-#include "ClpParameters.hpp"
+#include "ClpModelParameters.hpp"
 #include "ClpObjective.hpp"
+
+#ifdef COINUTILS_HAS_GLPK
+#include "glpk.h"
+#endif
+
 class ClpEventHandler;
 /** This is the base class for Linear and quadratic Models
     This knows nothing about the algorithm, but it seems to
@@ -124,9 +130,11 @@ public:
   int readMps(const char *filename,
     bool keepNames = false,
     bool ignoreErrors = false);
+#ifdef COINUTILS_HAS_GLPK
   /// Read GMPL files from the given filenames
-  int readGMPL(const char *filename, const char *dataName,
-    bool keepNames = false);
+  int readGMPL(const char *filename, const char *dataName, bool keepNames = false,
+               glp_tran **coin_glp_tran = NULL, glp_prob **coin_glp_prob = NULL);
+#endif
   /// Copy in integer informations
   void copyInIntegerInformation(const char *information);
   /// Drop integer informations
@@ -1442,4 +1450,3 @@ public:
 #define CLP_MOVEMENT 2 // be more careful on pivot row in primal
 #endif
 #endif
-

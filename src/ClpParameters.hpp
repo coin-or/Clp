@@ -1,131 +1,192 @@
-// Copyright (C) 2000, 2002, International Business Machines
-// Corporation and others.  All Rights Reserved.
-// This code is licensed under the terms of the Eclipse Public License (EPL).
+/*
+  Copyright (C) 2007, Lou Hafer, International Business Machines Corporation
+  and others.  All Rights Reserved.
 
-#ifndef _ClpParameters_H
-#define _ClpParameters_H
-
-/** This is where to put any useful stuff.
+  This code is licensed under the terms of the Eclipse Public License (EPL).
 
 */
-enum ClpIntParam {
-  /** The maximum number of iterations Clp can execute in the simplex methods
-      */
-  ClpMaxNumIteration = 0,
-  /** The maximum number of iterations Clp can execute in hotstart before
-         terminating */
-  ClpMaxNumIterationHotStart,
-  /** The name discipline; specifies how the solver will handle row and
-         column names.
-       - 0: Auto names: Names cannot be set by the client. Names of the form
-        Rnnnnnnn or Cnnnnnnn are generated on demand when a name for a
-        specific row or column is requested; nnnnnnn is derived from the row
-        or column index. Requests for a vector of names return a vector with
-        zero entries.
-       - 1: Lazy names: Names supplied by the client are retained. Names of the
-        form Rnnnnnnn or Cnnnnnnn are generated on demand if no name has been
-        supplied by the client. Requests for a vector of names return a
-        vector sized to the largest index of a name supplied by the client;
-        some entries in the vector may be null strings.
-       - 2: Full names: Names supplied by the client are retained. Names of the
-        form Rnnnnnnn or Cnnnnnnn are generated on demand if no name has been
-        supplied by the client. Requests for a vector of names return a
-        vector sized to match the constraint system, and all entries will
-        contain either the name specified by the client or a generated name.
-     */
-  ClpNameDiscipline,
-  /** Just a marker, so that we can allocate a static sized array to store
-         parameters. */
-  ClpLastIntParam
-};
+#ifndef ClpParameters_H
+#define ClpParameters_H
 
-enum ClpDblParam {
-  /** Set Dual objective limit. This is to be used as a termination criteria
-         in methods where the dual objective monotonically changes (dual
-         simplex). */
-  ClpDualObjectiveLimit,
-  /** Primal objective limit. This is to be used as a termination
-         criteria in methods where the primal objective monotonically changes
-         (e.g., primal simplex) */
-  ClpPrimalObjectiveLimit,
-  /** The maximum amount the dual constraints can be violated and still be
-         considered feasible. */
-  ClpDualTolerance,
-  /** The maximum amount the primal constraints can be violated and still be
-         considered feasible. */
-  ClpPrimalTolerance,
-  /** Objective function constant. This the value of the constant term in
-         the objective function. */
-  ClpObjOffset,
-  /// Maximum time in seconds - after, this action is as max iterations
-  ClpMaxSeconds,
-  /// Maximum wallclock running time in seconds - after, this action is as max iterations
-  ClpMaxWallSeconds,
-  /// Tolerance to use in presolve
-  ClpPresolveTolerance,
-  /** Just a marker, so that we can allocate a static sized array to store
-         parameters. */
-  ClpLastDblParam
-};
+/* \file ClpParameters.hpp
+   \brief Declarations for parameters of Clp.
+*/
 
-enum ClpStrParam {
-  /** Name of the problem. This is the found on the Name card of
-         an mps file. */
-  ClpProbName = 0,
-  /** Just a marker, so that we can allocate a static sized array to store
-         parameters. */
-  ClpLastStrParam
-};
+#include "ClpConfig.h"
 
-/// Copy (I don't like complexity of Coin version)
-template < class T >
-inline void
-ClpDisjointCopyN(const T *array, const CoinBigIndex size, T *newArray)
-{
-  memcpy(reinterpret_cast< void * >(newArray), array, size * sizeof(T));
-}
-/// And set
-template < class T >
-inline void
-ClpFillN(T *array, const CoinBigIndex size, T value)
-{
-  CoinBigIndex i;
-  for (i = 0; i < size; i++)
-    array[i] = value;
-}
-/// This returns a non const array filled with input from scalar or actual array
-template < class T >
-inline T *
-ClpCopyOfArray(const T *array, const CoinBigIndex size, T value)
-{
-  T *arrayNew = new T[size];
-  if (array)
-    ClpDisjointCopyN(array, size, arrayNew);
-  else
-    ClpFillN(arrayNew, size, value);
-  return arrayNew;
-}
+#include "ClpParam.hpp"
+#include "ClpSimplex.hpp"
 
-/// This returns a non const array filled with actual array (or NULL)
-template < class T >
-inline T *
-ClpCopyOfArray(const T *array, const CoinBigIndex size)
-{
-  if (array) {
-    T *arrayNew = new T[size];
-    ClpDisjointCopyN(array, size, arrayNew);
-    return arrayNew;
-  } else {
-    return NULL;
+/* \brief Clp algorithm control class
+
+  This class defines and stores the parameters used to control the operation 
+  of Clp.
+*/
+
+class CLPLIB_EXPORT ClpParameters {
+
+public:
+  /*! \name Constructors and destructors */
+  //@{
+
+  /*! \brief Constructors */
+  ClpParameters(bool cbcMode = false);
+
+  ClpParameters(int strategy, bool cbcMode = false);
+
+  void init(int strategy);
+
+  /*! \brief Destructor */
+  ~ClpParameters();
+
+  /*! \name Enumeration types used for Clp keyword parameters */
+  //@{
+
+   /*! \brief Codes to specify overall strategies */
+   
+   enum ClpStrategy { DefaultStrategy = 0 };
+      
+  /*! \brief Codes to specify one or off for binary parameters
+
+     - ParamOff: Capability is switched off
+     - ParamOn: Capability is switched on
+   */
+
+  enum OnOffMode { ParamOff = 0, ParamOn, ParamEndMarker };
+
+  /*! \brief What parameters to print
+
+    - displayAll:
+    - displayLowHigh:
+    - displayHigh:
+    - displayEndMarker
+
+   */
+
+  enum CommandDisplayMode {
+     displayAll = 0,
+     displayLowHigh,
+     displayHigh,
+     displayEndMarker
+  };
+  //@}
+  
+  /*! \name Operators
+      \brief Functions that define operators to allow access by []. 
+  */
+
+  //@{
+
+  ClpParam *operator[](std::size_t idx){
+     return getParam(idx);
   }
-}
-/// For a structure to be used by trusted code
-typedef struct {
-  int typeStruct; // allocated as 1,2 etc
-  int typeCall;
-  void *data;
-} ClpTrustedData;
-#endif
+   
+  /*! \name Functions for Setting Up Parameters
+      \brief Functions that populate the parameters objects. 
+  */
 
-/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/
+  //@{
+
+  /*! set up the solver parameter vector */
+  void addClpParams();
+  void addClpStrParams();
+  void addClpDirParams();
+  void addClpFileParams();
+  void addClpHelpParams();
+  void addClpActionParams();
+  void addClpKwdParams();
+  void addClpDblParams();
+  void addClpIntParams();
+  void addClpBoolParams();
+
+  /*! set up the default */
+  void setDefaults(int strategy);
+
+  //@{
+
+  /*! \name Access functions
+      \brief Functions that get and set data. 
+  */
+
+  //@{
+  /* \brief Get Clp solver parameter vector */
+  inline CoinParamVec &paramVec() { return parameters_; }
+
+  /* \brief Get specific Clp solver parameter object */
+  inline ClpParam *getParam(int code) {
+     return static_cast<ClpParam *>(parameters_[code]);
+  }
+
+  /* \brief Get value of parameter */
+  void getParamVal(int code, std::string &value) {
+     value = parameters_[code]->getVal(value);
+  }
+  void getParamVal(int code, double &value) {
+     value = parameters_[code]->getVal(value);
+  }
+  void getParamVal(int code, int &value) {
+     value = parameters_[code]->getVal(value);
+  }
+
+  /* \brief Set value of parameter */
+   void setParamVal(int code, std::string value,
+                    std::string *message = NULL,
+                    CoinParam::ParamPushMode pMode = CoinParam::pushDefault) {
+      parameters_[code]->setVal(value, message, pMode);
+  }
+   void setParamVal(int code, double value,
+                    std::string *message = NULL,
+                    CoinParam::ParamPushMode pMode = CoinParam::pushDefault) {
+      parameters_[code]->setVal(value, message, pMode);
+  }
+   void setParamVal(int code, int value,
+                    std::string *message = NULL,
+                    CoinParam::ParamPushMode pMode = CoinParam::pushDefault) {
+      parameters_[code]->setVal(value, message, pMode);
+  }
+
+  /* \brief Get version */
+  inline std::string getVersion() { return CLP_VERSION; }
+
+  /* \brief Get default directory */
+  inline std::string getDefaultDirectory() { return dfltDirectory_; }
+
+  /* \brief Set default directory */
+   inline void setDefaultDirectory(std::string dir) { dfltDirectory_ = dir; }
+
+  /*! \brief Set Clp model */
+  inline void setModel(ClpSimplex *model) { model_ = model; }
+
+  /*! \brief Get Clp model */
+  inline ClpSimplex *getModel() const { return (model_); }
+
+  /*! \brief Say whether in CbcMode */
+  inline void setCbcMode(bool yesNo) { cbcMode_ = yesNo; }
+#ifdef CBC_CLUMSY_CODING
+  /*! \brief Synchronize Clp model - Int and Dbl */
+  void synchronizeModel();
+
+#endif
+  //@{
+
+   /*! \brief Returns index of first parameter that matches and number of 
+     matches overall. Returns CLP_INVALID if no match */
+   int matches(std::string field, int &numberMatches); 
+   
+private:
+   
+  /*! \brief Default directory prefix */
+  std::string dfltDirectory_;
+
+  /*! \brief The Cbc parameter vector (parameters stored by their index) */
+  CoinParamVec parameters_;
+
+  /*! \brief A pointer to the current ClpSimplex object */
+  ClpSimplex *model_;
+
+  /*! \brief To say if in Cbc mode */
+  bool cbcMode_;
+
+};
+
+#endif

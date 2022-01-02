@@ -2864,6 +2864,14 @@ void ClpSimplex::gutsOfDelete(int type)
     primalColumnPivot_->clearArrays();
   }
 }
+// Clean solver
+void ClpSimplex::cleanSolver()
+{
+  delete [] rowScale_;
+  delete [] columnScale_;
+  rowScale_ = NULL;
+  columnScale_ = NULL;
+}
 // This sets largest infeasibility and most infeasible
 void ClpSimplex::checkPrimalSolution(const double *rowActivities,
   const double *columnActivities)
@@ -7613,6 +7621,17 @@ void ClpSimplex::allSlackBasis(bool resetSolution)
     }
   }
 }
+// Deletes rows (just ClpMode::deleteRows plus a bit)
+void
+ClpSimplex::deleteRows(int number, const int *which)
+{
+  if (number) {
+    // do more if necessary
+    delete [] pivotVariable_;
+    pivotVariable_=NULL;
+    ClpModel::deleteRows(number,which);
+  }
+}
 /* Loads a problem (the constraints on the
    rows are given by lower and upper bounds). If a pointer is 0 then the
    following values are the default:
@@ -7731,14 +7750,17 @@ int ClpSimplex::readMps(const char *filename,
   return status;
 }
 
+#ifdef COINUTILS_HAS_GLPK
 // Read GMPL files from the given filenames
-int ClpSimplex::readGMPL(const char *filename, const char *dataName,
-  bool keepNames)
+int ClpSimplex::readGMPL(const char *filename, const char *dataName, bool keepNames,
+                          glp_tran **coin_glp_tran, glp_prob **coin_glp_prob)
 {
-  int status = ClpModel::readGMPL(filename, dataName, keepNames);
+  int status = ClpModel::readGMPL(filename, dataName, keepNames, coin_glp_tran,
+				  coin_glp_prob);
   createStatus();
   return status;
 }
+#endif
 
 // Read file in LP format from file with name filename.
 int ClpSimplex::readLp(const char *filename, const double epsilon)
@@ -9210,7 +9232,7 @@ int ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
     if ((startFinishOptions & 1) != 0) {
       // User may expect user data - fill in as required
       if (numberRows_) {
-        if (!pivotVariable_)
+        if (!pivotVariable_) 
           pivotVariable_ = new int[numberRows_];
         CoinIotaN(pivotVariable_, numberRows_, numberColumns_);
       }
@@ -11641,6 +11663,7 @@ int ClpSimplex::fathom(void *stuff)
   (static_cast< ClpSimplexDual * >(this))->changeBounds(3, NULL, dummyChange);
   saveNumberFake = numberFake_;
   ClpNode **nodes = new ClpNode *[maxDepthSize];
+  memset(nodes,0,maxDepthSize*sizeof(ClpNode *));
   int numberTotal = numberRows_ + numberColumns_;
   double *saveLower = CoinCopyOfArray(columnLower_, numberColumns_);
   double *saveUpper = CoinCopyOfArray(columnUpper_, numberColumns_);
@@ -11853,7 +11876,7 @@ int ClpSimplex::fathom(void *stuff)
       abort();
     } else {
       // Create node
-      ClpNode *node;
+      ClpNode *node = NULL;
       computeDuals(NULL);
       if (depth > 0) {
         int way = nodes[depth - 1]->way();

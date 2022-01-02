@@ -14,7 +14,7 @@ include $(top_srcdir)/BuildTools/Makemain.inc
 
 # Name of the library compiled in this directory.  We want it to be installed
 # in the 'lib' directory
-lib_LTLIBRARIES = libClp.la libClpSolver.la
+lib_LTLIBRARIES = libClp.la 
 
 # List all source files for this library, including headers
 libClp_la_SOURCES = \
@@ -47,7 +47,11 @@ libClp_la_SOURCES = \
 	ClpNode.cpp ClpNode.hpp \
 	ClpObjective.cpp ClpObjective.hpp \
 	ClpPackedMatrix.cpp ClpPackedMatrix.hpp \
-	ClpParameters.hpp \
+	ClpParamUtils.cpp ClpParamUtils.hpp \
+	ClpParam.cpp ClpParam.hpp \
+	CbcOrClpParam.cpp CbcOrClpParam.hpp \
+	ClpParameters.cpp ClpParameters.hpp \
+	ClpModelParameters.hpp \
 	ClpPlusMinusOneMatrix.cpp ClpPlusMinusOneMatrix.hpp \
 	ClpPredictorCorrector.cpp ClpPredictorCorrector.hpp \
 	ClpPdco.cpp ClpPdco.hpp \
@@ -71,7 +75,11 @@ libClp_la_SOURCES = \
 	ClpPEPrimalColumnDantzig.cpp ClpPEPrimalColumnDantzig.hpp \
  	ClpPEPrimalColumnSteepest.cpp ClpPEPrimalColumnSteepest.hpp \
  	ClpPEDualRowDantzig.cpp ClpPEDualRowDantzig.hpp \
- 	ClpPEDualRowSteepest.cpp ClpPEDualRowSteepest.hpp
+ 	ClpPEDualRowSteepest.cpp ClpPEDualRowSteepest.hpp \
+	ClpSolver.cpp \
+	MyEventHandler.cpp MyEventHandler.hpp \
+	MyMessageHandler.cpp MyMessageHandler.hpp \
+	unitTest.cpp
 
 if COIN_HAS_ABC
 libClp_la_SOURCES += \
@@ -119,13 +127,6 @@ libClp_la_SOURCES += \
 	CoinAbcSmallFactorization5.cpp
 endif
 
-libClpSolver_la_SOURCES = \
-	ClpSolver.cpp \
-	CbcOrClpParam.cpp CbcOrClpParam.hpp \
-	MyEventHandler.cpp MyEventHandler.hpp \
-	MyMessageHandler.cpp MyMessageHandler.hpp \
-	unitTest.cpp
-
 # if AMD or CHOLMOD is available, then compile ClpCholeskyUfl.cpp
 if COIN_HAS_AMD
 libClp_la_SOURCES += ClpCholeskyUfl.cpp ClpCholeskyUfl.hpp
@@ -146,7 +147,6 @@ endif
 
 # List all additionally required libraries
 libClp_la_LIBADD = $(CLPLIB_LFLAGS)
-libClpSolver_la_LIBADD = libClp.la
 
 ########################################################################
 #                            clp program                               #
@@ -160,7 +160,7 @@ bin_PROGRAMS = clp
 clp_SOURCES = ClpMain.cpp 
 
 # List all additionally required libraries
-clp_LDADD = libClpSolver.la libClp.la $(CLPLIB_LFLAGS)
+clp_LDADD = libClp.la $(CLPLIB_LFLAGS)
 
 ########################################################################
 #                            Additional flags                          #
@@ -204,11 +204,13 @@ includecoin_HEADERS = \
 	ClpMatrixBase.hpp \
 	ClpMessage.hpp \
 	ClpModel.hpp \
+	ClpModelParameters.hpp \
 	ClpNetworkMatrix.hpp \
 	ClpNonLinearCost.hpp \
 	ClpNode.hpp \
 	ClpObjective.hpp \
 	ClpPackedMatrix.hpp \
+	ClpParamUtils.hpp \
 	ClpPdcoBase.hpp \
 	ClpPlusMinusOneMatrix.hpp \
 	ClpParameters.hpp \
@@ -223,14 +225,17 @@ includecoin_HEADERS = \
 	ClpSimplexDual.hpp \
 	ClpSimplexPrimal.hpp \
 	ClpSolve.hpp \
-	CbcOrClpParam.hpp \
+	ClpParam.hpp \
+	ClpParameters.hpp \
 	Idiot.hpp \
 	ClpCholeskyPardiso.hpp \
 	ClpPESimplex.hpp \
 	ClpPEPrimalColumnDantzig.hpp \
 	ClpPEPrimalColumnSteepest.hpp \
 	ClpPEDualRowDantzig.hpp \
-	ClpPEDualRowSteepest.hpp
+	ClpPEDualRowSteepest.hpp \
+	CbcOrClpParam.hpp \
+	CbcOrClpParam.cpp 
 
 if COIN_HAS_ABC
 includecoin_HEADERS += AbcSimplex.hpp CoinAbcCommon.hpp AbcCommon.hpp AbcNonLinearCost.hpp
@@ -256,7 +261,7 @@ includecoin_HEADERS += ClpCholeskyWssmp.hpp ClpCholeskyWssmpKKT.hpp
 endif
 
 # needed by Cbc
-includecoin_HEADERS += CbcOrClpParam.cpp
+includecoin_HEADERS += ClpParam.cpp
 
 
 #######################################################################

@@ -323,6 +323,12 @@ public:
   virtual void solveFromHotStart();
   /// Delete the snapshot
   virtual void unmarkHotStart();
+  /** Do series of solves from hot start
+      - with options - initially 1 - just go to first re-factorization.
+      Returns number that can be fixed (negative if whole problem infeasible)
+  */
+  virtual int solvesFromHotStart(int numberLook, const int *which,
+				 int options);
   /** Start faster dual - returns negative if problems 1 if infeasible,
       Options to pass to solver
       1 - create external reduced costs for columns

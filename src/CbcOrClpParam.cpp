@@ -4,12 +4,15 @@
 
 #include "CoinPragma.hpp"
 #include "CoinTime.hpp"
+//#define COIN_HAS_CBC
+#define COIN_HAS_CLP
 #include "CbcOrClpParam.hpp"
 #include "CoinHelperFunctions.hpp"
 
 #include <string>
 #include <iostream>
 #include <cassert>
+#include "CoinFinite.hpp"
 
 #ifdef COIN_HAS_CBC
 #ifdef COIN_HAS_CLP
@@ -908,8 +911,8 @@ CbcOrClpParam::setDoubleParameterWithMessage(CbcModel &model, double value, int 
       model.setDblParam(CbcModel::CbcMaximumSeconds, value);
       break;
     case CBC_PARAM_DBL_MAXSECONDSNIFS:
-      oldValue = model.getDblParam(CbcModel::CbcMaximumSecondsNotImprovingFeasSol);
-      model.setDblParam(CbcModel::CbcMaximumSecondsNotImprovingFeasSol, value);
+      oldValue = model.getDblParam(CbcModel::CbcMaxSecondsNotImproving);
+      model.setDblParam(CbcModel::CbcMaxSecondsNotImproving, value);
       break;
     case CLP_PARAM_DBL_DUALTOLERANCE:
     case CLP_PARAM_DBL_PRIMALTOLERANCE:
@@ -951,7 +954,7 @@ CbcOrClpParam::doubleParameter(CbcModel &model) const
     value = model.getDblParam(CbcModel::CbcMaximumSeconds);
     break;
   case CBC_PARAM_DBL_MAXSECONDSNIFS:
-    value = model.getDblParam(CbcModel::CbcMaximumSecondsNotImprovingFeasSol);
+    value = model.getDblParam(CbcModel::CbcMaxSecondsNotImproving);
     break;
 
   case CLP_PARAM_DBL_DUALTOLERANCE:
@@ -1000,8 +1003,8 @@ CbcOrClpParam::setIntParameterWithMessage(CbcModel &model, int value, int &retur
       model.setIntParam(CbcModel::CbcMaxNumNode, value);
       break;
     case CBC_PARAM_INT_MAXNODESNOTIMPROVINGFS:
-      oldValue = model.getIntParam(CbcModel::CbcMaxNodesNotImprovingFeasSol);
-      model.setIntParam(CbcModel::CbcMaxNodesNotImprovingFeasSol, value);
+      oldValue = model.getIntParam(CbcModel::CbcMaxNodesNotImproving);
+      model.setIntParam(CbcModel::CbcMaxNodesNotImproving, value);
       break;
 
     case CBC_PARAM_INT_MAXSOLS:
@@ -1067,7 +1070,7 @@ int CbcOrClpParam::intParameter(CbcModel &model) const
     value = model.getIntParam(CbcModel::CbcMaxNumNode);
     break;
   case CBC_PARAM_INT_MAXNODESNOTIMPROVINGFS:
-    value = model.getIntParam(CbcModel::CbcMaxNodesNotImprovingFeasSol);
+    value = model.getIntParam(CbcModel::CbcMaxNodesNotImproving);
     break;
   case CBC_PARAM_INT_MAXSOLS:
     value = model.getIntParam(CbcModel::CbcMaxNumSol);
@@ -3051,6 +3054,9 @@ You can also use the parameters 'direction minimize'.");
     p.appendStringValue("nodezero1[8192][More strong branching at root node]#");
     p.appendStringValue("nodezero2[16384][More strong branching at root node - more]#");
     p.appendStringValue("nodezero3[24576][More strong branching at root node - yet more]#");
+    p.appendStringValue("lagrangean1[234881024][lagrangean cuts at end of root cuts]#");
+    p.appendStringValue("lagrangean2[268435456][lagrangean cuts at end of root cuts -alt]#");
+    p.appendStringValue("lessused[536870912][less used cuts at beginning of root cuts]#");
     p.appendStringValue("#+"); // + allowed
     p.setIntValue(0);
     parameters.push_back(p);
@@ -3846,6 +3852,7 @@ way of using absolute value rather than fraction.");
       "off", CBC_PARAM_STR_REDSPLIT2CUTS);
     p.append("on");
     p.append("root");
+    p.append("ifmove");
     p.append("longOn");
     p.append("longRoot");
     p.setLonghelp("This switches on reduce and split  cuts (either at root or in entire tree). \
