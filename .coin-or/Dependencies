@@ -3,5 +3,5 @@ ThirdParty/Mumps  https://github.com/coin-or-tools/ThirdParty-Mumps stable/3.0
 ThirdParty/Glpk   https://github.com/coin-or-tools/ThirdParty-Glpk  master
 Data/Netlib       https://github.com/coin-or-tools/Data-Netlib      master
 Data/Sample       https://github.com/coin-or-tools/Data-Sample      master
-CoinUtils         https://github.com/coin-or/CoinUtils              refactor
-Osi               https://github.com/coin-or/Osi                    refactor
+CoinUtils         https://github.com/coin-or/CoinUtils              master
+Osi               https://github.com/coin-or/Osi                    master
