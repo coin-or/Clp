@@ -3306,10 +3306,12 @@ This is a first try and will hopefully become more sophisticated.");
     p.append("force");
     p.append("simple");
     p.append("on");
+    p.append("light!weight");
     p.append("more!printing");
     p.setLonghelp(
       "This switches on Orbital branching. \
-Value 'on' just adds orbital, 'strong' tries extra fixing in strong branching.");
+Value 'on' just adds orbital, 'strong' tries extra fixing in strong branching.\
+ 'lightweight' is as on where computation seems cheap");
     parameters.push_back(p);
   }
 #endif
