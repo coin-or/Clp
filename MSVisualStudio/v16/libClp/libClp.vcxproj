@@ -133,6 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\src\CbcOrClpParam.cpp" />
     <ClCompile Include="..\..\..\src\ClpCholeskyMumps.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -157,6 +158,11 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\..\src\ClpMain.cpp" />
+    <ClCompile Include="..\..\..\src\ClpParam.cpp" />
+    <ClCompile Include="..\..\..\src\ClpParameters.cpp" />
+    <ClCompile Include="..\..\..\src\ClpParamUtils.cpp" />
+    <ClCompile Include="..\..\..\src\ClpSolver.cpp" />
     <ClCompile Include="..\..\..\src\Clp_C_Interface.cpp" />
     <ClCompile Include="..\..\..\src\ClpCholeskyBase.cpp" />
     <ClCompile Include="..\..\..\src\ClpCholeskyDense.cpp" />
@@ -222,6 +228,7 @@
     <ClCompile Include="..\..\..\src\ClpPEDualRowSteepest.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\src\CbcOrClpParam.hpp" />
     <ClInclude Include="..\..\..\src\ClpCholeskyBase.hpp" />
     <ClInclude Include="..\..\..\src\ClpCholeskyDense.hpp" />
     <ClInclude Include="..\..\..\src\ClpCholeskyMumps.hpp" />
@@ -249,13 +256,16 @@
     <ClInclude Include="..\..\..\src\ClpMatrixBase.hpp" />
     <ClInclude Include="..\..\..\src\ClpMessage.hpp" />
     <ClInclude Include="..\..\..\src\ClpModel.hpp" />
+    <ClInclude Include="..\..\..\src\ClpModelParameters.hpp" />
     <ClInclude Include="..\..\..\src\ClpNetworkBasis.hpp" />
     <ClInclude Include="..\..\..\src\ClpNetworkMatrix.hpp" />
     <ClInclude Include="..\..\..\src\ClpNode.hpp" />
     <ClInclude Include="..\..\..\src\ClpNonLinearCost.hpp" />
     <ClInclude Include="..\..\..\src\ClpObjective.hpp" />
     <ClInclude Include="..\..\..\src\ClpPackedMatrix.hpp" />
+    <ClInclude Include="..\..\..\src\ClpParam.hpp" />
     <ClInclude Include="..\..\..\src\ClpParameters.hpp" />
+    <ClInclude Include="..\..\..\src\ClpParamUtils.hpp" />
     <ClInclude Include="..\..\..\src\ClpPdco.hpp" />
     <ClInclude Include="..\..\..\src\ClpPdcoBase.hpp" />
     <ClInclude Include="..\..\..\src\ClpPlusMinusOneMatrix.hpp" />
@@ -271,6 +281,7 @@
     <ClInclude Include="..\..\..\src\ClpSimplexOther.hpp" />
     <ClInclude Include="..\..\..\src\ClpSimplexPrimal.hpp" />
     <ClInclude Include="..\..\..\src\ClpSolve.hpp" />
+    <ClInclude Include="..\..\..\src\ClpSolver.hpp" />
     <ClInclude Include="..\..\..\src\Idiot.hpp" />
     <ClInclude Include="..\..\..\src\ClpPESimplex.hpp" />
     <ClInclude Include="..\..\..\src\ClpPEPrimalColumnDantzig.hpp" />
