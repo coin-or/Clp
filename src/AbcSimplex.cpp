@@ -38,7 +38,7 @@
 #include "CoinModel.hpp"
 #include "CoinLpIO.hpp"
 
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
 #include "glpk.h"
 #endif
 
@@ -4390,7 +4390,7 @@ AbcSimplex::readMps(const char *filename,
   return status;
 }
 
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
 // Read GMPL files from the given filenames
 int
 AbcSimplex::readGMPL(const char *filename, const char * dataName, bool keepNames,

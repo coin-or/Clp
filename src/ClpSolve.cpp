@@ -7,7 +7,6 @@
 #include "CoinPragma.hpp"
 #include "ClpConfig.h"
 
-// check already here if CLP_HAS_GLPK is defined, since we do not want to get confused by a CLP_HAS_GLPK in config_coinutils.h
 #if defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD) || defined(CLP_HAS_GLPK)
 #define UFL_BARRIER
 #endif
@@ -64,7 +63,7 @@ int debugInt[24];
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #endif
-#ifdef UFL_BARRIER
+#if defined(UFL_BARRIER) && (defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD))
 #include "ClpCholeskyUfl.hpp"
 #endif
 #ifdef TAUCS_BARRIER
@@ -3230,7 +3229,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       }
       break;
 #endif
-#ifdef UFL_BARRIER
+#if defined(UFL_BARRIER) && (defined(CLP_HAS_AMD) || defined(CLP_HAS_CHOLMOD))
     case 4:
       if (!doKKT) {
         ClpCholeskyUfl *cholesky = new ClpCholeskyUfl(options.getExtraInfo(1));

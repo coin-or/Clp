@@ -702,6 +702,8 @@ COIN_HAS_AMD_FALSE
 COIN_HAS_AMD_TRUE
 COIN_HAS_ABC_FALSE
 COIN_HAS_ABC_TRUE
+COIN_HAS_GLPK_FALSE
+COIN_HAS_GLPK_TRUE
 NETLIB_DATA
 COIN_HAS_NETLIB_FALSE
 COIN_HAS_NETLIB_TRUE
@@ -890,6 +892,9 @@ with_sample
 with_sample_data
 with_netlib
 with_netlib_data
+with_glpk
+with_glpk_lflags
+with_glpk_cflags
 enable_aboca
 with_amd
 with_amd_lflags
@@ -1625,6 +1630,15 @@ Optional Packages:
                           is applied as for --with-netlib-data
   --with-netlib-data      A data directory specification for Netlib
                           appropriate for your environment.
+  --with-glpk             Use Glpk. If an argument is given, 'yes' is
+                          equivalent to --with-glpk, 'no' is
+                          equivalent to --without-glpk. Any other argument is
+                          applied as for --with-glpk-lflags
+  --with-glpk-lflags      Linker flags for Glpk appropriate for your
+                          environment. (Most often, -l specs for libraries.)
+  --with-glpk-cflags      Compiler flags for Glpk appropriate for your
+                          environment. (Most often, -I specs for header file
+                          directories.)
   --with-amd              Use AMD. If an argument is given, 'yes' is
                           equivalent to --with-amd, 'no' is
                           equivalent to --without-amd. Any other argument is
@@ -18879,6 +18893,248 @@ printf "%s\n" "#define CLP_HAS_NETLIB 1" >>confdefs.h
   fi
 
 
+
+
+
+
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for package Glpk" >&5
+printf %s "checking for package Glpk... " >&6; }
+
+
+
+
+
+
+
+
+  coin_has_glpk=noInfo
+  if test x"$COIN_SKIP_PROJECTS" != x ; then
+    for pkg in `echo $COIN_SKIP_PROJECTS | tr '[:upper:]' '[:lower:]'` ; do
+      if test "$pkg" = "glpk" ; then
+        coin_has_glpk=skipping
+      fi
+    done
+  fi
+
+
+  if test "$coin_has_glpk" != skipping ; then
+
+
+
+
+# Check whether --with-glpk was given.
+if test ${with_glpk+y}
+then :
+  withval=$with_glpk;
+fi
+
+
+
+# Check whether --with-glpk-lflags was given.
+if test ${with_glpk_lflags+y}
+then :
+  withval=$with_glpk_lflags;
+fi
+
+
+
+# Check whether --with-glpk-cflags was given.
+if test ${with_glpk_cflags+y}
+then :
+  withval=$with_glpk_cflags;
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+  coin_has_glpk=requested
+
+  glpk_lflags=
+  glpk_cflags=
+  glpk_data=
+  glpk_pcfiles="coinglpk"
+
+
+  withval="$with_glpk"
+  if test -n "$withval" ; then
+    case "$withval" in
+      no )
+        coin_has_glpk=skipping
+        glpk_failmode='command line'
+        ;;
+      yes )
+        coin_has_glpk=requested
+        glpk_failmode=''
+        ;;
+      build )
+        coin_has_glpk=requested
+        glpk_build=yes
+        glpk_failmode=''
+        ;;
+      * )
+        coin_has_glpk=requested
+        glpk_failmode=''
+        glpk_lflags="$withval"
+        glpk_pcfiles=''
+        ;;
+    esac
+  else
+    if test -n "$with_glpk_lflags" ||
+       test -n "$with_glpk_cflags" ||
+       test -n "$with_glpk_data" ; then
+      coin_has_glpk=requested
+      glpk_failmode=''
+      glpk_pcfiles=''
+    fi
+  fi
+
+
+  if test "$coin_has_glpk" != skipping ; then
+       withval="$with_glpk_lflags"
+       if test -n "$withval" ; then
+         case "$withval" in
+           build | no | yes )
+             as_fn_error $? "\"$withval\" is not useful here; please specify link flags appropriate for your environment." "$LINENO" 5
+             ;;
+           * )
+             coin_has_glpk=yes
+             glpk_lflags="$withval"
+             glpk_pcfiles=''
+             ;;
+         esac
+       fi
+
+       withval="$with_glpk_cflags"
+       if test -n "$withval" ; then
+         case "$withval" in
+           build | no | yes )
+             as_fn_error $? "\"$withval\" is not useful here; please specify compile flags appropriate for your environment." "$LINENO" 5
+             ;;
+           * )
+             coin_has_glpk=yes
+             glpk_cflags="$withval"
+             glpk_pcfiles=''
+             ;;
+         esac
+       fi
+     fi
+
+
+
+
+
+  if test $coin_has_glpk = requested ; then
+    if test -n "$PKG_CONFIG" ; then
+      if test x"$glpk_build" = xyes ; then
+        pcfile="coin$glpk_pcfiles"
+
+
+
+  if test -n "$PKG_CONFIG" ; then
+    if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
+      GLPK_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
+      coin_has_glpk=yes
+    else
+      GLPK_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
+      coin_has_glpk=no
+    fi
+  else
+    as_fn_error $? "\"Cannot check for existence of module glpk without pkgconf\"" "$LINENO" 5
+  fi
+
+      fi
+      if ! test $coin_has_glpk = yes ; then
+        pcfile="$glpk_pcfiles"
+
+
+
+  if test -n "$PKG_CONFIG" ; then
+    if PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --exists "$pcfile" ; then
+      GLPK_VERSIONS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --modversion "$pcfile" 2>/dev/null | tr '\n' ' '`
+      coin_has_glpk=yes
+    else
+      GLPK_PKG_ERRORS=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG $pkg_short_errors --errors-to-stdout --print-errors "$pcfile"`
+      coin_has_glpk=no
+    fi
+  else
+    as_fn_error $? "\"Cannot check for existence of module glpk without pkgconf\"" "$LINENO" 5
+  fi
+
+      fi
+      if test $coin_has_glpk = yes ; then
+        glpk_data=`PKG_CONFIG_PATH="$COIN_PKG_CONFIG_PATH" $PKG_CONFIG --variable=datadir "$pcfile" 2>/dev/null`
+        glpk_pcfiles="$pcfile"
+      fi
+    else
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: Check for glpk via pkg-config could not be performed as there is no pkg-config available. Consider installing pkg-config or provide appropriate values for --with-glpk-lflags and --with-glpk-cflags." >&5
+printf "%s\n" "$as_me: WARNING: Check for glpk via pkg-config could not be performed as there is no pkg-config available. Consider installing pkg-config or provide appropriate values for --with-glpk-lflags and --with-glpk-cflags." >&2;}
+      coin_has_glpk=no
+    fi
+  fi
+
+
+  if test "$BUILDTOOLS_DEBUG" = 1 ; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: FIND_PRIM_PKG result for glpk: \"$coin_has_glpk\"" >&5
+printf "%s\n" "$as_me: FIND_PRIM_PKG result for glpk: \"$coin_has_glpk\"" >&6;}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Collected values for package 'glpk'" >&5
+printf "%s\n" "$as_me: Collected values for package 'glpk'" >&6;}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: glpk_lflags is \"$glpk_lflags\"" >&5
+printf "%s\n" "$as_me: glpk_lflags is \"$glpk_lflags\"" >&6;}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: glpk_cflags is \"$glpk_cflags\"" >&5
+printf "%s\n" "$as_me: glpk_cflags is \"$glpk_cflags\"" >&6;}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: glpk_data is \"$glpk_data\"" >&5
+printf "%s\n" "$as_me: glpk_data is \"$glpk_data\"" >&6;}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: glpk_pcfiles is \"$glpk_pcfiles\"" >&5
+printf "%s\n" "$as_me: glpk_pcfiles is \"$glpk_pcfiles\"" >&6;}
+  fi
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $coin_has_glpk" >&5
+printf "%s\n" "$coin_has_glpk" >&6; }
+  else
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $coin_has_glpk (COIN_SKIP_PROJECTS)" >&5
+printf "%s\n" "$coin_has_glpk (COIN_SKIP_PROJECTS)" >&6; }
+  fi
+
+
+  if test "$coin_has_glpk" != yes ; then
+    coin_has_glpk=no
+  fi
+
+
+   if test $coin_has_glpk = yes; then
+  COIN_HAS_GLPK_TRUE=
+  COIN_HAS_GLPK_FALSE='#'
+else
+  COIN_HAS_GLPK_TRUE='#'
+  COIN_HAS_GLPK_FALSE=
+fi
+
+
+
+  if test $coin_has_glpk = yes ; then
+
+printf "%s\n" "#define CLP_HAS_GLPK 1" >>confdefs.h
+
+    CLPLIB_PCFILES="$glpk_pcfiles $CLPLIB_PCFILES"
+       CLPLIB_LFLAGS="$glpk_lflags $CLPLIB_LFLAGS"
+       CLPLIB_CFLAGS="$glpk_cflags $CLPLIB_CFLAGS"
+
+
+
+  fi
+
+
 #############################################################################
 #                                    Aboca                                  #
 #############################################################################
@@ -19144,31 +19400,12 @@ printf "%s\n" "$coin_has_amd (COIN_SKIP_PROJECTS)" >&6; }
 
   if test "$coin_has_amd" = 'no' ; then
     if expr "$amd_failmode" : '.*header.*' &>/dev/null ; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING:
-Compiler flags are \"$amd_cflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-amd-cflags." >&5
-printf "%s\n" "$as_me: WARNING:
-Compiler flags are \"$amd_cflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-amd-cflags." >&2;}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Compiler flags were \"$amd_cflags\". Use --with-amd-cflags to overwrite. Check config.log for details of failed compile attempt." >&5
+printf "%s\n" "$as_me: Compiler flags were \"$amd_cflags\". Use --with-amd-cflags to overwrite. Check config.log for details of failed compile attempt." >&6;}
     fi
     if expr "$amd_failmode" : '.*link.*' &>/dev/null ; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING:
-Linker flags are \"$amd_lflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-amd-lflags." >&5
-printf "%s\n" "$as_me: WARNING:
-Linker flags are \"$amd_lflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-amd-lflags." >&2;}
-    fi
-    if expr "$amd_failmode" : '.*header.*' &>/dev/null ||
-       expr "$amd_failmode" : '.*link.*' &>/dev/null ; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING:
-Check config.log for details of failed compile or link attempts." >&5
-printf "%s\n" "$as_me: WARNING:
-Check config.log for details of failed compile or link attempts." >&2;}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Linker flags are \"$amd_lflags\". Use --with-amd-lflags to overwrite. Check config.log for details of failed link attempt." >&5
+printf "%s\n" "$as_me: Linker flags are \"$amd_lflags\". Use --with-amd-lflags to overwrite. Check config.log for details of failed link attempt." >&6;}
     fi
     if test "$amd_userflags" = 'yes' ; then
       as_fn_error $? "user-specified flags for AMD do not work." "$LINENO" 5
@@ -19421,31 +19658,12 @@ printf "%s\n" "$coin_has_cholmod (COIN_SKIP_PROJECTS)" >&6; }
 
   if test "$coin_has_cholmod" = 'no' ; then
     if expr "$cholmod_failmode" : '.*header.*' &>/dev/null ; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING:
-Compiler flags are \"$cholmod_cflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-cholmod-cflags." >&5
-printf "%s\n" "$as_me: WARNING:
-Compiler flags are \"$cholmod_cflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-cholmod-cflags." >&2;}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Compiler flags were \"$cholmod_cflags\". Use --with-cholmod-cflags to overwrite. Check config.log for details of failed compile attempt." >&5
+printf "%s\n" "$as_me: Compiler flags were \"$cholmod_cflags\". Use --with-cholmod-cflags to overwrite. Check config.log for details of failed compile attempt." >&6;}
     fi
     if expr "$cholmod_failmode" : '.*link.*' &>/dev/null ; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING:
-Linker flags are \"$cholmod_lflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-cholmod-lflags." >&5
-printf "%s\n" "$as_me: WARNING:
-Linker flags are \"$cholmod_lflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-cholmod-lflags." >&2;}
-    fi
-    if expr "$cholmod_failmode" : '.*header.*' &>/dev/null ||
-       expr "$cholmod_failmode" : '.*link.*' &>/dev/null ; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING:
-Check config.log for details of failed compile or link attempts." >&5
-printf "%s\n" "$as_me: WARNING:
-Check config.log for details of failed compile or link attempts." >&2;}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Linker flags are \"$cholmod_lflags\". Use --with-cholmod-lflags to overwrite. Check config.log for details of failed link attempt." >&5
+printf "%s\n" "$as_me: Linker flags are \"$cholmod_lflags\". Use --with-cholmod-lflags to overwrite. Check config.log for details of failed link attempt." >&6;}
     fi
     if test "$cholmod_userflags" = 'yes' ; then
       as_fn_error $? "user-specified flags for CHOLMOD do not work." "$LINENO" 5
@@ -19942,31 +20160,12 @@ printf "%s\n" "$coin_has_mumps (COIN_SKIP_PROJECTS)" >&6; }
 
   if test "$coin_has_mumps" = 'no' ; then
     if expr "$mumps_failmode" : '.*header.*' &>/dev/null ; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING:
-Compiler flags are \"$mumps_cflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-mumps-cflags." >&5
-printf "%s\n" "$as_me: WARNING:
-Compiler flags are \"$mumps_cflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-mumps-cflags." >&2;}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Compiler flags were \"$mumps_cflags\". Use --with-mumps-cflags to overwrite. Check config.log for details of failed compile attempt." >&5
+printf "%s\n" "$as_me: Compiler flags were \"$mumps_cflags\". Use --with-mumps-cflags to overwrite. Check config.log for details of failed compile attempt." >&6;}
     fi
     if expr "$mumps_failmode" : '.*link.*' &>/dev/null ; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING:
-Linker flags are \"$mumps_lflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-mumps-lflags." >&5
-printf "%s\n" "$as_me: WARNING:
-Linker flags are \"$mumps_lflags\". If you expected this test to
-succeed, check that they are correct. You can supply correct values using
---with-mumps-lflags." >&2;}
-    fi
-    if expr "$mumps_failmode" : '.*header.*' &>/dev/null ||
-       expr "$mumps_failmode" : '.*link.*' &>/dev/null ; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING:
-Check config.log for details of failed compile or link attempts." >&5
-printf "%s\n" "$as_me: WARNING:
-Check config.log for details of failed compile or link attempts." >&2;}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Linker flags are \"$mumps_lflags\". Use --with-mumps-lflags to overwrite. Check config.log for details of failed link attempt." >&5
+printf "%s\n" "$as_me: Linker flags are \"$mumps_lflags\". Use --with-mumps-lflags to overwrite. Check config.log for details of failed link attempt." >&6;}
     fi
     if test "$mumps_userflags" = 'yes' ; then
       as_fn_error $? "user-specified flags for MUMPS do not work." "$LINENO" 5
@@ -20947,6 +21146,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COIN_HAS_NETLIB_TRUE}" && test -z "${COIN_HAS_NETLIB_FALSE}"; then
   as_fn_error $? "conditional \"COIN_HAS_NETLIB\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${COIN_HAS_GLPK_TRUE}" && test -z "${COIN_HAS_GLPK_FALSE}"; then
+  as_fn_error $? "conditional \"COIN_HAS_GLPK\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${COIN_HAS_ABC_TRUE}" && test -z "${COIN_HAS_ABC_FALSE}"; then

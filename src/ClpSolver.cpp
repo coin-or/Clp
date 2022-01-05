@@ -15,7 +15,7 @@
 #include <sstream>
 #include <string>
 
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
 #include "glpk.h"
 #else
 #define GLP_UNDEF 1
@@ -193,7 +193,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
   __cilkrts_set_param("nworkers", "1");
   // abcState_=1;
 #endif
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
   glp_tran *coin_glp_tran;
   glp_prob *coin_glp_prob;
 #endif
@@ -1457,7 +1457,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           length = fileName.size();
           size_t percent = fileName.find('%');
           if (percent < length && percent > 0) {
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
              gmpl = 1;
              fileName = fileName.substr(0, percent);
              gmplData = fileName.substr(percent + 1);
@@ -1508,7 +1508,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
            status = model_.readMps(
                 fileName.c_str(), keepImportNames != 0, allowImportErrors != 0);
         } else if (gmpl > 0) {
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
            status = model_.readGMPL(
                 fileName.c_str(), (gmpl == 2) ? gmplData.c_str() : NULL,
                 keepImportNames != 0, &coin_glp_tran, &coin_glp_prob);
@@ -2237,7 +2237,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
               int numberRows = model_.getNumRows();
               int numberColumns = model_.getNumCols();
               int numberGlpkRows = numberRows + 1;
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
               if (coin_glp_prob) {
                 // from gmpl
                 numberGlpkRows = glp_get_num_rows(coin_glp_prob);
@@ -2290,7 +2290,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                         primalColumnSolution[i], dualColumnSolution[i]);
               }
               fclose(fp);
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
               if (coin_glp_prob) {
                 glp_read_sol(coin_glp_prob, fileName.c_str());
                 glp_mpl_postsolve(coin_glp_tran, coin_glp_prob, GLP_SOL);
@@ -2838,7 +2838,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
       }
     }
   }
-#ifdef COINTUILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
   if (coin_glp_prob) {
     // free up as much as possible
     glp_free(coin_glp_prob);

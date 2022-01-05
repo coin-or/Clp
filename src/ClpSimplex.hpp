@@ -268,7 +268,7 @@ public:
   int readMps(const char *filename,
     bool keepNames = false,
     bool ignoreErrors = false);
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
   /// Read GMPL files from the given filenames
   int readGMPL(const char *filename, const char *dataName,
 	       bool keepNames = false,

@@ -15,6 +15,9 @@
 /* Define to 1 if CoinUtils is available. */
 #undef CLP_HAS_COINUTILS
 
+/* Define to 1 if Glpk is available. */
+#undef CLP_HAS_GLPK
+
 /* Define to 1 if the MUMPS package is available */
 #undef CLP_HAS_MUMPS
 

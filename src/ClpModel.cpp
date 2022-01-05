@@ -2967,7 +2967,7 @@ int ClpModel::readMps(const char *fileName,
 
   return status;
 }
-#ifdef COINUTILS_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
 // Read GMPL files from the given filenames
 int ClpModel::readGMPL(const char *fileName, const char *dataName,
 		       bool keepNames,

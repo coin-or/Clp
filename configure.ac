@@ -60,6 +60,7 @@ AC_COIN_CHK_PKG(Osi,[OsiClpLib OsiClpUnitTest])
 AC_COIN_CHK_PKG(OsiTests,[OsiClpUnitTest],[osi-unittests])
 AC_COIN_CHK_PKG(Sample,,[coindatasample],[],dataonly)
 AC_COIN_CHK_PKG(Netlib,,[coindatanetlib],[],dataonly)
+AC_COIN_CHK_PKG(Glpk,[ClpLib],[coinglpk])
 
 #############################################################################
 #                                    Aboca                                  #
