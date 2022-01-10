@@ -106,11 +106,12 @@ make_doxygen_info
 echo "## Project Links
 
 Help:
+ * [Code of Conduct](https://www.coin-or.org/code-of-conduct/)
  * [Discussion forum](https://github.com/coin-or/Clp/discussions)
  * [Report a bug](https://github.com/coin-or/Clp/issues/new)
  
 Documentation:
- * [Doxygen-generated html documentation](http://www.coin-or.org/Doxygen/Clp)
+ * [Doxygen-generated html documentation](https://coin-or.github.io/Clp/Doxygen)
  * Source code [examples](examples/)
  * [User's Guide](https://coin-or.github.io/Clp) (from 2004)
 
