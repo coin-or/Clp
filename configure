@@ -1591,76 +1591,85 @@ Optional Packages:
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
   --with-sysroot[=DIR]    Search for dependent libraries within DIR (or the
                           compiler's sysroot if not specified).
-  --with-coinutils        Use CoinUtils. If an argument is given, 'yes' is
+  --without-coinutils     Do not use CoinUtils. If an argument is given to
+                          --with-coinutils, then 'yes' is
                           equivalent to --with-coinutils, 'no' is
-                          equivalent to --without-coinutils. Any other
-                          argument is applied as for --with-coinutils-lflags
+                          equivalent to --without-coinutils and any other
+                          argument is applied as for --with-coinutils-lflags.
   --with-coinutils-lflags Linker flags for CoinUtils appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-coinutils-cflags Compiler flags for CoinUtils appropriate for your
                           environment. (Most often, -I specs for header file
                           directories.)
-  --with-osi              Use Osi. If an argument is given, 'yes' is
-                          equivalent to --with-osi, 'no' is
-                          equivalent to --without-osi. Any other argument is
-                          applied as for --with-osi-lflags
+  --without-osi           Do not use Osi. If an argument is given to
+                          --with-osi, then 'yes' is equivalent to
+                          --with-osi, 'no' is equivalent to
+                          --without-osi and any other argument is applied as
+                          for --with-osi-lflags.
   --with-osi-lflags       Linker flags for Osi appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-osi-cflags       Compiler flags for Osi appropriate for your
                           environment. (Most often, -I specs for header file
                           directories.)
-  --with-ositests         Use OsiTests. If an argument is given, 'yes' is
+  --without-ositests      Do not use OsiTests. If an argument is given to
+                          --with-ositests, then 'yes' is
                           equivalent to --with-ositests, 'no' is
-                          equivalent to --without-ositests. Any other argument
-                          is applied as for --with-ositests-lflags
+                          equivalent to --without-ositests and any other
+                          argument is applied as for --with-ositests-lflags.
   --with-ositests-lflags  Linker flags for OsiTests appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-ositests-cflags  Compiler flags for OsiTests appropriate for your
                           environment. (Most often, -I specs for header file
                           directories.)
-  --with-sample           Use Sample. If an argument is given, 'yes' is
-                          equivalent to --with-sample, 'no' is
-                          equivalent to --without-sample. Any other argument
-                          is applied as for --with-sample-data
+  --without-sample        Do not use Sample. If an argument is given to
+                          --with-sample, then 'yes' is equivalent
+                          to --with-sample, 'no' is equivalent to
+                          --without-sample and any other argument is applied
+                          as for --with-sample-data.
   --with-sample-data      A data directory specification for Sample
                           appropriate for your environment.
-  --with-netlib           Use Netlib. If an argument is given, 'yes' is
-                          equivalent to --with-netlib, 'no' is
-                          equivalent to --without-netlib. Any other argument
-                          is applied as for --with-netlib-data
+  --without-netlib        Do not use Netlib. If an argument is given to
+                          --with-netlib, then 'yes' is equivalent
+                          to --with-netlib, 'no' is equivalent to
+                          --without-netlib and any other argument is applied
+                          as for --with-netlib-data.
   --with-netlib-data      A data directory specification for Netlib
                           appropriate for your environment.
-  --with-glpk             Use Glpk. If an argument is given, 'yes' is
-                          equivalent to --with-glpk, 'no' is
-                          equivalent to --without-glpk. Any other argument is
-                          applied as for --with-glpk-lflags
+  --without-glpk          Do not use Glpk. If an argument is given to
+                          --with-glpk, then 'yes' is equivalent to
+                          --with-glpk, 'no' is equivalent to
+                          --without-glpk and any other argument is applied as
+                          for --with-glpk-lflags.
   --with-glpk-lflags      Linker flags for Glpk appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-glpk-cflags      Compiler flags for Glpk appropriate for your
                           environment. (Most often, -I specs for header file
                           directories.)
-  --with-amd              Use AMD. If an argument is given, 'yes' is
-                          equivalent to --with-amd, 'no' is
-                          equivalent to --without-amd. Any other argument is
-                          applied as for --with-amd-lflags
+  --without-amd           Do not use AMD. If an argument is given to
+                          --with-amd, then 'yes' is equivalent to
+                          --with-amd, 'no' is equivalent to
+                          --without-amd and any other argument is applied as
+                          for --with-amd-lflags.
   --with-amd-lflags       Linker flags for AMD appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-amd-cflags       Compiler flags for AMD appropriate for your
                           environment. (Most often, -I specs for header file
                           directories.)
-  --with-cholmod          Use CHOLMOD. If an argument is given, 'yes' is
-                          equivalent to --with-cholmod, 'no' is
-                          equivalent to --without-cholmod. Any other argument
-                          is applied as for --with-cholmod-lflags
+  --without-cholmod       Do not use CHOLMOD. If an argument is given to
+                          --with-cholmod, then 'yes' is equivalent
+                          to --with-cholmod, 'no' is equivalent to
+                          --without-cholmod and any other argument is applied
+                          as for --with-cholmod-lflags.
   --with-cholmod-lflags   Linker flags for CHOLMOD appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-cholmod-cflags   Compiler flags for CHOLMOD appropriate for your
                           environment. (Most often, -I specs for header file
                           directories.)
-  --with-mumps            Use MUMPS. If an argument is given, 'yes' is
-                          equivalent to --with-mumps, 'no' is
-                          equivalent to --without-mumps. Any other argument is
-                          applied as for --with-mumps-lflags
+  --without-mumps         Do not use MUMPS. If an argument is given to
+                          --with-mumps, then 'yes' is equivalent
+                          to --with-mumps, 'no' is equivalent to
+                          --without-mumps and any other argument is applied as
+                          for --with-mumps-lflags.
   --with-mumps-lflags     Linker flags for MUMPS appropriate for your
                           environment. (Most often, -l specs for libraries.)
   --with-mumps-cflags     Compiler flags for MUMPS appropriate for your
@@ -3246,7 +3255,7 @@ fi
       : ${FFLAGS:="-nologo -fpp -Z7 -MDd $ADD_FFLAGS"}
       : ${FCFLAGS:="-nologo -fpp -Z7 -MDd $ADD_FCFLAGS"}
       : ${CFLAGS:="-nologo -Z7 -MDd $ADD_CFLAGS"}
-      : ${CXXFLAGS:="-nologo -EHs -Z7 -MDd $ADD_CXXFLAGS"}
+      : ${CXXFLAGS:="-nologo -EHs -Z7 -MDd -Zc:__cplusplus $ADD_CXXFLAGS"}
     else
       : ${FFLAGS:="-g $ADD_FFLAGS"}
       : ${FCFLAGS:="-g $ADD_FCFLAGS"}
@@ -3258,7 +3267,7 @@ fi
       : ${FFLAGS:="-nologo -fpp -O2 -MD $ADD_FFLAGS"}
       : ${FCFLAGS:="-nologo -fpp -O2 -MD $ADD_FCFLAGS"}
       : ${CFLAGS:="-nologo -DNDEBUG -O2 -MD $ADD_CFLAGS"}
-      : ${CXXFLAGS:="-nologo -EHs -DNDEBUG -O2 -MD $ADD_CXXFLAGS"}
+      : ${CXXFLAGS:="-nologo -EHs -DNDEBUG -O2 -MD -Zc:__cplusplus $ADD_CXXFLAGS"}
     else
       : ${FFLAGS:="-O2 $ADD_FFLAGS"}
       : ${FCFLAGS:="-O2 $ADD_FCFLAGS"}
