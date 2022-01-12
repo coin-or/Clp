@@ -12155,6 +12155,11 @@ int ClpSimplex::fathomMany(void *stuff)
     if (feasible) {
       info->presolveType_ = 0;
       // save and move pseudo costs
+      small->setMaximumIterations(10*(small->numberRows()+small->numberColumns()));
+      if (!dynamic_cast<ClpDualRowSteepest *>(small->dualRowPivot())) {
+	ClpDualRowSteepest steep;
+	small->setDualRowPivotAlgorithm(steep);
+      }
       whichSolution = small->fathomMany(stuff);
       // restore pseudocosts
       if (info->upPseudo_) {
