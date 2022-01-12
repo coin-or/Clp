@@ -17,6 +17,9 @@
 #include "ClpParam.hpp"
 #include "ClpSimplex.hpp"
 
+// For now, we need this by default. It will be removed later.
+#define CBC_CLUMSY_CODING
+
 /* \brief Clp algorithm control class
 
   This class defines and stores the parameters used to control the operation 
