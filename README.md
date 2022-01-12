@@ -103,7 +103,7 @@ following on the command line.
 ```
 wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew
 chmod u+x coinbrew
-./coinbrew fetch Clp@stable/1.17
+./coinbrew fetch Clp@1.17
 ./coinbrew build Clp
 ```
 For more detailed instructions on coinbrew, see https://coin-or.github.io/coinbrew.
