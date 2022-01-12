@@ -1,0 +1,14 @@
+<map id="/mnt/c/Users/tkral/Documents/Projects/Clp/Clp/src/AbcWarmStart.hpp" name="/mnt/c/Users/tkral/Documents/Projects/Clp/Clp/src/AbcWarmStart.hpp">
+<area shape="rect" id="node2" href="$AbcCommon_8hpp.html" title="AbcCommon.hpp" alt="" coords="115,109,237,136"/>
+<area shape="rect" id="node6" href="$ClpSimplex_8hpp.html" title="ClpSimplex.hpp" alt="" coords="347,109,458,136"/>
+<area shape="rect" id="node3" href="$ClpConfig_8h.html" title="ClpConfig.h" alt="" coords="30,259,117,285"/>
+<area shape="rect" id="node4" href="$config__clp__default_8h.html" title="config_clp_default.h" alt="" coords="5,333,141,360"/>
+<area shape="rect" id="node9" href="$ClpModel_8hpp.html" title="ClpModel.hpp" alt="" coords="591,184,691,211"/>
+<area shape="rect" id="node16" href="$ClpMatrixBase_8hpp.html" title="ClpMatrixBase.hpp" alt="" coords="1181,333,1312,360"/>
+<area shape="rect" id="node27" href="$ClpSolve_8hpp.html" title="ClpSolve.hpp" alt="" coords="68,184,167,211"/>
+<area shape="rect" id="node14" href="$ClpPackedMatrix_8hpp.html" title="ClpPackedMatrix.hpp" alt="" coords="483,259,627,285"/>
+<area shape="rect" id="node25" href="$ClpParameters_8hpp.html" title="ClpParameters.hpp" alt="" coords="1257,259,1389,285"/>
+<area shape="rect" id="node26" href="$ClpObjective_8hpp.html" title="ClpObjective.hpp" alt="" coords="1413,259,1533,285"/>
+<area shape="rect" id="node19" href="$ClpPrimalColumnSteepest_8hpp.html" title="ClpPrimalColumnSteepest.hpp" alt="" coords="455,333,654,360"/>
+<area shape="rect" id="node20" href="$ClpPrimalColumnPivot_8hpp.html" title="ClpPrimalColumnPivot.hpp" alt="" coords="397,408,573,435"/>
+</map>

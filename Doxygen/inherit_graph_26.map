@@ -1,0 +1,11 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classClpMatrixBase.html" title="Abstract base class for Clp Matrices. " alt="" coords="5,81,112,108"/>
+<area shape="rect" id="node2" href="$classClpDummyMatrix.html" title="This implements a dummy matrix as derived from ClpMatrixBase. " alt="" coords="181,5,301,32"/>
+<area shape="rect" id="node3" href="$classClpNetworkMatrix.html" title="This implements a simple network matrix as derived from ClpMatrixBase. " alt="" coords="178,56,303,83"/>
+<area shape="rect" id="node4" href="$classClpPackedMatrix.html" title="ClpPackedMatrix" alt="" coords="181,107,301,133"/>
+<area shape="rect" id="node9" href="$classClpPlusMinusOneMatrix.html" title="This implements a simple +&#45; one matrix as derived from ClpMatrixBase. " alt="" coords="160,157,321,184"/>
+<area shape="rect" id="node5" href="$classClpDynamicMatrix.html" title="This implements a dynamic matrix when we have a limit on the number of &quot;interesting rows&quot;..." alt="" coords="369,81,496,108"/>
+<area shape="rect" id="node7" href="$classClpGubMatrix.html" title="This implements Gub rows plus a ClpPackedMatrix. " alt="" coords="383,132,483,159"/>
+<area shape="rect" id="node6" href="$classClpDynamicExampleMatrix.html" title="This implements a dynamic matrix when we have a limit on the number of &quot;interesting rows&quot;..." alt="" coords="544,81,719,108"/>
+<area shape="rect" id="node8" href="$classClpGubDynamicMatrix.html" title="This implements Gub rows plus a ClpPackedMatrix. " alt="" coords="556,132,707,159"/>
+</map>

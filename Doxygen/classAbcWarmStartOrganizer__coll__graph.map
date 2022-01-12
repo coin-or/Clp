@@ -1,0 +1,31 @@
+<map id="AbcWarmStartOrganizer" name="AbcWarmStartOrganizer">
+<area shape="rect" id="node32" href="$classAbcWarmStart.html" title="As CoinWarmStartBasis but with alternatives (Also uses Clp status meaning for slacks) ..." alt="" coords="1165,879,1272,905"/>
+<area shape="rect" id="node2" href="$classAbcSimplex.html" title="AbcSimplex" alt="" coords="567,1012,658,1039"/>
+<area shape="rect" id="node25" href="$classAbcNonLinearCost.html" title="AbcNonLinearCost" alt="" coords="903,844,1035,871"/>
+<area shape="rect" id="node26" href="$classAbcPrimalColumnPivot.html" title="Primal Column Pivot Abstract Base Class. " alt="" coords="891,1003,1047,1029"/>
+<area shape="rect" id="node28" href="$classAbcDualRowPivot.html" title="Dual Row Pivot Abstract Base Class. " alt="" coords="906,1112,1033,1139"/>
+<area shape="rect" id="node29" href="$classAbcSimplexFactorization.html" title="This just implements AbcFactorization when an AbcMatrix object is passed. " alt="" coords="887,1183,1052,1209"/>
+<area shape="rect" id="node31" href="$classAbcMatrix.html" title="AbcMatrix" alt="" coords="929,932,1009,959"/>
+<area shape="rect" id="node3" href="$classClpSimplex.html" title="This solves LPs using the simplex method. " alt="" coords="255,689,341,716"/>
+<area shape="rect" id="node7" href="$classClpEventHandler.html" title="Base class for Clp event handling. " alt="" coords="553,389,672,416"/>
+<area shape="rect" id="node18" href="$classClpPrimalColumnPivot.html" title="Primal Column Pivot Abstract Base Class. " alt="" coords="537,899,689,925"/>
+<area shape="rect" id="node20" href="$classClpNetworkBasis.html" title="This deals with Factorization and Updates for network structures. " alt="" coords="551,491,674,517"/>
+<area shape="rect" id="node21" href="$classClpDisasterHandler.html" title="Base class for Clp disaster handling. " alt="" coords="545,541,680,568"/>
+<area shape="rect" id="node22" href="$classClpNonLinearCost.html" title="ClpNonLinearCost" alt="" coords="549,604,677,631"/>
+<area shape="rect" id="node23" href="$classClpDualRowPivot.html" title="Dual Row Pivot Abstract Base Class. " alt="" coords="551,743,674,769"/>
+<area shape="rect" id="node24" href="$classClpSimplexProgress.html" title="For saving extra information to see if looping. " alt="" coords="543,833,682,860"/>
+<area shape="rect" id="node4" href="$classClpModel.html" title="ClpModel" alt="" coords="931,216,1007,243"/>
+<area shape="rect" id="node5" href="$classClpObjective.html" title="Objective Abstract Base Class. " alt="" coords="565,440,661,467"/>
+<area shape="rect" id="node6" href="$structClpTrustedData.html" title="For a structure to be used by trusted code. " alt="" coords="557,12,669,39"/>
+<area shape="rect" id="node8" href="$classClpPackedMatrix.html" title="ClpPackedMatrix" alt="" coords="553,256,673,283"/>
+<area shape="rect" id="node9" href="$classClpMatrixBase.html" title="Abstract base class for Clp Matrices. " alt="" coords="245,200,351,227"/>
+<area shape="rect" id="node10" href="$classClpPackedMatrix2.html" title="ClpPackedMatrix2" alt="" coords="235,257,361,284"/>
+<area shape="rect" id="node11" href="$classClpPackedMatrix3.html" title="ClpPackedMatrix3" alt="" coords="235,308,361,335"/>
+<area shape="rect" id="node12" href="$structblockStruct.html" title="blockStruct" alt="" coords="23,308,111,335"/>
+<area shape="rect" id="node13" title="STL class. " alt="" coords="259,75,337,101"/>
+<area shape="rect" id="node14" title="STL class. " alt="" coords="5,67,129,109"/>
+<area shape="rect" id="node16" title="STL class. " alt="" coords="242,144,354,171"/>
+<area shape="rect" id="node19" href="$classClpFactorization.html" title="This just implements CoinFactorization when an ClpMatrixBase object is passed. " alt="" coords="912,591,1027,617"/>
+<area shape="rect" id="node27" href="$classClpDataSave.html" title="This is a tiny class where data can be saved round calls. " alt="" coords="249,1057,347,1084"/>
+<area shape="rect" id="node30" href="$classCoinAbcAnyFactorization.html" title="Abstract base class which also has some scalars so can be used from Dense or Simp. " alt="" coords="529,1307,696,1333"/>
+</map>

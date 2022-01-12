@@ -1,0 +1,7 @@
+<map id="ClpPrimalColumnPivot" name="ClpPrimalColumnPivot">
+<area shape="rect" id="node2" href="$classClpPrimalColumnDantzig.html" title="Primal Column Pivot Dantzig Algorithm Class. " alt="" coords="22,80,187,107"/>
+<area shape="rect" id="node4" href="$classClpPrimalColumnSteepest.html" title="Primal Column Pivot Steepest Edge Algorithm Class. " alt="" coords="216,80,391,107"/>
+<area shape="rect" id="node6" href="$classClpPrimalQuadraticDantzig.html" title="Primal Column Pivot Dantzig Algorithm Class. " alt="" coords="415,80,592,107"/>
+<area shape="rect" id="node3" href="$classClpPEPrimalColumnDantzig.html" title="ClpPEPrimalColumnDantzig" alt="" coords="5,155,188,181"/>
+<area shape="rect" id="node5" href="$classClpPEPrimalColumnSteepest.html" title="Primal Column Pivot Steepest Edge Algorithm Class. " alt="" coords="212,155,403,181"/>
+</map>

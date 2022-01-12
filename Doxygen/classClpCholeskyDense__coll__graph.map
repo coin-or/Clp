@@ -1,0 +1,26 @@
+<map id="ClpCholeskyDense" name="ClpCholeskyDense">
+<area shape="rect" id="node2" href="$classClpCholeskyBase.html" title="Base class for Clp Cholesky factorization Will do better factorization. " alt="" coords="819,53,943,80"/>
+<area shape="rect" id="node3" href="$classClpInterior.html" title="This solves LPs using interior point methods. " alt="" coords="1059,135,1141,161"/>
+<area shape="rect" id="node26" href="$classClpLsqr.html" title="This class implements LSQR. " alt="" coords="1355,173,1421,200"/>
+<area shape="rect" id="node4" href="$classClpModel.html" title="ClpModel" alt="" coords="843,249,919,276"/>
+<area shape="rect" id="node8" href="$classClpSimplex.html" title="This solves LPs using the simplex method. " alt="" coords="1057,513,1143,540"/>
+<area shape="rect" id="node5" href="$classClpObjective.html" title="Objective Abstract Base Class. " alt="" coords="523,132,619,159"/>
+<area shape="rect" id="node6" href="$structClpTrustedData.html" title="For a structure to be used by trusted code. " alt="" coords="515,183,627,209"/>
+<area shape="rect" id="node7" href="$classClpEventHandler.html" title="Base class for Clp event handling. " alt="" coords="1329,235,1447,261"/>
+<area shape="rect" id="node9" href="$classClpPrimalColumnPivot.html" title="Primal Column Pivot Abstract Base Class. " alt="" coords="1312,600,1464,627"/>
+<area shape="rect" id="node11" href="$classClpNetworkBasis.html" title="This deals with Factorization and Updates for network structures. " alt="" coords="1327,792,1449,819"/>
+<area shape="rect" id="node12" href="$classClpDisasterHandler.html" title="Base class for Clp disaster handling. " alt="" coords="1321,513,1455,540"/>
+<area shape="rect" id="node13" href="$classClpNonLinearCost.html" title="ClpNonLinearCost" alt="" coords="1324,329,1452,356"/>
+<area shape="rect" id="node14" href="$classClpDualRowPivot.html" title="Dual Row Pivot Abstract Base Class. " alt="" coords="1327,735,1449,761"/>
+<area shape="rect" id="node15" href="$classClpSimplexProgress.html" title="For saving extra information to see if looping. " alt="" coords="1319,420,1457,447"/>
+<area shape="rect" id="node10" href="$classClpFactorization.html" title="This just implements CoinFactorization when an ClpMatrixBase object is passed. " alt="" coords="1601,727,1716,753"/>
+<area shape="rect" id="node16" href="$classClpPackedMatrix.html" title="ClpPackedMatrix" alt="" coords="511,313,631,340"/>
+<area shape="rect" id="node17" href="$classClpMatrixBase.html" title="Abstract base class for Clp Matrices. " alt="" coords="245,247,351,273"/>
+<area shape="rect" id="node18" href="$classClpPackedMatrix2.html" title="ClpPackedMatrix2" alt="" coords="235,312,361,339"/>
+<area shape="rect" id="node19" href="$classClpPackedMatrix3.html" title="ClpPackedMatrix3" alt="" coords="235,363,361,389"/>
+<area shape="rect" id="node20" href="$structblockStruct.html" title="blockStruct" alt="" coords="23,363,111,389"/>
+<area shape="rect" id="node21" title="STL class. " alt="" coords="259,481,337,508"/>
+<area shape="rect" id="node22" title="STL class. " alt="" coords="5,474,129,515"/>
+<area shape="rect" id="node24" title="STL class. " alt="" coords="242,413,354,440"/>
+<area shape="rect" id="node27" href="$classClpPdcoBase.html" title="Abstract base class for tailoring everything for Pcdo. " alt="" coords="830,144,931,171"/>
+</map>
