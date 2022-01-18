@@ -1007,10 +1007,10 @@ void ClpParameters::addClpKwdParams() {
       "cut. With the current state of the solver for quadratic programs it may "
       "be a good idea to switch off crossover for this case (and maybe "
       "presolve as well) - the option 'maybe' does this.");
-  parameters_[ClpParam::CRASH]->appendKwd("off");
+  parameters_[ClpParam::CROSSOVER]->appendKwd("off");
   parameters_[ClpParam::CROSSOVER]->appendKwd("on");
-  parameters_[ClpParam::CRASH]->appendKwd("maybe");
-  parameters_[ClpParam::CRASH]->appendKwd("presolve");
+  parameters_[ClpParam::CROSSOVER]->appendKwd("maybe");
+  parameters_[ClpParam::CROSSOVER]->appendKwd("presolve");
 
   parameters_[ClpParam::DIRECTION]->setup(
       "direction", "Minimize or Maximize", 
