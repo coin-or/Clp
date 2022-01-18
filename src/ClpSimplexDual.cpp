@@ -7231,7 +7231,7 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
     if (maxPass < -10) {
       // odd
       returnCode = 1;
-      problemStatus_ = 3;
+      problemStatus_ = 10;
       // can't say anything interesting - might as well return
 #ifdef CLP_DEBUG
       printf("returning from fastDual after %d iterations with code %d because of loop\n",

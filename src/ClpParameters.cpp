@@ -142,12 +142,14 @@ void ClpParameters::setDefaults(int strategy) {
 #endif
       parameters_[ClpParam::COMMANDPRINTLEVEL]->setDefault("more");
       parameters_[ClpParam::BARRIERSCALE]->setDefault("off");
+      parameters_[ClpParam::BIASLU]->setDefault("LX");
       parameters_[ClpParam::CHOLESKY]->setDefault("native");
       parameters_[ClpParam::CRASH]->setDefault("off");
       parameters_[ClpParam::CROSSOVER]->setDefault("on");
       parameters_[ClpParam::DIRECTION]->setDefault("min!imize");
       parameters_[ClpParam::DUALPIVOT]->setDefault("auto!matic");
       parameters_[ClpParam::FACTORIZATION]->setDefault("normal");
+      parameters_[ClpParam::GAMMA]->setDefault("off");
       parameters_[ClpParam::PRESOLVE]->setDefault("on");
       parameters_[ClpParam::PRIMALPIVOT]->setDefault("auto!matic");
       parameters_[ClpParam::INTPRINT]->setDefault("normal");

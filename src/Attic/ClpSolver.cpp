@@ -29,7 +29,9 @@ int boundary_sort3 = 10000;
 #include "CoinMpsIO.hpp"
 #include "CoinFileIO.hpp"
 #include "CoinModel.hpp"
-#ifdef CLP_HAS_GLPK
+#undef CLP_HAS_GLPK // out for now
+#undef COINUTILS_HAS_GLPK 
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
 #include "glpk.h"
 extern glp_tran *cbc_glp_tran;
 extern glp_prob *cbc_glp_prob;
@@ -2374,7 +2376,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 int numberRows = models[iModel].getNumRows();
                 int numberColumns = models[iModel].getNumCols();
                 int numberGlpkRows = numberRows + 1;
-#ifdef CLP_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
                 if (cbc_glp_prob) {
                   // from gmpl
                   numberGlpkRows = glp_get_num_rows(cbc_glp_prob);
@@ -2420,7 +2422,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                     primalColumnSolution[i], dualColumnSolution[i]);
                 }
                 fclose(fp);
-#ifdef CLP_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
                 if (cbc_glp_prob) {
                   glp_read_sol(cbc_glp_prob, fileName.c_str());
                   glp_mpl_postsolve(cbc_glp_tran,
@@ -2971,7 +2973,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
     }
   }
   delete[] goodModels;
-#ifdef CLP_HAS_GLPK
+#if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
   if (cbc_glp_prob) {
     // free up as much as possible
     glp_free(cbc_glp_prob);
