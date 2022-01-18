@@ -168,10 +168,6 @@ clp_LDADD = libClp.la $(CLPLIB_LFLAGS)
 
 AM_CPPFLAGS = $(CLPLIB_CFLAGS)
 
-# CbcOrClpParam seem to require COIN_HAS_CLP so that it knows that it
-# is built within Clp
-AM_CPPFLAGS += -DCOIN_HAS_CLP
-
 # Use additional libtool flags
 AM_LDFLAGS = $(LT_LDFLAGS)
 
