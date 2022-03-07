@@ -12533,8 +12533,9 @@ int ClpSimplex::fathomMany(void *stuff)
             for (int i = 0; i < numberColumns_; i++) {
               if (integerType_[i]) {
                 int iColumn = info->whichColumn_[i];
-                info->large_->columnUpper_[iColumn] = columnUpper_[i];
-                info->large_->columnLower_[iColumn] = columnLower_[i];
+		double value = floor(columnActivity_[i]+0.5);
+                info->large_->columnUpper_[iColumn] = value;
+                info->large_->columnLower_[iColumn] = value;
               }
             }
             static_cast< ClpSimplexOther * >(info->large_)->afterCrunch(*this, info->whichRow_, info->whichColumn_, info->nBound_);
