@@ -991,6 +991,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       model2 = this;
       eventHandler()->event(ClpEventHandler::presolveInfeasible);
       problemStatus_ = pinfo->presolveStatus();
+      secondaryStatus_ = 11;
       if (options.infeasibleReturn() || (moreSpecialOptions_ & 1) != 0) {
         delete pinfo;
         return -1;
