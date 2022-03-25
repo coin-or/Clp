@@ -1261,7 +1261,9 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
 #endif
           acceptablePivot, dubiousWeights);
         if (sequenceIn_ < 0 && acceptablePivot <= acceptablePivot_) {
-          acceptablePivot_ = -fabs(acceptablePivot_); // stop early exit
+          //acceptablePivot_ = -fabs(acceptablePivot_); // stop early exit
+	  if (!factorization_->pivots())
+	    problemStatus_=1;
 	}
 #if CAN_HAVE_ZERO_OBJ > 1
         if ((specialOptions_ & 16777216) != 0)
