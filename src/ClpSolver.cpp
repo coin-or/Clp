@@ -717,10 +717,13 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           model_.factorization()->setBiasLU(mode);
           break;
         case ClpParam::PERTURBATION:
-          if (mode == 0)
-            model_.setPerturbation(50);
-          else
+          if (mode == 1) {
+	    if (model_.perturbation()==100)
+	      model_.setPerturbation(50);
+          } else {
             model_.setPerturbation(100);
+	    parameters[ClpParam::PERTVALUE]->setVal(100);
+	  }
           break;
         case ClpParam::ERRORSALLOWED:
           allowImportErrors = mode;
