@@ -669,6 +669,32 @@ int ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
     double averageInfeasibility = sumPrimalInfeasibilities_ / static_cast< double >(numberPrimalInfeasibilities_);
     if (averageInfeasibility < factor * largestPrimalError_)
       problemStatus_ = 10;
+    if (problemStatus_==1 && (specialOptions_&1024)==0
+	&& (moreSpecialOptions_&256) == 0 ) {
+      // check if any free variables have non-zero dj etc
+      getSolution(NULL,NULL);
+      if (numberDualInfeasibilities_) {
+	char generalPrint[100];
+	sprintf(generalPrint,"Looks infeasible - but some (free?) variables have bad reduced costs -> primal");
+	handler_->message(CLP_GENERAL_WARNING, messages_)
+	  << generalPrint << CoinMessageEol;
+	problemStatus_ = 10;
+      } else if (numberFake_) {
+	// check flagged
+	int nFlagged = 0;
+	for (int i=0;i<numberColumns_+numberRows_;i++) {
+	  if (flagged(i))
+	    nFlagged++;
+	}
+	if (nFlagged) {
+	  char generalPrint[100];
+	  sprintf(generalPrint,"Looks infeasible but double checking -> primal");
+	  handler_->message(CLP_GENERAL_WARNING, messages_)
+	    << generalPrint << CoinMessageEol;
+	  problemStatus_ = 10;
+	}
+      }
+    }
   }
 
   if (problemStatus_ == 10)
@@ -1849,8 +1875,13 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
             ray_ = new double[numberRows_];
             rowArray_[0]->expand(); // in case packed
             const double *array = rowArray_[0]->denseVector();
-            for (int i = 0; i < numberRows_; i++)
-              ray_[i] = array[i];
+	    if (!rowScale_) {
+	      for (int i = 0; i < numberRows_; i++)
+		ray_[i] = array[i];
+	    } else {
+	      for (int i = 0; i < numberRows_; i++)
+		ray_[i] = array[i]/rowScale_[i];
+	    }
 #ifdef PRINT_RAY_METHOD
             {
               double *farkas = new double[2 * numberColumns_ + numberRows_];
