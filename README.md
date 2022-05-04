@@ -2,6 +2,11 @@
 
 [![A COIN-OR Project](https://coin-or.github.io/coin-or-badge.png)](https://www.coin-or.org)
 
+Projects such as this one are maintained by a small group of volunteers under
+the auspices of the non-profit [COIN-OR Foundation](https://www.coin-or.org)
+and we need your help! Please consider [sponsoring our
+activities](https://github.com/sponsors/coin-or).
+
 [![Latest Release](https://img.shields.io/github/v/release/coin-or/Clp?sort=semver)](https://github.com/coin-or/Clp/releases)
 
 _This file is auto-generated from [config.yml](.coin-or/config.yml) using the 
@@ -28,14 +33,13 @@ CLP also includes a barrier method for solving LPs.
 
 Clp is written in C++ and is released as open source under the [Eclipse Public License 2.0](http://www.opensource.org/licenses/EPL-2.0).
 
-It is distributed under the auspices of the [COIN-OR Foundation](https://www.coin-or.org)
+It is distributed under the auspices of the [COIN-OR Foundation](https://www.coin-or.org).
 
 The Clp development site is https://github.com/coin-or/Clp.
 
 ## CITE
 
 Code: [![DOI](https://zenodo.org/badge/173496299.svg)](https://zenodo.org/badge/latestdoi/173496299)
-
 
 ## CURRENT BUILD STATUS
 
@@ -63,11 +67,37 @@ releases in Github
 are archived as part of Clp
 [here](https://www.coin-or.org/download/binary/Clp).
 
- * *Linux*: On Debian/Ubuntu, Clp is available in the package `coinor-clp` and can be installed with apt. On Fedora, Clp is available in the package `coin-or-Clp`.
+ * *Linux* (see https://repology.org/project/coin-or-clp/versions for a complete listing): 
+   * arch:
+     ```
+     $ sudo pacman -S  coin-or-clp
+     ```
+   * Debian/Ubuntu:
+     ```
+     $ sudo apt-get install  coinor-clp coinor-libclp-dev
+     ```
+   * Fedora/Redhat/CentOS:
+     ```
+     $ sudo yum install  coin-or-Clp coin-or-Clp-devel
+     ```
+   * freebsd:
+     ```
+     $ sudo pkg install math/clp
+     ```
+   * linuxbrew:
+     ```
+     $ brew install clp
+     ```
  * *Windows*: The easiest way to get Clp on Windows is to download an archive as described above.
  * *Mac OS X*: The easiest way to get Clp on Mac OS X is through [Homebrew](https://brew.sh).
-   * `brew tap coin-or-tools/coinor`
-   * `brew install coin-or-tools/coinor/clp`
+     ```
+     $ brew tap coin-or-tools/coinor
+     $ brew install coin-or-tools/coinor/clp
+     ```
+ * *conda* (cross-platform, no Windows for now):
+     ```
+     $ conda install coinclp
+     ```
 
 Due to license incompatibilities, pre-compiled binaries lack some functionality.
 If binaries are not available for your platform for the latest version and you would like to request them to be built and posted, feel free to let us know on the mailing list.
@@ -77,8 +107,8 @@ If binaries are not available for your platform for the latest version and you w
 Source code can be obtained either by
 
  * Downloading a snapshot of the source code for the latest release version of Clp from the
- [releases](https://github.com/coin-or/Clp/releases) page.
- * Cloning this repository from [Github](https://github.com/coin-or/Clp) or 
+ [releases](https://github.com/coin-or/Clp/releases) page,
+ * Cloning this repository from [Github](https://github.com/coin-or/Clp), or 
  * Using the [coinbrew](https://github.com/coin-or/coinbrew) script to get the project and all dependencies (recommended, see below).   
 
 ### Dependencies
@@ -94,7 +124,7 @@ OS by default).
 
 ## BUILDING from source
 
-The quick start assumes you are in a bash shell. 
+These quick start instructions assumes you are in a bash shell. 
 
 ### Using `coinbrew`
 
