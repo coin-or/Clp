@@ -94,13 +94,16 @@ are archived as part of Clp
      $ brew tap coin-or-tools/coinor
      $ brew install coin-or-tools/coinor/clp
      ```
- * *conda* (cross-platform, no Windows for now):
+
+* *conda* (cross-platform, no Windows for now):
      ```
-     $ conda install coinclp
+     $ conda install coin-or-clp
      ```
 
-Due to license incompatibilities, pre-compiled binaries lack some functionality.
-If binaries are not available for your platform for the latest version and you would like to request them to be built and posted, feel free to let us know on the mailing list.
+Due to license incompatibilities, pre-compiled binaries lack some 
+functionality. If binaries are not available for your platform for the latest 
+version and you would like to request them to be built and posted, feel free 
+to let us know on the mailing list. 
 
 ### Source
 
