@@ -4820,6 +4820,8 @@ void ClpSimplex::setSparseFactorization(bool value)
     factorization_->sparseThreshold(0);
   }
 }
+#ifdef DEBUG
+static
 void checkCorrect(ClpSimplex * /*model*/, int iRow,
   const double *element, const int *rowStart, const int *rowLength,
   const int *column,
@@ -4878,6 +4880,7 @@ void checkCorrect(ClpSimplex * /*model*/, int iRow,
   maximumUpC = maximumUp;
   maximumDownC = maximumDown;
 }
+#endif
 
 /* Tightens primal bounds to make dual faster.  Unless
    fixed, bounds are slightly looser than they could be.
@@ -6788,6 +6791,7 @@ typedef struct {
   int matrixStorageChoice;
 } Clp_scalars;
 #ifndef SLIM_NOIO
+static
 int outDoubleArray(double *array, int length, FILE *fp)
 {
   size_t numberWritten;
@@ -6984,6 +6988,7 @@ int ClpSimplex::saveModel(const char *fileName)
   }
 }
 
+static
 int inDoubleArray(double *&array, int length, FILE *fp)
 {
   size_t numberRead;
