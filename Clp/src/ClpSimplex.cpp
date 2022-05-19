@@ -6259,10 +6259,16 @@ int ClpSimplex::reducedGradient(int phase)
 #include "ClpPredictorCorrector.hpp"
 #include "ClpCholeskyBase.hpp"
 // Preference is PARDISO, WSSMP, UFL (just ordering), MUMPS, TAUCS then base
+#ifdef COIN_HAS_WSMP
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
+#endif
+#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
 #include "ClpCholeskyUfl.hpp"
+#endif
+#ifdef COIN_HAS_MUMPS
 #include "ClpCholeskyMumps.hpp"
+#endif
 #if TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
