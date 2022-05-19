@@ -8359,6 +8359,7 @@ int ClpSimplex::outDuplicateRows(int numberLook, int *whichRows, bool noOverlaps
     clpPresolveInfo *info;
     int *nActions;
   } clpPresolveMore;
+  static
   void ClpCopyToMiniSave(saveInfo & where, const char *info, unsigned int sizeInfo, int numberElements,
     const int *indices, const double *elements)
   {

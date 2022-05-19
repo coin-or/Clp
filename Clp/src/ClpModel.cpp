@@ -1125,6 +1125,7 @@ bool ClpModel::setStrParam(ClpStrParam key, const std::string &value)
 #endif
 // Useful routines
 // Returns resized array and deletes incoming
+static
 double *resizeDouble(double *array, int size, int newSize, double fill,
   bool createArray)
 {
@@ -1141,6 +1142,7 @@ double *resizeDouble(double *array, int size, int newSize, double fill,
   return array;
 }
 // Returns resized array and updates size
+static
 double *deleteDouble(double *array, int size,
   int number, const int *which, int &newSize)
 {
@@ -1170,6 +1172,7 @@ double *deleteDouble(double *array, int size,
   }
   return array;
 }
+static
 char *deleteChar(char *array, int size,
   int number, const int *which, int &newSize,
   bool ifDelete)
@@ -3215,6 +3218,7 @@ void ClpModel::setObjective(ClpObjective *objective)
   objective_ = objective->clone();
 }
 // Returns resized array and updates size
+static
 double *whichDouble(double *array, int number, const int *which)
 {
   double *newArray = NULL;
@@ -3226,6 +3230,7 @@ double *whichDouble(double *array, int number, const int *which)
   }
   return newArray;
 }
+static
 char *whichChar(char *array, int number, const int *which)
 {
   char *newArray = NULL;
@@ -3237,6 +3242,7 @@ char *whichChar(char *array, int number, const int *which)
   }
   return newArray;
 }
+static
 unsigned char *whichUnsignedChar(unsigned char *array,
   int number, const int *which)
 {
