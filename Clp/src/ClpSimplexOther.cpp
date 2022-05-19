@@ -2360,9 +2360,10 @@ int ClpSimplexOther::parametrics(const char *dataFile)
   if (intervalTheta >= endTheta)
     intervalTheta = 0.0;
   if (!good) {
-    sprintf(line, "Odd first line %s on file %s?", line, dataFile);
+    char line2[300];
+    sprintf(line2, "Odd first line %s on file %s?", line, dataFile);
     handler_->message(CLP_GENERAL, messages_)
-      << line << CoinMessageEol;
+      << line2 << CoinMessageEol;
     fclose(fp);
     return -2;
   }
