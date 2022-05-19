@@ -7769,7 +7769,6 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
       }
     }
   }
-  int numberOld = numberNonZero;
   int nMax = 0;
   for (int iBlock = 0; iBlock < numberBlocks_; iBlock++) {
     // C) Can do two at a time (if so put odd one into start_)
@@ -7917,7 +7916,6 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
         index[numberNonZero++] = iSequence;
       }
     }
-    numberOld = numberNonZero;
   }
   for (int j = numberNonZero; j < nMax; j++)
     array[j] = 0.0;

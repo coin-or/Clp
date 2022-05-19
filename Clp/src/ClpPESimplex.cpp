@@ -458,9 +458,11 @@ void ClpPESimplex::identifyCompatibleRows(CoinIndexedVector *spare,
   // No longer using wDual_
   wDual->checkClear();
   //wDual_->clear();
+#ifdef PE_TEST
   double timeTmp = 0.0;
   if (doStatistics_)
     timeTmp = CoinCpuTime();
+#endif
   double *values = wDual->denseVector();
   const double *rowScale = model_->rowScale();
   CoinPackedMatrix *clpMatrix = model_->matrix();

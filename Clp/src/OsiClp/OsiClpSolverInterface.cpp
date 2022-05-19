@@ -3068,7 +3068,9 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
       //const char * integerInformation = modelPtr_->integerType_;
       //assert (integerInformation);
 
+#if 0
       int sequenceOut = modelPtr_->sequenceOut_;
+#endif
       // Put nonzero bounds in bound
       const double *columnLower = modelPtr_->columnLower_;
       const double *columnUpper = modelPtr_->columnUpper_;
@@ -9782,7 +9784,7 @@ int OsiClpSolverInterface::infeasibleOtherWay(char *whichWay)
   int numberRows = getNumRows();
   int numberColumns = getNumCols();
 
-  int iRow, iColumn;
+  int iColumn;
 
   // Row copy
   //const double * elementByRow = matrixByRow.getElements();
@@ -9800,8 +9802,6 @@ int OsiClpSolverInterface::infeasibleOtherWay(char *whichWay)
   const int *row = getMatrixByCol()->getIndices();
   const CoinBigIndex *columnStart = getMatrixByCol()->getVectorStarts();
   const int *columnLength = getMatrixByCol()->getVectorLengths();
-  const double *objective = getObjCoefficients();
-  double direction = getObjSense();
   double tolerance = 1.0e-6;
   double *down = new double[3 * numberRows];
   double *up = down + numberRows;

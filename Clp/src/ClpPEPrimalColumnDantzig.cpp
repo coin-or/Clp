@@ -267,7 +267,6 @@ int ClpPEPrimalColumnDantzig::pivotColumn(CoinIndexedVector *updates,
     largest *= model_->largestDualError() / 1.0e-8;
 
   // initialize the best reduced cost values
-  double dualTolerance = model_->dualTolerance();
   double bestDj = 1.0e-30;
   int bestSequence = -1;
   double bestDjComp = 1.0e-30;
@@ -284,7 +283,6 @@ int ClpPEPrimalColumnDantzig::pivotColumn(CoinIndexedVector *updates,
   if (psi_ >= 1.0 || ratioCompatibles < 0.01)
     checkCompatibles = false;
 
-  int indicesToConsiderCount = 0;
   for (int iSequence = 0; iSequence < number; iSequence++) {
     // check flagged variable
     if (!model_->flagged(iSequence)) {

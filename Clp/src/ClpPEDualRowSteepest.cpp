@@ -264,8 +264,10 @@ int ClpPEDualRowSteepest::pivotRow()
   tolerance *= tolerance; // as we are using squares
   bool toleranceChanged = false;
   double *solution = model_->solutionRegion();
+#ifdef OUT_EQ
   double *lower = model_->lowerRegion();
   double *upper = model_->upperRegion();
+#endif
   // do last pivot row one here
   //#define CLP_DUAL_FIXED_COLUMN_MULTIPLIER 10.0
   if (lastPivotRow >= 0 && lastPivotRow < model_->numberRows()) {
