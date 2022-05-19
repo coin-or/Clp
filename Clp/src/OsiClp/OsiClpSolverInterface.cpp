@@ -5792,7 +5792,7 @@ int OsiClpSolverInterface::readLp(const char *filename, const double epsilon)
   *m.messagesPointer() = modelPtr_->coinMessages();
   try {
     m.readLp(filename, epsilon);
-  } catch (CoinError e) {
+  } catch (const CoinError& e) {
     printf("ERROR: %s::%s, %s\n",
       e.className().c_str(), e.methodName().c_str(), e.message().c_str());
     return -1;
