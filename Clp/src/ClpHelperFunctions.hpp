@@ -16,6 +16,7 @@
 #error "don't have header file for math"
 #endif
 #endif
+#include <string>
 
 /**
     Note (JJF) I have added some operations on arrays even though they may

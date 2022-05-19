@@ -13,6 +13,7 @@
 #include <cfloat>
 #include <cstdlib>
 #include <cmath>
+#include "ClpHelperFunctions.hpp"
 #include "CoinHelperFunctions.hpp"
 #include "CoinTypes.hpp"
 
