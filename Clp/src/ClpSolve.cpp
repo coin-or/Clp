@@ -65,7 +65,9 @@ int debugInt[24];
 #include "ClpCholeskyWssmp.hpp"
 #include "ClpCholeskyWssmpKKT.hpp"
 #endif
+#if defined(COIN_HAS_AMD) || defined(COIN_HAS_CHOLMOD) || defined(COIN_HAS_GLPK)
 #include "ClpCholeskyUfl.hpp"
+#endif
 #ifdef TAUCS_BARRIER
 #include "ClpCholeskyTaucs.hpp"
 #endif
