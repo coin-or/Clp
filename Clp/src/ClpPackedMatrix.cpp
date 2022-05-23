@@ -8387,7 +8387,7 @@ void ClpPackedMatrix3::transposeTimes2(const ClpSimplex *model,
   }
   // Make sure sequenceOut not eligible
   int sequenceOut = model->sequenceOut();
-  double saveOutDj;
+  double saveOutDj = 0.0;
   if (sequenceOut >= 0) {
     saveOutDj = reducedCost[sequenceOut];
     unsigned char thisStatus = status[sequenceOut] & 7;

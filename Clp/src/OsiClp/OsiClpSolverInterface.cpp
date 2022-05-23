@@ -148,6 +148,7 @@ void OsiClpSolverInterface::initialSolve()
   // Switch off printing if asked to
   bool gotHint = (getHintParam(OsiDoReducePrint, takeHint, strength));
   assert(gotHint);
+  (void)gotHint;
   if (strength != OsiHintIgnore && takeHint) {
     if (messageLevel > 0)
       messageLevel--;
@@ -843,6 +844,7 @@ void OsiClpSolverInterface::resolve()
   OsiHintStrength strength;
   bool gotHint = (getHintParam(OsiDoInBranchAndCut, takeHint, strength));
   assert(gotHint);
+  (void)gotHint;
   // mark so we can pick up objective value quickly
   modelPtr_->upperIn_ = 0.0;
   if ((specialOptions_ & 4096) != 0) {

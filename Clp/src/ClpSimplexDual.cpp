@@ -3899,8 +3899,7 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
             // give fake bounds if possible
             int jSequence = iSequence + addSequence;
             if (2.0 * fabs(solution_[jSequence]) < dualBound_) {
-              FakeBound bound = getFakeBound(jSequence);
-              assert(bound == ClpSimplexDual::noFake);
+              assert(getFakeBound(jSequence) == ClpSimplexDual::noFake);
               setFakeBound(jSequence, ClpSimplexDual::bothFake);
               numberFake_++;
               value = oldValue - tentativeTheta * alpha;

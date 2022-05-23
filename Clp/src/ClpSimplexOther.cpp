@@ -1310,8 +1310,10 @@ int ClpSimplexOther::setInDual(ClpSimplex *dualProblem)
   int jColumn = numberRows_;
   for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
     Status status = getColumnStatus(iColumn);
+#ifndef NDEBUG
     Status statusD = dualProblem->getRowStatus(iColumn);
     Status statusDJ = dualProblem->getColumnStatus(jColumn);
+#endif
     if (status == atLowerBound || status == isFixed || status == atUpperBound) {
       dualProblem->setRowStatus(iColumn, basic);
       numberBasic++;
@@ -1346,7 +1348,9 @@ int ClpSimplexOther::setInDual(ClpSimplex *dualProblem)
   // now rows (no ranges at first)
   for (iRow = 0; iRow < numberRows_; iRow++) {
     Status status = getRowStatus(iRow);
+#ifndef NDEBUG
     Status statusD = dualProblem->getColumnStatus(iRow);
+#endif
     if (status == basic) {
       // dual variable is at bound
       if (!lower[iRow]) {
