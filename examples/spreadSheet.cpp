@@ -48,12 +48,15 @@ int main(int argc, const char *argv[])
     exit(77);
   }
   fprintf(fp,"LowerRhs,");
+  int numberIntegers = 0;
   for (int iColumn=0;iColumn<numberColumns;iColumn++) {
     fprintf(fp,"%s,",model.columnName(iColumn).c_str());
+    if (model.isInteger(iColumn))
+      numberIntegers++;
   }
   fprintf(fp,"UpperRhs,RowActivity\n");
   for (int iRow=0;iRow<numberRows;iRow++) {
-    if (rowLower[iRow]>-1.030)
+    if (rowLower[iRow]>-1.0e30)
       fprintf(fp,"%g,",rowLower[iRow]);
     else
       fprintf(fp,"-Inf,");
@@ -74,7 +77,7 @@ int main(int argc, const char *argv[])
       fprintf(fp,",");
       iLast++;
     }
-    if (rowUpper[iRow]<1.030)
+    if (rowUpper[iRow]<1.0e30)
       fprintf(fp,"%g,",rowUpper[iRow]);
     else
       fprintf(fp,"+Inf,");
@@ -100,6 +103,19 @@ int main(int argc, const char *argv[])
 	fprintf(fp,",%g,%g\n",model.objectiveOffset(),model.objectiveValue());
     } else {
       fprintf(fp,"\n");
+    }
+  }
+  if (numberIntegers) {
+    fprintf(fp,"Integers");
+    for (int iColumn=0;iColumn<numberColumns;iColumn++) {
+      if (model.isInteger(iColumn)) {
+	if (columnUpper[iColumn]==1.0&&columnLower[iColumn]==0.0)
+	  fprintf(fp,",BV");
+	else
+	  fprintf(fp,",UI");
+      } else {
+	fprintf(fp,",");
+      }
     }
   }
   fclose(fp);
