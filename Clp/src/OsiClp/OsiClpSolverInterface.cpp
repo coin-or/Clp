@@ -2571,7 +2571,7 @@ void OsiClpSolverInterface::solveFromHotStart()
 #endif
         } else if (problemStatus == 10) {
           problemStatus = 3;
-        } else if (smallModel_->numberPrimalInfeasibilities()) {
+        } else if (!smallModel_->numberPrimalInfeasibilities()) {
           problemStatus = 1; // infeasible
         }
       } else {
