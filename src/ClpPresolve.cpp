@@ -2222,6 +2222,10 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex *originalModel,
   } else {
     rowObjective_ = NULL;
   }
+  // See if user provided good names
+  if (nrows_!= originalModel_->rowNames()->size() ||
+      ncols_!= originalModel_->columnNames()->size())
+    dropNames = true;
 
   // result is 0 - okay, 1 infeasible, -1 go round again, 2 - original model
   int result = -1;
