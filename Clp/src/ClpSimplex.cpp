@@ -5569,7 +5569,7 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
 #endif
   //int lastAlgorithm = -1;
   if ((specialOptions_ & 2048) != 0 && problemStatus_ == 10 && !numberPrimalInfeasibilities_
-    && sumDualInfeasibilities_ < 1000.0 * dualTolerance_ && perturbation_ >= 100)
+    && sumDualInfeasibilities_ < 50.0 * dualTolerance_ && perturbation_ >= 100)
     problemStatus_ = 0; // ignore
   if (problemStatus_ == 1 && ((specialOptions_ & (1024 | 4096)) == 0 || (specialOptions_ & 32) != 0)
     && (static_cast< ClpSimplexDual * >(this))->checkFakeBounds()) {
