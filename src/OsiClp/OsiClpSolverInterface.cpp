@@ -2760,6 +2760,8 @@ void OsiClpSolverInterface::solveFromHotStart()
     }
     if (status) {
       // not finished - might be optimal
+      // put back objective in case perturbed
+      CoinMemcpyN(saveObjective, number, smallModel_->costRegion());
       smallModel_->checkPrimalSolution(smallModel_->solutionRegion(0),
         smallModel_->solutionRegion(1));
       //smallModel_->gutsOfSolution(NULL,NULL,0);
