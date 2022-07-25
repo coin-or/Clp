@@ -1323,7 +1323,7 @@ void ClpNonLinearCost::goBackAll(const CoinIndexedVector *update)
       offset_[iSequence] = 0;
     }
 #ifdef CLP_DEBUG
-    for (i = 0; i < numberRows_ + numberColumns_; i++)
+    for (int i = 0; i < numberRows_ + numberColumns_; i++)
       assert(!offset_[i]);
 #endif
   }
