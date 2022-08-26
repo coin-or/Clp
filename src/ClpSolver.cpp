@@ -747,7 +747,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           printMode = mode;
           break;
         case ClpParam::KEEPNAMES:
-          keepImportNames = 1 - mode;
+          keepImportNames = mode;
           break;
         case ClpParam::PRESOLVE:
           if (mode == 0)
