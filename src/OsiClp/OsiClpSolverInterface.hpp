@@ -505,6 +505,9 @@ public:
   {
     integerInformation_[colIndex] = static_cast< char >(value);
   }
+  /// Return integer information array
+  inline const char * integerInformation() const
+  { return integerInformation_;}
   /// Get pointer to row-wise copy of matrix
   virtual const CoinPackedMatrix *getMatrixByRow() const;
 
@@ -1364,6 +1367,14 @@ public:
   inline void setContinuousModel(ClpSimplex *model)
   {
     continuousModel_ = model;
+  }
+  /// Clean up smallModel
+  inline void zapSmallModel()
+  {
+    delete smallModel_;
+    smallModel_ = NULL;
+    delete[] spareArrays_;
+    spareArrays_ = NULL;
   }
   //@}
 

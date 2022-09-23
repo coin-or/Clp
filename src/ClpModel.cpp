@@ -38,6 +38,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinTime.hpp"
 #include "ClpModel.hpp"
+#include "ClpSimplex.hpp"
 #include "ClpEventHandler.hpp"
 #include "ClpPackedMatrix.hpp"
 #ifndef SLIM_CLP
@@ -2902,10 +2903,10 @@ int ClpModel::readMps(const char *fileName,
   }
   m.messageHandler()->setPrefix(savePrefix);
   if (!status || (ignoreErrors && (status > 0 && status < 100000))) {
-    loadProblem(*m.getMatrixByCol(),
-      m.getColLower(), m.getColUpper(),
-      m.getObjCoefficients(),
-      m.getRowLower(), m.getRowUpper());
+    loadProblem(*m.getMatrixByCol(), 
+		m.getColLower(), m.getColUpper(),
+		m.getObjCoefficients(),
+		m.getRowLower(), m.getRowUpper());
     if (m.integerColumns()) {
       integerType_ = new char[numberColumns_];
       CoinMemcpyN(m.integerColumns(), numberColumns_, integerType_);
@@ -2937,9 +2938,9 @@ int ClpModel::readMps(const char *fileName,
       columnNames_ = std::vector< std::string >();
       rowNames_.reserve(numberRows_);
       for (iRow = 0; iRow < numberRows_; iRow++) {
-        const char *name = m.rowName(iRow);
-        maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(name)));
-        rowNames_.push_back(name);
+	const char *name = m.rowName(iRow);
+	maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(name)));
+	rowNames_.push_back(name);
       }
 
       int iColumn;
@@ -2959,6 +2960,9 @@ int ClpModel::readMps(const char *fileName,
     handler_->message(CLP_IMPORT_RESULT, messages_)
       << fileName
       << time2 - time1 << CoinMessageEol;
+    if (m.getInfinity()<0.0) {
+      modifyByIndicators(m);
+    }
   } else {
     // errors
     handler_->message(CLP_IMPORT_ERRORS, messages_)
@@ -2966,6 +2970,755 @@ int ClpModel::readMps(const char *fileName,
   }
 
   return status;
+}
+/* Modify model to deal with indicators.
+   startBigM are values in input.
+   If bigM > 0.0 then use that,
+   if < 0.0 use but try and improve */
+void
+ClpModel::modifyByIndicators(CoinMpsIO &m, double startBigM,
+			  double bigM)
+{
+  int numberIndicators = 0;
+  const int * row1 = matrix_->getIndices();
+  const int * columnLength1 = matrix_->getVectorLengths();
+  const CoinBigIndex * columnStart1 = matrix_->getVectorStarts();
+  double * elementByColumn1 = matrix()->getMutableElements();
+  // get transpose
+  CoinPackedMatrix rowCopy = *matrix();
+  rowCopy.reverseOrdering();
+  //const int * column1 = rowCopy.getIndices();
+  const int * rowLength1 = rowCopy.getVectorLengths();
+  //const CoinBigIndex * rowStart1 = rowCopy.getVectorStarts();
+  //const double * element1 = rowCopy.getElements();
+  double * rowLower1 = rowLower_;
+  double * rowUpper1 = rowUpper_;
+  int nExtra = 0;
+  CoinBigIndex nExtraEl = 0;
+  int * binaryInd = new int [numberRows_+1];
+  int * rowInd = new int [numberRows_+1];
+  int numberRows1 = numberRows_;
+  unsigned char * rowType = new unsigned char [numberRows1];
+  memset(rowType,0,numberRows1);
+  // should do computations to get reasonable starting bigM ?
+  for (int iColumn=0;iColumn<numberColumns_;iColumn++) {
+    for (CoinBigIndex j=columnStart1[iColumn];
+	 j<columnStart1[iColumn]+columnLength1[iColumn];j++) {
+      if (fabs(elementByColumn1[j])==startBigM) {
+	if (columnLower_[iColumn]!=columnUpper_[iColumn]) {
+	  binaryInd[numberIndicators] = iColumn;
+	  int iRow = row1[j];
+	  unsigned char jType = 1;
+	  if (rowLower1[iRow]>-1.0e50 && rowUpper1[iRow]<1.0e50) {
+	    nExtra++;
+	    nExtraEl += rowLength1[iRow];
+	    jType = 3;
+	  } else if (rowLower1[iRow]>-1.0e50) {
+	    jType = 2;
+	  }
+	  if (elementByColumn1[j]<0.0) {
+	    jType |= 4;
+	  }
+	  rowType[iRow] = jType; 
+	  rowInd[numberIndicators++] = iRow;
+	} else {
+	  // fixed!
+	  int iRow = row1[j];
+	  if ((elementByColumn1[j]<0.0 && columnLower_[iColumn])
+	       ||(elementByColumn1[j]>0.0 && !columnUpper_[iColumn])) {
+	    // applies
+	    elementByColumn1[j] = 1.0;
+	    if (columnLower_[iColumn]) {
+	      // adjust rhs
+	      if (rowLower1[iRow]>-1.0e100)
+		rowLower1[iRow] += 1.0;
+	      if (rowUpper1[iRow]<1.0e100)
+		rowUpper1[iRow] += 1.0;
+	    }
+	  } else {
+	    // free up
+	    rowLower1[iRow] = -COIN_DBL_MAX;
+	    rowUpper1[iRow] = COIN_DBL_MAX;
+	    elementByColumn1[j] = 1.0;
+	  }
+	}
+      }
+    }
+  }
+  CoinSort_2(binaryInd,binaryInd+numberIndicators,rowInd);
+  binaryInd[numberIndicators] = numberColumns_+1;
+  rowInd[numberIndicators]=-1;
+  int numberRows = numberRows1+nExtra;
+  double * rowLower = new double [numberRows];
+  double * rowUpper = new double [numberRows];
+  int * whichRow = new int [numberRows+1];
+  whichRow[numberRows]=numberRows+1;
+  double * trueRhs = new double[numberRows];
+  int iRow = 0;
+  for (int i=0;i<numberRows1;i++) {
+    whichRow[i] = iRow;
+    unsigned char jType = rowType[i]&7;
+    if (!jType) {
+      rowLower[iRow] = rowLower1[i];
+      rowUpper[iRow] = rowUpper1[i];
+      iRow++;
+    } else {
+      if ((jType&3)==2) {
+	// flip
+	rowLower[iRow] = -rowUpper1[i];
+	rowUpper[iRow] = -rowLower1[i];
+      } else if ((jType&3)==1) {
+	// no flip
+	rowLower[iRow] = rowLower1[i];
+	rowUpper[iRow] = rowUpper1[i];
+      }
+      if ((jType&3)==3) {
+	// two rows
+	rowLower[iRow] = -COIN_DBL_MAX;
+	rowUpper[iRow] = rowUpper1[i];
+	trueRhs[iRow] = rowUpper[iRow];
+	if ((jType&4)!=0)
+	  rowUpper[iRow] += bigM;
+	iRow++;
+	rowLower[iRow] = rowLower1[i];
+	rowUpper[iRow] = COIN_DBL_MAX;
+	trueRhs[iRow] = rowLower[iRow];
+	if ((jType&4)!=0)
+	  rowLower[iRow] -= bigM;
+	iRow++;
+      } else if ((jType&4)!=0) {
+	trueRhs[iRow] = rowUpper[iRow];
+	rowUpper[iRow] += bigM;
+	iRow++;
+      } else {
+	trueRhs[iRow] = rowUpper[iRow];
+	iRow++;
+      }
+    }
+  }
+  assert (iRow==numberRows);
+  int n =columnStart1[numberColumns_]+nExtraEl;
+  CoinBigIndex * columnStart = new CoinBigIndex [numberColumns_+1];
+  int * row = new int [n];
+  double * element = new double [n];
+  CoinBigIndex j=0;
+  int iColumn = binaryInd[0];
+  iRow = rowInd[0];
+  int ind=0;
+  for (int jColumn=0;jColumn<numberColumns_;jColumn++) {
+    columnStart[jColumn] = j;
+    for (CoinBigIndex k=columnStart1[jColumn];k<columnStart1[jColumn+1];k++) {
+      int irow = row1[k]; 
+      int jrow = whichRow[irow];
+      double el = elementByColumn1[k];
+      if (jColumn==iColumn && fabs(el)==startBigM)
+	continue;
+      char iType = rowType[irow]&7;
+      // could be simplified - but easier to debug
+      switch(iType) {
+	// normal 
+      case 0:
+	row[j] = jrow;
+	element[j++] = el;
+	break;
+	// <=  
+      case 1:
+	row[j] = jrow;
+	element[j++] = el;
+	break;
+	// >=
+      case 2:
+	row[j] = jrow;
+	element[j++] = -el; // flip
+	break;
+	// == or range
+      case 3:
+	row[j] = jrow;
+	element[j++] = el;
+	row[j] = jrow+1;
+	element[j++] = el;
+	break;
+	// normal flip! 
+      case 4:
+	abort();
+	// <= flip
+      case 5:
+	row[j] = jrow;
+	element[j++] = el;
+	break;
+	// >= flip
+      case 6:
+	row[j] = jrow;
+	element[j++] = -el; // flip
+	break;
+	// == or range flip
+      case 7:
+	row[j] = jrow;
+	element[j++] = el;
+	row[j] = jrow+1;
+	element[j++] = el;
+	break;
+      }
+    }
+    while (jColumn==iColumn) {
+      // now add in
+      char iType = rowType[iRow]&7;
+      assert (iType&3);
+      int jrow = whichRow[iRow];
+      // could be simplified - but easier to debug
+      switch(iType) {
+	// <= active at 0  
+      case 1:
+	row[j] = jrow;
+	element[j++] = -bigM;
+	break;
+	// >= active at 0
+      case 2:
+	row[j] = jrow;
+	element[j++] = -bigM;
+	break;
+	// == or range active at 0
+      case 3:
+	// first <= side
+	row[j] = jrow;
+	element[j++] = -bigM;
+	// then >= side
+	row[j] = jrow+1;
+	element[j++] = bigM;
+	break;
+	// <= active at 1  
+      case 5:
+	row[j] = jrow;
+	element[j++] = bigM;
+	break;
+	// >= active at 1
+      case 6:
+	row[j] = jrow;
+	// flip to make <= row
+	element[j++] = bigM;
+	break;
+	// == or range active at 1
+      case 7:
+	// first <= side
+	row[j] = jrow;
+	element[j++] = bigM;
+	// then >= side
+	row[j] = jrow+1;
+	element[j++] = -bigM;
+	break;
+      }
+      // onto next
+      ind++;
+      iColumn = binaryInd[ind];
+      iRow = rowInd[ind];
+    } assert (j<=n);
+  }
+  columnStart[numberColumns_] = j;
+  // redo problem
+  delete [] rowLower_;
+  rowLower_ = rowLower;
+  delete [] rowUpper_;
+  rowUpper_ = rowUpper;
+  numberRows_ = numberRows;
+  CoinPackedMatrix * newMatrix = new
+    CoinPackedMatrix(true,numberRows,numberColumns_,j,
+		     element,row,columnStart,NULL);
+  replaceMatrix(newMatrix,true);
+  delete [] rowActivity_;
+  delete [] dual_;
+  rowActivity_ = new double[numberRows_];
+  dual_ = new double[numberRows_];
+
+  CoinZeroN(dual_, numberRows_);
+  CoinZeroN(reducedCost_, numberColumns_);
+  // set default solution and clean bounds
+  for (iRow = 0; iRow < numberRows_; iRow++) {
+    if (rowLower_[iRow] > 0.0) {
+      rowActivity_[iRow] = rowLower_[iRow];
+    } else if (rowUpper_[iRow] < 0.0) {
+      rowActivity_[iRow] = rowUpper_[iRow];
+    } else {
+      rowActivity_[iRow] = 0.0;
+    }
+    if (rowLower_[iRow] < -1.0e27)
+      rowLower_[iRow] = -COIN_DBL_MAX;
+    if (rowUpper_[iRow] > 1.0e27)
+      rowUpper_[iRow] = COIN_DBL_MAX;
+  }
+  if (nExtra) {
+    // redo names - use m version
+    rowNames_ = std::vector< std::string >();
+    for (int iRow = 0; iRow < numberRows1; iRow++) {
+      const char *name = m.rowName(iRow);
+      lengthNames_ =
+	CoinMax(lengthNames_, static_cast<int>(strlen(name)));
+      rowNames_.push_back(name);
+      if ((rowType[iRow]&3)==3) {
+	char name2[300];
+	strcpy(name2,name);
+	strcat(name2,"_fake_");
+	lengthNames_ =
+	  CoinMax(lengthNames_, static_cast<int>(strlen(name2)));
+	rowNames_.push_back(name2);
+      }
+    }
+    // redo status array
+    delete [] status_;
+    status_ = NULL;
+    static_cast<ClpSimplex *>(this)->createStatus();
+  }
+  // improve big M
+  char temp[50];
+  sprintf(temp,"%d indicator variables found - Good Luck",
+	  numberIndicators);
+  double time0 = CoinCpuTime();
+  handler_->message(CLP_GENERAL, messages_) << temp << CoinMessageEol;
+  ClpSimplex model(*this);
+  model.passInEventHandler(eventHandler_);
+  //model.dual();
+  double * newValues = new double[numberRows];
+  double * saveObjective = NULL;
+  double saveOffset = model.objectiveOffset();
+  model.setObjectiveOffset(0.0);
+  double saveCutoff = model.dualObjectiveLimit();
+  model.setDualObjectiveLimit(COIN_DBL_MAX);
+  double saveDirection = model.optimizationDirection();
+  model.setOptimizationDirection(1.0);
+  int nTry=1;
+  for (int iTry=0;iTry<nTry;iTry++) 
+  {
+    int numberColumns = model.numberColumns();
+    int numberRows = model.numberRows();
+    int numberChanged = 0;
+    double * rowLower = model.rowLower();
+    double * rowUpper = model.rowUpper();
+    double * columnLower = model.columnLower();
+    double * columnUpper = model.columnUpper();
+    double * objective = model.objective();
+    CoinPackedMatrix * matrix = model.matrix();
+    // get transpose
+    CoinPackedMatrix rowCopy = *matrix;
+    rowCopy.reverseOrdering();
+    const int * column = rowCopy.getIndices();
+    const int * rowLength = rowCopy.getVectorLengths();
+    const CoinBigIndex * rowStart = rowCopy.getVectorStarts();
+    const double * element = rowCopy.getElements();
+    int iRow, iColumn;
+    const int * row = matrix->getIndices();
+    const int * columnLength = matrix->getVectorLengths();
+    const CoinBigIndex * columnStart = matrix->getVectorStarts();
+    double * elementByColumn = matrix->getMutableElements();
+    int ninfeas =0;
+    saveObjective = CoinCopyOfArray(objective,numberColumns);
+    memset(objective,0,numberColumns*sizeof(double));
+#if 0
+    // free up rows
+    for (int k = 0;k<numberIndicators;k++) {
+      int jRow = rowInd[k];
+      int iRow = whichRow[jRow];
+      rowUpper[iRow] = COIN_DBL_MAX;
+      unsigned char iType = rowType[jRow];
+      if ((iType&3)==3) {
+	rowLower[iRow+1] = -COIN_DBL_MAX;
+      }
+    }
+#endif
+    //#define CHECK_SOLUTION
+#ifdef CHECK_SOLUTION
+    double * solution = new double[numberColumns_];
+    {
+      FILE * fp =fopen("/tmp/c.dmp","rb");
+      double * temp = new double[CoinMax(numberRows,numberColumns_)];
+      if (fp) {
+	int n = fread(temp,sizeof(double),numberColumns_,fp);
+	fclose(fp);
+	if (n!=numberColumns_) {
+	  // some null columns
+	  int get = -1;
+	  for (int i=0;i<numberColumns_;i++) {
+	    if (columnLength[i]) {
+	      get++;
+	      solution[i] = temp[get];
+	    } else {
+	      solution[i] = 0.0;
+	    }
+	  }
+	} else {
+	  memcpy(solution,temp,numberColumns_*sizeof(double));
+	}
+	memset(temp,0,numberRows*sizeof(double));
+	model.times(1.0,solution,temp);
+	int nBad = 0;
+	double worst = 0.0;
+	for (int i=0;i<numberRows;i++) {
+	  double value = temp[i];
+	  if (value>rowUpper[i]+1.0e-8) {
+	    nBad++;
+	    worst = CoinMax(worst,value-rowUpper[i]);
+	  } else if (value<rowLower[i]-1.0e-8) {
+	    nBad++;
+	    worst = CoinMax(worst,rowLower[i]-value);
+	  }
+	}
+	printf("%d bad rows - worst %g\n",nBad,worst);
+	delete [] temp;
+      } else {
+	solution = NULL;
+      }
+    }
+#endif
+    model.dual();
+    if (model.status()) {
+       handler_->message(CLP_GENERAL, messages_) << "Model seems to be infeasible" << CoinMessageEol;
+      //model.writeMps("/tmp/badinf.mps");
+      return;
+    }
+    model.setLogLevel(0);
+    int nTotal = numberRows+numberColumns;
+    unsigned char * status = CoinCopyOfArray(model.statusArray(),nTotal);
+    for (int k = 0;k<numberIndicators;k++) {
+      int jRow = rowInd[k];
+      int iColumn = binaryInd[k];
+      if (columnLower[iColumn]==columnUpper[iColumn])
+	continue ; // already fixed
+      unsigned char iType = rowType[jRow];
+      /* need to do twice always to get max and min
+	 May be infeasible if min > true rhs - if so
+	 fix */
+      bool allInt = true;
+      int iRow = whichRow[jRow];
+      for (CoinBigIndex j=rowStart[iRow];
+	   j<rowStart[iRow]+rowLength[iRow];j++) {
+	int jColumn = column[j];
+	double value = element[j];
+	if (jColumn!=iColumn) {
+	  if (!isInteger(jColumn) || value != floor(value+0.5))
+	    allInt = false;
+	  objective[jColumn] = value;
+	}
+      }
+      double saveRhs = rowUpper[iRow];
+      rowUpper[iRow] = COIN_DBL_MAX;
+      memcpy(model.statusArray(),status,nTotal);
+      model.primal();
+      if (model.status()>1) {
+	// problems - try all slack
+	handler_->message(CLP_GENERAL, messages_) << "accuracy problems" << CoinMessageEol;
+	model.allSlackBasis(true);
+	model.dual();
+      }
+      double minimum = -COIN_DBL_MAX;
+      double maximum = COIN_DBL_MAX;
+      bool infeasible = false;
+      if (!model.status()) {
+	minimum = model.objectiveValue();
+	if (minimum > trueRhs[iRow]+1.0e-5)
+	  infeasible = true;
+      } else {
+	assert (model.status()==1);
+	minimum = COIN_DBL_MAX;
+	infeasible = true;
+      }
+      if (!infeasible && (iType&3)==3) {
+	model.setOptimizationDirection(-1.0);
+	memcpy(model.statusArray(),status,nTotal);
+	model.primal();
+	if (model.status()>1) {
+	  // problems - try all slack
+	  handler_->message(CLP_GENERAL, messages_) << "accuracy problems" << CoinMessageEol;
+	  model.allSlackBasis(true);
+	  model.dual();
+	}
+	if (!model.status()) {
+	  maximum = model.objectiveValue();
+	  if (maximum < trueRhs[iRow+1]-1.0e-5)
+	  infeasible = true;
+	} else {
+	  assert (model.status()==1);
+	  maximum = -COIN_DBL_MAX;
+	  infeasible = true;
+	}
+      }
+      for (CoinBigIndex j=rowStart[iRow];
+	   j<rowStart[iRow]+rowLength[iRow];j++) {
+	int jColumn = column[j];
+	objective[jColumn] = 0.0;
+      }
+      model.setOptimizationDirection(1.0);
+      rowUpper[iRow] = saveRhs;
+      if (infeasible) {
+	ninfeas++;
+	// constraint must be inactive
+	rowLower[iRow] = -COIN_DBL_MAX;
+	rowUpper[iRow] = COIN_DBL_MAX;
+ 	if ((iType&3)==3) {
+	  rowLower[iRow+1] = -COIN_DBL_MAX;
+	  rowUpper[iRow+1] = COIN_DBL_MAX;
+	}
+	//#define DETAIL 2
+	if ((iType&4)==0) {
+	  // set to 1.0
+#if DETAIL
+	  printf("row %d (%s) fixing indicator %d (%s) at 1.0\n",
+		 iRow,model.rowName(iRow).c_str(),
+		 iColumn,model.columnName(iColumn).c_str());
+#endif
+	  columnLower[iColumn] = 1.0;
+	} else {
+	  // set to 0.0
+#if DETAIL
+	  printf("row %d (%s) fixing indicator %d (%s) at 0.0\n",
+		 iRow,model.rowName(iRow).c_str(),
+		 iColumn,model.columnName(iColumn).c_str());
+#endif
+	  columnUpper[iColumn] = 0.0;
+	}
+	model.dual();
+	memcpy(status,model.statusArray(),nTotal);
+      } else {
+	CoinBigIndex j=-1;
+	for (j=columnStart[iColumn];
+	     j<columnStart[iColumn]+columnLength[iColumn];j++) {
+	  if (row[j]==iRow) {
+	    if ((iType&3)==3)
+	      assert (row[j+1]==iRow+1);
+	    break;
+	  }
+	}
+	assert (j>=0);
+	if (fabs(minimum-floor(minimum+0.5))<1.0e-6&&allInt)
+	  minimum = floor(minimum+0.5);
+	else
+	  minimum -= 1.0e-5;
+	minimum = CoinMax(minimum,-bigM);
+	if (fabs(maximum-floor(maximum+0.5))<1.0e-6&&allInt)
+	  maximum = floor(maximum+0.5);
+	else
+	  maximum += 1.0e-5;
+	maximum = CoinMin(maximum,bigM);
+	if ((iType&4)!=0) {
+	  // active when 1 
+	  // sigma + mx <= m + rhs
+	  double upper = trueRhs[iRow];
+	  double value = elementByColumn[j]; 
+	  double newValue =  maximum-upper;
+	  // if maximum <= upper row is redundant
+#if DETAIL
+	  printf("row %d (%s) indicator %d (%s) active at 1 new value %g new rhs %g\n",
+		 iRow,model.rowName(iRow).c_str(),
+		 iColumn,model.columnName(iColumn).c_str(),
+		 newValue,upper+newValue);
+#endif
+	  elementByColumn[j]=newValue;
+	  rowUpper[iRow] = upper + CoinMax(newValue,0.0);
+	  if (maximum < upper+1.0e-8)
+	    rowUpper[iRow] = COIN_DBL_MAX;
+#if DETAIL > 1
+	  printf("New row %g <=",rowLower[iRow]);
+	  for (CoinBigIndex j=rowStart[iRow];
+	       j<rowStart[iRow]+rowLength[iRow];j++) {
+	    int jColumn = column[j];
+	    double value = element[j];
+	    if (jColumn==iColumn)
+	      value = newValue;
+	    printf(" (%g,%s)",value,model.columnName(jColumn).c_str());
+	  }
+	  printf(" <= %g\n",rowUpper[iRow]);
+#ifdef CHECK_SOLUTION
+	  if (solution) {
+	    double sum = 0.0;
+	    for (CoinBigIndex j=rowStart[iRow];
+		 j<rowStart[iRow]+rowLength[iRow];j++) {
+	      int jColumn = column[j];
+	      double value = element[j];
+	      if (jColumn==iColumn)
+		value = newValue;
+	      sum += value*solution[jColumn];
+	    }
+	    if (sum>rowUpper[iRow]+1.0e-8)
+	      printf("!!row infeasible\n");
+	  }
+#endif
+#endif
+	  if (fabs(newValue-value)>1.0e-9)
+	    numberChanged++;
+	  if ((iType&3)==3) {
+	    // onto >= row
+	    iRow++;
+	    j++;
+	    double lower = trueRhs[iRow];
+	    double newValue =  lower - minimum;
+	    // if minimum >= lower row is redundant
+#if DETAIL
+	    printf("row %d (%s) indicator %d (%s) active at 1 new value %g new rhs %g\n",
+		   iRow,model.rowName(iRow).c_str(),
+		   iColumn,model.columnName(iColumn).c_str(),
+		   -newValue,lower-newValue);
+#endif
+	    elementByColumn[j]=-newValue;
+	    rowLower[iRow] = lower - newValue;
+	    if (minimum >= lower)
+	      rowLower[iRow] = -COIN_DBL_MAX;
+#if DETAIL > 1
+	    printf("New row %g <=",rowLower[iRow]);
+	    for (CoinBigIndex j=rowStart[iRow];
+		 j<rowStart[iRow]+rowLength[iRow];j++) {
+	      int jColumn = column[j];
+	      double value = element[j];
+	      if (jColumn==iColumn)
+		value = -newValue;
+	      printf(" (%g,%s)",value,model.columnName(jColumn).c_str());
+	    }
+	    printf(" <= %g\n",rowUpper[iRow]);
+#ifdef CHECK_SOLUTION
+	    if (solution) {
+	      double sum = 0.0;
+	      for (CoinBigIndex j=rowStart[iRow];
+		   j<rowStart[iRow]+rowLength[iRow];j++) {
+		int jColumn = column[j];
+		double value = element[j];
+		if (jColumn==iColumn)
+		  value = newValue;
+		sum += value*solution[jColumn];
+	      }
+	      if (sum<rowLower[iRow]-1.0e-8)
+		printf("!!row infeasible\n");
+	    }
+#endif
+#endif
+	    if (fabs(newValue-value)>1.0e-9)
+	      numberChanged++;
+	  }
+	} else {
+	  // active when 0 
+	  int numberToDo = ((iType&3)==3) ? 2 : 1;
+	  // sigma - mx <= rhs
+	  double upper = trueRhs[iRow];
+	  double value = elementByColumn[j]; 
+	  double newValue =  upper-maximum;
+	  // if maximum <= upper redunant
+#if DETAIL
+	  printf("row %d (%s) indicator %d (%s) active at 0 new value %g new rhs %g\n",
+		 iRow,model.rowName(iRow).c_str(),
+		 iColumn,model.columnName(iColumn).c_str(),
+		 newValue,upper+newValue);
+#endif
+	  elementByColumn[j]=newValue;
+	  if (maximum <= upper)
+	    rowUpper[iRow] = COIN_DBL_MAX;
+#if DETAIL > 1
+	  printf("New row %g <=",rowLower[iRow]);
+	  for (CoinBigIndex j=rowStart[iRow];
+	       j<rowStart[iRow]+rowLength[iRow];j++) {
+	    int jColumn = column[j];
+	    double value = element[j];
+	    if (jColumn==iColumn)
+	      value = newValue;
+	    printf(" (%g,%s)",value,model.columnName(jColumn).c_str());
+	  }
+	  printf(" <= %g\n",rowUpper[iRow]);
+#ifdef CHECK_SOLUTION
+	  if (solution) {
+	    double sum = 0.0;
+	    for (CoinBigIndex j=rowStart[iRow];
+		 j<rowStart[iRow]+rowLength[iRow];j++) {
+	      int jColumn = column[j];
+	      double value = element[j];
+	      if (jColumn==iColumn)
+		value = newValue;
+	      sum += value*solution[jColumn];
+	    }
+	    if (sum>rowUpper[iRow]+1.0e-8)
+	      printf("!!row infeasible\n");
+	  }
+#endif
+#endif
+	  if (fabs(newValue-value)>1.0e-9)
+	    numberChanged++;
+	  if ((iType&3)==3) {
+	    // onto >= row
+	    iRow++;
+	    j++;
+	    double lower = trueRhs[iRow];
+	    double newValue =  lower - minimum;
+	    // if minimum >= lower row is redundant
+#if DETAIL
+	    printf("row %d (%s) indicator %d (%s) active at 0 new value %g new rhs %g\n",
+		   iRow,model.rowName(iRow).c_str(),
+		   iColumn,model.columnName(iColumn).c_str(),
+		   -newValue,lower-newValue);
+#endif
+	    elementByColumn[j]=newValue;
+	    if (minimum >= lower)
+	      rowLower[iRow] = -COIN_DBL_MAX;
+#if DETAIL > 1
+	    printf("New row %g <=",rowLower[iRow]);
+	    for (CoinBigIndex j=rowStart[iRow];
+		 j<rowStart[iRow]+rowLength[iRow];j++) {
+	      int jColumn = column[j];
+	      double value = element[j];
+	      if (jColumn==iColumn)
+		value = -newValue;
+	      printf(" (%g,%s)",value,model.columnName(jColumn).c_str());
+	    }
+	    printf(" <= %g\n",rowUpper[iRow]);
+#ifdef CHECK_SOLUTION
+	    if (solution) {
+	      double sum = 0.0;
+	      for (CoinBigIndex j=rowStart[iRow];
+		   j<rowStart[iRow]+rowLength[iRow];j++) {
+		int jColumn = column[j];
+		double value = element[j];
+		if (jColumn==iColumn)
+		  value = newValue;
+		sum += value*solution[jColumn];
+	      }
+	      if (sum<rowLower[iRow]-1.0e-8)
+		printf("!!row infeasible\n");
+	    }
+#endif
+#endif
+	    if (fabs(newValue-value)>1.0e-9)
+	      numberChanged++;
+	  }
+	}
+      }
+    }
+    temp[0]='\0';
+    if (ninfeas)
+      sprintf(temp,"Eliminated infeasible rows %d times - ",ninfeas);
+    char * temp2 = temp+strlen(temp);
+    time0 = CoinCpuTime()-time0;
+    sprintf(temp2,"%d elements changed in %.2f seconds",
+	    numberChanged,time0);
+    handler_->message(CLP_GENERAL, messages_) << temp << CoinMessageEol;
+    memcpy(objective,saveObjective,numberColumns*sizeof(double));
+#if DETAIL
+    char temp[50];
+    sprintf(temp,"/tmp/tryind%d.mps",iTry+1);
+    model.writeMps(temp);
+#endif
+    // replace matrix and rhs
+    memcpy(rowLower_,rowLower,numberRows_*sizeof(double));
+    memcpy(rowUpper_,rowUpper,numberRows_*sizeof(double));
+    CoinPackedMatrix * newMatrix = new CoinPackedMatrix(*matrix);
+    replaceMatrix(newMatrix,true);
+    delete [] status;
+  }
+  model.setObjectiveOffset(saveOffset);
+  model.setDualObjectiveLimit(saveCutoff);
+  model.setOptimizationDirection(saveDirection);
+  
+  delete [] saveObjective;
+  delete [] newValues;
+  delete [] whichRow;
+  delete [] rowInd;
+  delete [] rowType;
+  delete [] binaryInd;
+  delete [] trueRhs;
+  delete [] columnStart;
+  delete [] row;
+  delete [] element;
 }
 #if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
 // Read GMPL files from the given filenames

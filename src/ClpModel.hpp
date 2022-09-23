@@ -21,6 +21,7 @@
 #include "CoinHelperFunctions.hpp"
 #include "CoinTypes.h"
 #include "CoinFinite.hpp"
+#include "CoinMpsIO.hpp"
 #include "ClpModelParameters.hpp"
 #include "ClpObjective.hpp"
 
@@ -130,6 +131,12 @@ public:
   int readMps(const char *filename,
     bool keepNames = false,
     bool ignoreErrors = false);
+  /** Modify model to deal with indicators.
+      startBigM are values in input.
+      If bigM > 0.0 then use that,
+      if < 0.0 use but try and improve */
+  void modifyByIndicators(CoinMpsIO &m, double startBigM=COIN_DBL_MAX,
+			  double bigM=1.0e7);
 #if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
   /// Read GMPL files from the given filenames
   int readGMPL(const char *filename, const char *dataName, bool keepNames = false,

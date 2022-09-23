@@ -1915,8 +1915,8 @@ void OsiClpSolverInterface::markHotStart()
   modelPtr_->setProblemStatus(0);
   saveData_.perturbation_ = 0;
   saveData_.specialOptions_ = modelPtr_->specialOptions_;
-  modelPtr_->specialOptions_ |= 0x1000000;
-  modelPtr_->specialOptions_ = saveData_.specialOptions_;
+  //modelPtr_->specialOptions_ |= 0x1000000;
+  //modelPtr_->specialOptions_ = saveData_.specialOptions_;
   ClpObjective *savedObjective = NULL;
   double savedDualLimit = modelPtr_->dblParam_[ClpDualObjectiveLimit];
   if (fakeObjective_) {
@@ -2078,7 +2078,7 @@ void OsiClpSolverInterface::markHotStart()
       smallModel_ = NULL;
     }
     if (!smallModel_) {
-      delete[] spareArrays_;
+      delete[] spareArrays_; 
       spareArrays_ = NULL;
     }
 #endif
@@ -6035,9 +6035,8 @@ int OsiClpSolverInterface::readMps(const char *filename, bool keepNames, bool al
 
     // no errors
     loadProblem(*m.getMatrixByCol(), m.getColLower(), m.getColUpper(),
-      m.getObjCoefficients(), m.getRowSense(), m.getRightHandSide(),
-      m.getRowRange());
-    int nCols = m.getNumCols();
+      m.getObjCoefficients(), m.getRowLower(), m.getRowUpper());
+   int nCols = m.getNumCols();
     // get quadratic part
     if (m.reader()->whichSection() == COIN_QUAD_SECTION) {
       CoinBigIndex *start = NULL;
@@ -6092,6 +6091,9 @@ int OsiClpSolverInterface::readMps(const char *filename, bool keepNames, bool al
           OsiSolverInterface::setColName(iColumn, name);
       }
       modelPtr_->copyNames(rowNames, columnNames);
+    }
+    if (m.getInfinity()<0.0) {
+      modelPtr_->modifyByIndicators(m);
     }
   }
   return numberErrors;
