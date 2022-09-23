@@ -29,6 +29,7 @@
 #include "ClpEventHandler.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpHelperFunctions.hpp"
+#include "CoinMpsIO.hpp"
 #include "CoinModel.hpp"
 #include "CoinLpIO.hpp"
 #include <cfloat>
@@ -254,7 +255,11 @@ ClpSimplex::ClpSimplex(const ClpModel *rhs,
   , abcSimplex_(NULL)
   , abcState_(0)
 #endif
+#ifndef CLP_OLD_PROGRESS
   , minIntervalProgressUpdate_(0.7)
+#else
+  , minIntervalProgressUpdate_(-1.0)
+#endif
   , lastStatusUpdate_(0.0)
 {
   int i;
@@ -2581,6 +2586,12 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode)
   , abcSimplex_(NULL)
   , abcState_(0)
 #endif
+#ifndef CLP_OLD_PROGRESS
+  , minIntervalProgressUpdate_(0.7)
+#else
+  , minIntervalProgressUpdate_(-1.0)
+#endif
+  , lastStatusUpdate_(0.0)
 {
   int i;
   for (i = 0; i < 6; i++) {
@@ -5672,6 +5683,9 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
   if ((moreSpecialOptions_ & 524288) != 0 && (!nonLinearCost_ || !nonLinearCost_->numberInfeasibilities()) && fabs(dblParam_[ClpDualObjectiveLimit]) > 1.0e30) {
     problemStatus_ = 0;
   }
+  // if we are in strong branching
+  if (problemStatus_==10&&(specialOptions_&1048576)!=0)
+    problemStatus_=3;
   if (problemStatus_ == 10) {
     //printf("Cleaning up with primal\n");
 #ifdef COIN_DEVELOP
@@ -5791,10 +5805,25 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
     setInitialDenseFactorization(denseFactorization);
     perturbation_ = savePerturbation;
     if (problemStatus_ == 10) {
-      if (!numberPrimalInfeasibilities_)
+      if (!numberPrimalInfeasibilities_) {
         problemStatus_ = 0;
-      else
-        problemStatus_ = 4;
+      } else {
+ 	// we really have problems
+	if ((moreSpecialOptions_&536870912)!=0) {
+	  problemStatus_ = 4;
+	  moreSpecialOptions_ &= ~536870912;
+	} else {
+	  // try once more
+	  moreSpecialOptions_ |= 536870912;
+	  allSlackBasis();
+	  char temp[80];
+	  sprintf(temp,"We have serious accuracy problems - trying from all slack");
+	  handler_->message(CLP_GENERAL_WARNING, messages_)
+	    << temp
+	    << CoinMessageEol;
+	  primal();
+	}
+      }
     }
     handler_->setLogLevel(saveLog);
 #ifdef COIN_DEVELOP
@@ -5909,6 +5938,8 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
       secondaryStatus_ = 1; //printf("inf on obj dual %g limit %g\n",objectiveValue(),limit);
     }
   }
+  // clear serious error flags
+  moreSpecialOptions_ &= ~(1073741824|536870912);
   return returnCode;
 }
 // primal
@@ -6157,7 +6188,21 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
         problemStatus_ = 0;
         numberDualInfeasibilities_ = 0;
       } else {
-        problemStatus_ = 4;
+	// we really have problems
+	if ((moreSpecialOptions_&1073741824)!=0) {
+	  problemStatus_ = 4;
+	  moreSpecialOptions_ &= ~1073741824;
+	} else {
+	  // try once more
+	  moreSpecialOptions_ |= 1073741824;
+	  allSlackBasis();
+	  char temp[80];
+	  sprintf(temp,"We have serious accuracy problems - trying from all slack");
+	  handler_->message(CLP_GENERAL_WARNING, messages_)
+	    << temp
+	    << CoinMessageEol;
+	  dual();
+	}
       }
     }
   }
@@ -6198,6 +6243,8 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
       secondaryStatus_ = 1; //printf("inf on obj primal %g limit %g\n",objectiveValue(),limit);
     }
   }
+  // clear serious error flags
+  moreSpecialOptions_ &= ~(1073741824|536870912);
   //if (problemStatus_==1&&lastAlgorithm==1)
   //returnCode=10; // so will do primal after postsolve
   return returnCode;
@@ -12229,6 +12276,8 @@ int ClpSimplex::fathomMany(void *stuff)
     assert(nBasic == numberRows_);
   }
 #endif
+  if (perturbation_==50)
+    perturbation_ = 51; // dial down
   int returnCode = startFastDual2(info);
   if (returnCode) {
     stopFastDual2(info);

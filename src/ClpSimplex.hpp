@@ -1437,7 +1437,10 @@ public:
 	 67108864 bit - try sorted values pass
 	 134217728 bit - clean up problem if scaling feasible mismatch
 	 268435456 bit - objective is piecewise linear
+	 536870912 bit - we are really in trouble (dual-primal-dual)
+	 1073741824 bit - we are really in trouble (primal-dual-primal)
   */
+
   inline int moreSpecialOptions() const
   {
     return moreSpecialOptions_;
