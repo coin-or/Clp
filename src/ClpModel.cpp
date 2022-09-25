@@ -3696,7 +3696,7 @@ ClpModel::modifyByIndicators(CoinMpsIO &m, double startBigM,
 #if DETAIL
     char temp[50];
     sprintf(temp,"/tmp/tryind%d.mps",iTry+1);
-    model.writeMps(temp);
+    model.writeMps(temp,2,1);
 #endif
     // replace matrix and rhs
     memcpy(rowLower_,rowLower,numberRows_*sizeof(double));
@@ -3708,7 +3708,22 @@ ClpModel::modifyByIndicators(CoinMpsIO &m, double startBigM,
   model.setObjectiveOffset(saveOffset);
   model.setDualObjectiveLimit(saveCutoff);
   model.setOptimizationDirection(saveDirection);
-  
+  *this = model;
+  eventHandler_->setSimplex(static_cast<ClpSimplex *>(this));
+  // delete freed up rows
+  int nDelete = 0;
+  for (int i=0;i<numberRows_;i++) {
+    if (rowLower_[i]<-1.0e30 && rowUpper_[i]>1.0e30) {
+      whichRow[nDelete++] = i;
+      //printf("deleting row %d (%s) rhs %g %g\n",
+      //     i,rowName(i).c_str(),
+      //     rowLower_[i],rowUpper_[i]);
+    }
+  }
+  deleteRows(nDelete,whichRow);
+#if DETAIL
+  writeMps("/tmp/end.mps",2,1);
+#endif
   delete [] saveObjective;
   delete [] newValues;
   delete [] whichRow;
