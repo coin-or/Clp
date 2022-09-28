@@ -7212,8 +7212,8 @@ int ClpSimplexDual::fastDual(bool alwaysFinish)
       double *givenPi = NULL;
       returnCode = whileIterating(givenPi, 0);
       if ((!alwaysFinish && returnCode < 0) || returnCode == 3) {
-        if (returnCode != 3)
-          assert(problemStatus_ < 0);
+        //if (returnCode != 3)
+	//assert(problemStatus_ < 0);
         returnCode = 1;
         problemStatus_ = 3;
         // can't say anything interesting - might as well return
