@@ -23,6 +23,19 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ClpExamplesTestQP", "ClpExa
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Clp", "Clp\Clp.vcxproj", "{E62F88EE-DC76-489A-99A8-8070099D9D4F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{688FC827-9A38-4AFA-98F4-C301EDAAA305}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\LICENSE = ..\..\LICENSE
+		..\..\README.md = ..\..\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{434E978C-9259-4FD1-B708-FA653F0FC1C8}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\.github\workflows\linux-ci.yml = ..\..\.github\workflows\linux-ci.yml
+		..\..\.github\workflows\release.yml = ..\..\.github\workflows\release.yml
+		..\..\.github\workflows\windows-ci.yml = ..\..\.github\workflows\windows-ci.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -114,6 +127,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{434E978C-9259-4FD1-B708-FA653F0FC1C8} = {688FC827-9A38-4AFA-98F4-C301EDAAA305}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6F8995EA-6612-4697-B709-B51B0005FDBD}
