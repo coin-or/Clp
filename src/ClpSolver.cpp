@@ -194,8 +194,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
   // abcState_=1;
 #endif
 #if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
-  glp_tran *coin_glp_tran;
-  glp_prob *coin_glp_prob;
+  glp_tran *coin_glp_tran = NULL;
+  glp_prob *coin_glp_prob = NULL;
 #endif
   // default action on import
   int allowImportErrors = 0;
@@ -2832,7 +2832,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
           }
 #else
         printGeneralWarning(
-            model_, "** Can'tmake a gues in this build configuration\n");
+            model_, "** Can't make a guess in this build configuration\n");
 #endif
 
       }  break;

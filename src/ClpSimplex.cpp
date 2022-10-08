@@ -4266,7 +4266,12 @@ bool ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
         delete columnArray_[iColumn];
         columnArray_[iColumn] = new CoinIndexedVector();
       }
-      columnArray_[iColumn]->reserve(numberColumns_ + numberRows2);
+#if COIN_AVX2
+      // allow extra for chunking
+     columnArray_[iColumn]->reserve(numberColumns_ + numberRows2+3);
+#else
+     columnArray_[iColumn]->reserve(numberColumns_ + numberRows2);
+#endif
     }
   }
   if (problemStatus_ == 10) {
@@ -12312,8 +12317,8 @@ int ClpSimplex::fathomMany(void *stuff)
     info->numberNodesExplored_ = 0;
     info->numberIterations_ = numberIterations;
     return -1;
-  } else if (problemStatus_ != 0) {
-    abort();
+    //} else if (problemStatus_ != 0) {
+    //abort();
   }
   if (!columnScale_) {
     CoinMemcpyN(solution_, numberColumns_, columnActivity_);
@@ -12423,6 +12428,13 @@ int ClpSimplex::fathomMany(void *stuff)
     if ((numberNodes % 1000) == 0 && printing)
       printf("After %d nodes (%d iterations) - best solution %g - current depth %d\n",
         numberNodes, numberIterations, bestObjective, depth);
+    if (problemStatus_ > 1) {
+      allSlackBasis();
+      int save = forceFactorization_;
+      forceFactorization_ = 1;
+      fastDual2(info);
+      forceFactorization_ = save;
+    }
     if (problemStatus_ == 1 || (problemStatus_ == 0 && objectiveValue() * optimizationDirection_ > bestObjective)) {
       backtrack = true;
       if (printing)

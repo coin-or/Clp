@@ -3284,7 +3284,7 @@ ClpModel::modifyByIndicators(CoinMpsIO &m, double startBigM,
   model.setDualObjectiveLimit(COIN_DBL_MAX);
   double saveDirection = model.optimizationDirection();
   model.setOptimizationDirection(1.0);
-  int nTry=1;
+  int nTry=2;
   for (int iTry=0;iTry<nTry;iTry++) 
   {
     int numberColumns = model.numberColumns();
