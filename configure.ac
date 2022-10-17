@@ -48,6 +48,9 @@ AC_COIN_RPATH_FLAGS([$expanded_libdir])
 # Check for cmath/math.h, cfloat/float.h, cieeefp/ieeefp.h
 AC_COIN_CHECK_MATH_HDRS
 
+# Check for intrinsics header for ClpPackedMatrix.cpp
+AC_CHECK_HEADERS([immintrin.h intrin.h arm_neon.h fmaintrin.h],[break],[])
+
 #############################################################################
 #                              COIN-OR components                           #
 #############################################################################

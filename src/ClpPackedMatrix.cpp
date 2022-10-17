@@ -6745,13 +6745,14 @@ ClpPackedMatrix3::ClpPackedMatrix3()
   , plusOnes_(0)
 {
 }
-#ifdef _MSC_VER
+#ifdef HAVE_INTRIN_H
 #include <intrin.h>
-#elif defined(__ARM_FEATURE_SIMD32) || defined(__ARM_NEON)
+#elif defined(HAVE_ARM_NEON_H)
 #include <arm_neon.h>
-#else
+#elif defined(HAVE_IMMINTRIN_H)
 #include <immintrin.h>
-//#include <fmaintrin.h>
+#elif defined(HAVE_FMAINTRIN_H)
+#include <fmaintrin.h>
 #endif
 /* Constructor from copy. */
 ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *columnCopy)

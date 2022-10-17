@@ -17575,6 +17575,21 @@ fi
 done
 
 
+# Check for intrinsics header for ClpPackedMatrix.cpp
+       for ac_header in immintrin.h intrin.h arm_neon.h fmaintrin.h
+do :
+  as_ac_Header=`printf "%s\n" "ac_cv_header_$ac_header" | $as_tr_sh`
+ac_fn_cxx_check_header_compile "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
+if eval test \"x\$"$as_ac_Header"\" = x"yes"
+then :
+  cat >>confdefs.h <<_ACEOF
+#define `printf "%s\n" "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+ break
+fi
+
+done
+
 #############################################################################
 #                              COIN-OR components                           #
 #############################################################################
