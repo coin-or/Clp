@@ -5,6 +5,7 @@
 #ifndef ClpQuadraticObjective_H
 #define ClpQuadraticObjective_H
 
+#include "ClpConfig.h"
 #include "ClpObjective.hpp"
 #include "CoinPackedMatrix.hpp"
 
