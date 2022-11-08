@@ -6136,7 +6136,7 @@ int OsiClpSolverInterface::readLp(class CoinLpIO &m)
   freeCachedResults();
 
   // set objective function offest
-  setDblParam(OsiObjOffset, 0);
+  setDblParam(OsiObjOffset, m.objectiveOffset());
 
   // set problem name
   setStrParam(OsiProbName, m.getProblemName());
