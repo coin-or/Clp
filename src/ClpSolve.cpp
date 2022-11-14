@@ -4365,6 +4365,10 @@ int ClpSimplexProgress::looping()
     infeasibility = model_->sumDualInfeasibilities();
     realInfeasibility = model_->nonLinearCost()->sumInfeasibilities();
     numberInfeasibilities = model_->numberDualInfeasibilities();
+    if (iterationNumber>3*model_->numberRows()+3*model_->numberColumns()) {
+      // should I put out a message
+      return 1;
+    }
   }
   int i;
   int numberMatched = 0;
