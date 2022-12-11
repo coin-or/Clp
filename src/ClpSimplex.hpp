@@ -360,8 +360,9 @@ public:
   int nonlinearSLP(int numberConstraints, ClpConstraint **constraints,
     int numberPasses, double deltaTolerance);
   /** Solves using barrier (assumes you have good cholesky factor code).
-         Does crossover to simplex if asked*/
-  int barrier(bool crossover = true);
+      Does crossover to simplex if asked.
+      startFinishOptions as dual/primal */
+  int barrier(bool crossover = true, int startFinishOptions = 0);
   /** Solves non-linear using reduced gradient.  Phase = 0 get feasible,
          =1 use solution */
   int reducedGradient(int phase = 0);

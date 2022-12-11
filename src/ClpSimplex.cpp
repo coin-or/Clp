@@ -6446,7 +6446,7 @@ int ClpSimplex::reducedGradient(int phase)
 #include "ClpPresolve.hpp"
 /* Solves using barrier (assumes you have good cholesky factor code).
    Does crossover to simplex if asked*/
-int ClpSimplex::barrier(bool crossover)
+int ClpSimplex::barrier(bool crossover, int startFinishOptions)
 {
   ClpSimplex *model2 = this;
   int savePerturbation = perturbation_;
@@ -6681,12 +6681,12 @@ int ClpSimplex::barrier(bool crossover)
     //     model2->setObjectiveScale(1.0e-3);
     //     model2->primal(2);
     //    model2->setObjectiveScale(saveScale);
-    model2->primal(1);
+    model2->primal(1,startFinishOptions);
   } else if (barrierStatus == 4 && crossover) {
     // memory problems
     model2->setPerturbation(savePerturbation);
     model2->createStatus();
-    model2->dual();
+    model2->dual(0,startFinishOptions);
   }
   model2->setMaximumIterations(saveMaxIts);
   delete[] rowPrimal;
@@ -6705,7 +6705,7 @@ int ClpSimplex::barrier(bool crossover)
     CoinMemcpyN(saveUpper, numberColumns, model2->columnUpper());
     CoinMemcpyN(saveUpper + numberColumns, numberRows, model2->rowUpper());
     delete[] saveUpper;
-    model2->primal(1);
+    model2->primal(1,startFinishOptions);
   }
   model2->setPerturbation(savePerturbation);
   return model2->status();
