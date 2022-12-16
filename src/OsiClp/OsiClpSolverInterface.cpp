@@ -4998,9 +4998,37 @@ int OsiClpSolverInterface::writeMpsNative(const char *filename,
   const char **rowNames, const char **columnNames,
   int formatType, int numberAcross, double objSense) const
 {
-  return OsiSolverInterface::writeMpsNative(filename, rowNames, columnNames,
-    formatType, numberAcross%2, objSense,
-    numberSOS_, setInfo_);
+  int returnCode;
+  // see if quadratic
+  ClpQuadraticObjective *quadraticObj = (dynamic_cast< ClpQuadraticObjective * >(modelPtr_->objectiveAsObject()));
+  if (!quadraticObj) {
+    returnCode =
+      OsiSolverInterface::writeMpsNative(filename, rowNames, columnNames,
+					 formatType, numberAcross%2, objSense,
+					 numberSOS_, setInfo_);
+  } else {
+    CoinPackedMatrix *quadratic = quadraticObj->quadraticObjective();
+    CoinMpsIO writer;
+    writer.passInMessageHandler(handler_);
+    //writer.messagesPointer() = modelPtr_->messagesPointer();
+    writer.setMpsData(*(modelPtr_->matrix()), COIN_DBL_MAX,
+    modelPtr_->getColLower(), modelPtr_->getColUpper(),
+		      modelPtr_->objective(),
+    (const char *)NULL /*integrality*/,
+    modelPtr_->getRowLower(), modelPtr_->getRowUpper(),
+    columnNames, rowNames);
+    // Pass in array saying if each variable integer
+    writer.copyInIntegerInformation(modelPtr_->integerInformation());
+    writer.setObjectiveOffset(modelPtr_->objectiveOffset());
+    // set name
+    writer.setProblemName(modelPtr_->problemName().c_str());
+    /* do not gzip it - unless .gz */
+    returnCode = writer.writeMps(filename,
+				 strstr(filename,".gz") ? 1 : 0,
+				 formatType, numberAcross,
+				 quadratic, numberSOS_, setInfo_);
+  }
+  return returnCode;
 }
 int OsiClpSolverInterface::writeBasisNative(const char *filename) const
 {
