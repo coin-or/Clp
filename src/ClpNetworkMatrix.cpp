@@ -1,5 +1,7 @@
 // Copyright (C) 2003, International Business Machines
 // Corporation and others.  All Rights Reserved.
+// Portions Copyright 2023 Siemens
+// Modified on January 2023 by Siemens and/or its affiliates to fix a memory leak in ctor of ClpNetworkMatrix and to remove redundant ';'
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 #include <cstdio>
@@ -46,7 +48,7 @@ ClpNetworkMatrix::ClpNetworkMatrix(int numberColumns, const int *head,
   matrix_ = NULL;
   lengths_ = NULL;
   indices_ = new int[2 * numberColumns];
-  ;
+  
   numberRows_ = -1;
   numberColumns_ = numberColumns;
   trueNetwork_ = true;
@@ -1211,7 +1213,7 @@ ClpNetworkMatrix::ClpNetworkMatrix(
   matrix_ = NULL;
   lengths_ = NULL;
   indices_ = new int[2 * numberColumns];
-  ;
+
   numberRows_ = numberRows;
   numberColumns_ = numberColumns;
   trueNetwork_ = true;
@@ -1241,6 +1243,7 @@ ClpNetworkMatrix::ClpNetworkMatrix(
         indices_[i] = iRow;
     }
   }
+  delete[] which;
   if (numberBad)
     throw CoinError("Invalid rows", "subsetConstructor", "ClpNetworkMatrix");
 }
