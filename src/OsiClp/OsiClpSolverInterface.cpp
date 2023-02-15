@@ -11127,12 +11127,3 @@ OsiClpSolverInterface::modifyByIndicators(double startBigM,
 {
   modelPtr_->modifyByIndicators(startBigM,bigM);
 }
-void
-OsiSolverInterface::modifyByIndicators(double startBigM,
-			  double bigM)
-{
-  OsiClpSolverInterface * thisModel =
-    dynamic_cast<OsiClpSolverInterface *>(this);
-  if (thisModel)
-    thisModel->modifyByIndicators(startBigM,bigM);
-}
