@@ -704,6 +704,12 @@ public:
   /** Set the variables listed in indices (which is of length len) to be
       integer variables */
   virtual void setInteger(const int *indices, int len);
+  /** Modify model to deal with indicators.
+      startBigM are values in input.
+      If bigM > 0.0 then use that,
+      if < 0.0 use but try and improve */
+  virtual void modifyByIndicators(double startBigM=COIN_DBL_MAX,
+			  double bigM=1.0e7);
   /// Number of SOS sets
   inline int numberSOS() const
   {

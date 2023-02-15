@@ -135,7 +135,7 @@ public:
       startBigM are values in input.
       If bigM > 0.0 then use that,
       if < 0.0 use but try and improve */
-  void modifyByIndicators(CoinMpsIO &m, double startBigM=COIN_DBL_MAX,
+  void modifyByIndicators(double startBigM=COIN_DBL_MAX,
 			  double bigM=1.0e7);
 #if defined(COINUTILS_HAS_GLPK) && defined(CLP_HAS_GLPK)
   /// Read GMPL files from the given filenames

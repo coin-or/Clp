@@ -2961,7 +2961,7 @@ int ClpModel::readMps(const char *fileName,
       << fileName
       << time2 - time1 << CoinMessageEol;
     if (m.getInfinity()<0.0) {
-      modifyByIndicators(m);
+      modifyByIndicators();
     }
   } else {
     // errors
@@ -2976,7 +2976,7 @@ int ClpModel::readMps(const char *fileName,
    If bigM > 0.0 then use that,
    if < 0.0 use but try and improve */
 void
-ClpModel::modifyByIndicators(CoinMpsIO &m, double startBigM,
+ClpModel::modifyByIndicators(double startBigM,
 			  double bigM)
 {
   int numberIndicators = 0;
@@ -3247,9 +3247,10 @@ ClpModel::modifyByIndicators(CoinMpsIO &m, double startBigM,
   }
   if (nExtra) {
     // redo names - use m version
+    std::vector<std::string> saveNames = rowNames_;
     rowNames_ = std::vector< std::string >();
     for (int iRow = 0; iRow < numberRows1; iRow++) {
-      const char *name = m.rowName(iRow);
+      const char *name = saveNames[iRow].c_str();
       lengthNames_ =
 	CoinMax(lengthNames_, static_cast<int>(strlen(name)));
       rowNames_.push_back(name);

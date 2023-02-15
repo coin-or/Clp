@@ -6121,7 +6121,9 @@ int OsiClpSolverInterface::readMps(const char *filename, bool keepNames, bool al
       modelPtr_->copyNames(rowNames, columnNames);
     }
     if (m.getInfinity()<0.0) {
-      modelPtr_->modifyByIndicators(m);
+      //writeMps("/tmp/before");
+      modelPtr_->modifyByIndicators();
+      //writeMps("/tmp/after");
     }
   }
   return numberErrors;
@@ -11114,4 +11116,23 @@ ClpSimplex * presolvedOsiModel(ClpSimplex * model, double tolerance,
     (presolvedModel);
   ClpSimplex *model2 = osi2->getModelPtr();
   return model2;
+}
+/* Modify model to deal with indicators.
+   startBigM are values in input.
+   If bigM > 0.0 then use that,
+   if < 0.0 use but try and improve */
+void
+OsiClpSolverInterface::modifyByIndicators(double startBigM,
+			  double bigM)
+{
+  modelPtr_->modifyByIndicators(startBigM,bigM);
+}
+void
+OsiSolverInterface::modifyByIndicators(double startBigM,
+			  double bigM)
+{
+  OsiClpSolverInterface * thisModel =
+    dynamic_cast<OsiClpSolverInterface *>(this);
+  if (thisModel)
+    thisModel->modifyByIndicators(startBigM,bigM);
 }
