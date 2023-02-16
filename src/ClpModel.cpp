@@ -2980,6 +2980,12 @@ ClpModel::modifyByIndicators(double startBigM,
 			  double bigM)
 {
   int numberIndicators = 0;
+  // get correct sign for bigM
+  int nTry=0;
+  if (bigM<0.0) {
+    bigM = -bigM;
+    nTry = 2;
+  }
   const int * row1 = matrix_->getIndices();
   const int * columnLength1 = matrix_->getVectorLengths();
   const CoinBigIndex * columnStart1 = matrix_->getVectorStarts();
@@ -3285,7 +3291,6 @@ ClpModel::modifyByIndicators(double startBigM,
   model.setDualObjectiveLimit(COIN_DBL_MAX);
   double saveDirection = model.optimizationDirection();
   model.setOptimizationDirection(1.0);
-  int nTry=2;
   for (int iTry=0;iTry<nTry;iTry++) 
   {
     int numberColumns = model.numberColumns();

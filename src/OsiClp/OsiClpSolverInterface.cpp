@@ -6121,9 +6121,7 @@ int OsiClpSolverInterface::readMps(const char *filename, bool keepNames, bool al
       modelPtr_->copyNames(rowNames, columnNames);
     }
     if (m.getInfinity()<0.0) {
-      //writeMps("/tmp/before");
-      modelPtr_->modifyByIndicators();
-      //writeMps("/tmp/after");
+      modifyByIndicators();
     }
   }
   return numberErrors;
@@ -11125,5 +11123,114 @@ void
 OsiClpSolverInterface::modifyByIndicators(double startBigM,
 			  double bigM)
 {
-  modelPtr_->modifyByIndicators(startBigM,bigM);
+  if (bigM && false) {
+    modelPtr_->modifyByIndicators(startBigM,bigM);
+    return;
+  }
+  // SOS
+  int numberRows = getNumRows();
+  int numberColumns = getNumCols();
+  // Column copy of matrix
+  CoinPackedMatrix * matrix = getMutableMatrixByCol();
+  double *element = matrix->getMutableElements();
+  int *row = matrix->getMutableIndices();
+  CoinBigIndex *columnStart = matrix->getMutableVectorStarts();
+  int *columnLength = matrix->getMutableVectorLengths();
+  int nInd = 0;
+  int nZeroInd = 0;
+  for (int iColumn = 0;iColumn < numberColumns; iColumn++) {
+    for (CoinBigIndex j = columnStart[iColumn];
+	 j < columnStart[iColumn] + columnLength[iColumn]; j++) {
+      double value = element[j];
+      if (value == -startBigM) {
+	nInd++;
+      } else if (value == startBigM) {
+	nInd++;
+	nZeroInd++;
+      }
+    }
+  }
+  if (!nInd)
+    return;
+  // delete elements and add columns then rows
+  CoinBigIndex * newStarts = new CoinBigIndex[nInd+2*nZeroInd+2];
+  CoinBigIndex * newStarts2 = newStarts+nInd+nZeroInd+1;
+  int * newVar = new int[nInd+3*nZeroInd];
+  int * newVar2 = newVar+nInd+nZeroInd;
+  double * newEl = new double[nInd+2*nZeroInd];
+  double * newEl2 = newEl+nInd;
+  double * lower = new double[3*(nInd+nZeroInd)];
+  double * upper = lower + nInd+nZeroInd;
+  double * cost = upper + nInd+nZeroInd;
+  CoinSet *setInfo = new CoinSet [nInd];
+  int newCols = nZeroInd;
+  nInd = 0;
+  int newZeroCols = 0;
+  CoinBigIndex nEl = 0;
+  // extra binary variables
+  for (int i=0;i<newCols;i++) {
+    newStarts[i] = 0;
+    lower[i] = 0.0;
+    upper[i] = 1.0;
+    cost[i] = 0.0;
+  }
+  newStarts[newCols] = 0;
+  newStarts2[0] = 0;
+  nZeroInd = 0;
+  for (int iColumn = 0;iColumn < numberColumns; iColumn++) {
+    CoinBigIndex start = columnStart[iColumn];
+    columnStart[iColumn] = nEl;
+    for (CoinBigIndex j = start; j < start + columnLength[iColumn]; j++) {
+      double value = element[j];
+      int iRow = row[j];
+      if (fabs(value)==startBigM) {
+	int sosColumn[2];
+	sosColumn[0] = iColumn;
+	sosColumn[1] = numberColumns+newCols;
+	if (value == startBigM) { 
+	  int iPut = 2*nZeroInd;
+	  newEl2[iPut] = 1.0;
+	  newVar2[iPut] = iColumn;
+	  newEl2[iPut+1] = 1.0;
+	  newVar2[iPut+1] = numberColumns+nZeroInd;
+	  sosColumn[0] = numberColumns+nZeroInd;
+	  nZeroInd++;
+	  newStarts2[nZeroInd] = 2*nZeroInd;
+	}
+	CoinSet sos1(2,sosColumn);
+	sos1.setSetType(1);
+	setInfo[nInd] = sos1;
+	newEl[nInd] = 1.0;
+	newVar[nInd] = iRow;
+	lower[newCols] = -COIN_DBL_MAX;
+	upper[newCols] = COIN_DBL_MAX;
+	cost[newCols] = 0.0;
+	nInd++;
+	newCols++;
+	newStarts[newCols] = newStarts[newCols-1]+1;
+      } else {
+	row[nEl] = iRow;
+	element[nEl++] =value;
+      }
+    }
+    columnLength[iColumn] = nEl-columnStart[iColumn];
+  }
+  columnStart[numberColumns] = nEl;
+  matrix->setNumElements(nEl);
+  //matrix->removeGaps();
+  addCols(newCols,newStarts,newVar,newEl,lower,upper,cost);
+  for (int i=0;i<nZeroInd;i++)
+    setInteger(numberColumns+i);
+  replaceSetInfo(nInd,setInfo);
+  // now add rows
+  for (int i=0;i<nZeroInd;i++) {
+    lower[i] = 1.0;
+    upper[i] = 1.0;
+  }
+  newStarts2[nZeroInd] = 2*nZeroInd;
+  addRows(nZeroInd,newStarts2,newVar2,newEl2,lower,upper);
+  delete [] newStarts;
+  delete [] newVar;
+  delete [] newEl;
+  delete [] lower;
 }
