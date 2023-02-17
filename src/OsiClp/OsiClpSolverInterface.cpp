@@ -11123,7 +11123,7 @@ void
 OsiClpSolverInterface::modifyByIndicators(double startBigM,
 			  double bigM)
 {
-  if (bigM && false) {
+  if (bigM) {
     modelPtr_->modifyByIndicators(startBigM,bigM);
     return;
   }
