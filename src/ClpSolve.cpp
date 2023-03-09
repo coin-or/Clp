@@ -4420,7 +4420,7 @@ int ClpSimplexProgress::looping()
   if (model_->numberIterations()>20*model_->numberRows()+100) {
     // pretty bad
     // make factorize every iteration
-    if (model_->numberIterations()<25*model_->numberRows()+100) {
+    if (model_->numberIterations()<25*model_->numberRows()+300) {
       model_->forceFactorization(1);
     } else {
       // give up

@@ -11864,6 +11864,13 @@ int ClpSimplex::fathom(void *stuff)
           numberIterations, numberNodes);
 #endif
         break;
+      } else if (numberNodes>1000) {
+        info->nNodes_ = -2;
+#ifdef CLP_USEFUL_PRINTOUT
+        printf("too many nodes %d iterations %d nodes\n",
+          numberIterations, numberNodes);
+#endif
+        break;
       }
     } else {
       if (numberIterations > 4000) {
