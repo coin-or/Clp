@@ -17,6 +17,7 @@
 #include "ClpMessage.hpp"
 #include <iostream>
 #include <cassert>
+#include <vector>
 
 //#############################################################################
 // Constructors / Destructor / Assignment
@@ -1217,10 +1218,8 @@ ClpNetworkMatrix::ClpNetworkMatrix(
   trueNetwork_ = true;
   int iColumn;
   int numberBad = 0;
-  int *which = new int[rhs.numberRows_];
+  std::vector<int> which(rhs.numberRows_, -1);
   int iRow;
-  for (iRow = 0; iRow < rhs.numberRows_; iRow++)
-    which[iRow] = -1;
   int n = 0;
   for (iRow = 0; iRow < numberRows; iRow++) {
     int jRow = whichRow[iRow];
