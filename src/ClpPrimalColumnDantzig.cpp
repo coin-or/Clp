@@ -108,10 +108,10 @@ int ClpPrimalColumnDantzig::pivotColumn(CoinIndexedVector *updates,
 
   // update of duals finished - now do pricing
 
-  double largest = model_->currentPrimalTolerance();
+  //double largest = model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
-  if (model_->largestDualError() > 1.0e-8)
-    largest *= model_->largestDualError() / 1.0e-8;
+  //if (model_->largestDualError() > 1.0e-8)
+  //  largest *= model_->largestDualError() / 1.0e-8;
 
   double bestDj = model_->dualTolerance();
   int bestSequence = -1;

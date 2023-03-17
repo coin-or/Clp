@@ -205,7 +205,7 @@ private:
   int coCompatibleColsAvg_;
   int coCompatibleRowsAvg_;
   int coUpdateDegenerates_;
-  int coIdentifyCompatibles_;
+  //int coIdentifyCompatibles_;
   int coDegeneratePivots_;
   int coCompatiblePivots_;
   int coDegenerateCompatiblePivots_;

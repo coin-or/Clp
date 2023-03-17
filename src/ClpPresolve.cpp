@@ -516,7 +516,9 @@ static int tightenDoubletons2(CoinPresolveMatrix *prob)
   int numberChanged = 0;
   double bound[2];
   double alpha[2] = { 0.0, 0.0 };
+#if ABC_NORMAL_DEBUG > 0
   double offset = 0.0;
+#endif
 
   for (int icol = 0; icol < ncols; icol++) {
     if (hincol[icol] == 2) {
@@ -826,8 +828,12 @@ static int tightenDoubletons2(CoinPresolveMatrix *prob)
           double costThis = cost[icol] + slope[1] * (element0 / alpha[0]);
           xValue = xValueEqual;
           yValue0 = CoinMax((rowUpper0 - xValue * alpha[0]) / element0, lowerX);
+#if ABC_NORMAL_DEBUG > 0 || defined(PRINT_VALUES) || !defined(NDEBUG)
           double thisOffset = costEqual - (costOther * xValue + costThis * yValue0);
+#endif
+#if ABC_NORMAL_DEBUG > 0
           offset += thisOffset;
+#endif
 #ifdef PRINT_VALUES
           printf("new cost at equal %g\n", costOther * xValue + costThis * yValue0 + thisOffset);
 #endif

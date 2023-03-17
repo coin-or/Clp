@@ -262,9 +262,9 @@ int ClpPEPrimalColumnDantzig::pivotColumn(CoinIndexedVector *updates,
   //
 
   // we can't really trust infeasibilities if there is primal error
-  double largest = model_->currentPrimalTolerance();
-  if (model_->largestDualError() > 1.0e-8)
-    largest *= model_->largestDualError() / 1.0e-8;
+  //double largest = model_->currentPrimalTolerance();
+  //if (model_->largestDualError() > 1.0e-8)
+  //  largest *= model_->largestDualError() / 1.0e-8;
 
   // initialize the best reduced cost values
   double dualTolerance = model_->dualTolerance();

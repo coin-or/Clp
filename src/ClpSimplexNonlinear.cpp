@@ -3156,7 +3156,7 @@ for (iPass = 0; iPass < numberPasses; iPass++) {
         //CoinIndexedVector * columnArray = columnArray_[0];
         CoinIndexedVector *spare = rowArray_[1];
         double *work = longArray->denseVector();
-        int *which = longArray->getIndices();
+        //int *which = longArray->getIndices();
         int nPass = 100;
         //bool conjugate=false;
         // Put back true bounds
@@ -3207,13 +3207,13 @@ for (iPass = 0; iPass < numberPasses; iPass++) {
             absolutelyOptimal = true;
             break; //looks optimal
           }
-          double djNorm = 0.0;
-          int iIndex;
-          for (iIndex = 0; iIndex < numberNonBasic; iIndex++) {
-            int iSequence = which[iIndex];
-            double alpha = work[iSequence];
-            djNorm += alpha * alpha;
-          }
+          //double djNorm = 0.0;
+          //int iIndex;
+          //for (iIndex = 0; iIndex < numberNonBasic; iIndex++) {
+          //  int iSequence = which[iIndex];
+          //  double alpha = work[iSequence];
+          //  djNorm += alpha * alpha;
+          //}
           //if (!jPass)
           //printf("dj norm %g - %d \n",djNorm,numberNonBasic);
           //int number=longArray->getNumElements();
@@ -4096,11 +4096,11 @@ int ClpSimplexNonlinear::primalSLP(int numberConstraints, ClpConstraint **constr
       double movement = newModel.primalRowSolution()[iRow] + constraint->offset();
       movement = fabs((movement - functionValue) * dualValue);
       infPenalty2 += movement;
-      double sumOfActivities = 0.0;
-      for (CoinBigIndex j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
-        int iColumn = column[j];
-        sumOfActivities += fabs(solution[iColumn] * elementByRow[j]);
-      }
+      //double sumOfActivities = 0.0;
+      //for (CoinBigIndex j = rowStart[iRow]; j < rowStart[iRow] + rowLength[iRow]; j++) {
+      //  int iColumn = column[j];
+      //  sumOfActivities += fabs(solution[iColumn] * elementByRow[j]);
+      //}
       if (rowLower_[iRow] > -1.0e20) {
         if (functionValue < rowLower_[iRow] - 1.0e-5) {
           double infeasibility = rowLower_[iRow] - functionValue;

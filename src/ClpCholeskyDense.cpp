@@ -886,15 +886,15 @@ void ClpCholeskyCtriRecLeaf(/*ClpCholeskyDenseC * thisStruct,*/ longDouble *aTri
   assert(diagonal == thisStruct->diagonal_ + ict * BLOCK);
 #endif
   int j;
-  longDouble *aa;
+  //longDouble *aa;
 #ifdef BLOCKUNROLL
   if (nUnder == BLOCK) {
-    aa = aTri - 2 * BLOCK;
+    //aa = aTri - 2 * BLOCK;
     for (j = 0; j < BLOCK; j += 2) {
       int i;
       CoinWorkDouble temp0 = diagonal[j];
       CoinWorkDouble temp1 = diagonal[j + 1];
-      aa += 2 * BLOCK;
+      //aa += 2 * BLOCK;
       for (i = 0; i < BLOCK; i += 2) {
         CoinWorkDouble at1;
         CoinWorkDouble t00 = aUnder[i + j * BLOCK];
@@ -926,11 +926,11 @@ void ClpCholeskyCtriRecLeaf(/*ClpCholeskyDenseC * thisStruct,*/ longDouble *aTri
     }
   } else {
 #endif
-    aa = aTri - BLOCK;
+    //aa = aTri - BLOCK;
     for (j = 0; j < BLOCK; j++) {
       int i;
       CoinWorkDouble temp1 = diagonal[j];
-      aa += BLOCK;
+      //aa += BLOCK;
       for (i = 0; i < nUnder; i++) {
         int k;
         CoinWorkDouble t00 = aUnder[i + j * BLOCK];

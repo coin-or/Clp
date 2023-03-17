@@ -1112,7 +1112,7 @@ myamlf(WSI n, WSI xadj[], WSI adjncy[], WSI dgree[], WSI varbl[],
   WSI l, i, j, k;
   double x, y;
   WSI maxmum, fltag, nodeg, scln, nm1, deg, tn,
-    locatns, ipp, jpp, nnode, numpiv, node,
+    /*locatns,*/ ipp, jpp, nnode, numpiv, node,
     nodeln, currloc, counter, numii, mindeg,
     i0, i1, i2, i4, i5, i6, i7, i9,
     j0, j1, j2, j3, j4, j5, j6, j7, j8, j9;
@@ -1165,7 +1165,7 @@ myamlf(WSI n, WSI xadj[], WSI adjncy[], WSI dgree[], WSI varbl[],
   maxmum = 0;
   mindeg = 1;
   fltag = 2;
-  locatns = locaux - 1;
+  //locatns = locaux - 1;
   nm1 = n - 1;
   counter = 1;
   for (l = 0; l < n; l++) {
@@ -1311,7 +1311,7 @@ myamlf(WSI n, WSI xadj[], WSI adjncy[], WSI dgree[], WSI varbl[],
         }
       }
       currloc = (j5 = locaux) - j4;
-      locatns += currloc;
+      //locatns += currloc;
     } else {
       i1 = (j4 = xadj[node - 1]) + lsize[node - 1];
       for (j = j5 = j4; j < i1; j++) {
@@ -1734,7 +1734,8 @@ myamlf(WSI n, WSI xadj[], WSI adjncy[], WSI dgree[], WSI varbl[],
 #ifdef WSSMP_DBG
       chk(66, node, n);
 #endif
-      locatns += (lsize[node - 1] - currloc), locaux = j;
+      //locatns += (lsize[node - 1] - currloc);
+      locaux = j;
     }
     varbl[node - 1] = numpiv + nodeg;
     lsize[node - 1] = j - j4;
