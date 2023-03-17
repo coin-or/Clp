@@ -436,7 +436,7 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
             numberFixed++;
             break;
           case atLowerBound:
-            dj = dj;
+            //dj = dj;
             break;
           case isFree:
             dj = -100.0 * fabs(dj);
@@ -4160,7 +4160,7 @@ int ClpSimplexPrimal::lexSolve()
             numberFixed++;
             break;
           case atLowerBound:
-            dj = dj;
+            //dj = dj;
             break;
           case isFree:
             dj = -100.0 * fabs(dj);
