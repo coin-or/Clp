@@ -398,7 +398,7 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
   int i, n;
   int allOnes = 1;
   int iteration = 0;
-  int iterationTotal = 0;
+  //int iterationTotal = 0;
   int nTry = 0; /* number of tries at same weight */
   double fixTolerance = IDIOT_FIX_TOLERANCE;
   int maxBigIts = maxBigIts_;
@@ -847,7 +847,7 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
   }
   int numberBaseTrys = 0; // for first time
   int numberAway = -1;
-  iterationTotal = lastResult.iteration;
+  //iterationTotal = lastResult.iteration;
   firstInfeas = lastResult.infeas;
   if ((strategy_ & 1024) != 0)
     reasonableInfeas = 0.5 * firstInfeas;
@@ -973,7 +973,7 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
     numberAway = n;
     keepinfeas = result.infeas;
     lastWeighted = result.weighted;
-    iterationTotal += result.iteration;
+    //iterationTotal += result.iteration;
     if (iteration == 1) {
       if ((strategy_ & 1024) != 0 && mu < 1.0e-10)
         result.infeas = firstInfeas * 0.8;
@@ -1339,7 +1339,9 @@ void Idiot::crossOver(int mode)
   int iteration;
   int i, n = 0;
   double ratio = 1.0;
+#ifdef COIN_DETAIL
   double objValue = 0.0;
+#endif
   if ((strategy_ & 128) != 0) {
     fixTolerance = SMALL_IDIOT_FIX_TOLERANCE;
   }
@@ -1404,12 +1406,16 @@ void Idiot::crossOver(int mode)
     for (i = ordStart; i < ordEnd; i++) {
       double value = colsol[i] * ratio;
       colsol[i] = value;
+#ifdef COIN_DETAIL
       objValue += value * cost[i];
+#endif
     }
     for (i = 0; i < nrows; i++) {
       double value = rowlower[i] - rowsol[i];
       colsol[i + slackStart] = value;
+#ifdef COIN_DETAIL
       objValue += value * cost[i + slackStart];
+#endif
     }
     COIN_DETAIL_PRINT(printf("New objective after scaling %g\n", objValue));
   }

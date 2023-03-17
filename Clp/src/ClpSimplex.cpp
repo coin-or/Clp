@@ -9488,9 +9488,13 @@ ClpSimplex::ClpSimplex(ClpSimplex *wholeModel,
 
   double *lower = lower_ + numberColumns;
   double *upper = upper_ + numberColumns;
+#ifdef COIN_DETAIL
   double fixed = 0.0;
+#endif
   for (iRow = 0; iRow < numberRows_; iRow++) {
+#ifdef COIN_DETAIL
     fixed += fabs(sumFixed[iRow]);
+#endif
     if (lower[iRow] > -1.0e50)
       lower[iRow] -= sumFixed[iRow];
     if (upper[iRow] < 1.0e50)

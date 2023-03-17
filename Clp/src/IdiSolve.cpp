@@ -992,7 +992,7 @@ Idiot::IdiSolve(
             double value = colsol[icol];
             double djval = cost[icol];
             double djval2, value2;
-            double theta, a, b, c;
+            double theta, a, b/*, c*/;
             if (elemnt) {
               for (j = columnStart[icol]; j < columnStart[icol] + length[icol]; j++) {
                 int irow = row[j];
@@ -1029,13 +1029,13 @@ Idiot::IdiSolve(
                                         		}*/
                 a = 0.0;
                 b = 0.0;
-                c = 0.0;
+                //c = 0.0;
                 djval2 = cost[icol];
                 if (elemnt) {
                   for (j = columnStart[icol]; j < columnStart[icol] + length[icol]; j++) {
                     int irow = row[j];
                     double value = rowsol[irow];
-                    c += value * value;
+                    //c += value * value;
                     a += elemnt[j] * elemnt[j];
                     b += value * elemnt[j];
                   }
@@ -1043,14 +1043,14 @@ Idiot::IdiSolve(
                   for (j = columnStart[icol]; j < columnStart[icol] + length[icol]; j++) {
                     int irow = row[j];
                     double value = rowsol[irow];
-                    c += value * value;
+                    //c += value * value;
                     a += 1.0;
                     b += value;
                   }
                 }
                 a *= weight;
                 b = b * weight + 0.5 * djval2;
-                c *= weight;
+                //c *= weight;
                 /* solve */
                 theta = -b / a;
 #ifndef FOUR_GOES
@@ -1148,7 +1148,7 @@ Idiot::IdiSolve(
         double djval = costExtra[i];
         double djval2, value2;
         double element = elemExtra[i];
-        double theta, a, b, c;
+        double theta, a, b/*, c*/;
         int irow = rowExtra[i];
         djval -= element * pi[irow];
         /*printf("xxx iter %d extra %d djval %g value %g\n",
@@ -1163,15 +1163,15 @@ Idiot::IdiSolve(
           nChange++;
           a = 0.0;
           b = 0.0;
-          c = 0.0;
+          //c = 0.0;
           djval2 = costExtra[i];
           value = rowsol[irow];
-          c += value * value;
+          //c += value * value;
           a += element * element;
           b += element * value;
           a *= weight;
           b = b * weight + 0.5 * djval2;
-          c *= weight;
+          //c *= weight;
           /* solve */
           theta = -b / a;
           if (theta > 0.0) {
