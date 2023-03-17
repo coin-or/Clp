@@ -3024,7 +3024,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
           double value = fullSolution[iColumn];
           if (model2->getColumnStatus(iColumn) != ClpSimplex::basic) {
             if (dj < -dualTolerance_ && value < columnUpper[iColumn])
-              dj = dj;
+              /*dj = dj*/;
             else if (dj > dualTolerance_ && value > columnLower[iColumn])
               dj = -dj;
             else if (columnUpper[iColumn] > columnLower[iColumn])
