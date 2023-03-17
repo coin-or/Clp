@@ -3147,10 +3147,10 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
         effectiveRhs[i] = rhsValue;
       }
       {
-        double bSum = 0.0;
-        for (int i = 0; i < numberRows; i++) {
-          bSum += effectiveRhs[i] * ray[i];
-        }
+        //double bSum = 0.0;
+        //for (int i = 0; i < numberRows; i++) {
+        //  bSum += effectiveRhs[i] * ray[i];
+        //}
         //printf("before bounds - bSum %g\n",bSum);
       }
       modelPtr_->times(-1.0, bound, effectiveRhs);

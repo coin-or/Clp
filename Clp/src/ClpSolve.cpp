@@ -6496,9 +6496,9 @@ int ClpSimplex::solveBenders(CoinStructuredModel *model, ClpSolve &options)
     // Solve master - may be unbounded
     //masterModel.scaling(0);
     // get obj for debug
-    double objSum = masterModel.objectiveValue();
-    for (int i = 0; i < numberBlocks; i++)
-      objSum += sub[i].objectiveValue();
+    //double objSum = masterModel.objectiveValue();
+    //for (int i = 0; i < numberBlocks; i++)
+    //  objSum += sub[i].objectiveValue();
     //printf("objsum %g\n",objSum);
     if (0) {
       masterModel.writeMps("yy.mps");
@@ -7109,24 +7109,24 @@ int ClpSimplex::solveBenders(CoinStructuredModel *model, ClpSolve &options)
       int numberRows2 = sub[iBlock].numberRows();
       int numberColumns2 = sub[iBlock].numberColumns();
       double *saveLower = modification[iBlock];
-      double *lower2 = sub[iBlock].rowLower();
+      //double *lower2 = sub[iBlock].rowLower();
       double *saveUpper = saveLower + numberRows2 + numberColumns2;
-      double *upper2 = sub[iBlock].rowUpper();
+      //double *upper2 = sub[iBlock].rowUpper();
       int typeRun = sub[iBlock].secondaryStatus();
       sub[iBlock].setSecondaryStatus(0);
       if (typeRun != 99) {
         if (0) {
-          double objValue = 0.0;
+          //double objValue = 0.0;
           const double *solution = sub[iBlock].dualRowSolution();
           for (int i = 0; i < numberRows2; i++) {
             if (solution[i] < -dualTolerance_) {
               // at upper
               assert(saveUpper[i] < 1.0e30);
-              objValue += solution[i] * upper2[i];
+              //objValue += solution[i] * upper2[i];
             } else if (solution[i] > dualTolerance_) {
               // at lower
               assert(saveLower[i] > -1.0e30);
-              objValue += solution[i] * lower2[i];
+              //objValue += solution[i] * lower2[i];
             }
           }
           //printf("obj %g\n",objValue);

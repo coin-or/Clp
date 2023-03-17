@@ -5575,7 +5575,9 @@ int ClpSimplexOther::expandKnapsack(int knapsackRow, int &numberOutput,
     buildStart[0] = 0;
   while (iStack >= 0) {
     if (sum >= minSize && sum <= maxSize) {
+#ifndef NDEBUG
       double checkSize = 0.0;
+#endif
       bool good = true;
       int nRow = 0;
       double obj = 0.0;
@@ -5668,9 +5670,11 @@ int ClpSimplexOther::expandKnapsack(int knapsackRow, int &numberOutput,
           }
           break;
         }
+#ifndef NDEBUG
         for (int j = 0; j < numJ; j++) {
           checkSize += stack[j] * size[j];
         }
+#endif
         assert(fabs(sum - checkSize) < 1.0e-3);
       }
       for (jRow = 0; jRow < nRow; jRow++) {
@@ -6604,7 +6608,7 @@ void ClpSimplexOther::getGubBasis(ClpSimplex &original, const int *whichRows,
   double *solution = primalColumnSolution();
   double *originalSolution = original.primalColumnSolution();
   int numberSets = gubMatrix->numberSets();
-  const double *cost = original.objective();
+  //const double *cost = original.objective();
   int lastOdd = gubMatrix->firstAvailable();
   //assert (numberTotalColumns==numberColumns+numberSlacks);
   int numberRows = original.numberRows();
@@ -6730,9 +6734,9 @@ void ClpSimplexOther::getGubBasis(ClpSimplex &original, const int *whichRows,
     }
   }
   delete[] numberKey;
-  double objValue = 0.0;
-  for (int i = 0; i < numberColumns; i++)
-    objValue += cost[i] * originalSolution[i];
+  //double objValue = 0.0;
+  //for (int i = 0; i < numberColumns; i++)
+  //  objValue += cost[i] * originalSolution[i];
   //printf("objective value is %g\n", objValue);
 }
 /*
