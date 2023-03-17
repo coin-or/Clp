@@ -3741,12 +3741,12 @@ void ClpPredictorCorrector::debugMove(int /*phase*/,
     if (!flagged(iColumn))
       primalNew[iColumn] += primalStep * deltaX_[iColumn];
   }
-  CoinWorkDouble quadraticOffset = quadraticDjs(djNew, primalNew, 1.0);
+  /*CoinWorkDouble quadraticOffset =*/ quadraticDjs(djNew, primalNew, 1.0);
   CoinZeroN(errorRegionNew, numberRows_);
   CoinZeroN(rhsFixRegionNew, numberRows_);
   CoinWorkDouble maximumBoundInfeasibility = 0.0;
   CoinWorkDouble maximumDualError = 1.0e-12;
-  CoinWorkDouble primalObjectiveValue = 0.0;
+  //CoinWorkDouble primalObjectiveValue = 0.0;
   //CoinWorkDouble dualObjectiveValue = 0.0;
   CoinWorkDouble solutionNorm = 1.0e-12;
   const CoinWorkDouble largeFactor = 1.0e2;
@@ -3754,16 +3754,16 @@ void ClpPredictorCorrector::debugMove(int /*phase*/,
   if (largeGap < largeFactor) {
     largeGap = largeFactor;
   }
-  CoinWorkDouble dualFake = 0.0;
+  //CoinWorkDouble dualFake = 0.0;
   CoinWorkDouble dualTolerance = dblParam_[ClpDualTolerance];
   dualTolerance = dualTolerance / scaleFactor_;
   if (dualTolerance < 1.0e-12) {
     dualTolerance = 1.0e-12;
   }
   //CoinWorkDouble newGap = 0.0;
-  CoinWorkDouble offsetObjective = 0.0;
+  //CoinWorkDouble offsetObjective = 0.0;
   CoinWorkDouble gamma2 = gamma_ * gamma_; // gamma*gamma will be added to diagonal
-  CoinWorkDouble gammaOffset = 0.0;
+  //CoinWorkDouble gammaOffset = 0.0;
   CoinWorkDouble maximumDjInfeasibility = 0.0;
   for (iColumn = 0; iColumn < numberTotal; iColumn++) {
     if (!flagged(iColumn)) {
@@ -3799,12 +3799,12 @@ void ClpPredictorCorrector::debugMove(int /*phase*/,
       CoinWorkDouble gammaTerm = gamma2;
       if (primalR_) {
         gammaTerm += primalR_[iColumn];
-        quadraticOffset += newPrimal * newPrimal * primalR_[iColumn];
+        //quadraticOffset += newPrimal * newPrimal * primalR_[iColumn];
       }
       CoinWorkDouble dualInfeasibility = reducedCost - zValue + wValue + gammaTerm * newPrimal;
-      if (CoinAbs(dualInfeasibility) > dualTolerance) {
-        dualFake += newPrimal * dualInfeasibility;
-      }
+      //if (CoinAbs(dualInfeasibility) > dualTolerance) {
+      //  dualFake += newPrimal * dualInfeasibility;
+      //}
       if (lowerBoundInfeasibility > maximumBoundInfeasibility) {
         maximumBoundInfeasibility = lowerBoundInfeasibility;
       }
@@ -3817,10 +3817,10 @@ void ClpPredictorCorrector::debugMove(int /*phase*/,
         // reducedCost-zVec_[iColumn]+wVec_[iColumn]+gammaTerm*newPrimal);
         maximumDualError = dualInfeasibility;
       }
-      gammaOffset += newPrimal * newPrimal;
+      //gammaOffset += newPrimal * newPrimal;
       djNew[iColumn] = 0.0;
     } else {
-      offsetObjective += primalNew[iColumn] * cost_[iColumn];
+      //offsetObjective += primalNew[iColumn] * cost_[iColumn];
       if (upper_[iColumn] - lower_[iColumn] > 1.0e-5) {
         if (primalNew[iColumn] < lower_[iColumn] + 1.0e-8 && djNew[iColumn] < -1.0e-8) {
           if (-djNew[iColumn] > maximumDjInfeasibility) {
@@ -3835,12 +3835,12 @@ void ClpPredictorCorrector::debugMove(int /*phase*/,
       }
       djNew[iColumn] = primalNew[iColumn];
     }
-    primalObjectiveValue += solution_[iColumn] * cost_[iColumn];
+    //primalObjectiveValue += solution_[iColumn] * cost_[iColumn];
   }
   // update rhs region
   multiplyAdd(djNew + numberColumns_, numberRows_, -1.0, rhsFixRegionNew, 1.0);
   matrix_->times(1.0, djNew, rhsFixRegionNew);
-  primalObjectiveValue += 0.5 * gamma2 * gammaOffset + 0.5 * quadraticOffset;
+  //primalObjectiveValue += 0.5 * gamma2 * gammaOffset + 0.5 * quadraticOffset;
   //dualObjectiveValue += offsetObjective + dualFake;
   //dualObjectiveValue -= 0.5 * gamma2 * gammaOffset + 0.5 * quadraticOffset;
   // Need to rethink (but it is only for printing)
@@ -3848,13 +3848,13 @@ void ClpPredictorCorrector::debugMove(int /*phase*/,
   multiplyAdd(primalNew + numberColumns_, numberRows_, -1.0, errorRegionNew, 0.0);
   matrix_->times(1.0, primalNew, errorRegionNew);
   //finish off objective computation
-  CoinWorkDouble primalObjectiveNew = primalObjectiveValue * scaleFactor_;
+  //CoinWorkDouble primalObjectiveNew = primalObjectiveValue * scaleFactor_;
   //CoinWorkDouble dualValue2 = innerProduct(dualNew, numberRows_, rhsFixRegionNew);
   //dualObjectiveValue -= dualValue2;
   //CoinWorkDouble dualObjectiveNew=dualObjectiveValue*scaleFactor_;
   CoinWorkDouble maximumRHSError1 = 0.0;
   CoinWorkDouble maximumRHSError2 = 0.0;
-  CoinWorkDouble primalOffset = 0.0;
+  //CoinWorkDouble primalOffset = 0.0;
   char *dropped = cholesky_->rowsDropped();
   int iRow;
   for (iRow = 0; iRow < numberRows_; iRow++) {
@@ -3867,10 +3867,10 @@ void ClpPredictorCorrector::debugMove(int /*phase*/,
       if (CoinAbs(value) > maximumRHSError2) {
         maximumRHSError2 = CoinAbs(value);
       }
-      primalOffset += value * dualNew[iRow];
+      //primalOffset += value * dualNew[iRow];
     }
   }
-  primalObjectiveNew -= primalOffset * scaleFactor_;
+  //primalObjectiveNew -= primalOffset * scaleFactor_;
   //CoinWorkDouble maximumRHSError;
   if (maximumRHSError1 > maximumRHSError2) {
     ; //maximumRHSError = maximumRHSError1;

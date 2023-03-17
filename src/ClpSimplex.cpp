@@ -2250,7 +2250,9 @@ int ClpSimplex::housekeeping(double objectiveChange)
         int numberFixed = 0;
         int numberUnsat = 0;
         int numberSat = 0;
+#ifdef COIN_DETAILED
         double sumUnsat = 0.0;
+#endif
         double tolerance = 10.0 * primalTolerance_;
         double mostAway = 0.0;
         for (int i = 0; i < numberColumns_; i++) {
@@ -2267,7 +2269,9 @@ int ClpSimplex::housekeeping(double objectiveChange)
               // problem may be perturbed so relax test
               if (fabs(value - closest) > 1.0e-4) {
                 numberUnsat++;
+#ifdef COIN_DETAILED
                 sumUnsat += fabs(value - closest);
+#endif
                 if (mostAway < fabs(value - closest)) {
                   mostAway = fabs(value - closest);
                 }
