@@ -1,0 +1,5 @@
+﻿
+# Ignore files created during unit tests
+/MSVisualStudio/v17/*.mps
+/MSVisualStudio/v17/*.lp
+/MSVisualStudio/v17/*.out
