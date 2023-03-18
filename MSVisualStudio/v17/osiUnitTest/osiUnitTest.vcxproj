@@ -43,9 +43,9 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{75367352-81a3-4707-8560-3005edc37bba}</ProjectGuid>
-    <RootNamespace>OsiClpUnitTest</RootNamespace>
+    <RootNamespace>osiUnitTest</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>OsiClpUnitTest</ProjectName>
+    <ProjectName>osiUnitTest</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

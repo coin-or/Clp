@@ -13,8 +13,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libOsi", "..\..\..\Osi\MSVi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libOsiCommonTest", "..\..\..\Osi\MSVisualStudio\v17\libOsiCommonTest\libOsiCommonTest.vcxproj", "{109D6E6F-6D91-460F-86AE-DF27400E09A9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OsiClpUnitTest", "OsiClpUnitTest\OsiClpUnitTest.vcxproj", "{75367352-81A3-4707-8560-3005EDC37BBA}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ClpExamplesMinimum", "ClpExamplesMinimum\ClpExamplesMinimum.vcxproj", "{52464C0A-31B8-465D-B734-6B05EE15CD7D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ClpExamplesTestBarrier", "ClpExamplesTestBarrier\ClpExamplesTestBarrier.vcxproj", "{F7011C7A-A8B7-47A7-8C6F-1BBD2A332A29}"
@@ -35,6 +33,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		..\..\.github\workflows\release.yml = ..\..\.github\workflows\release.yml
 		..\..\.github\workflows\windows-ci.yml = ..\..\.github\workflows\windows-ci.yml
 	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0F428A8D-1191-439E-8978-053C8F099329}"
+	ProjectSection(SolutionItems) = preProject
+		ClpTest.cmd = ClpTest.cmd
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{5F5EC484-0FD9-4B32-ACAB-FF00E07DEAB5}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "osiUnitTest", "osiUnitTest\osiUnitTest.vcxproj", "{75367352-81A3-4707-8560-3005EDC37BBA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -84,14 +91,6 @@ Global
 		{109D6E6F-6D91-460F-86AE-DF27400E09A9}.Release|x64.Build.0 = Release|x64
 		{109D6E6F-6D91-460F-86AE-DF27400E09A9}.Release|x86.ActiveCfg = Release|Win32
 		{109D6E6F-6D91-460F-86AE-DF27400E09A9}.Release|x86.Build.0 = Release|Win32
-		{75367352-81A3-4707-8560-3005EDC37BBA}.Debug|x64.ActiveCfg = Debug|x64
-		{75367352-81A3-4707-8560-3005EDC37BBA}.Debug|x64.Build.0 = Debug|x64
-		{75367352-81A3-4707-8560-3005EDC37BBA}.Debug|x86.ActiveCfg = Debug|Win32
-		{75367352-81A3-4707-8560-3005EDC37BBA}.Debug|x86.Build.0 = Debug|Win32
-		{75367352-81A3-4707-8560-3005EDC37BBA}.Release|x64.ActiveCfg = Release|x64
-		{75367352-81A3-4707-8560-3005EDC37BBA}.Release|x64.Build.0 = Release|x64
-		{75367352-81A3-4707-8560-3005EDC37BBA}.Release|x86.ActiveCfg = Release|Win32
-		{75367352-81A3-4707-8560-3005EDC37BBA}.Release|x86.Build.0 = Release|Win32
 		{52464C0A-31B8-465D-B734-6B05EE15CD7D}.Debug|x64.ActiveCfg = Debug|x64
 		{52464C0A-31B8-465D-B734-6B05EE15CD7D}.Debug|x64.Build.0 = Debug|x64
 		{52464C0A-31B8-465D-B734-6B05EE15CD7D}.Debug|x86.ActiveCfg = Debug|Win32
@@ -124,12 +123,27 @@ Global
 		{E62F88EE-DC76-489A-99A8-8070099D9D4F}.Release|x64.Build.0 = Release|x64
 		{E62F88EE-DC76-489A-99A8-8070099D9D4F}.Release|x86.ActiveCfg = Release|Win32
 		{E62F88EE-DC76-489A-99A8-8070099D9D4F}.Release|x86.Build.0 = Release|Win32
+		{75367352-81A3-4707-8560-3005EDC37BBA}.Debug|x64.ActiveCfg = Debug|x64
+		{75367352-81A3-4707-8560-3005EDC37BBA}.Debug|x64.Build.0 = Debug|x64
+		{75367352-81A3-4707-8560-3005EDC37BBA}.Debug|x86.ActiveCfg = Debug|Win32
+		{75367352-81A3-4707-8560-3005EDC37BBA}.Debug|x86.Build.0 = Debug|Win32
+		{75367352-81A3-4707-8560-3005EDC37BBA}.Release|x64.ActiveCfg = Release|x64
+		{75367352-81A3-4707-8560-3005EDC37BBA}.Release|x64.Build.0 = Release|x64
+		{75367352-81A3-4707-8560-3005EDC37BBA}.Release|x86.ActiveCfg = Release|Win32
+		{75367352-81A3-4707-8560-3005EDC37BBA}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{109D6E6F-6D91-460F-86AE-DF27400E09A9} = {0F428A8D-1191-439E-8978-053C8F099329}
+		{52464C0A-31B8-465D-B734-6B05EE15CD7D} = {5F5EC484-0FD9-4B32-ACAB-FF00E07DEAB5}
+		{F7011C7A-A8B7-47A7-8C6F-1BBD2A332A29} = {5F5EC484-0FD9-4B32-ACAB-FF00E07DEAB5}
+		{BDAE37AF-13BF-426A-9629-7E1CE4775C5B} = {5F5EC484-0FD9-4B32-ACAB-FF00E07DEAB5}
 		{434E978C-9259-4FD1-B708-FA653F0FC1C8} = {688FC827-9A38-4AFA-98F4-C301EDAAA305}
+		{0F428A8D-1191-439E-8978-053C8F099329} = {688FC827-9A38-4AFA-98F4-C301EDAAA305}
+		{5F5EC484-0FD9-4B32-ACAB-FF00E07DEAB5} = {688FC827-9A38-4AFA-98F4-C301EDAAA305}
+		{75367352-81A3-4707-8560-3005EDC37BBA} = {0F428A8D-1191-439E-8978-053C8F099329}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6F8995EA-6612-4697-B709-B51B0005FDBD}
