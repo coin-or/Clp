@@ -4417,10 +4417,12 @@ int ClpSimplexProgress::looping()
   // skip if just last time as may be checking something
   if (matched == (1 << (CLP_PROGRESS - 1)))
     numberMatched = 0;
-  if (model_->numberIterations()>20*model_->numberRows()+100) {
+  if (model_->numberIterations()>20*model_->numberRows()
+      +5*model_->numberColumns()+100) {
     // pretty bad
     // make factorize every iteration
-    if (model_->numberIterations()<25*model_->numberRows()+300) {
+    if (model_->numberIterations()<25*model_->numberRows()
+	+8*model_->numberColumns()+300) {
       model_->forceFactorization(1);
     } else {
       // give up
