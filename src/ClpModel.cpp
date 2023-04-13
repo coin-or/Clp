@@ -2968,6 +2968,11 @@ int ClpModel::readMps(const char *fileName,
     handler_->message(CLP_IMPORT_ERRORS, messages_)
       << status << fileName << CoinMessageEol;
   }
+  if (m.isMaximization()) {
+    optimizationDirection_ = -1.0;
+    handler_->message(CLP_GENERAL, messages_) <<
+      "optimization direction has been set to maximize" << CoinMessageEol;
+  }
 
   return status;
 }

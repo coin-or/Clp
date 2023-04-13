@@ -6009,6 +6009,11 @@ int OsiClpSolverInterface::readMps(const char *filename,
     }
     modelPtr_->copyNames(rowNames, columnNames);
   }
+  if (m.isMaximization()) {
+    modelPtr_->setOptimizationDirection(-1.0);
+    handler_->message(COIN_GENERAL_INFO, messages_) <<
+      "optimization direction has been set to maximize" << CoinMessageEol;
+  }
   return numberErrors;
 }
 int OsiClpSolverInterface::readMps(const char *filename, const char *extension,
@@ -6123,6 +6128,11 @@ int OsiClpSolverInterface::readMps(const char *filename, bool keepNames, bool al
     if (m.getInfinity()<0.0) {
       modifyByIndicators();
     }
+  }
+  if (m.isMaximization()) {
+    modelPtr_->setOptimizationDirection(-1.0);
+    handler_->message(COIN_GENERAL_INFO, messages_) <<
+      "optimization direction has been set to maximize" << CoinMessageEol;
   }
   return numberErrors;
 }
