@@ -1924,7 +1924,7 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
               double sumPrimal = (!numberFake) ? 2.0e5 : sumPrimalInfeasibilities_;
               if (sumPrimalInfeasibilities_ < 1.0e-3 || sumDualInfeasibilities_ > 1.0e-5 || (sumPrimal < 1.0e5 && (specialOptions_ & 1024) != 0 && factorization_->pivots())) {
                 if ((sumPrimal > 50.0 && factorization_->pivots() > 2)
-		    || (moreSpecialOptions_&256)!=0 && factorization_->pivots()) {
+		    || ((moreSpecialOptions_&256)!=0 && factorization_->pivots())) {
                   problemStatus_ = -4;
 #ifdef COIN_DEVELOP
                   printf("status to -4 at %d - primalinf %g pivots %d\n",
