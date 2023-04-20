@@ -3086,7 +3086,7 @@ This is a first try and will hopefully become more sophisticated.");
     p.setLonghelp(
       "This switches on Orbital branching. \
 Value 'on' just adds orbital, 'strong' tries extra fixing in strong branching. \
-'cuts' just adds global cuts to break symmetry. \ 
+'cuts' just adds global cuts to break symmetry. \
 'fastish' only computes symmetry at root. \
 'lightweight' is as on where computation seems cheap");
     parameters.push_back(p);
