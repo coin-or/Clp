@@ -128,18 +128,11 @@ jobs:
           echo "package_suffix=${{ matrix.arch }}-w64-${{ matrix.msystem }}${{ matrix.suffix }}" >> $GITHUB_ENV
         shell: msys2 {0}
         if: ${{ matrix.arch != 'msvc' }}
-      - name: Generate safe branch name
-        # Replace forward slash in branch name head_ref, such as stable/1.1 
-        # because slash is not allowed in artifact name.
-        run: |
-          head_ref=${{ github.head_ref }}
-          echo "safe_head_ref=${head_ref//\//-}" >> $GITHUB_ENV
-        shell: msys2 {0}
       - name: Upload artifact
         if: ${{ github.event_name == 'pull_request'}}
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ github.event.repository.name }}-${{ env.safe_head_ref }}-${{ env.package_suffix }}
+          name: ${{ github.event.repository.name }}-${{ github.head_ref }}-${{ env.package_suffix }}
           path: dist
           if-no-files-found: error
       - name: Zip up dist contents for release
