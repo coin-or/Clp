@@ -42,8 +42,7 @@ echo INFO: Starting Tests
 "%BINDIR%\clp.exe" -dirSample %SAMPLEDIR% -unitTest -dirNetlib %netlibdir% -netlib
 if not %errorlevel%==0 echo ERROR: Error running clp.exe tests. && goto :error
 
-@REM Skip Osi test until VS2022 projects have been created
-@REM "%BINDIR%\osiUnitTest.exe" -mpsDir=%SAMPLEDIR% -netlibDir=%NETLIBDIR% -testOsiSolverInterface 
-@REM if not %errorlevel%==0 echo ERROR: Error running osiUnitTest.exe tests. && goto :error
+"%BINDIR%\osiUnitTest.exe" -mpsDir=%SAMPLEDIR% -netlibDir=%NETLIBDIR% -testOsiSolverInterface 
+if not %errorlevel%==0 echo ERROR: Error running osiUnitTest.exe tests. && goto :error
 
 echo INFO: Finished Tests successfully (%ERRORLEVEL%)
