@@ -6000,7 +6000,7 @@ int sizeWork = 6 * numberBlocks_;
 work_ = new double[sizeWork];
 ;
 int iBlock;
-int nZero = 0;
+//int nZero = 0;
 for (iBlock = 0; iBlock < numberBlocks_; iBlock++) {
   int start = iBlock * chunk;
   offset_[iBlock] = start;
@@ -6034,8 +6034,8 @@ for (iBlock = 0; iBlock < numberBlocks_; iBlock++) {
       }
     }
     count_[iRow * numberBlocks_ + iBlock] = static_cast< unsigned short >(nFound);
-    if (!nFound)
-      nZero++;
+    //if (!nFound)
+    //  nZero++;
   }
 }
 //double fraction = ((double) nZero)/((double) (numberBlocks_*numberRows_));
@@ -6828,7 +6828,6 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
   unsigned char *status = model->statusArray();
   const double *lower = model->columnLower();
   const double *upper = model->columnUpper();
-  int nFree = 0; // or superbasic
   int nFreeEls = 0;
   for (iColumn = 0; iColumn < numberColumns; iColumn++) {
     CoinBigIndex start = columnStart[iColumn];
@@ -6842,7 +6841,6 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
     n -= kZero;
     nels += n;
     if ((lower[iColumn] == -COIN_DBL_MAX && upper[iColumn] == COIN_DBL_MAX) || (status[iColumn] & 3) == 0) {
-      nFree++;
       nFreeEls += n;
       n = 0;
       if ((status[iColumn] & 3) != 0) {

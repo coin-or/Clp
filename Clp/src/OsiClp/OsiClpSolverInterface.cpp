@@ -3078,7 +3078,9 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
       const double *columnUpper = modelPtr_->columnUpper_;
       const double *columnValue = modelPtr_->columnActivity_;
       int numberBad = 0;
+#if PRINT_CONFLICT > 1
       int nNonzeroBasic = 0;
+#endif
       for (int i = 0; i < numberColumns; i++) {
         double value = farkas[i];
         double boundValue = 0.0;
@@ -3091,7 +3093,9 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
           if (value) {
             //printf("basic %d direction %d farkas %g\n",
             //i,modelPtr_->directionOut_,value);
+#if PRINT_CONFLICT > 1
             nNonzeroBasic++;
+#endif
             if (value < 0.0)
               boundValue = columnLower[i];
             else
@@ -3132,7 +3136,9 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
           if (value) {
             //printf("row basic %d direction %d ray %g\n",
             //	   i,modelPtr_->directionOut_,value);
+#if PRINT_CONFLICT > 1
             nNonzeroBasic++;
+#endif
             if (value < 0.0)
               rhsValue = rowLower[i];
             else
@@ -3318,8 +3324,10 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
         double *sort = new double[numberColumns];
         double relax = 0.0;
         int nConflict = 0;
+#if PRINT_CONFLICT > 1 //ndef NDEBUG
         int nOriginal = 0;
         int nFixed = 0;
+#endif
         for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
           double thisRelax = 0.0;
           if (integerInformation[iColumn]) {
@@ -3332,10 +3340,12 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
             double gap = originalUpper[iColumn] - originalLower[iColumn];
             if (!gap)
               continue;
+#if PRINT_CONFLICT > 1 //ndef NDEBUG
             if (gap == columnUpper[iColumn] - columnLower[iColumn])
               nOriginal++;
             if (columnUpper[iColumn] == columnLower[iColumn])
               nFixed++;
+#endif
             if (fabs(farkas[iColumn]) < 1.0e-15) {
               farkas[iColumn] = 0.0;
               continue;
@@ -7700,28 +7710,28 @@ void OsiClpSolverInterface::crunch()
             }
             {
               // Column copy of matrix
-              const double *element = small->matrix()->getElements();
-              const int *row = small->matrix()->getIndices();
-              const CoinBigIndex *columnStart = small->matrix()->getVectorStarts();
-              const int *columnLength = small->matrix()->getVectorLengths();
-              int n = 0, k = 0, nn = 0;
-              for (int i = 0; i < small->numberColumns_; i++) {
-                double sum = 0.0;
-                for (CoinBigIndex j = columnStart[i];
-                     j < columnStart[i] + columnLength[i]; j++) {
-                  sum += small->ray_[row[j]] * element[j];
-                }
-                if (fabs(sum) > 1.0e-7) {
-                  if (small->getColumnStatus(i) == ClpSimplex::basic) {
-                    n++;
-                    if (fabs(1.0 - fabs(sum)) > 1.0e-7)
-                      nn++;
-                  } else if (fabs(sum) > 1.0e-7) {
-                    k++;
-                  }
-                  //printf("%d %g\n",i,sum);
-                }
-              }
+              //const double *element = small->matrix()->getElements();
+              //const int *row = small->matrix()->getIndices();
+              //const CoinBigIndex *columnStart = small->matrix()->getVectorStarts();
+              //const int *columnLength = small->matrix()->getVectorLengths();
+              //int n = 0, k = 0, nn = 0;
+              //for (int i = 0; i < small->numberColumns_; i++) {
+              //  double sum = 0.0;
+              //  for (CoinBigIndex j = columnStart[i];
+              //       j < columnStart[i] + columnLength[i]; j++) {
+              //    sum += small->ray_[row[j]] * element[j];
+              //  }
+              //  if (fabs(sum) > 1.0e-7) {
+              //    if (small->getColumnStatus(i) == ClpSimplex::basic) {
+              //      n++;
+              //      if (fabs(1.0 - fabs(sum)) > 1.0e-7)
+              //        nn++;
+              //    } else if (fabs(sum) > 1.0e-7) {
+              //      k++;
+              //    }
+              //    //printf("%d %g\n",i,sum);
+              //  }
+              //}
               //printf("small %d basic (%d non-unit) %d non-basic\n",n,nn,k);
             }
             // Column copy of matrix
@@ -7747,20 +7757,20 @@ void OsiClpSolverInterface::crunch()
                 ray[iRow] = -sum / value;
               }
             }
-            int n = 0, k = 0, nn = 0;
+            //int n = 0, k = 0, nn = 0;
             for (int i = 0; i < modelPtr_->numberColumns_; i++) {
-              double sum = 0.0;
-              for (CoinBigIndex j = columnStart[i];
-                   j < columnStart[i] + columnLength[i]; j++) {
-                sum += ray[row[j]] * element[j];
-              }
-              if (modelPtr_->getStatus(i) == ClpSimplex::basic && fabs(sum) > 1.0e-7) {
-                n++;
-                if (fabs(1.0 - fabs(sum)) > 1.0e-7)
-                  nn++;
-              } else if (fabs(sum) > 1.0e-7) {
-                k++;
-              }
+              //double sum = 0.0;
+              //for (CoinBigIndex j = columnStart[i];
+              //     j < columnStart[i] + columnLength[i]; j++) {
+              //  sum += ray[row[j]] * element[j];
+              //}
+              //if (modelPtr_->getStatus(i) == ClpSimplex::basic && fabs(sum) > 1.0e-7) {
+              //  n++;
+              //  if (fabs(1.0 - fabs(sum)) > 1.0e-7)
+              //    nn++;
+              //} else if (fabs(sum) > 1.0e-7) {
+              //  k++;
+              //}
               if (modelPtr_->getStatus(i) != ClpSimplex::basic && modelPtr_->columnLower_[i] == modelPtr_->columnUpper_[i])
                 modelPtr_->setStatus(i, ClpSimplex::isFixed);
             }
@@ -8150,7 +8160,7 @@ void OsiNodeSimple::gutsOfConstructor(OsiSolverInterface &model,
   variable_ = -1;
   // This has hard coded integer tolerance
   double mostAway = INTEGER_TOLERANCE;
-  int numberAway = 0;
+  //int numberAway = 0;
   for (i = 0; i < numberIntegers; i++) {
     int iColumn = integer[i];
     lower_[i] = static_cast< int >(lower[iColumn]);
@@ -8159,8 +8169,8 @@ void OsiNodeSimple::gutsOfConstructor(OsiSolverInterface &model,
     value = CoinMax(value, static_cast< double >(lower_[i]));
     value = CoinMin(value, static_cast< double >(upper_[i]));
     double nearest = floor(value + 0.5);
-    if (fabs(value - nearest) > INTEGER_TOLERANCE)
-      numberAway++;
+    //if (fabs(value - nearest) > INTEGER_TOLERANCE)
+    //  numberAway++;
     if (fabs(value - nearest) > mostAway) {
       double away = fabs(value - nearest);
       if (away > upMovement[iSmallest]) {
@@ -8775,7 +8785,7 @@ void OsiClpSolverInterface::branchAndBound()
         assert(wsb != NULL); // make sure not volume
         numberIterations += getIterationCount();
         // fix on reduced costs
-        int nFixed0 = 0, nFixed1 = 0;
+        //int nFixed0 = 0, nFixed1 = 0;
         double cutoff;
         getDblParam(OsiDualObjectiveLimit, cutoff);
         double gap = (cutoff - modelPtr_->objectiveValue()) * direction + 1.0e-4;
@@ -8788,10 +8798,10 @@ void OsiClpSolverInterface::branchAndBound()
             if (upper[iColumn] > lower[iColumn]) {
               double djValue = dj[iColumn] * direction;
               if (wsb->getStructStatus(iColumn) == CoinWarmStartBasis::atLowerBound && djValue > gap) {
-                nFixed0++;
+                //nFixed0++;
                 setColUpper(iColumn, lower[iColumn]);
               } else if (wsb->getStructStatus(iColumn) == CoinWarmStartBasis::atUpperBound && -djValue > gap) {
-                nFixed1++;
+                //nFixed1++;
                 setColLower(iColumn, upper[iColumn]);
               }
             }
@@ -10168,18 +10178,24 @@ void OsiClpSolverInterface::crossover(int options, int basis)
     double *lower = modelPtr_->columnLower();
     double *upper = modelPtr_->columnUpper();
     double *solution = modelPtr_->primalColumnSolution();
+#ifdef CLP_INVESTIGATE
     int nFix = 0;
+#endif
     for (int i = 0; i < numberColumns; i++) {
       if (lower[i] < upper[i] && (lower[i] > -1.0e10 || upper[i] < 1.0e10)) {
         double value = solution[i];
         if (value < lower[i] + tolerance && value - lower[i] < upper[i] - value) {
           solution[i] = lower[i];
           upper[i] = lower[i];
+#ifdef CLP_INVESTIGATE
           nFix++;
+#endif
         } else if (value > upper[i] - tolerance && value - lower[i] > upper[i] - value) {
           solution[i] = upper[i];
           lower[i] = upper[i];
+#ifdef CLP_INVESTIGATE
           nFix++;
+#endif
         }
       }
     }

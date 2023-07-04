@@ -1600,7 +1600,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         double largest = 0.0;
         double smallest = 1.0e30;
         double largestGap = 0.0;
-        int numberNotE = 0;
+        //int numberNotE = 0;
         bool notInteger = false;
         for (iRow = 0; iRow < numberRows; iRow++) {
           double value1 = model2->rowLower_[iRow];
@@ -1623,7 +1623,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
           }
           // CHECKME This next bit can't be right...
           if (value2 > value1) {
-            numberNotE++;
+            //numberNotE++;
             //if (value2 > 1.0e31 || value1 < -1.0e31)
             //   largestGap = COIN_DBL_MAX;
             //else
@@ -3338,18 +3338,24 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         double *lower = barrier.columnLower();
         double *upper = barrier.columnUpper();
         double *solution = barrier.primalColumnSolution();
+#ifdef CLP_INVESTIGATE
         int nFix = 0;
+#endif
         for (int i = 0; i < n; i++) {
           if (barrier.fixedOrFree(i) && lower[i] < upper[i]) {
             double value = solution[i];
             if (value < lower[i] + 1.0e-6 && value - lower[i] < upper[i] - value) {
               solution[i] = lower[i];
               upper[i] = lower[i];
+#ifdef CLP_INVESTIGATE
               nFix++;
+#endif
             } else if (value > upper[i] - 1.0e-6 && value - lower[i] > upper[i] - value) {
               solution[i] = upper[i];
               lower[i] = upper[i];
+#ifdef CLP_INVESTIGATE
               nFix++;
+#endif
             }
           }
         }
@@ -3360,18 +3366,24 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         lower = barrier.rowLower();
         upper = barrier.rowUpper();
         solution = barrier.primalRowSolution();
+#ifdef CLP_INVESTIGATE
         nFix = 0;
+#endif
         for (int i = 0; i < nr; i++) {
           if (barrier.fixedOrFree(i + n) && lower[i] < upper[i]) {
             double value = solution[i];
             if (value < lower[i] + 1.0e-6 && value - lower[i] < upper[i] - value) {
               solution[i] = lower[i];
               upper[i] = lower[i];
+#ifdef CLP_INVESTIGATE
               nFix++;
+#endif
             } else if (value > upper[i] - 1.0e-6 && value - lower[i] > upper[i] - value) {
               solution[i] = upper[i];
               lower[i] = upper[i];
+#ifdef CLP_INVESTIGATE
               nFix++;
+#endif
             }
           }
         }
@@ -3391,18 +3403,24 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         double *lower = barrier.columnLower();
         double *upper = barrier.columnUpper();
         double *solution = barrier.primalColumnSolution();
+#ifdef CLP_INVESTIGATE
         int nFix = 0;
+#endif
         for (int i = 0; i < n; i++) {
           if (barrier.fixedOrFree(i) && lower[i] < upper[i]) {
             double value = solution[i];
             if (value < lower[i] + 1.0e-8 && value - lower[i] < upper[i] - value) {
               solution[i] = lower[i];
               upper[i] = lower[i];
+#ifdef CLP_INVESTIGATE
               nFix++;
+#endif
             } else if (value > upper[i] - 1.0e-8 && value - lower[i] > upper[i] - value) {
               solution[i] = upper[i];
               lower[i] = upper[i];
+#ifdef CLP_INVESTIGATE
               nFix++;
+#endif
             } else {
               //printf("fixcol %d %g <= %g <= %g\n",
               //     i,lower[i],solution[i],upper[i]);
@@ -3416,18 +3434,24 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         lower = barrier.rowLower();
         upper = barrier.rowUpper();
         solution = barrier.primalRowSolution();
+#ifdef CLP_INVESTIGATE
         nFix = 0;
+#endif
         for (int i = 0; i < nr; i++) {
           if (barrier.fixedOrFree(i + n) && lower[i] < upper[i]) {
             double value = solution[i];
             if (value < lower[i] + 1.0e-5 && value - lower[i] < upper[i] - value) {
               solution[i] = lower[i];
               upper[i] = lower[i];
+#ifdef CLP_INVESTIGATE
               nFix++;
+#endif
             } else if (value > upper[i] - 1.0e-5 && value - lower[i] > upper[i] - value) {
               solution[i] = upper[i];
               lower[i] = upper[i];
+#ifdef CLP_INVESTIGATE
               nFix++;
+#endif
             } else {
               //printf("fixrow %d %g <= %g <= %g\n",
               //     i,lower[i],solution[i],upper[i]);
