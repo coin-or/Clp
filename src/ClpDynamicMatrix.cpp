@@ -1611,13 +1611,17 @@ ClpDynamicMatrix::keyValue(int iSet) const
         value = lowerSet_[iSet];
       else
         value = upperSet_[iSet];
+#ifndef NDEBUG
       int numberKey = 0;
+#endif
       int j = startSet_[iSet];
       while (j >= 0) {
         DynamicStatus status = getDynamicStatus(j);
         assert(status != inSmall);
         if (status == soloKey) {
+#ifndef NDEBUG
           numberKey++;
+#endif
         } else if (status == atUpperBound) {
           value -= columnUpper_[j];
         } else if (columnLower_) {

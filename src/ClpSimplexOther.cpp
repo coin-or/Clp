@@ -1407,13 +1407,13 @@ int ClpSimplexOther::restoreFromDual(const ClpSimplex *dualProblem,
   int numberBasic = 0;
   int iRow, iColumn = 0;
   // Get number of extra rows from ranges
-  int numberExtraRows = 0;
-  for (iRow = 0; iRow < numberRows_; iRow++) {
-    if (rowLower_[iRow] > -SMALL_INFINITY && rowUpper_[iRow] < SMALL_INFINITY) {
-      if (rowUpper_[iRow] != rowLower_[iRow])
-        numberExtraRows++;
-    }
-  }
+  //int numberExtraRows = 0;
+  //for (iRow = 0; iRow < numberRows_; iRow++) {
+  //  if (rowLower_[iRow] > -SMALL_INFINITY && rowUpper_[iRow] < SMALL_INFINITY) {
+  //    if (rowUpper_[iRow] != rowLower_[iRow])
+  //      numberExtraRows++;
+  //  }
+  //}
   const double *objective = this->objective();
   const double *dualDual = dualProblem->dualRowSolution();
   const double *dualDj = dualProblem->dualColumnSolution();
@@ -1551,7 +1551,9 @@ int ClpSimplexOther::restoreFromDual(const ClpSimplex *dualProblem,
   }
   // now rows
   int kExtraRow = jColumn;
+#ifndef NDEBUG
   int numberRanges = 0;
+#endif
   for (iRow = 0; iRow < numberRows_; iRow++) {
     Status status = dualProblem->getColumnStatus(iRow);
     if (status == basic) {
@@ -1588,7 +1590,9 @@ int ClpSimplexOther::restoreFromDual(const ClpSimplex *dualProblem,
         }
       } else {
         // range
+#ifndef NDEBUG
         numberRanges++;
+#endif
         Status statusL = dualProblem->getColumnStatus(kExtraRow);
         //printf("range row %d (%d), extra %d (%d) - dualSol %g,%g dualDj %g,%g\n",
         //     iRow,status,kExtraRow,statusL, dualSol[iRow],
@@ -2837,7 +2841,7 @@ int ClpSimplexOther::parametrics(const char *dataFile)
       upperRowMove = new double[numberRows_];
       memset(upperRowMove, 0, numberRows_ * sizeof(double));
       int nLine = 0;
-      int nBadLine = 0;
+      //int nBadLine = 0;
       int nBadName = 0;
       while (fgets(line, 200, fp)) {
         if (!strncmp(line, "ENDATA", 6) || !strncmp(line, "COLUMN", 6))
@@ -2862,7 +2866,7 @@ int ClpSimplexOther::parametrics(const char *dataFile)
           if (comma) {
             *comma = '\0';
           } else if (i < nAcross - 1) {
-            nBadLine++;
+            //nBadLine++;
             break;
           }
           switch (orderRow[i]) {
@@ -3009,7 +3013,7 @@ int ClpSimplexOther::parametrics(const char *dataFile)
         objectiveMove = new double[numberColumns_];
         memset(objectiveMove, 0, numberColumns_ * sizeof(double));
         int nLine = 0;
-        int nBadLine = 0;
+        //int nBadLine = 0;
         int nBadName = 0;
         while (fgets(line, 200, fp)) {
           if (!strncmp(line, "ENDATA", 6))
@@ -3035,7 +3039,7 @@ int ClpSimplexOther::parametrics(const char *dataFile)
             if (comma) {
               *comma = '\0';
             } else if (i < nAcross - 1) {
-              nBadLine++;
+              //nBadLine++;
               break;
             }
             switch (orderColumn[i]) {
@@ -6125,7 +6129,9 @@ void ClpSimplexOther::cleanupAfterPostsolve()
   }
   double dualTolerance = dblParam_[ClpDualTolerance];
   double primalTolerance = dblParam_[ClpPrimalTolerance];
+#ifdef CLP_INVESTIGATE
   int numberCleaned = 0;
+#endif
   double maxmin = optimizationDirection_;
   for (int iColumn = 0; iColumn < numberColumns_; iColumn++) {
     double dualValue = reducedCost_[iColumn] * maxmin;
@@ -6184,7 +6190,9 @@ void ClpSimplexOther::cleanupAfterPostsolve()
           double addDual = dualValue / value;
           dual_[iRow] += addDual;
           reducedCost_[iColumn] = 0.0;
+#ifdef CLP_INVESTIGATE
           numberCleaned++;
+#endif
           break;
         }
       }
@@ -7216,14 +7224,14 @@ int ClpSimplex::modifyCoefficientsAndPivot(int number,
       for (int i = 0; i < n; i++) {
         int inWhich = sort[i];
         int iSequence = which2[inWhich];
-        int nZeroNew = 0;
+#ifndef NDEBUG
         int nZeroOld = 0;
+#endif
         for (CoinBigIndex j = start[inWhich]; j < start[inWhich + 1]; j++) {
           int iRow = row[j];
           double newValue = newCoefficient[j];
           if (!newValue) {
             newValue = COIN_INDEXED_REALLY_TINY_ELEMENT;
-            nZeroNew++;
           }
           array[iRow] = newValue;
         }
@@ -7242,7 +7250,9 @@ int ClpSimplex::modifyCoefficientsAndPivot(int number,
               }
             }
           } else {
+#ifndef NDEBUG
             nZeroOld++;
+#endif
           }
         }
         assert(!nZeroOld);
@@ -8196,7 +8206,9 @@ int ClpSimplex::outDuplicateRows(int numberLook, int *whichRows, bool noOverlaps
 #endif
   if (tolerance < 0.0)
     tolerance = primalTolerance_;
+#ifdef PRINT_DUP
   int nPossible = 0;
+#endif
   int nDelete = 0;
 #if USE_HASH == 1
   hash *temp = reinterpret_cast< hash * >(weights);
@@ -8240,8 +8252,8 @@ int ClpSimplex::outDuplicateRows(int numberLook, int *whichRows, bool noOverlaps
         CoinBigIndex start = rowStart[iThis];
         CoinBigIndex end = start + rowLength[iThis];
         if (rowLength[iThis] == rowLength[iLast]) {
-          nPossible++;
 #ifdef PRINT_DUP
+          nPossible++;
           char line[520], temp[50];
 #endif
           CoinBigIndex ishift = rowStart[iLast] - start;

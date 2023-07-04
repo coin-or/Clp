@@ -2922,11 +2922,15 @@ int ClpGubMatrix::generalExpanded(ClpSimplex *model, int mode, int &number)
     // redo pivotVariable
     int *pivotVariable = model->pivotVariable();
     int iRow;
+#ifndef NDEBUG
     int numberBasic = 0;
+#endif
     int numberRows = model->numberRows();
     for (iRow = 0; iRow < numberRows; iRow++) {
       if (model->getRowStatus(iRow) == ClpSimplex::basic) {
+#ifndef NDEBUG
         numberBasic++;
+#endif
         pivotVariable[iRow] = iRow + numberColumns;
       } else {
         pivotVariable[iRow] = -1;
@@ -2944,7 +2948,9 @@ int ClpGubMatrix::generalExpanded(ClpSimplex *model, int mode, int &number)
           }
           pivotVariable[i] = iColumn;
           backToPivotRow_[iColumn] = i;
+#ifndef NDEBUG
           numberBasic++;
+#endif
         }
       }
     }

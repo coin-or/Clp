@@ -1514,6 +1514,7 @@ void ClpPlusMinusOneMatrix::checkValid(bool detail) const
   if (startPositive_[number] < last)
     bad++;
   CoinAssertHint(!bad, "starts are not monotonic");
+  (void)bad;
   for (CoinBigIndex cbi = 0; cbi < numberElements; cbi++) {
     maxIndex = CoinMax(indices_[cbi], maxIndex);
     minIndex = CoinMin(indices_[cbi], minIndex);
