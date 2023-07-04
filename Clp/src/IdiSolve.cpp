@@ -167,7 +167,9 @@ Idiot::IdiSolve(
 #else
   int nsolve = NSOLVE + 1; /* allow for null vector */
 #endif
+#ifdef FOUR_GOES
   int nflagged;
+#endif
   double *COIN_RESTRICT thetaX;
   double *COIN_RESTRICT djX;
   double *COIN_RESTRICT bX;
@@ -470,7 +472,7 @@ Idiot::IdiSolve(
             double *COIN_RESTRICT v = vX;
             double c;
 #ifdef FIT
-            int ntot = 0, nsign = 0, ngood = 0, mgood[4] = { 0, 0, 0, 0 };
+            //int ntot = 0, nsign = 0, ngood = 0, mgood[4] = { 0, 0, 0, 0 };
             double diff1, diff2, val0, val1, val2, newValue;
             CoinMemcpyN(colsol, ncols, history[HISTORY - 1]);
             CoinMemcpyN(solExtra, extraBlock, history[HISTORY - 1] + ncols);
@@ -487,20 +489,20 @@ Idiot::IdiSolve(
                   int k;
                   objvalue += value2 * cost[i];
 #ifdef FIT
-                  ntot++;
+                  //ntot++;
                   val0 = history[0][i];
                   val1 = history[1][i];
                   val2 = history[2][i];
                   diff1 = val0 - val1;
                   diff2 = val1 - val2;
                   if (diff1 * diff2 >= 0.0) {
-                    nsign++;
+                    //nsign++;
                     if (fabs(diff1) < fabs(diff2)) {
                       int ii = static_cast< int >(fabs(4.0 * diff1 / diff2));
                       if (ii == 4)
                         ii = 3;
-                      mgood[ii]++;
-                      ngood++;
+                      //mgood[ii]++;
+                      //ngood++;
                     }
                     if (fabs(diff1) < 0.75 * fabs(diff2)) {
                       newValue = val1 + (diff1 * diff2) / (diff2 - diff1);
@@ -936,7 +938,9 @@ Idiot::IdiSolve(
         }
       }
       CoinMemcpyN(statusSave, ncols, statusWork);
+#ifdef FOUR_GOES
       nflagged = 0;
+#endif
     }
     nChange = 0;
     doFull = 0;
@@ -1108,7 +1112,9 @@ Idiot::IdiSolve(
                 if (djval > djFlag) {
                   statusWork[icol] = 1;
 #ifndef FOUR_GOES
+#ifdef FOUR_GOES
                   nflagged++;
+#endif
 #else
                 nflaggedX[iPar]++;
 #endif

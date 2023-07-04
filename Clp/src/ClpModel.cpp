@@ -1466,12 +1466,10 @@ void ClpModel::deleteRows(int number, const int *which)
   } else {
     char *deleted = new char[numberRows_];
     int i;
-    int numberDeleted = 0;
     CoinZeroN(deleted, numberRows_);
     for (i = 0; i < number; i++) {
       int j = which[i];
       if (j >= 0 && j < numberRows_ && !deleted[j]) {
-        numberDeleted++;
         deleted[j] = 1;
       }
     }
@@ -2540,6 +2538,7 @@ int ClpModel::addColumns(const CoinBuild &buildObject, bool tryPlusMinusOne, boo
     delete[] upper;
   }
   synchronizeMatrix();
+  (void)numberErrors; // todo do something with this number?
   return 0;
 }
 #endif
@@ -3329,6 +3328,7 @@ ClpModel::ClpModel(const ClpModel *rhs,
     if (whichColumn[i] < 0 || whichColumn[i] >= rhs->numberColumns_)
       numberBad++;
   CoinAssertHint(!numberBad, "Bad Column list for subproblem constructor");
+  (void)numberBad;
   numberRows_ = numberRows;
   numberColumns_ = numberColumns;
   userPointer_ = rhs->userPointer_;
