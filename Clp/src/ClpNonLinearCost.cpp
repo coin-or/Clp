@@ -90,7 +90,8 @@ ClpNonLinearCost::ClpNonLinearCost(ClpSimplex * model, int method)
       break;
     }
   }
-  if (allZero && model_->clpMatrix()->type() < 15)
+  if (allZero && model_->clpMatrix()->type() < 15
+      && model_->objectiveAsObject()->type() == 1)
     model_->setInfeasibilityCost(1.0);
   double infeasibilityCost = model_->infeasibilityCost();
   sumInfeasibilities_ = 0.0;
