@@ -327,6 +327,8 @@ int ClpSimplexDual::startupSolve(int ifValuesPass, double *saveDuals, int startF
         usePrimal = perturb();
       // Can't get here if values pass
       gutsOfSolution(NULL, NULL);
+      // save for later check
+      bestObjectiveValue_=objectiveValue_;
 #ifdef CLP_INVESTIGATE
       if (numberDualInfeasibilities_)
         printf("ZZZ %d primal %d dual - sumdinf %g\n",
