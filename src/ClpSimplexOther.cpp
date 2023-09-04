@@ -1036,7 +1036,7 @@ int ClpSimplexOther::writeBasis(const char *filename,
     }
   }
 
-  char number[20];
+  char number[24];
   FILE *fp = fopen(filename, "w");
   if (!fp)
     return -1;
