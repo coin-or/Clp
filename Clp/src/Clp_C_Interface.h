@@ -74,7 +74,7 @@ COINLIBAPI Clp_Simplex *COINLINKAGE Clp_newModel(void);
 /** Destructor */
 COINLIBAPI void COINLINKAGE Clp_deleteModel(Clp_Simplex *model);
 /** Default constructor */
-COINLIBAPI Clp_Solve *COINLINKAGE ClpSolve_new();
+COINLIBAPI Clp_Solve *COINLINKAGE ClpSolve_new(void);
 /** Destructor */
 COINLIBAPI void COINLINKAGE ClpSolve_delete(Clp_Solve *solve);
 /*@}*/
