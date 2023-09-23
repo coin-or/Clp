@@ -78,7 +78,7 @@ CLPLIB_EXPORT Clp_Simplex *CLP_LINKAGE Clp_newModel(void);
 /** Destructor */
 CLPLIB_EXPORT void CLP_LINKAGE Clp_deleteModel(Clp_Simplex *model);
 /** Default constructor */
-CLPLIB_EXPORT Clp_Solve *CLP_LINKAGE ClpSolve_new();
+CLPLIB_EXPORT Clp_Solve *CLP_LINKAGE ClpSolve_new(void);
 /** Destructor */
 CLPLIB_EXPORT void CLP_LINKAGE ClpSolve_delete(Clp_Solve *solve);
 /*@}*/
