@@ -1,0 +1,8 @@
+<map id="ClpPackedMatrix" name="ClpPackedMatrix">
+<area shape="rect" id="node1" title=" " alt="" coords="125,80,245,107"/>
+<area shape="rect" id="node3" href="$classClpDynamicMatrix.html" title="This implements a dynamic matrix when we have a limit on the number of &quot;interesting rows&quot;." alt="" coords="53,155,180,181"/>
+<area shape="rect" id="node5" href="$classClpGubMatrix.html" title="This implements Gub rows plus a ClpPackedMatrix." alt="" coords="216,155,316,181"/>
+<area shape="rect" id="node2" href="$classClpMatrixBase.html" title="Abstract base class for Clp Matrices." alt="" coords="131,5,238,32"/>
+<area shape="rect" id="node4" href="$classClpDynamicExampleMatrix.html" title="This implements a dynamic matrix when we have a limit on the number of &quot;interesting rows&quot;." alt="" coords="5,229,180,256"/>
+<area shape="rect" id="node6" href="$classClpGubDynamicMatrix.html" title="This implements Gub rows plus a ClpPackedMatrix." alt="" coords="204,229,355,256"/>
+</map>

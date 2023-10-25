@@ -1,0 +1,6 @@
+<map id="ClpSimplexPrimal" name="ClpSimplexPrimal">
+<area shape="rect" id="node1" title="This solves LPs using the primal simplex method." alt="" coords="15,155,139,181"/>
+<area shape="rect" id="node4" href="$classClpSimplexNonlinear.html" title="This solves non&#45;linear LPs using the primal simplex method." alt="" coords="5,229,148,256"/>
+<area shape="rect" id="node2" href="$classClpSimplex.html" title="This solves LPs using the simplex method." alt="" coords="33,80,120,107"/>
+<area shape="rect" id="node3" href="$classClpModel.html" title=" " alt="" coords="39,5,115,32"/>
+</map>
