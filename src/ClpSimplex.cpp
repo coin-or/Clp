@@ -7453,6 +7453,7 @@ ClpSimplex::valueIncomingDual() const
 // Sanity check on input data - returns true if okay
 bool ClpSimplex::sanityCheck()
 {
+#if 0 // can't say bad - just because empty
   // bad if empty
   if (!numberColumns_ || ((!numberRows_ || !matrix_->getNumElements()) && objective_->type() < 2)) {
     int infeasNumber[2];
@@ -7464,6 +7465,7 @@ bool ClpSimplex::sanityCheck()
     sumPrimalInfeasibilities_ = infeasSum[1];
     return false;
   }
+#endif
   int numberBad;
   double largestBound, smallestBound, minimumGap;
   double smallestObj, largestObj;
