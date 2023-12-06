@@ -274,6 +274,14 @@ int ClpPredictorCorrector::solve()
     //complementarityGap_*2.0<historyInfeasibility_[0])
     //saveIteration=-1;
     lastStep = CoinMin(actualPrimalStep_, actualDualStep_);
+    // See if not getting anywhere
+    if (numberIterations_>50&&lastStep<1.0e-18) {
+      handler_->message(CLP_GENERAL, messages_)
+	<< "Barrier not making any progress - exiting"
+	<< CoinMessageEol;
+      problemStatus_=-1;
+      break;
+    }
     CoinWorkDouble goodGapChange;
     //#define KEEP_GOING_IF_FIXED 5
 #ifndef KEEP_GOING_IF_FIXED
@@ -3680,14 +3688,14 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble /*nextGap*/)
   //objectiveValue();
   if (solutionNorm_ > 1.0e40) {
     handler_->message(CLP_GENERAL, messages_)
-    << "Barrier declaring infeasible"
+    << "Barrier thinks infeasible"
     << CoinMessageEol;
     problemStatus_=1;
     return -1;
   }
   if (objectiveNorm_ > 1.0e40) {
     handler_->message(CLP_GENERAL, messages_)
-    << "Barrier declaring infeasible"
+    << "Barrier thinks infeasible"
     << CoinMessageEol;
     problemStatus_=1;
     return -1;
