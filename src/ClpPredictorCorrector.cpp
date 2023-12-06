@@ -275,12 +275,20 @@ int ClpPredictorCorrector::solve()
     //saveIteration=-1;
     lastStep = CoinMin(actualPrimalStep_, actualDualStep_);
     // See if not getting anywhere
-    if (numberIterations_>50&&lastStep<1.0e-18) {
-      handler_->message(CLP_GENERAL, messages_)
-	<< "Barrier not making any progress - exiting"
-	<< CoinMessageEol;
-      problemStatus_=-1;
-      break;
+    if (numberIterations_>50) {
+      if (lastStep<1.0e-18) {
+	handler_->message(CLP_GENERAL, messages_)
+	  << "Barrier not making any progress - exiting"
+	  << CoinMessageEol;
+	problemStatus_=-1;
+	break;
+      } else if (complementarityGap_>1.01*historyInfeasibility_[0]) {
+	handler_->message(CLP_GENERAL, messages_)
+	  << "Complementarity gap oscillating - exiting"
+	  << CoinMessageEol;
+	problemStatus_=-1;
+	break;
+      }
     }
     CoinWorkDouble goodGapChange;
     //#define KEEP_GOING_IF_FIXED 5
@@ -3493,7 +3501,7 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble /*nextGap*/)
 #endif
         diagonal_[iColumn] = diagonalValue;
         //FUDGE
-        if (diagonalValue > diagonalLimit) {
+        if (fabs(diagonalValue) > diagonalLimit) {
 #ifdef COIN_DEVELOP
           std::cout << "large diagonal " << diagonalValue << std::endl;
 #endif
