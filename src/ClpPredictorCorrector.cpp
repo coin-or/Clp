@@ -891,6 +891,8 @@ int ClpPredictorCorrector::solve()
     // save last gap
     checkGap = complementarityGap_;
     numberFixed = updateSolution(nextGap);
+    if (numberFixed<0)
+      break;
     numberFixedTotal += numberFixed;
   } /* endwhile */
   delete[] saveX;
@@ -3677,12 +3679,18 @@ int ClpPredictorCorrector::updateSolution(CoinWorkDouble /*nextGap*/)
   }
   //objectiveValue();
   if (solutionNorm_ > 1.0e40) {
-    std::cout << "primal off to infinity" << std::endl;
-    abort();
+    handler_->message(CLP_GENERAL, messages_)
+    << "Barrier declaring infeasible"
+    << CoinMessageEol;
+    problemStatus_=1;
+    return -1;
   }
   if (objectiveNorm_ > 1.0e40) {
-    std::cout << "dual off to infinity" << std::endl;
-    abort();
+    handler_->message(CLP_GENERAL, messages_)
+    << "Barrier declaring infeasible"
+    << CoinMessageEol;
+    problemStatus_=1;
+    return -1;
   }
   handler_->message(CLP_BARRIER_STEP, messages_)
     << static_cast< double >(actualPrimalStep_)
