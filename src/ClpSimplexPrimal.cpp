@@ -1403,6 +1403,15 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
         printf("nonLinearCost says infeasible %d summing to %g\n",
           ninfeas, sum);
 #endif
+      // Need to increase infeasibility cost (keep Henning happy)
+      if (infeasibilityCost_ < 1.0e14) {
+        infeasibilityCost_ *= 5.0;
+        // reset looping criterion
+        progress->reset();
+        if (handler_->logLevel() == 63)
+          printf("increasing weight to %g\n", infeasibilityCost_);
+        gutsOfSolution(NULL, NULL, ifValuesPass != 0);
+      }
       if (average > relaxedToleranceP) {
         sumOfRelaxedPrimalInfeasibilities_ = sum;
         numberPrimalInfeasibilities_ = ninfeas;
