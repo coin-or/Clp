@@ -1123,12 +1123,10 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       sumDualInfeasibilities_ = 0.0;
     }
   }
-  // Check if looping
+  // Check if looping (can't loop in values pass)
   int loop;
-  if (type != 2) {
+  if (type != 2 && !ifValuesPass) {
     loop = progress->looping();
-    if (ifValuesPass && loop != 3)
-      loop = -1;
   } else {
     loop = -1;
   }
