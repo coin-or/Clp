@@ -132,7 +132,7 @@ ClpSimplex::ClpSimplex(bool emptyMessages)
   , abcSimplex_(NULL)
   , abcState_(0)
 #endif
-#ifndef CLP_OLD_PROGRESS
+#if CLP_OLD_PROGRESS==0
   , minIntervalProgressUpdate_(0.7)
 #else
   , minIntervalProgressUpdate_(-1.0)
@@ -255,7 +255,7 @@ ClpSimplex::ClpSimplex(const ClpModel *rhs,
   , abcSimplex_(NULL)
   , abcState_(0)
 #endif
-#ifndef CLP_OLD_PROGRESS
+#if CLP_OLD_PROGRESS==0
   , minIntervalProgressUpdate_(0.7)
 #else
   , minIntervalProgressUpdate_(-1.0)
@@ -2592,7 +2592,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode)
   , abcSimplex_(NULL)
   , abcState_(0)
 #endif
-#ifndef CLP_OLD_PROGRESS
+#if CLP_OLD_PROGRESS==0
   , minIntervalProgressUpdate_(0.7)
 #else
   , minIntervalProgressUpdate_(-1.0)
@@ -9553,7 +9553,7 @@ void ClpSimplex::restoreData(ClpDataSave saved)
   rhsScale_ = saved.rhsScale_;
   acceptablePivot_ = saved.acceptablePivot_;
 }
-#if CLP_CHECK_SCALING
+#if CLP_CHECK_SCALING 
 /* Deals with badly scaled problems
    Returns COIN_INT_MAX if well scaled
    otherwise when to check again.
