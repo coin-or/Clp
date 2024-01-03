@@ -1385,6 +1385,12 @@ ClpSolveSetIntProperty(setInfeasibleReturn)
                                                 ClpSolveGetIntProperty(substitution)
                                                   ClpSolveSetIntProperty(setSubstitution)
 
+/** give pointer to ClpSimplex object (C++ class) */
+void* CLP_LINKAGE Clp_getClpSimplex(Clp_Simplex *model)
+{
+   return static_cast<void*>(model->model_);
+}
+
 #if defined(__MWERKS__)
 #pragma export off
 #endif
