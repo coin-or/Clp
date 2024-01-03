@@ -546,8 +546,14 @@ CLPLIB_EXPORT void CLP_LINKAGE ClpSolve_setPresolveActions(Clp_Solve *, int acti
 
 CLPLIB_EXPORT int CLP_LINKAGE ClpSolve_substitution(Clp_Solve *);
 CLPLIB_EXPORT void CLP_LINKAGE ClpSolve_setSubstitution(Clp_Solve *, int value);
-
 /*@}*/
+
+/**@name Functions for expert users */
+/*@{*/
+/** gives pointer to ClpSimplex object (C++ class), return should be cast to ClpSimplex* */
+CLPLIB_EXPORT void* CLP_LINKAGE Clp_getClpSimplex(Clp_Simplex *model);
+/*@}*/
+
 #ifdef __cplusplus
 }
 #endif
