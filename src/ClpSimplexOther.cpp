@@ -1775,6 +1775,19 @@ ClpSimplex *
 ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
   int &nBound, bool moreBounds, bool tightenBounds)
 {
+#if 0
+  /* If you only want to find redundant rows before fathom then
+     use this and set numberRows_ negative before this call (in ClpSimplex.cpp)
+  */
+  bool takeOutSome=false;
+  if (numberRows_<0) {
+    numberRows_ = -numberRows_;
+    takeOutSome=true;
+  }
+#else
+  assert (numberRows_>=0);
+  bool takeOutSome=true;
+#endif
   //#define CHECK_STATUS
 #ifdef CHECK_STATUS
   {
@@ -1794,7 +1807,21 @@ ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
   const int *row = matrix_->getIndices();
   const CoinBigIndex *columnStart = matrix_->getVectorStarts();
   const int *columnLength = matrix_->getVectorLengths();
-
+  char * flags;
+  double * maxdown;
+  double * maxup;
+  if (takeOutSome) {
+    flags = new char [numberRows_];
+    maxdown = new double [2*numberRows_];
+    maxup = maxdown+numberRows_;
+    for (int i=0;i<numberRows_;i++) {
+      if (getRowStatus(i)==ClpSimplex::basic)
+	flags[i] = 0;
+      else
+	flags[i]=3;
+    }
+    memset(maxdown,0,2*sizeof(double)*numberRows_);
+  }
   CoinZeroN(rhs, numberRows_);
   int iColumn;
   int iRow;
@@ -1805,41 +1832,127 @@ ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
   double offset = 0.0;
   const double *objective = this->objective();
   double *solution = columnActivity_;
-  for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
-    double lower = columnLower_[iColumn];
-    double upper = columnUpper_[iColumn];
-    if (upper > lower || getColumnStatus(iColumn) == ClpSimplex::basic) {
-      backColumn[iColumn] = numberColumns2;
-      whichColumn[numberColumns2++] = iColumn;
-      for (CoinBigIndex j = columnStart[iColumn];
-           j < columnStart[iColumn] + columnLength[iColumn]; j++) {
-        int iRow = row[j];
-        int n = whichRow[iRow];
-        if (n == 0 && element[j])
-          whichRow[iRow] = -iColumn - 1;
-        else if (n < 0)
-          whichRow[iRow] = 2;
+  if (!takeOutSome) {
+    for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
+      double lower = columnLower_[iColumn];
+      double upper = columnUpper_[iColumn];
+      if (upper > lower || getColumnStatus(iColumn) == ClpSimplex::basic) {
+	backColumn[iColumn] = numberColumns2;
+	whichColumn[numberColumns2++] = iColumn;
+	for (CoinBigIndex j = columnStart[iColumn];
+	     j < columnStart[iColumn] + columnLength[iColumn]; j++) {
+	  int iRow = row[j];
+	  int n = whichRow[iRow];
+	  if (n == 0 && element[j])
+	    whichRow[iRow] = -iColumn - 1;
+	  else if (n < 0)
+	    whichRow[iRow] = 2;
+	}
+      } else {
+	// fixed
+	backColumn[iColumn] = -1;
+	solution[iColumn] = upper;
+	if (upper) {
+	  offset += objective[iColumn] * upper;
+	  for (CoinBigIndex j = columnStart[iColumn];
+	       j < columnStart[iColumn] + columnLength[iColumn]; j++) {
+	    int iRow = row[j];
+	    double value = element[j];
+	    rhs[iRow] += upper * value;
+	  }
+	}
       }
-    } else {
-      // fixed
-      backColumn[iColumn] = -1;
-      solution[iColumn] = upper;
-      if (upper) {
-        offset += objective[iColumn] * upper;
-        for (CoinBigIndex j = columnStart[iColumn];
-             j < columnStart[iColumn] + columnLength[iColumn]; j++) {
-          int iRow = row[j];
-          double value = element[j];
-          rhs[iRow] += upper * value;
-        }
+    }
+  } else {
+    for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
+      double lower = columnLower_[iColumn];
+      double upper = columnUpper_[iColumn];
+      if (upper > lower || getColumnStatus(iColumn) == ClpSimplex::basic) {
+	backColumn[iColumn] = numberColumns2;
+	whichColumn[numberColumns2++] = iColumn;
+	for (CoinBigIndex j = columnStart[iColumn];
+	     j < columnStart[iColumn] + columnLength[iColumn]; j++) {
+	  int iRow = row[j];
+	  double value = element[j];
+	  if (value<0.0) {
+	    if (upper < 1.0e12) 
+	      maxdown[iRow] += upper * value;
+	    else
+	      flags[iRow] |= 1;;
+	    if (lower > -1.0e12) 
+	      maxup[iRow] += lower * value;
+	    else
+	      flags[iRow] |= 2;;
+	  } else {
+	    if (upper < 1.0e12) 
+	      maxup[iRow] += upper * value;
+	    else
+	      flags[iRow] |= 2;;
+	    if (lower > -1.0e12) 
+	      maxdown[iRow] += lower * value;
+	    else
+	      flags[iRow] |= 1;;
+	  }
+	  int n = whichRow[iRow];
+	  if (n == 0 && element[j])
+	    whichRow[iRow] = -iColumn - 1;
+	  else if (n < 0)
+	    whichRow[iRow] = 2;
+	}
+      } else {
+	// fixed
+	backColumn[iColumn] = -1;
+	solution[iColumn] = upper;
+	if (upper) {
+	  offset += objective[iColumn] * upper;
+	  for (CoinBigIndex j = columnStart[iColumn];
+	       j < columnStart[iColumn] + columnLength[iColumn]; j++) {
+	    int iRow = row[j];
+	    double value = element[j];
+	    rhs[iRow] += upper * value;
+	    maxup[iRow] += upper * value;
+	    maxdown[iRow] += upper * value;
+	  }
+	}
       }
     }
   }
   int returnCode = 0;
   double tolerance = primalTolerance();
   nBound = 2 * numberRows_;
+  //#define PRINT_AB
+#ifdef PRINT_AB
+  static int abcdef1 = 0;
+  static int abcdef2 = 0;
+  static int abcdef3 = 0;
+  bool anyDropped = false;
+  abcdef1++;
+#endif
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int n = whichRow[iRow];
+    if (takeOutSome) {
+      // check if redundant
+      bool redundant = true;
+      double rowBound = rowLower_[iRow];
+      if (rowBound>-1.0e100) {
+	if ((flags[iRow]&1)!=0||maxdown[iRow]<rowBound-1.0e-9)
+	  redundant = false;
+      }
+      if (redundant) {
+	rowBound = rowUpper_[iRow];
+	if (rowBound<1.0e100) {
+	  if ((flags[iRow]&2)!=0||maxup[iRow]>rowBound+1.0e-9)
+	    redundant = false;
+	}
+      }
+      if (redundant) {
+#ifdef PRINT_AB
+	abcdef2++;
+	anyDropped= true;
+#endif
+	continue; // ignore
+      }
+    }
     if (n > 0) {
       whichRow[numberRows2++] = iRow;
     } else if (n < 0) {
@@ -1864,6 +1977,17 @@ ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
         returnCode = 1; // infeasible
       }
     }
+  }
+#ifdef PRINT_AB
+  if (anyDropped)
+    abcdef3++;
+  if ((abcdef1%1000)==0)
+    printf("crunch %d times, %d dropped in %d occasions\n",
+	   abcdef1,abcdef2,abcdef3);
+#endif
+  if (takeOutSome) {
+    delete [] flags;
+    delete [] maxdown;
   }
   ClpSimplex *small = NULL;
   if (!returnCode) {
@@ -2260,6 +2384,8 @@ void ClpSimplexOther::afterCrunch(const ClpSimplex &small,
           assert (n == numberRows);
      }
 #endif
+     // be on safe side
+     computeObjectiveValue();
 }
 /* Tightens integer bounds - returns number tightened or -1 if infeasible
  */

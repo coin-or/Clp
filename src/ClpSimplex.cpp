@@ -3,7 +3,6 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 //#undef NDEBUG
-
 #include "ClpConfig.h"
 
 #include "CoinPragma.hpp"
@@ -11455,6 +11454,7 @@ int ClpSimplex::fathom(void *stuff)
     int *whichColumn = new int[2 * numberColumns_];
     int nBound;
     bool tightenBounds = ((specialOptions_ & 64) == 0) ? false : true;
+    //numberRows_=-numberRows_;//!! flag to say do more work (if test in crunch)
     ClpSimplex *small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
       nBound, false, tightenBounds);
     if (small) {
@@ -12177,6 +12177,7 @@ int ClpSimplex::fathomMany(void *stuff)
     int *whichRow = new int[3 * numberRows_];
     int *whichColumn = new int[2 * numberColumns_];
     int nBound;
+    //numberRows_=-numberRows_;//!! flag to say do more work (if test in crunch)
     bool tightenBounds = ((specialOptions_ & 64) == 0) ? false : true;
     ClpSimplex *small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
       nBound, false, tightenBounds);
@@ -13034,6 +13035,8 @@ int ClpSimplex::fastDual2(ClpNodeStuff *info)
 #endif
   if (goodWeights)
     status = 100;
+  if (!problemStatus_) 
+    computeObjectiveValue(); // be on safe side
   return status;
 }
 // Stop Fast dual
