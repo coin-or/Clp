@@ -1807,9 +1807,9 @@ ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
   const int *row = matrix_->getIndices();
   const CoinBigIndex *columnStart = matrix_->getVectorStarts();
   const int *columnLength = matrix_->getVectorLengths();
-  char * flags;
-  double * maxdown;
-  double * maxup;
+  char * flags = NULL;
+  double * maxdown = NULL;
+  double * maxup = NULL;
   if (takeOutSome) {
     flags = new char [numberRows_];
     maxdown = new double [2*numberRows_];
