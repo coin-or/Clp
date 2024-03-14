@@ -1786,7 +1786,7 @@ ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
   }
 #else
   assert (numberRows_>=0);
-  bool takeOutSome=true;
+  bool takeOutSome=false;//true;
 #endif
   //#define CHECK_STATUS
 #ifdef CHECK_STATUS
