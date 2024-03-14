@@ -1775,7 +1775,7 @@ ClpSimplex *
 ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
   int &nBound, bool moreBounds, bool tightenBounds)
 {
-#if 0
+#if 1
   /* If you only want to find redundant rows before fathom then
      use this and set numberRows_ negative before this call (in ClpSimplex.cpp)
   */
@@ -1786,7 +1786,7 @@ ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
   }
 #else
   assert (numberRows_>=0);
-  bool takeOutSome=false;//true;
+  bool takeOutSome=true;
 #endif
   //#define CHECK_STATUS
 #ifdef CHECK_STATUS
