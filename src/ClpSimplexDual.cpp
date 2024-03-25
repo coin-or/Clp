@@ -440,7 +440,7 @@ void ClpSimplexDual::gutsOfDual(int ifValuesPass, double *&saveDuals, int initia
   // Start check for cycles
   progress_.startCheck();
 #if CLP_CHECK_SCALING
-  if ((moreSpecialOptions_&256)!=0)
+  if ((moreSpecialOptions_&(256|8192))!=0)
     progress_.checkScalingEtc();
 #endif
   // Say change made on first iteration
@@ -527,7 +527,7 @@ void ClpSimplexDual::gutsOfDual(int ifValuesPass, double *&saveDuals, int initia
     smallestPrimalInfeasibility = CoinMin(smallestPrimalInfeasibility,
       sumPrimalInfeasibilities_);
     lastObjectiveValue = objectiveValue_;
-    if (sumPrimalInfeasibilities_ > 1.0e5 && sumPrimalInfeasibilities_ > 1.0e5 * smallestPrimalInfeasibility && (moreSpecialOptions_ & 256) == 0 && ((progress_.lastObjective(0) < -1.0e10 && -progress_.lastObjective(1) > -1.0e5) || sumPrimalInfeasibilities_ > 1.0e10 * smallestPrimalInfeasibility) && problemStatus_ < 0) {
+    if (sumPrimalInfeasibilities_ > 1.0e5 && sumPrimalInfeasibilities_ > 1.0e5 * smallestPrimalInfeasibility && (moreSpecialOptions_ &(256|8192)) == 0 && ((progress_.lastObjective(0) < -1.0e10 && -progress_.lastObjective(1) > -1.0e5) || sumPrimalInfeasibilities_ > 1.0e10 * smallestPrimalInfeasibility) && problemStatus_ < 0) {
       // problems - try primal
       problemStatus_ = 10;
       // mark as large infeasibility cost wanted
@@ -587,7 +587,7 @@ void ClpSimplexDual::gutsOfDual(int ifValuesPass, double *&saveDuals, int initia
       }
     }
     // If looks odd try other way
-    if ((moreSpecialOptions_ & 256) == 0 && fabs(objectiveValue_) > 1.0e20 && sumDualInfeasibilities_ > 1.0
+    if ((moreSpecialOptions_ &(256|8192)) == 0 && fabs(objectiveValue_) > 1.0e20 && sumDualInfeasibilities_ > 1.0
       && problemStatus_ < 0) {
       problemStatus_ = 10;
       break;
@@ -678,7 +678,7 @@ int ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
     if (averageInfeasibility < factor * largestPrimalError_)
       problemStatus_ = 10;
     if (problemStatus_==1 && (specialOptions_&1024)==0
-	&& (moreSpecialOptions_&256) == 0 ) {
+	&& (moreSpecialOptions_&(256|8192)) == 0 ) {
       // check if any free variables have non-zero dj etc
       getSolution(NULL,NULL);
       if (numberDualInfeasibilities_) {
@@ -1990,7 +1990,7 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
               double sumPrimal = (!numberFake) ? 2.0e5 : sumPrimalInfeasibilities_;
               if (sumPrimalInfeasibilities_ < 1.0e-3 || sumDualInfeasibilities_ > 1.0e-5 || (sumPrimal < 1.0e5 && (specialOptions_ & 1024) != 0 && factorization_->pivots())) {
                 if ((sumPrimal > 50.0 && factorization_->pivots() > 2)
-		    || (moreSpecialOptions_&256)!=0 && factorization_->pivots()) {
+		    || (moreSpecialOptions_&(256|8192))!=0 && factorization_->pivots()) {
                   problemStatus_ = -4;
 #ifdef COIN_DEVELOP
                   printf("status to -4 at %d - primalinf %g pivots %d\n",
@@ -2013,7 +2013,7 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
 #endif
                   // Get rid of objective
                   if ((specialOptions_ & 16384) == 0 &&
-		      (moreSpecialOptions_ & 256) == 0)
+		      (moreSpecialOptions_ &(256|8192)) == 0)
                     objective_ = new ClpLinearObjective(NULL, numberColumns_);
                 }
               }
@@ -2033,7 +2033,7 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
 #endif
                   // Get rid of objective
                   if ((specialOptions_ & 16384) == 0 &&
-		      (moreSpecialOptions_ & 256) == 0)
+		      (moreSpecialOptions_ &(256|8192)) == 0)
                     objective_ = new ClpLinearObjective(NULL, numberColumns_);
                 }
               }
@@ -6007,7 +6007,7 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
       } else {
         unflagVariables = false;
         //secondaryStatus_ = 1; // and say probably infeasible
-        if ((moreSpecialOptions_ & 256) == 0) {
+        if ((moreSpecialOptions_ &(256|8192)) == 0) {
           // try primal
           problemStatus_ = 10;
         } else {
