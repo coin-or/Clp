@@ -11454,7 +11454,7 @@ int ClpSimplex::fathom(void *stuff)
     int *whichColumn = new int[2 * numberColumns_];
     int nBound;
     bool tightenBounds = ((specialOptions_ & 64) == 0) ? false : true;
-    //numberRows_=-numberRows_;//!! flag to say do more work (if test in crunch)
+    numberRows_=-numberRows_;//!! flag to say do more work (if test in crunch)
     ClpSimplex *small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
       nBound, false, tightenBounds);
     if (small) {
@@ -12177,7 +12177,7 @@ int ClpSimplex::fathomMany(void *stuff)
     int *whichRow = new int[3 * numberRows_];
     int *whichColumn = new int[2 * numberColumns_];
     int nBound;
-    //numberRows_=-numberRows_;//!! flag to say do more work (if test in crunch)
+    numberRows_=-numberRows_;//!! flag to say do more work (if test in crunch)
     bool tightenBounds = ((specialOptions_ & 64) == 0) ? false : true;
     ClpSimplex *small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
       nBound, false, tightenBounds);

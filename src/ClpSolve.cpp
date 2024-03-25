@@ -3850,7 +3850,9 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       int savePerturbation = perturbation();
       if (savePerturbation == 50)
         setPerturbation(51); // small
-      if (!finalStatus || finalStatus == 2 || (moreSpecialOptions_ & 2) == 0 || fabs(sumDual) + fabs(sumPrimal) < 1.0e-3) {
+      if ((finalStatus>=0 && finalStatus <= 2) ||
+	  (moreSpecialOptions_ & 2) == 0 ||
+	  fabs(sumDual) + fabs(sumPrimal) < 1.0e-3) {
         if (finalStatus == 2) {
           if (sumDual > 1.0e-4) {
             // unbounded - get feasible first
