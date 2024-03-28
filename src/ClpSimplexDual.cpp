@@ -1327,7 +1327,7 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
 	    problemStatus_=1;
 	}
 #if CAN_HAVE_ZERO_OBJ > 1
-        if ((specialOptions_ & 16777216) != 0)
+        if ((specialOptions_ & 0x04000000) != 0)
           theta_ = 0.0;
 #endif
       } else {
@@ -1505,7 +1505,7 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
         //columnArray_[0]->cleanAndPackSafe(1.0e-60);
         if (candidate == -1) {
 #if CLP_CAN_HAVE_ZERO_OBJ > 1
-          if ((specialOptions_ & 16777216) == 0) {
+          if ((specialOptions_ & 0x04000000) == 0) {
 #endif
             // make sure incoming doesn't count
             Status saveStatus = getStatus(sequenceIn_);
@@ -5603,7 +5603,7 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
           }
           if (lastCleaned < numberIterations_ && numberTimesOptimal_ < 4 && (numberChanged_ || (specialOptions_ & 4096) == 0)) {
 #if CLP_CAN_HAVE_ZERO_OBJ
-            if ((specialOptions_ & 16777216) == 0) {
+            if ((specialOptions_ & 0x04000000) == 0) {
 #endif
               doOriginalTolerance = 2;
               numberTimesOptimal_++;
@@ -5881,7 +5881,7 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
         if (givenDuals)
           dualTolerance_ = 1.0e50;
 #if CLP_CAN_HAVE_ZERO_OBJ > 1
-        if ((specialOptions_ & 16777216) == 0) {
+        if ((specialOptions_ & 0x04000000) == 0) {
 #endif
           updateDualsInDual(rowArray_[0], columnArray_[0], rowArray_[1],
             0.0, objectiveChange, true);
@@ -5923,7 +5923,7 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
         if (givenDuals)
           dualTolerance_ = 1.0e50;
 #if CLP_CAN_HAVE_ZERO_OBJ > 1
-        if ((specialOptions_ & 16777216) == 0) {
+        if ((specialOptions_ & 0x04000000) == 0) {
 #endif
           updateDualsInDual(rowArray_[0], columnArray_[0], rowArray_[1],
             0.0, objectiveChange, true);

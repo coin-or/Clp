@@ -1185,7 +1185,6 @@ public:
 	 2097152 - ray even if >2 pivots AND if problem is "crunched" 
 	 4194304 - don't scale integer variables
 	 8388608 - Idiot when not really sure about it
-	 16777216 - zero costs!
          NOTE - many applications can call Clp but there may be some short cuts
                 which are taken which are not guaranteed safe from all applications.
                 Vetted applications will have a bit set and the code may test this
@@ -1195,6 +1194,7 @@ public:
                 repository.  See COIN_CLP_VETTED comments.
          0x01000000 is Cbc (and in branch and bound)
          0x02000000 is in a different branch and bound
+	 0x04000000 - zero costs!
      */
   inline unsigned int specialOptions() const
   {

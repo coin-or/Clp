@@ -233,7 +233,7 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
   // initialize - maybe values pass and algorithm_ is +1
 #if 0
      // if so - put in any superbasic costed slacks
-     if (ifValuesPass && specialOptions_ < 0x01000000) {
+  if (ifValuesPass && (specialOptions_&0x03000000)==0) {
           // Get column copy
           const CoinPackedMatrix * columnCopy = matrix();
           const int * row = columnCopy->getIndices();
@@ -3998,7 +3998,7 @@ int ClpSimplexPrimal::lexSolve()
      // if so - put in any superbasic costed slacks
      // Start can skip some things in transposeTimes
      specialOptions_ |= 131072;
-     if (ifValuesPass && specialOptions_ < 0x01000000) {
+     if (ifValuesPass && (specialOptions_&0x03000000)==0) {
           // Get column copy
           const CoinPackedMatrix * columnCopy = matrix();
           const int * row = columnCopy->getIndices();
