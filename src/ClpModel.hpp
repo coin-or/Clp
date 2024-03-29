@@ -1195,6 +1195,7 @@ public:
          0x01000000 is Cbc (and in branch and bound)
          0x02000000 is in a different branch and bound
 	 0x04000000 - zero costs!
+	 0x08000000 - get correct duals  on max iterations
      */
   inline unsigned int specialOptions() const
   {

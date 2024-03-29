@@ -1638,16 +1638,16 @@ void OsiClpSolverInterface::setupForRepeatedUse(int senseOfAdventure, int printO
   // First try
   switch (senseOfAdventure) {
   case 0:
-    specialOptions_ = 8;
+    specialOptions_ |= 8;
     break;
   case 1:
-    specialOptions_ = 1 + 2 + 8;
+    specialOptions_ |= 1 + 2 + 8;
     break;
   case 2:
-    specialOptions_ = 1 + 2 + 4 + 8;
+    specialOptions_ |= 1 + 2 + 4 + 8;
     break;
   case 3:
-    specialOptions_ = 1 + 8;
+    specialOptions_ |= 1 + 8;
     break;
   }
   //#define NO_CRUNCH2

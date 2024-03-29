@@ -1847,6 +1847,8 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
         } else if (whatNext == 2) {
           // maximum iterations or equivalent
           problemStatus_ = 3;
+	  if ((specialOptions_&0x08000000)!=0)
+	    gutsOfSolution(NULL,NULL); // clean up
           returnCode = 3;
           break;
         }
