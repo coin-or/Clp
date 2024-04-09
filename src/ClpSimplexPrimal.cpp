@@ -1484,9 +1484,15 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
               double *saveObjective = CoinCopyOfArray(objective(),
                 numberColumns_);
               memset(objective(), 0, numberColumns_ * sizeof(double));
-              infeasibilityCost_ = 1.0;
+              infeasibilityCost_ = 1.0e200;
               createRim(4);
               nonLinearCost_->checkInfeasibilities(primalTolerance_);
+	      for (int i=0;i<numberColumns_+numberRows_;i++) {
+		if (fabs(cost_[i])!=1.0e200)
+		  cost_[i] = 0.0;
+		else
+		  cost_[i] /= 1.0e200;
+	      }
               gutsOfSolution(NULL, NULL, false);
               memcpy(objective(), saveObjective, numberColumns_ * sizeof(double));
               delete[] saveObjective;
