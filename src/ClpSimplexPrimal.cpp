@@ -1168,7 +1168,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   //problemStatus_=-1;;
   progressFlag_ = 0; //reset progress flag
 
-  if ((CoinWallclockTime() - lastStatusUpdate_ > minIntervalProgressUpdate_)) {
+  if (handler_->logLevel()>0&& (CoinWallclockTime() - lastStatusUpdate_ > minIntervalProgressUpdate_)) {
     handler_->message(CLP_SIMPLEX_STATUS, messages_)
       << numberIterations_ << nonLinearCost_->feasibleReportCost();
     handler_->printing(nonLinearCost_->numberInfeasibilities() > 0)
@@ -1481,24 +1481,25 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
             //if ((specialOptions_&(32|0x01000000))!=0x01000000) {
             if ((specialOptions_ & 0x03000000) == 0) {
               ray_ = new double[numberRows_];
+	      // obliterate cost
               double *saveObjective = CoinCopyOfArray(objective(),
                 numberColumns_);
               memset(objective(), 0, numberColumns_ * sizeof(double));
-              infeasibilityCost_ = 1.0e200;
+              infeasibilityCost_ = 1.0e100;
               createRim(4);
               nonLinearCost_->checkInfeasibilities(primalTolerance_);
 	      for (int i=0;i<numberColumns_+numberRows_;i++) {
-		if (fabs(cost_[i])!=1.0e200)
+		if (fabs(cost_[i])!=1.0e100)
 		  cost_[i] = 0.0;
 		else
-		  cost_[i] /= 1.0e200;
+		  cost_[i] /= 1.0e100;
 	      }
               gutsOfSolution(NULL, NULL, false);
               memcpy(objective(), saveObjective, numberColumns_ * sizeof(double));
               delete[] saveObjective;
               // swap sign
-              for (int i = 0; i < numberRows_; i++)
-                ray_[i] = -dual_[i];
+              for (int i = 0; i < numberRows_; i++) 
+                ray_[i] = -dual_[i]/1.0e100;
             } else {
               ray_ = NULL;
             }
