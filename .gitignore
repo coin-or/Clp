@@ -12,3 +12,8 @@
 **/MSVisualStudio/**/*.mps
 **/MSVisualStudio/**/*.lp
 **/MSVisualStudio/**/*.out
+
+# Ignore autotools cache files
+aclocal.m4*
+acinclude.m4
+autom4te*
