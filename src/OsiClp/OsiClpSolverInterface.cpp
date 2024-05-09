@@ -858,6 +858,7 @@ disaster:
     if (save < 2)
       modelPtr_->setLogLevel(0);
     modelPtr_->dual(0, startFinishOptions);
+    lastAlgorithm_ = 2;
     totalIterations += modelPtr_->numberIterations();
     modelPtr_->setLogLevel(save);
   }
