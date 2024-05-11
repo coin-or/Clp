@@ -3355,7 +3355,7 @@ and then do parametrics.  It will use the default\
 File is in modified csv format - a line ROWS will be followed by rows data \
 while a line COLUMNS will be followed by column data.  The last line \
 should be ENDATA. The ROWS line must exist and is in the format \
-ROWS, inital theta, final theta, interval theta, n where n is 0 to get \
+ROWS, initial theta, final theta, interval theta, n where n is 0 to get \
 CLPI0062 message at interval or at each change of theta \
 and 1 to get CLPI0063 message at each iteration.  If interval theta is 0.0 \
 or >= final theta then no interval reporting.  n may be missed out when it is \
