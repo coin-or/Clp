@@ -286,6 +286,8 @@ public:
   int numberNodesExplored_;
   /// Number of iterations
   int numberIterations_;
+  /// Maximum iterations
+  int maximumIterations_;
   /// Type of presolve - 0 none, 1 crunch
   int presolveType_;
 #ifndef NO_FATHOM_PRINT

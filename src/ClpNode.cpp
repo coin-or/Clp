@@ -704,6 +704,7 @@ ClpNodeStuff::ClpNodeStuff()
   , nNodes_(0)
   , numberNodesExplored_(0)
   , numberIterations_(0)
+  , maximumIterations_(1000000)
   , presolveType_(0)
 #ifndef NO_FATHOM_PRINT
   , startingDepth_(-1)
@@ -746,6 +747,7 @@ ClpNodeStuff::ClpNodeStuff(const ClpNodeStuff &rhs)
   , nNodes_(rhs.nNodes_)
   , numberNodesExplored_(rhs.numberNodesExplored_)
   , numberIterations_(rhs.numberIterations_)
+  , maximumIterations_(rhs.maximumIterations_)
   , presolveType_(rhs.presolveType_)
 #ifndef NO_FATHOM_PRINT
   , startingDepth_(rhs.startingDepth_)
@@ -792,6 +794,7 @@ ClpNodeStuff::operator=(const ClpNodeStuff &rhs)
     nNodes_ = rhs.nNodes_;
     numberNodesExplored_ = rhs.numberNodesExplored_;
     numberIterations_ = rhs.numberIterations_;
+    maximumIterations_ = rhs.maximumIterations_;
     presolveType_ = rhs.presolveType_;
 #ifndef NO_FATHOM_PRINT
     handler_ = rhs.handler_;

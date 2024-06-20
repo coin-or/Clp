@@ -12123,6 +12123,7 @@ int ClpSimplex::fathomMany(void *stuff)
   assert(stuff);
   ClpNodeStuff *info = reinterpret_cast< ClpNodeStuff * >(stuff);
   int nNodes = info->maximumNodes();
+  int maximumIterations = info->maximumIterations_;
   int putNode = info->maximumSpace();
   int goodNodes = 0;
   info->nNodes_ = 0;
@@ -12453,6 +12454,8 @@ int ClpSimplex::fathomMany(void *stuff)
       fastDual2(info);
       forceFactorization_ = save;
     }
+    if (numberIterations>=maximumIterations)
+      stopAtOnce = true;
     if (problemStatus_ == 1 || (problemStatus_ == 0 && objectiveValue() * optimizationDirection_ > bestObjective)) {
       backtrack = true;
       if (printing)
