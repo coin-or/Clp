@@ -247,6 +247,8 @@ public:
     bool keepZero = false)
   {
     matrix_->modifyCoefficient(row, column, newElement, keepZero);
+    // Say matrix changed
+    whatsChanged_ &= ~15;
   }
   /** Change row lower bounds */
   void chgRowLower(const double *rowLower);
