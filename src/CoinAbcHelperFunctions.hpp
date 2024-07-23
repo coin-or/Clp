@@ -6,15 +6,7 @@
 #define CoinAbcHelperFunctions_H
 
 #include "ClpConfig.h"
-#ifdef HAVE_CMATH
 #include <cmath>
-#else
-#ifdef HAVE_MATH_H
-#include <math.h>
-#else
-#include <cmath>
-#endif
-#endif
 #include "CoinAbcCommon.hpp"
 #ifndef abc_assert
 #define abc_assert(condition)                               \
