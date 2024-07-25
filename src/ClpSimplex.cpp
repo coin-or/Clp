@@ -12952,7 +12952,7 @@ int ClpSimplex::fastDual2(ClpNodeStuff *info)
       perturbation_ = savePerturbation;
       baseIteration_ = numberIterations_;
       goodWeights = false;
-      status = static_cast< ClpSimplexPrimal * >(this)->primal(0);
+      status = static_cast< ClpSimplexPrimal * >(this)->primal(0,1);
       baseIteration_ = 0;
       computeObjectiveValue();
       // can't rely on djs either
