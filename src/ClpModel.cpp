@@ -1917,7 +1917,7 @@ void ClpModel::addRows(int number, const double *rowLower,
 // Add rows from a build object
 int ClpModel::addRows(const CoinBuild &buildObject, bool tryPlusMinusOne, bool checkDuplicates)
 {
-  CoinAssertHint(buildObject.type() == 0, "Looks as if both addRows and addCols being used"); // check correct
+  CoinAssertHint(buildObject.type() == CoinBuild::Type::Row, "Looks as if both addRows and addCols being used"); // check correct
   int number = buildObject.numberRows();
   int numberErrors = 0;
   if (number) {
@@ -2409,7 +2409,7 @@ void ClpModel::addColumns(int number, const double *columnLower,
 // Add columns from a build object
 int ClpModel::addColumns(const CoinBuild &buildObject, bool tryPlusMinusOne, bool checkDuplicates)
 {
-  CoinAssertHint(buildObject.type() == 1, "Looks as if both addRows and addCols being used"); // check correct
+  CoinAssertHint(buildObject.type() == CoinBuild::Type::Column, "Looks as if both addRows and addCols being used"); // check correct
   int number = buildObject.numberColumns();
   int numberErrors = 0;
   if (number) {
