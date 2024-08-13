@@ -841,8 +841,8 @@ public:
   virtual void addRows(const int numrows,
     const CoinBigIndex *rowStarts, const int *columns, const double *element,
     const double *rowlb, const double *rowub);
-  ///
-  void modifyCoefficient(int row, int column, double newElement,
+  /// modify one coefficient
+  virtual void modifyCoefficient(int row, int column, double newElement,
     bool keepZero = false)
   {
     modelPtr_->modifyCoefficient(row, column, newElement, keepZero);
