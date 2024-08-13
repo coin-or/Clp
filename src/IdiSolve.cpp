@@ -301,7 +301,7 @@ Idiot::IdiSolve(
           }
         }
         difference = rowupper[i] - rowlower[i];
-        difference = CoinMin(difference, 1.0e31);
+        difference = std::min(difference, 1.0e31);
         rowupper[i] = smaller;
         elemExtra[extraBlock] = value;
         solExtra[extraBlock] = (rowupper[i] - rowsol[i]) / value;
@@ -424,7 +424,7 @@ Idiot::IdiSolve(
           int chunk = (stop[itry] - start[itry] + FOUR_GOES - 1) / FOUR_GOES;
           startsX[itry][0] = start[itry];
           for (int i = 1; i < 5; i++)
-            startsX[itry][i] = CoinMin(stop[itry], startsX[itry][i - 1] + chunk);
+            startsX[itry][i] = std::min(stop[itry], startsX[itry][i - 1] + chunk);
         }
 #endif
       } else {
@@ -437,7 +437,7 @@ Idiot::IdiSolve(
           int chunk = (start[itry] - stop[itry] + FOUR_GOES - 1) / FOUR_GOES;
           startsX[itry][0] = start[itry];
           for (int i = 1; i < 5; i++)
-            startsX[itry][i] = CoinMax(stop[itry], startsX[itry][i - 1] - chunk);
+            startsX[itry][i] = std::max(stop[itry], startsX[itry][i - 1] - chunk);
         }
 #endif
       }
@@ -688,7 +688,7 @@ Idiot::IdiSolve(
             if ((strategy & 64) != 0) {
               value = 10.0;
               for (k = 0; k < nsolve; k++) {
-                value = CoinMax(value, fabs(theta[k]));
+                value = std::max(value, fabs(theta[k]));
               }
               if (value > 10.0 && ((logLevel_ & 4) != 0)) {
                 printf("theta %g %g %g\n", theta[0], theta[1], theta[2]);
@@ -1129,7 +1129,7 @@ Idiot::IdiSolve(
 #ifdef FOUR_GOES
     for (int i = 0; i < FOUR_GOES; i++) {
       nChange += nChangeX[i];
-      maxDj = CoinMax(maxDj, maxDjX[i]);
+      maxDj = std::max(maxDj, maxDjX[i]);
       objvalue += objvalueX[i];
       nflagged += nflaggedX[i];
     }
@@ -1180,9 +1180,9 @@ Idiot::IdiSolve(
           /* solve */
           theta = -b / a;
           if (theta > 0.0) {
-            value2 = CoinMin(theta, upperExtra[i] - solExtra[i]);
+            value2 = std::min(theta, upperExtra[i] - solExtra[i]);
           } else {
-            value2 = CoinMax(theta, -solExtra[i]);
+            value2 = std::max(theta, -solExtra[i]);
           }
           solExtra[i] += value2;
           rowsol[irow] += element * value2;
@@ -1196,8 +1196,8 @@ Idiot::IdiSolve(
         djSave[i] = djSave[i - 1];
       }
       djSave[0] = maxDj;
-      largestDj = CoinMax(largestDj, maxDj);
-      smallestDj = CoinMin(smallestDj, maxDj);
+      largestDj = std::max(largestDj, maxDj);
+      smallestDj = std::min(smallestDj, maxDj);
       for (int i = DJTEST - 1; i > 0; i--) {
         maxDj += djSave[i];
       }

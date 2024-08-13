@@ -1218,9 +1218,9 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
                       // printf("basic %d direction %d farkas %g\n",
                       //	   i,simplex->directionOut(),value);
                       if (value < 0.0)
-                        boundValue = CoinMax(columnLower[i], -1.0e20);
+                        boundValue = std::max(columnLower[i], -1.0e20);
                       else
-                        boundValue = CoinMin(columnUpper[i], 1.0e20);
+                        boundValue = std::min(columnUpper[i], 1.0e20);
                     }
                   } else if (fabs(value) > 1.0e-10) {
                     if (value < 0.0)
@@ -2120,8 +2120,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           for (iRow = 0; iRow < numberRows; iRow++) {
              // leave free ones for now
              if (rowLower[iRow] > -1.0e20 || rowUpper[iRow] < 1.0e20) {
-                rowLower[iRow] = CoinMax(rowLower[iRow], -dValue);
-                rowUpper[iRow] = CoinMin(rowUpper[iRow], dValue);
+                rowLower[iRow] = std::max(rowLower[iRow], -dValue);
+                rowUpper[iRow] = std::min(rowUpper[iRow], dValue);
              }
           }
           int iColumn;
@@ -2132,8 +2132,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
              // leave free ones for now
              if (columnLower[iColumn] > -1.0e20 ||
                  columnUpper[iColumn] < 1.0e20) {
-                columnLower[iColumn] = CoinMax(columnLower[iColumn], -dValue);
-                columnUpper[iColumn] = CoinMin(columnUpper[iColumn], dValue);
+                columnLower[iColumn] = std::max(columnLower[iColumn], -dValue);
+                columnUpper[iColumn] = std::min(columnUpper[iColumn], dValue);
              }
           }
       } break;
@@ -2362,18 +2362,18 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 double lower = rowLower[iRow];
                 double upper = rowUpper[iRow];
                 double dual = dualRowSolution[iRow];
-                highestPrimal = CoinMax(highestPrimal, primal);
-                lowestPrimal = CoinMin(lowestPrimal, primal);
-                highestDual = CoinMax(highestDual, dual);
-                lowestDual = CoinMin(lowestDual, dual);
+                highestPrimal = std::max(highestPrimal, primal);
+                lowestPrimal = std::min(lowestPrimal, primal);
+                highestDual = std::max(highestDual, dual);
+                lowestDual = std::min(lowestDual, dual);
                 if (primal < lower + 1.0e-6) {
                   numberAtLower++;
                 } else if (primal > upper - 1.0e-6) {
                   numberAtUpper++;
                 } else {
                   numberBetween++;
-                  largestAway = CoinMax(
-                      largestAway, CoinMin(primal - lower, upper - primal));
+                  largestAway = std::max(
+                      largestAway, std::min(primal - lower, upper - primal));
                 }
               }
               buffer.str("");
@@ -2404,18 +2404,18 @@ clp watson.mps -\nscaling off\nprimalsimplex");
                 double lower = columnLower[iColumn];
                 double upper = columnUpper[iColumn];
                 double dual = dualColumnSolution[iColumn];
-                highestPrimal = CoinMax(highestPrimal, primal);
-                lowestPrimal = CoinMin(lowestPrimal, primal);
-                highestDual = CoinMax(highestDual, dual);
-                lowestDual = CoinMin(lowestDual, dual);
+                highestPrimal = std::max(highestPrimal, primal);
+                lowestPrimal = std::min(lowestPrimal, primal);
+                highestDual = std::max(highestDual, dual);
+                lowestDual = std::min(lowestDual, dual);
                 if (primal < lower + 1.0e-6) {
                   numberAtLower++;
                 } else if (primal > upper - 1.0e-6) {
                   numberAtUpper++;
                 } else {
                   numberBetween++;
-                  largestAway = CoinMax(
-                      largestAway, CoinMin(primal - lower, upper - primal));
+                  largestAway = std::max(
+                      largestAway, std::min(primal - lower, upper - primal));
                 }
               }
               buffer.str("");
@@ -2432,7 +2432,7 @@ clp watson.mps -\nscaling off\nprimalsimplex");
             int iRow;
             int numberRows = model_.numberRows();
             int lengthName = model_.lengthNames(); // 0 if no names
-            int lengthPrint = CoinMax(lengthName, 8);
+            int lengthPrint = std::max(lengthName, 8);
             // in general I don't want to pass around massive
             // amounts of data but seems simpler here
             std::vector<std::string> rowNames = *(model_.rowNames());
@@ -3668,7 +3668,7 @@ static void statistics(ClpSimplex * originalModel, ClpSimplex * model) {
             blockStart[iBlock] = jColumn;
             blockCount[iBlock] += numberMarkedColumns - n;
           }
-          maximumBlockSize = CoinMax(maximumBlockSize, blockCount[iBlock]);
+          maximumBlockSize = std::max(maximumBlockSize, blockCount[iBlock]);
           numberRowsDone++;
           if (thisBestValue * numberRowsDone > maximumBlockSize &&
               numberRowsDone > halfway) {

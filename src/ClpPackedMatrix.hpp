@@ -728,13 +728,13 @@ if (fabs(value) > zeroTolerance) {
   if (thisWeight < DEVEX_TRY_NORM) {
     if (referenceIn < 0.0) {
       // steepest
-      thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+      thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
     } else {
       // exact
       thisWeight = referenceIn * pivotSquared;
       if (reference(iColumn))
         thisWeight += 1.0;
-      thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+      thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
     }
   }
   // out basic or fixed
@@ -799,13 +799,13 @@ column++;
   if (thisWeight < DEVEX_TRY_NORM) {
     if (referenceIn < 0.0) {
       // steepest
-      thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+      thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
     } else {
       // exact
       thisWeight = referenceIn * pivotSquared;
       if (reference(iColumn))
         thisWeight += 1.0;
-      thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+      thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
     }
   }
   // out basic or fixed

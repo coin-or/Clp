@@ -263,7 +263,7 @@ bool AbcSimplexFactorization::timeToRefactorize() const
 	     numberPivots,numberRows,effectiveStartNumberU_,
 	     lengthU,lengthL,lengthR,nnd,average);
 #endif
-    shortestAverage_ = CoinMin(shortestAverage_, average);
+    shortestAverage_ = std::min(shortestAverage_, average);
     if (average > increaseNeeded * shortestAverage_ && coinAbcFactorization_->pivots() > 30) {
       //printf("PIVX %d nrow %d startU %d now %d L %d R %d dense %g average %g\n",
       //     numberPivots,numberRows,effectiveStartNumberU_,
@@ -902,7 +902,7 @@ void AbcSimplexFactorization::saferTolerances(double zeroValue,
     newValue1 = zeroValue;
   else
     newValue1 = -zeroTolerance() * zeroValue;
-  newValue1 = CoinMin(zeroTolerance(), newValue1);
+  newValue1 = std::min(zeroTolerance(), newValue1);
   if (newValue1 > 1.0e-15)
     zeroTolerance(newValue1);
   double newValue2;
@@ -911,7 +911,7 @@ void AbcSimplexFactorization::saferTolerances(double zeroValue,
     newValue2 = pivotValue;
   else
     newValue2 = -pivotTolerance() * pivotValue;
-  newValue2 = CoinMin(CoinMax(pivotTolerance(), newValue2), 0.999);
+  newValue2 = std::min(std::max(pivotTolerance(), newValue2), 0.999);
   if (newValue2 > pivotTolerance()) {
     pivotTolerance(newValue2);
     char line[100];

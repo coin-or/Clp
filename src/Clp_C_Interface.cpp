@@ -484,7 +484,7 @@ void CLP_LINKAGE
 Clp_problemName(Clp_Simplex *model, int maxNumberCharacters, char *array)
 {
   std::string name = model->model_->problemName();
-  maxNumberCharacters = CoinMin(maxNumberCharacters,
+  maxNumberCharacters = std::min(maxNumberCharacters,
     ((int)name.size()) + 1);
   strncpy(array, name.c_str(), maxNumberCharacters - 1);
   array[maxNumberCharacters - 1] = '\0';

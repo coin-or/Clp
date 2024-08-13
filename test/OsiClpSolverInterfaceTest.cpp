@@ -979,7 +979,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
           assert (dualsNow[i]<1.0e-4);
           if (duals[i]>1.0e-8) {
             if (dualsNow[i]+best*duals[i]>0.0) {
-              best = CoinMax(-dualsNow[i]/duals[i],0.0);
+              best = std::max(-dualsNow[i]/duals[i],0.0);
               direction=-1;
               colIn=-i-1;
             }
@@ -994,7 +994,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
             assert (djsNow[i]>-1.0e-4);
             if (djs[i]<-1.0e-8) {
               if (djsNow[i]+best*djs[i]<0.0) {
-                best = CoinMax(-djsNow[i]/djs[i],0.0);
+                best = std::max(-djsNow[i]/djs[i],0.0);
                 direction=1;
                 colIn=i;
               }
@@ -1003,7 +1003,7 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
             assert (djsNow[i]<1.0e-4);
             if (djs[i]>1.0e-8) {
               if (djsNow[i]+best*djs[i]>0.0) {
-                best = CoinMax(-djsNow[i]/djs[i],0.0);
+                best = std::max(-djsNow[i]/djs[i],0.0);
                 direction=-1;
                 colIn=i;
               }

@@ -161,10 +161,10 @@ ClpPESimplex::ClpPESimplex(ClpSimplex *model)
   isCompatibleRow_ = reinterpret_cast< bool * >(malloc(numberRows_ * sizeof(bool)));
   std::fill(isCompatibleRow_, isCompatibleRow_ + numberRows_, false);
 
-  tempRandom_ = reinterpret_cast< double * >(malloc(CoinMax(numberColumns_, numberRows_) * sizeof(double)));
+  tempRandom_ = reinterpret_cast< double * >(malloc(std::max(numberColumns_, numberRows_) * sizeof(double)));
   // fill
   CoinThreadRandom generator = *model_->randomNumberGenerator();
-  for (int i = 0; i < CoinMax(numberColumns_, numberRows_); i++) {
+  for (int i = 0; i < std::max(numberColumns_, numberRows_); i++) {
     double random;
     do
       random = static_cast< int >(generator.randomDouble() * 1.0e6) - 5.0e5;
@@ -345,7 +345,7 @@ void ClpPESimplex::identifyCompatibleCols(int number, const int *which,
   // no longer using wPrimal_
   //wPrimal_->clear();
   wPrimal->checkClear();
-  assert(coPrimalDegenerates_ <= CoinMax(numberColumns_, numberRows_));
+  assert(coPrimalDegenerates_ <= std::max(numberColumns_, numberRows_));
   for (int i = 0; i < coPrimalDegenerates_; i++) {
 #if 0
     double random;
@@ -444,7 +444,7 @@ void ClpPESimplex::identifyCompatibleRows(CoinIndexedVector *spare,
     coCompatibleRows_ = numberRows_;
     return;
   }
-  assert(coDualDegenerates_ <= CoinMax(numberColumns_, numberRows_));
+  assert(coDualDegenerates_ <= std::max(numberColumns_, numberRows_));
 #if 0
   // fill the elements of tempRandom with as many random elements as dual degenerate variables
   for (int j = 0; j < coDualDegenerates_; j++) {

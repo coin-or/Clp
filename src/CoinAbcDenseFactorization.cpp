@@ -144,7 +144,7 @@ void CoinAbcDenseFactorization::getAreas(int numberOfRows,
   numberDense_ = numberRows_;
   if ((numberRows_ & (BLOCKING8 - 1)) != 0)
     numberDense_ += (BLOCKING8 - (numberRows_ & (BLOCKING8 - 1)));
-  CoinBigIndex size = numberDense_ * (2 * numberDense_ + CoinMax(maximumPivots_, (numberDense_ + 1) >> 1));
+  CoinBigIndex size = numberDense_ * (2 * numberDense_ + std::max(maximumPivots_, (numberDense_ + 1) >> 1));
   if (size > maximumSpace_) {
     delete[] elements_;
     elements_ = new CoinFactorizationDouble[size];
@@ -746,7 +746,7 @@ CoinAbcAnyFactorization &CoinAbcAnyFactorization::operator=(const CoinAbcAnyFact
 void CoinAbcAnyFactorization::pivotTolerance(double value)
 {
   if (value > 0.0 && value <= 1.0) {
-    pivotTolerance_ = CoinMax(value, minimumPivotTolerance_);
+    pivotTolerance_ = std::max(value, minimumPivotTolerance_);
   }
 }
 void CoinAbcAnyFactorization::minimumPivotTolerance(double value)

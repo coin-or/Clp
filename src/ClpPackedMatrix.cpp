@@ -382,7 +382,7 @@ void ClpPackedMatrix::transposeTimes(double scalar,
           info[i].element = elementByColumn;
           info[i].start = columnStart;
           info[i].row = row;
-          info[i].numberToDo = CoinMin(chunk, numberActiveColumns_ - n);
+          info[i].numberToDo = std::min(chunk, numberActiveColumns_ - n);
           n += chunk;
         }
         for (int i = 0; i < numberThreads; i++) {
@@ -651,7 +651,7 @@ void ClpPackedMatrix::transposeTimesSubset(int number,
           info[i].element = elementByColumn;
           info[i].start = columnStart;
           info[i].row = row;
-          info[i].numberToDo = CoinMin(chunk, number - n);
+          info[i].numberToDo = std::min(chunk, number - n);
           n += chunk;
         }
         for (int i = 0; i < numberThreads; i++) {
@@ -1051,7 +1051,7 @@ void ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex *model, double sca
                     value = oldValue - upperTheta * alpha;
                     if (value < dualT && alpha >= acceptablePivot) {
                       upperTheta = (oldValue - dualT) / alpha;
-                      //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+                      //tentativeTheta = std::min(2.0*upperTheta,tentativeTheta);
                     }
                     // add to list
                     spare[numberRemaining] = alpha * mult;
@@ -1663,7 +1663,7 @@ int ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double *COIN_RESTRICT pi
       info[i].element = elementByColumn;
       info[i].start = columnStart;
       info[i].row = row;
-      info[i].numberToDo = CoinMin(chunk, numberActiveColumns_ - n);
+      info[i].numberToDo = std::min(chunk, numberActiveColumns_ - n);
       info[i].tolerance = zeroTolerance;
       n += chunk;
     }
@@ -1777,7 +1777,7 @@ transposeTimesUnscaledBit2(clpTempInfo &info)
             value = oldValue - upperTheta * alpha;
             if (value < dualT && alpha >= acceptablePivot) {
               upperTheta = (oldValue - dualT) / alpha;
-              //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+              //tentativeTheta = std::min(2.0*upperTheta,tentativeTheta);
             }
             // add to list
             spareArray[numberRemaining] = alpha * mult;
@@ -1834,7 +1834,7 @@ int ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double *COIN_RESTRICT pi
       info[i].element = elementByColumn;
       info[i].start = columnStart;
       info[i].row = row;
-      info[i].numberToDo = CoinMin(chunk, numberActiveColumns_ - n);
+      info[i].numberToDo = std::min(chunk, numberActiveColumns_ - n);
       info[i].tolerance = zeroTolerance;
       info[i].dualTolerance = dualTolerance;
       n += chunk;
@@ -1846,7 +1846,7 @@ int ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double *COIN_RESTRICT pi
     for (int i = 0; i < numberThreads; i++) {
       numberNonZero += info[i].numberAdded;
       numberRemaining += info[i].numberRemaining;
-      upperTheta = CoinMin(upperTheta, static_cast< double >(info[i].upperTheta));
+      upperTheta = std::min(upperTheta, static_cast< double >(info[i].upperTheta));
     }
     moveAndZero(info, 1, NULL);
     moveAndZero(info, 2, NULL);
@@ -1967,7 +1967,7 @@ int ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double *COIN_RESTRICT pi
               value = oldValue - upperTheta * alpha;
               if (value < dualT && alpha >= acceptablePivot) {
                 upperTheta = (oldValue - dualT) / alpha;
-                //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+                //tentativeTheta = std::min(2.0*upperTheta,tentativeTheta);
               }
               // add to list
               spareArray[numberRemaining] = alpha * mult;
@@ -2092,7 +2092,7 @@ int ClpPackedMatrix::gutsOfTransposeTimesByRowGEK(const CoinIndexedVector *COIN_
       info[i].which = index + n;
       info[i].infeas = output + n;
       info[i].startColumn = n;
-      info[i].numberToDo = CoinMin(chunk, numberColumns - n);
+      info[i].numberToDo = std::min(chunk, numberColumns - n);
       info[i].tolerance = tolerance;
       n += chunk;
     }
@@ -2449,13 +2449,13 @@ transposeTimes2UnscaledBit(clpTempInfo &info)
         if (thisWeight < DEVEX_TRY_NORM) {
           if (referenceIn < 0.0) {
             // steepest
-            thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+            thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
           } else {
             // exact
             thisWeight = referenceIn * pivotSquared;
             if (reference(iColumn))
               thisWeight += 1.0;
-            thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+            thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
           }
         }
         weights[iColumn] = thisWeight;
@@ -2564,13 +2564,13 @@ transposeTimes2ScaledBit(clpTempInfo &info)
         if (thisWeight < DEVEX_TRY_NORM) {
           if (referenceIn < 0.0) {
             // steepest
-            thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+            thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
           } else {
             // exact
             thisWeight = referenceIn * pivotSquared;
             if (reference(iColumn))
               thisWeight += 1.0;
-            thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+            thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
           }
         }
         weights[iColumn] = thisWeight;
@@ -2636,7 +2636,7 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
   double dualTolerance = model->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model->largestDualError());
+  double error = std::min(1.0e-2, model->largestDualError());
   // allow tolerance at least slightly bigger than standard
   dualTolerance = dualTolerance + error;
   bool packed = pi1->packedMode();
@@ -2701,7 +2701,7 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
             info[i].element = elementByColumn;
             info[i].start = columnStart;
             info[i].row = row;
-            info[i].numberToDo = CoinMin(chunk, numberActiveColumns_ - n);
+            info[i].numberToDo = std::min(chunk, numberActiveColumns_ - n);
             info[i].tolerance = zeroTolerance;
             info[i].dualTolerance = dualTolerance;
             info[i].numberInfeasibilities = killDjs ? 1 : 0;
@@ -2746,13 +2746,13 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
               if (thisWeight < DEVEX_TRY_NORM) {
                 if (referenceIn < 0.0) {
                   // steepest
-                  thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+                  thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
                 } else {
                   // exact
                   thisWeight = referenceIn * pivotSquared;
                   if (reference(iColumn))
                     thisWeight += 1.0;
-                  thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+                  thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
                 }
               }
               weights[iColumn] = thisWeight;
@@ -2885,7 +2885,7 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
             info[i].element = elementByColumn;
             info[i].start = columnStart;
             info[i].row = row;
-            info[i].numberToDo = CoinMin(chunk, numberActiveColumns_ - n);
+            info[i].numberToDo = std::min(chunk, numberActiveColumns_ - n);
             info[i].tolerance = zeroTolerance;
             info[i].dualTolerance = dualTolerance;
             info[i].numberInfeasibilities = killDjs ? 1 : 0;
@@ -2934,13 +2934,13 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
               if (thisWeight < DEVEX_TRY_NORM) {
                 if (referenceIn < 0.0) {
                   // steepest
-                  thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+                  thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
                 } else {
                   // exact
                   thisWeight = referenceIn * pivotSquared;
                   if (reference(iColumn))
                     thisWeight += 1.0;
-                  thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+                  thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
                 }
               }
               weights[iColumn] = thisWeight;
@@ -3013,7 +3013,7 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
           double tolerance = model->currentDualTolerance();
           // we can't really trust infeasibilities if there is dual error
           // this coding has to mimic coding in checkDualSolution
-          double error = CoinMin(1.0e-2, model->largestDualError());
+          double error = std::min(1.0e-2, model->largestDualError());
           // allow tolerance at least slightly bigger than standard
           tolerance = tolerance + error;
           returnCode = 1;
@@ -3140,13 +3140,13 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
           if (thisWeight < DEVEX_TRY_NORM) {
             if (referenceIn < 0.0) {
               // steepest
-              thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+              thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
             } else {
               // exact
               thisWeight = referenceIn * pivotSquared;
               if (reference(iColumn))
                 thisWeight += 1.0;
-              thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+              thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
             }
           }
           weights[iColumn] = thisWeight;
@@ -3199,13 +3199,13 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
           if (thisWeight < DEVEX_TRY_NORM) {
             if (referenceIn < 0.0) {
               // steepest
-              thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+              thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
             } else {
               // exact
               thisWeight = referenceIn * pivotSquared;
               if (reference(iColumn))
                 thisWeight += 1.0;
-              thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+              thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
             }
           }
           weights[iColumn] = thisWeight;
@@ -3266,13 +3266,13 @@ void ClpPackedMatrix::subsetTimes2(const ClpSimplex *model,
       if (thisWeight < DEVEX_TRY_NORM) {
         if (referenceIn < 0.0) {
           // steepest
-          thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+          thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
         } else {
           // exact
           thisWeight = referenceIn * pivotSquared;
           if (reference(iColumn))
             thisWeight += 1.0;
-          thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+          thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
         }
       }
       weights[iColumn] = thisWeight;
@@ -3304,13 +3304,13 @@ void ClpPackedMatrix::subsetTimes2(const ClpSimplex *model,
       if (thisWeight < DEVEX_TRY_NORM) {
         if (referenceIn < 0.0) {
           // steepest
-          thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+          thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
         } else {
           // exact
           thisWeight = referenceIn * pivotSquared;
           if (reference(iColumn))
             thisWeight += 1.0;
-          thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+          thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
         }
       }
       weights[iColumn] = thisWeight;
@@ -3533,8 +3533,8 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                     if (value > 1.0e-20) {
                          if(usefulRow[iRow]) {
                               useful = 1;
-                              largest = CoinMax(largest, fabs(elementByColumn[j]));
-                              smallest = CoinMin(smallest, fabs(elementByColumn[j]));
+                              largest = std::max(largest, fabs(elementByColumn[j]));
+                              smallest = std::min(smallest, fabs(elementByColumn[j]));
                          }
                     } else {
                          // small
@@ -3614,7 +3614,7 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                // safer to have smaller zero tolerance
                double ratio = smallest / largest;
                ClpSimplex * simplex = static_cast<ClpSimplex *> (model);
-               double newTolerance = CoinMax(ratio * 0.5, 1.0e-18);
+               double newTolerance = std::max(ratio * 0.5, 1.0e-18);
                if (simplex->zeroTolerance() > newTolerance)
                     simplex->setZeroTolerance(newTolerance);
           }
@@ -3674,15 +3674,15 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                                              int iColumn = column[j];
                                              if (usefulColumn[iColumn]) {
                                                   double value = fabs(element[j] * columnScale[iColumn]);
-                                                  largest = CoinMax(largest, value);
+                                                  largest = std::max(largest, value);
                                                   assert (largest < 1.0e40);
                                              }
                                         }
                                         rowScale[iRow] = 1.0 / largest;
 #ifdef COIN_DEVELOP
                                         if (extraDetails) {
-                                             overallLargest = CoinMax(overallLargest, largest);
-                                             overallSmallest = CoinMin(overallSmallest, largest);
+                                             overallLargest = std::max(overallLargest, largest);
+                                             overallSmallest = std::min(overallSmallest, largest);
                                         }
 #endif
                                    }
@@ -3701,18 +3701,18 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                                              if (usefulColumn[iColumn]) {
                                                   double value = fabs(element[j]);
                                                   value *= columnScale[iColumn];
-                                                  largest = CoinMax(largest, value);
-                                                  smallest = CoinMin(smallest, value);
+                                                  largest = std::max(largest, value);
+                                                  smallest = std::min(smallest, value);
                                              }
                                         }
                                         if (iRow >= numberRows2) {
                                              rowScale[iRow] = 1.0 / sqrt(smallest * largest);
-                                             //rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
+                                             //rowScale[iRow]=std::max(1.0e-10,std::min(1.0e10,rowScale[iRow]));
                                         }
 #ifdef COIN_DEVELOP
                                         if (extraDetails) {
-                                             overallLargest = CoinMax(largest * rowScale[iRow], overallLargest);
-                                             overallSmallest = CoinMin(smallest * rowScale[iRow], overallSmallest);
+                                             overallLargest = std::max(largest * rowScale[iRow], overallLargest);
+                                             overallSmallest = std::min(smallest * rowScale[iRow], overallSmallest);
                                         }
 #endif
                                    }
@@ -3733,15 +3733,15 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                                    int iColumn = column[j];
                                    if (usefulColumn[iColumn]) {
                                         double value = fabs(element[j]);
-                                        largest = CoinMax(largest, value);
+                                        largest = std::max(largest, value);
                                         assert (largest < 1.0e40);
                                    }
                               }
                               rowScale[iRow] = 1.0 / largest;
 #ifdef COIN_DEVELOP
                               if (extraDetails) {
-                                   overallLargest = CoinMax(overallLargest, largest);
-                                   overallSmallest = CoinMin(overallSmallest, largest);
+                                   overallLargest = std::max(overallLargest, largest);
+                                   overallSmallest = std::min(overallSmallest, largest);
                               }
 #endif
                          }
@@ -3768,16 +3768,16 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                                         if (usefulColumn[iColumn]) {
                                              double value = fabs(element[j]);
                                              value *= columnScale[iColumn];
-                                             largest = CoinMax(largest, value);
-                                             smallest = CoinMin(smallest, value);
+                                             largest = std::max(largest, value);
+                                             smallest = std::min(smallest, value);
                                         }
                                    }
 
                                    rowScale[iRow] = 1.0 / sqrt(smallest * largest);
-                                   //rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
+                                   //rowScale[iRow]=std::max(1.0e-10,std::min(1.0e10,rowScale[iRow]));
                                    if (extraDetails) {
-                                        overallLargest = CoinMax(largest * rowScale[iRow], overallLargest);
-                                        overallSmallest = CoinMin(smallest * rowScale[iRow], overallSmallest);
+                                        overallLargest = std::max(largest * rowScale[iRow], overallLargest);
+                                        overallSmallest = std::min(smallest * rowScale[iRow], overallSmallest);
                                    }
                               }
                          }
@@ -3788,8 +3788,8 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                               if (usefulColumn[iColumn]) {
                                    double value = fabs(objective[iColumn]);
                                    value *= columnScale[iColumn];
-                                   largest = CoinMax(largest, value);
-                                   smallest = CoinMin(smallest, value);
+                                   largest = std::max(largest, value);
+                                   smallest = std::min(smallest, value);
                               }
                          }
                          objScale = 1.0 / sqrt(smallest * largest);
@@ -3813,19 +3813,19 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                                         double value = fabs(elementByColumn[j]);
                                         if (usefulRow[iRow]) {
                                              value *= rowScale[iRow];
-                                             largest = CoinMax(largest, value);
-                                             smallest = CoinMin(smallest, value);
+                                             largest = std::max(largest, value);
+                                             smallest = std::min(smallest, value);
                                         }
                                    }
 #ifdef USE_OBJECTIVE
                                    if (fabs(objective[iColumn]) > 1.0e-20) {
                                         double value = fabs(objective[iColumn]) * objScale;
-                                        largest = CoinMax(largest, value);
-                                        smallest = CoinMin(smallest, value);
+                                        largest = std::max(largest, value);
+                                        smallest = std::min(smallest, value);
                                    }
 #endif
                                    columnScale[iColumn] = 1.0 / sqrt(smallest * largest);
-                                   //columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
+                                   //columnScale[iColumn]=std::max(1.0e-10,std::min(1.0e10,columnScale[iColumn]));
                               }
                          }
                     }
@@ -3842,7 +3842,7 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                          if (scaledDifference > tolerance && scaledDifference < 1.0e-4) {
                               // make gap larger
                               rowScale[iRow] *= 1.0e-4 / scaledDifference;
-                              rowScale[iRow] = CoinMax(1.0e-10, CoinMin(1.0e10, rowScale[iRow]));
+                              rowScale[iRow] = std::max(1.0e-10, std::min(1.0e10, rowScale[iRow]));
                               //printf("Row %d difference %g scaled diff %g => %g\n",iRow,difference,
                               // scaledDifference,difference*rowScale[iRow]);
                          }
@@ -3861,8 +3861,8 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                               iRow = row[j];
                               if(elementByColumn[j] && usefulRow[iRow]) {
                                    double value = fabs(elementByColumn[j] * rowScale[iRow]);
-                                   largest = CoinMax(largest, value);
-                                   smallest = CoinMin(smallest, value);
+                                   largest = std::max(largest, value);
+                                   smallest = std::min(smallest, value);
                               }
                          }
                          if (overallSmallest * largest > smallest)
@@ -3916,7 +3916,7 @@ ClpPackedMatrix::scale2(ClpModel * model) const
           overallLargest = 1.0;
           if (overallSmallest < 1.0e-1)
                overallLargest = 1.0 / sqrt(overallSmallest);
-          overallLargest = CoinMin(100.0, overallLargest);
+          overallLargest = std::min(100.0, overallLargest);
           overallSmallest = 1.0e50;
           //printf("scaling %d\n",model->scalingFlag());
           for (iColumn = 0; iColumn < numberColumns; iColumn++) {
@@ -3931,12 +3931,12 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                          iRow = row[j];
                          if(elementByColumn[j] && usefulRow[iRow]) {
                               double value = fabs(elementByColumn[j] * rowScale[iRow]);
-                              largest = CoinMax(largest, value);
-                              smallest = CoinMin(smallest, value);
+                              largest = std::max(largest, value);
+                              smallest = std::min(smallest, value);
                          }
                     }
                     columnScale[iColumn] = overallLargest / largest;
-                    //columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
+                    //columnScale[iColumn]=std::max(1.0e-10,std::min(1.0e10,columnScale[iColumn]));
 #ifdef RANDOMIZE
                     double value = 0.5 - randomNumberGenerator_.randomDouble(); //between -0.5 to + 0.5
                     columnScale[iColumn] *= (1.0 + 0.1 * value);
@@ -3951,7 +3951,7 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                     double value = smallest * columnScale[iColumn];
                     if (overallSmallest > value)
                          overallSmallest = value;
-                    //overallSmallest = CoinMin(overallSmallest,smallest*columnScale[iColumn]);
+                    //overallSmallest = std::min(overallSmallest,smallest*columnScale[iColumn]);
                }
           }
           model->messageHandler()->message(CLP_PACKEDSCALE_FINAL, *model->messagesPointer())
@@ -3960,12 +3960,12 @@ ClpPackedMatrix::scale2(ClpModel * model) const
                     << CoinMessageEol;
           if (overallSmallest < 1.0e-13) {
                // Change factorization zero tolerance
-               double newTolerance = CoinMax(1.0e-15 * (overallSmallest / 1.0e-13),
+               double newTolerance = std::max(1.0e-15 * (overallSmallest / 1.0e-13),
                                              1.0e-18);
                ClpSimplex * simplex = static_cast<ClpSimplex *> (model);
                if (simplex->factorization()->zeroTolerance() > newTolerance)
                     simplex->factorization()->zeroTolerance(newTolerance);
-               newTolerance = CoinMax(overallSmallest * 0.5, 1.0e-18);
+               newTolerance = std::max(overallSmallest * 0.5, 1.0e-18);
                simplex->setZeroTolerance(newTolerance);
           }
           delete [] usefulRow;
@@ -4219,8 +4219,8 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
         double value = fabs(elementByColumn[j]);
         if (value > 1.0e-20) {
           useful = 1;
-          largest = CoinMax(largest, fabs(elementByColumn[j]));
-          smallest = CoinMin(smallest, fabs(elementByColumn[j]));
+          largest = std::max(largest, fabs(elementByColumn[j]));
+          smallest = std::min(smallest, fabs(elementByColumn[j]));
         } else {
           // small
           deleteSome = true;
@@ -4269,8 +4269,8 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
     << CoinMessageEol;
   if (smallest * 1.0e12 < largest && simplex) {
     // increase tolerances
-    simplex->setCurrentDualTolerance(CoinMax(simplex->currentDualTolerance(), 5.0e-7));
-    simplex->setCurrentPrimalTolerance(CoinMax(simplex->currentPrimalTolerance(), 5.0e-7));
+    simplex->setCurrentDualTolerance(std::max(simplex->currentDualTolerance(), 5.0e-7));
+    simplex->setCurrentPrimalTolerance(std::max(simplex->currentPrimalTolerance(), 5.0e-7));
   }
   if (smallest >= 0.5 && largest <= 2.0 && !deletedElements) {
     // don't bother scaling
@@ -4313,7 +4313,7 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
       // safer to have smaller zero tolerance
       double ratio = smallest / largest;
       ClpSimplex *simplex = static_cast< ClpSimplex * >(model);
-      double newTolerance = CoinMax(ratio * 0.5, 1.0e-18);
+      double newTolerance = std::max(ratio * 0.5, 1.0e-18);
       if (simplex->zeroTolerance() > newTolerance)
         simplex->setZeroTolerance(newTolerance);
     }
@@ -4356,15 +4356,15 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
             int iColumn = column[j];
             if (usefulColumn[iColumn]) {
               double value = fabs(element[j]);
-              largest = CoinMax(largest, value);
+              largest = std::max(largest, value);
               assert(largest < 1.0e40);
             }
           }
           rowScale[iRow] = 1.0 / largest;
 #ifdef COIN_DEVELOP
           if (extraDetails) {
-            overallLargest = CoinMax(overallLargest, largest);
-            overallSmallest = CoinMin(overallSmallest, largest);
+            overallLargest = std::max(overallLargest, largest);
+            overallSmallest = std::min(overallSmallest, largest);
           }
 #endif
         }
@@ -4389,8 +4389,8 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
               if (usefulColumn[iColumn]) {
                 double value = fabs(element[j]);
                 value *= columnScale[iColumn];
-                largest = CoinMax(largest, value);
-                smallest = CoinMin(smallest, value);
+                largest = std::max(largest, value);
+                smallest = std::min(smallest, value);
               }
             }
 
@@ -4399,10 +4399,10 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
 #else
             rowScale[iRow] = 1.0 / sqrt(smallest * largest);
 #endif
-            //rowScale[iRow]=CoinMax(1.0e-10,CoinMin(1.0e10,rowScale[iRow]));
+            //rowScale[iRow]=std::max(1.0e-10,std::min(1.0e10,rowScale[iRow]));
             if (extraDetails) {
-              overallLargest = CoinMax(largest * rowScale[iRow], overallLargest);
-              overallSmallest = CoinMin(smallest * rowScale[iRow], overallSmallest);
+              overallLargest = std::max(largest * rowScale[iRow], overallLargest);
+              overallSmallest = std::min(smallest * rowScale[iRow], overallSmallest);
             }
           }
           if (model->scalingFlag() == 5)
@@ -4417,8 +4417,8 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
             if (usefulColumn[iColumn]) {
               double value = fabs(objective[iColumn]);
               value *= columnScale[iColumn];
-              largest = CoinMax(largest, value);
-              smallest = CoinMin(smallest, value);
+              largest = std::max(largest, value);
+              smallest = std::min(smallest, value);
             }
           }
           objScale = 1.0 / sqrt(smallest * largest);
@@ -4441,14 +4441,14 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
                 iRow = row[j];
                 double value = fabs(elementByColumn[j]);
                 value *= rowScale[iRow];
-                largest = CoinMax(largest, value);
-                smallest = CoinMin(smallest, value);
+                largest = std::max(largest, value);
+                smallest = std::min(smallest, value);
               }
 #ifdef USE_OBJECTIVE
               if (fabs(objective[iColumn]) > 1.0e-20) {
                 double value = fabs(objective[iColumn]) * objScale;
-                largest = CoinMax(largest, value);
-                smallest = CoinMin(smallest, value);
+                largest = std::max(largest, value);
+                smallest = std::min(smallest, value);
               }
 #endif
 #ifdef SQRT_ARRAY
@@ -4456,7 +4456,7 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
 #else
               columnScale[iColumn] = 1.0 / sqrt(smallest * largest);
 #endif
-              //columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
+              //columnScale[iColumn]=std::max(1.0e-10,std::min(1.0e10,columnScale[iColumn]));
             }
           }
 #ifdef SQRT_ARRAY
@@ -4475,7 +4475,7 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
         if (scaledDifference > tolerance && scaledDifference < 1.0e-4) {
           // make gap larger
           rowScale[iRow] *= 1.0e-4 / scaledDifference;
-          rowScale[iRow] = CoinMax(1.0e-10, CoinMin(1.0e10, rowScale[iRow]));
+          rowScale[iRow] = std::max(1.0e-10, std::min(1.0e10, rowScale[iRow]));
           //printf("Row %d difference %g scaled diff %g => %g\n",iRow,difference,
           // scaledDifference,difference*rowScale[iRow]);
         }
@@ -4493,8 +4493,8 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
                  j < columnStart[iColumn] + columnLength[iColumn]; j++) {
               iRow = row[j];
               double value = fabs(elementByColumn[j] * rowScale[iRow]);
-              largest = CoinMax(largest, value);
-              smallest = CoinMin(smallest, value);
+              largest = std::max(largest, value);
+              smallest = std::min(smallest, value);
             }
             if (overallSmallest * largest > smallest)
               overallSmallest = smallest / largest;
@@ -4548,7 +4548,7 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
     overallLargest = 1.0;
     if (overallSmallest < 1.0e-1)
       overallLargest = 1.0 / sqrt(overallSmallest);
-    overallLargest = CoinMin(100.0, overallLargest);
+    overallLargest = std::min(100.0, overallLargest);
     overallSmallest = 1.0e50;
     char *usedRow = reinterpret_cast< char * >(inverseRowScale);
     memset(usedRow, 0, numberRows);
@@ -4565,11 +4565,11 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
             iRow = row[j];
             usedRow[iRow] = 1;
             double value = fabs(elementByColumn[j] * rowScale[iRow]);
-            largest = CoinMax(largest, value);
-            smallest = CoinMin(smallest, value);
+            largest = std::max(largest, value);
+            smallest = std::min(smallest, value);
           }
           columnScale[iColumn] = overallLargest / largest;
-          //columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
+          //columnScale[iColumn]=std::max(1.0e-10,std::min(1.0e10,columnScale[iColumn]));
 #ifdef RANDOMIZE
           double value = 0.5 - randomNumberGenerator_.randomDouble(); //between -0.5 to + 0.5
           columnScale[iColumn] *= (1.0 + 0.1 * value);
@@ -4584,7 +4584,7 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
           double value = smallest * columnScale[iColumn];
           if (overallSmallest > value)
             overallSmallest = value;
-          //overallSmallest = CoinMin(overallSmallest,smallest*columnScale[iColumn]);
+          //overallSmallest = std::min(overallSmallest,smallest*columnScale[iColumn]);
         } else {
           //assert(columnScale[iColumn] == 1.0);
           columnScale[iColumn] = 1.0;
@@ -4614,12 +4614,12 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
 #endif
     if (overallSmallest < 1.0e-13) {
       // Change factorization zero tolerance
-      double newTolerance = CoinMax(1.0e-15 * (overallSmallest / 1.0e-13),
+      double newTolerance = std::max(1.0e-15 * (overallSmallest / 1.0e-13),
         1.0e-18);
       ClpSimplex *simplex = static_cast< ClpSimplex * >(model);
       if (simplex->factorization()->zeroTolerance() > newTolerance)
         simplex->factorization()->zeroTolerance(newTolerance);
-      newTolerance = CoinMax(overallSmallest * 0.5, 1.0e-18);
+      newTolerance = std::max(overallSmallest * 0.5, 1.0e-18);
       simplex->setZeroTolerance(newTolerance);
     }
     delete[] usefulColumn;
@@ -5136,7 +5136,7 @@ int ClpPackedMatrix::gutsOfTransposeTimesByRowGE3a(const CoinIndexedVector *COIN
     for (j = start; j < end; j++) {
       int iColumn = column[j];
 #ifndef NDEBUG
-      maxColumn = CoinMax(maxColumn, iColumn);
+      maxColumn = std::max(maxColumn, iColumn);
 #endif
       double elValue = element[j];
       elValue *= value;
@@ -5285,11 +5285,11 @@ void ClpPackedMatrix::rangeOfElements(double &smallestNegative, double &largestN
     for (j = columnStart[i]; j < columnStart[i] + columnLength[i]; j++) {
       double value = elementByColumn[j];
       if (value > 0.0) {
-        smallestPositive = CoinMin(smallestPositive, value);
-        largestPositive = CoinMax(largestPositive, value);
+        smallestPositive = std::min(smallestPositive, value);
+        largestPositive = std::max(largestPositive, value);
       } else if (value < 0.0) {
-        smallestNegative = CoinMax(smallestNegative, value);
-        largestNegative = CoinMin(largestNegative, value);
+        smallestNegative = std::max(smallestNegative, value);
+        largestNegative = std::min(largestNegative, value);
       }
     }
   }
@@ -5305,7 +5305,7 @@ void ClpPackedMatrix::partialPricing(ClpSimplex *model, double startFraction, do
 {
   numberWanted = currentWanted_;
   int start = static_cast< int >(startFraction * numberActiveColumns_);
-  int end = CoinMin(static_cast< int >(endFraction * numberActiveColumns_ + 1), numberActiveColumns_);
+  int end = std::min(static_cast< int >(endFraction * numberActiveColumns_ + 1), numberActiveColumns_);
   const double *COIN_RESTRICT element = matrix_->getElements();
   const int *COIN_RESTRICT row = matrix_->getIndices();
   const CoinBigIndex *COIN_RESTRICT startColumn = matrix_->getVectorStarts();
@@ -6171,7 +6171,7 @@ static int dualColumn0(const ClpSimplex *model, double *COIN_RESTRICT spare,
       } else if (oldValue < -dualTolerance) {
         keep = true;
       } else {
-        if (fabs(alpha) > CoinMax(10.0 * acceptablePivot, 1.0e-5))
+        if (fabs(alpha) > std::max(10.0 * acceptablePivot, 1.0e-5))
           keep = true;
         else
           keep = false;
@@ -6468,7 +6468,7 @@ void ClpPackedMatrix2::transposeTimes(const ClpSimplex *model,
         } else if (oldValue < -dualTolerance) {
           keep = true;
         } else {
-          if (fabs(alpha) > CoinMax(10.0 * acceptablePivot, 1.0e-5))
+          if (fabs(alpha) > std::max(10.0 * acceptablePivot, 1.0e-5))
             keep = true;
           else
             keep = false;
@@ -6595,7 +6595,7 @@ void ClpPackedMatrix2::transposeTimes(const ClpSimplex *model,
         freePivot = dwork[2];
         posFree = iwork[2] + numberNonZero;
       }
-      upperTheta = CoinMin(dwork[1], upperTheta);
+      upperTheta = std::min(dwork[1], upperTheta);
       for (i = 0; i < number; i++) {
         // double value = arrayTemp[i];
         //arrayTemp[i]=0.0;
@@ -6634,7 +6634,7 @@ void ClpPackedMatrix2::transposeTimes(const ClpSimplex *model,
 #endif
     }
   }
-  for (iBlock = CoinMax(0, numberBlocks_ - 2); iBlock < numberBlocks_; iBlock++) {
+  for (iBlock = std::max(0, numberBlocks_ - 2); iBlock < numberBlocks_; iBlock++) {
 #ifdef THREAD
     pthread_join(threadId_[iBlock], NULL);
 #endif
@@ -6662,7 +6662,7 @@ void ClpPackedMatrix2::transposeTimes(const ClpSimplex *model,
         freePivot = dwork[2];
         posFree = iwork[2] + numberNonZero;
       }
-      upperTheta = CoinMin(dwork[1], upperTheta);
+      upperTheta = std::min(dwork[1], upperTheta);
     }
     double *COIN_RESTRICT arrayTemp = array + offset;
     const int *indexTemp = index + offset;
@@ -6907,7 +6907,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
   nOdd += numberColumns_ - numberColumns;
   int i;
   int largestBlock=0;
-  int makeOdd = CoinMin(GOODBLOCKSIZE,COIN_AVX2);
+  int makeOdd = std::min(GOODBLOCKSIZE,COIN_AVX2);
   for (i = 1; i < maxCheck; i++) {
     int n = counts[i];
     if (n) {
@@ -6918,7 +6918,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
 	int nEls = nElsLookup[i];
 	nInOdd += n * nEls;
       } else {
-	largestBlock = CoinMax(largestBlock, n);
+	largestBlock = std::max(largestBlock, n);
 	int nMakeOdd = n%makeOdd;
 	counts2[i]=n-nMakeOdd;
 	nOdd += nMakeOdd;
@@ -6969,7 +6969,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
       counts2[i]=n-nMakeOdd;
     }
   }
-  maxBlockSize_ = CoinMin(largestBlock,GOODBLOCKSIZE);
+  maxBlockSize_ = std::min(largestBlock,GOODBLOCKSIZE);
   //#define OUT_BLOCK_ROWS
 #ifndef OUT_BLOCK_ROWS
   // add in some rows
@@ -7011,7 +7011,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
   }
 #endif
   // even if no blocks do a dummy one
-  numberBlocks_ = CoinMax(numberBlocks_, 1);
+  numberBlocks_ = std::max(numberBlocks_, 1);
 #ifndef OUT_BLOCK_ROWS
   block_ = new blockStruct[numberBlocks_ + 1]; // +1 for slacks
   memset(block_, 0, (numberBlocks_ + 1) * sizeof(blockStruct));
@@ -7040,7 +7040,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
 #endif
     while (nCol>=COIN_AVX2) {
       blockStruct *block = block_ + nBlock;
-      int n = CoinMin(nCol,GOODBLOCKSIZE);
+      int n = std::min(nCol,GOODBLOCKSIZE);
       n -= n % COIN_AVX2;
       nCol -= GOODBLOCKSIZE;
       nBlock++;
@@ -7056,7 +7056,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
     }
   }
   numberElements_ = nels;
-  nBlock = CoinMax(nBlock, 1);
+  nBlock = std::max(nBlock, 1);
   numberBlocks_ = nBlock;
 #ifndef OUT_BLOCK_ROWS
   // slacks
@@ -7191,7 +7191,7 @@ ClpPackedMatrix3::ClpPackedMatrix3(ClpSimplex *model, const CoinPackedMatrix *co
 #endif
       for (int jColumn=0;jColumn<numberInBlock;jColumn+=COIN_AVX2) {
 	CoinBigIndex offset = n*jColumn;;
-	int end = CoinMin(jColumn+COIN_AVX2,numberInBlock);
+	int end = std::min(jColumn+COIN_AVX2,numberInBlock);
 	for (int iColumn=jColumn;iColumn<end;iColumn++) {
 	  double *COIN_RESTRICT elementA = element + offset;
 	  int nOne=0;
@@ -8925,13 +8925,13 @@ transposeTimes3Bit2Odd(clpTempInfo &info)
         if (thisWeight < DEVEX_TRY_NORM) {
           if (referenceIn < 0.0) {
             // steepest
-            thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+            thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
           } else {
             // exact
             thisWeight = referenceIn * pivotSquared;
             if (reference(iColumn))
               thisWeight += 1.0;
-            thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+            thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
           }
         }
         weights[iColumn] = thisWeight;
@@ -9549,7 +9549,7 @@ void ClpPackedMatrix3::transposeTimes2(const ClpSimplex *model,
   double dualTolerance = model->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model->largestDualError());
+  double error = std::min(1.0e-2, model->largestDualError());
   // allow tolerance at least slightly bigger than standard
   dualTolerance = dualTolerance + error;
   int numberOdd = block_->startIndices_;
@@ -9717,7 +9717,7 @@ int ClpPackedMatrix3::redoInfeasibilities(const ClpSimplex *model,
   double tolerance = model->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model->largestDualError());
+  double error = std::min(1.0e-2, model->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   // reverse sign so test is cleaner
@@ -10076,7 +10076,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                                    value = oldValue - upperTheta * alpha;
                                    if (value < dualT && alpha >= acceptablePivot) {
                                         upperTheta = (oldValue - dualT) / alpha;
-                                        //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+                                        //tentativeTheta = std::min(2.0*upperTheta,tentativeTheta);
                                    }
                                    // add to list
                                    spare[numberRemaining] = alpha * mult;
@@ -10249,7 +10249,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
 	  for (int i=0;i<numberThreads;i++) {
 	    info[i].which=const_cast<int *>(which+n);
 	    info[i].work=const_cast<double *>(work+n);
-	    info[i].numberToDo=CoinMin(chunk,number-n);
+	    info[i].numberToDo=std::min(chunk,number-n);
 	    n += chunk;
 	    info[i].index = index+nR;
 	    info[i].spare = spare+nR;
@@ -10267,7 +10267,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
 	  moveAndZero(info,1,NULL);
 	  for (int i=0;i<numberThreads;i++) {
 	    numberRemaining += info[i].numberRemaining;
-	    upperTheta = CoinMin(upperTheta,static_cast<double>(info[i].upperTheta));
+	    upperTheta = std::min(upperTheta,static_cast<double>(info[i].upperTheta));
 	  }
 	  }
 #endif
@@ -10306,7 +10306,7 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                     case isFree:
                     case superBasic:
                          alpha = work[i];
-                         bestPossible = CoinMax(bestPossible, fabs(alpha));
+                         bestPossible = std::max(bestPossible, fabs(alpha));
                          oldValue = reducedCost[iSequence];
                          // If free has to be very large - should come in via dualRow
                          //if (getStatus(iSequence+addSequence)==isFree&&fabs(alpha)<1.0e-3)
@@ -10316,11 +10316,11 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                          } else if (oldValue < -dualTolerance_) {
                               keep = true;
                          } else {
-                              if (fabs(alpha) > CoinMax(10.0 * acceptablePivot, 1.0e-5)) {
+                              if (fabs(alpha) > std::max(10.0 * acceptablePivot, 1.0e-5)) {
                                    keep = true;
                               } else {
                                    keep = false;
-                                   badFree = CoinMax(badFree, fabs(alpha));
+                                   badFree = std::max(badFree, fabs(alpha));
                               }
                          }
                          if (keep) {
@@ -10360,11 +10360,11 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                          value = oldValue - tentativeTheta * alpha;
                          //assert (oldValue<=dualTolerance_*1.0001);
                          if (value > dualTolerance_) {
-                              bestPossible = CoinMax(bestPossible, -alpha);
+                              bestPossible = std::max(bestPossible, -alpha);
                               value = oldValue - upperTheta * alpha;
                               if (value > dualTolerance_ && -alpha >= acceptablePivot) {
                                    upperTheta = (oldValue - dualTolerance_) / alpha;
-                                   //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+                                   //tentativeTheta = std::min(2.0*upperTheta,tentativeTheta);
                               }
                               // add to list
                               spare[numberRemaining] = alpha;
@@ -10377,11 +10377,11 @@ ClpSimplexDual::dualColumn0(const CoinIndexedVector * rowArray,
                          value = oldValue - tentativeTheta * alpha;
                          //assert (oldValue>=-dualTolerance_*1.0001);
                          if (value < -dualTolerance_) {
-                              bestPossible = CoinMax(bestPossible, alpha);
+                              bestPossible = std::max(bestPossible, alpha);
                               value = oldValue - upperTheta * alpha;
                               if (value < -dualTolerance_ && alpha >= acceptablePivot) {
                                    upperTheta = (oldValue + dualTolerance_) / alpha;
-                                   //tentativeTheta = CoinMin(2.0*upperTheta,tentativeTheta);
+                                   //tentativeTheta = std::min(2.0*upperTheta,tentativeTheta);
                               }
                               // add to list
                               spare[numberRemaining] = alpha;

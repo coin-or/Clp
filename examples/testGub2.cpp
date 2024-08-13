@@ -114,8 +114,8 @@ int main(int argc, const char *argv[])
                          gubRow = false;
                          break;
                     } else {
-                         last = CoinMax(last, iColumn);
-                         first = CoinMin(first, iColumn);
+                         last = std::max(last, iColumn);
+                         first = std::min(first, iColumn);
                     }
                }
           }

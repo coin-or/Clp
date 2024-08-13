@@ -305,7 +305,7 @@ void CoinAbcTypeFactorization::gutsOfCopy(const CoinAbcTypeFactorization &other)
   permute_.allocate(other.permute_, (other.maximumRowsExtra_ + 2 * numberRows_ + 1) * CoinSizeofAsInt(CoinSimplexInt));
 #endif
   firstCount_.allocate(other.firstCount_,
-    (CoinMax(5 * numberRows_, 4 * numberRows_ + 2 * maximumPivots_ + 4) + 2)
+    (std::max(5 * numberRows_, 4 * numberRows_ + 2 * maximumPivots_ + 4) + 2)
       * CoinSizeofAsInt(CoinSimplexInt));
   nextCountAddress_ = nextCount();
   lastCountAddress_ = lastCount();
@@ -475,7 +475,7 @@ void CoinAbcTypeFactorization::gutsOfCopy(const CoinAbcTypeFactorization &other)
     //temp
     CoinAbcMemcpy(permute_.array(), other.permute_.array(), maximumRowsExtra_ + 2 * numberRows_ + 1);
 #endif
-    CoinAbcMemcpy(firstCount_.array(), other.firstCount_.array(), CoinMax(5 * numberRows_, 4 * numberRows_ + 2 * maximumPivots_ + 4) + 2);
+    CoinAbcMemcpy(firstCount_.array(), other.firstCount_.array(), std::max(5 * numberRows_, 4 * numberRows_ + 2 * maximumPivots_ + 4) + 2);
     CoinAbcMemcpy(startColumnU_.array(), other.startColumnU_.array(), numberRows_ + 1);
     CoinAbcMemcpy(numberInColumn_.array(), other.numberInColumn_.array(), numberRows_ + 1);
     CoinAbcMemcpy(pivotColumn_.array(), other.pivotColumn_.array(), numberRowsExtra_ + 1);
@@ -505,7 +505,7 @@ void CoinAbcTypeFactorization::gutsOfCopy(const CoinAbcTypeFactorization &other)
   for (CoinSimplexInt iRow = 0; iRow < numberRows_; iRow++) {
     CoinBigIndex start = startColumnU[iRow];
     CoinSimplexInt numberIn = numberInColumn[iRow];
-    maxU = CoinMax(maxU, start + numberIn);
+    maxU = std::max(maxU, start + numberIn);
   }
   //assert (maximumU_>=maxU);
 #endif
@@ -576,7 +576,7 @@ void CoinAbcTypeFactorization::getAreas(CoinSimplexInt numberOfRows,
 
   numberRows_ = numberOfRows;
   numberRowsSmall_ = numberOfRows;
-  maximumRows_ = CoinMax(maximumRows_, numberRows_);
+  maximumRows_ = std::max(maximumRows_, numberRows_);
   maximumRowsExtra_ = numberRows_ + maximumPivots_;
   numberRowsExtra_ = numberRows_;
   lengthAreaU_ = maximumU;
@@ -602,12 +602,12 @@ void CoinAbcTypeFactorization::getAreas(CoinSimplexInt numberOfRows,
   indexRowL_.conditionalNew(lengthAreaL_);
   // But we can use all we have if bigger
   CoinBigIndex length;
-  length = CoinMin(elementU_.getSize(), indexRowU_.getSize());
+  length = std::min(elementU_.getSize(), indexRowU_.getSize());
   if (length > lengthAreaU_) {
     lengthAreaU_ = length;
     assert(indexColumnU_.getSize() == indexRowU_.getSize());
   }
-  length = CoinMin(elementL_.getSize(), indexRowL_.getSize());
+  length = std::min(elementL_.getSize(), indexRowL_.getSize());
   if (length > lengthAreaL_) {
     lengthAreaL_ = length;
   }
@@ -652,7 +652,7 @@ void CoinAbcTypeFactorization::getAreas(CoinSimplexInt numberOfRows,
   lastColumn_.conditionalNew(maximumRowsExtra_ + 1);
   saveColumn_.conditionalNew(/*2*  */ numberRows_);
   assert(sizeof(CoinSimplexInt) == sizeof(CoinBigIndex)); // would need to redo
-  firstCount_.conditionalNew(CoinMax(5 * numberRows_, 4 * numberRows_ + 2 * maximumPivots_ + 4) + 2);
+  firstCount_.conditionalNew(std::max(5 * numberRows_, 4 * numberRows_ + 2 * maximumPivots_ + 4) + 2);
 #if CONVERTROW
   //space for cross reference
   convertRowToColumnU_.conditionalNew(lengthAreaU_);
@@ -714,7 +714,7 @@ CoinAbcTypeFactorization::factor(AbcSimplex *model)
       } else {
         double denseArea = (numberRows_ - numberGoodU_) * (numberRows_ - numberGoodU_);
         if (denseArea > 1.5 * lengthAreaU_) {
-          areaFactor_ *= CoinMin(2.5, denseArea / 1.5);
+          areaFactor_ *= std::min(2.5, denseArea / 1.5);
         } else {
           areaFactor_ *= 1.5;
         }
@@ -939,7 +939,7 @@ static void pivotSomeAfter(int first, int last, int numberInPivotColumn, int len
       for (int jj = 0; jj < numberInPivotColumn; jj += 32) {
         unsigned int aThis = *aBitsThis;
         aBitsThis++;
-        for (int i = jj; i < CoinMin(jj + 32, numberInPivotColumn); i++) {
+        for (int i = jj; i < std::min(jj + 32, numberInPivotColumn); i++) {
           if ((aThis & 1) != 0) {
             indexRowU[put] = indexL[i];
             elementU[put++] = area[iA];
@@ -1064,7 +1064,7 @@ static void pivotSome(int first, int last, int numberInPivotColumn, int lengthAr
       for (int jj = 0; jj < numberInPivotColumn; jj += 32) {
         unsigned int aThis = *aBitsThis;
         aBitsThis++;
-        for (int i = jj; i < CoinMin(jj + 32, numberInPivotColumn); i++) {
+        for (int i = jj; i < std::min(jj + 32, numberInPivotColumn); i++) {
           if ((aThis & 1) != 0) {
             indexRowU[put] = indexL[i];
             elementU[put++] = area[iA];
@@ -1196,8 +1196,8 @@ int CoinAbcTypeFactorization::pivot(CoinSimplexInt &pivotRow,
   // also allow for numberInPivotColumn rounded to multiple of four
   CoinBigIndex added = numberInPivotRow * (numberInPivotColumn + 4);
   CoinBigIndex spaceZeroed = added + ((numberRowsSmall_ + 3) >> 2);
-  spaceZeroed = CoinMax(spaceZeroed, firstZeroed_);
-  int maxBoth = CoinMax(numberInPivotRow, numberInPivotColumn);
+  spaceZeroed = std::max(spaceZeroed, firstZeroed_);
+  int maxBoth = std::max(numberInPivotRow, numberInPivotColumn);
   CoinBigIndex spaceOther = numberInPivotRow + maxBoth + numberInPivotRow * ((numberInPivotColumn + 31) >> 5);
   // allow for new multipliersL
   spaceOther += 2 * numberInPivotColumn + 8; // 32 byte alignment wanted
@@ -1434,7 +1434,7 @@ int CoinAbcTypeFactorization::pivot(CoinSimplexInt &pivotRow,
   }
   // giveUp should be more sophisticated and also vary in next three
 #if ABC_PARALLEL == 2
-  int giveUp = CoinMax(numberInPivotRow / (parallelMode_ + 1 + (parallelMode_ >> 1)), 16);
+  int giveUp = std::max(numberInPivotRow / (parallelMode_ + 1 + (parallelMode_ >> 1)), 16);
 #else
   int giveUp = numberInPivotRow;
 #endif
@@ -1674,7 +1674,7 @@ int CoinAbcTypeFactorization::pivot(CoinSimplexInt &pivotRow,
     assert (numberInColumn[i]>=0);
 #endif
   //if (added<1000)
-  //giveUp=CoinMax(); //??
+  //giveUp=std::max(); //??
 #ifdef DENSE_TRY
   if (!inAreaAlready) {
 #endif
@@ -1708,7 +1708,7 @@ int CoinAbcTypeFactorization::pivot(CoinSimplexInt &pivotRow,
         return -99;
       }
     }
-    lastEntryByRowU_ = CoinMax(startRowU[iRow] + numberNeeded, lastEntryByRowU_);
+    lastEntryByRowU_ = std::max(startRowU[iRow] + numberNeeded, lastEntryByRowU_);
     // in case I got it wrong!
     if (lastEntryByRowU_ > lengthAreaU_) {
       return -99;
@@ -2243,7 +2243,7 @@ int CoinAbcTypeFactorization::pivot(CoinSimplexInt pivotRow,
 #endif
         end += test;
       }
-      lastEntryByRowU_ = CoinMax(end, lastEntryByRowU_);
+      lastEntryByRowU_ = std::max(end, lastEntryByRowU_);
       assert(lastEntryByRowU_ <= lengthAreaU_);
       //put back next one in case zapped
       indexColumnU[startRowU[next]] = saveIndex;
@@ -2309,7 +2309,7 @@ int CoinAbcTypeFactorization::pivot(CoinSimplexInt pivotRow,
       //printf("start %d end %d test %d col %d\n",startRowU[iRow],end,test,saveColumn[jColumn]);
     }
     indexColumnU[startRowU[next]] = saveIndex;
-    lastEntryByRowU_ = CoinMax(end, lastEntryByRowU_);
+    lastEntryByRowU_ = std::max(end, lastEntryByRowU_);
     assert(lastEntryByRowU_ <= lengthAreaU_);
 #if BOTH_WAYS
 #endif
@@ -2963,7 +2963,7 @@ void CoinAbcTypeFactorization::cleanup()
       const CoinBigIndex *COIN_RESTRICT indices = reinterpret_cast< const CoinBigIndex * >(area + number);
 #if PRINT_LEVEL > 1
       for (int j1 = 0; j1 < number; j1 += 5) {
-        for (int j = j1; j < CoinMin(number, j1 + 5); j++)
+        for (int j = j1; j < std::min(number, j1 + 5); j++)
           printf("(%d,%g) ", indices[j], area[j]);
         printf("\n");
       }
@@ -2986,7 +2986,7 @@ void CoinAbcTypeFactorization::cleanup()
         int *indices = indexRowL + startColumnL[i];
         printf("%d has %d elements\n", i, number);
         for (int j1 = 0; j1 < number; j1 += 5) {
-          for (int j = j1; j < CoinMin(number, j1 + 5); j++)
+          for (int j = j1; j < std::min(number, j1 + 5); j++)
             printf("(%d,%g) ", indices[j], elementL[j + startColumnL[i]]);
           printf("\n");
         }
@@ -3768,7 +3768,7 @@ bool CoinAbcTypeFactorization::pivotOneOtherRow(CoinSimplexInt pivotRow,
 #endif
     indexColumnU[end++] = saveColumn[j];
   }
-  lastEntryByRowU_ = CoinMax(end, lastEntryByRowU_);
+  lastEntryByRowU_ = std::max(end, lastEntryByRowU_);
   assert(lastEntryByRowU_ <= lengthAreaU_);
   //modify linked list for pivots
   deleteLink(pivotRow);
@@ -3990,7 +3990,7 @@ CoinAbcTypeFactorization::preProcess3()
         element[first++] = value;
       }
     }
-    overallLargest = CoinMax(overallLargest, valueLargest);
+    overallLargest = std::max(overallLargest, valueLargest);
     CoinSimplexInt nMoved = first - startColumn[iColumn];
     numberInColumnPlus[iColumn] = nMoved;
     totalElements_ -= nMoved;
@@ -4200,7 +4200,7 @@ void CoinAbcTypeFactorization::postProcess(const CoinSimplexInt *sequence, CoinS
     //if (numberInColumnPlusAddress_) {
     CoinBigIndex *COIN_RESTRICT startR = startColumnRAddress_ + maximumPivots_ + 1;
     // do I need to zero
-    assert(startR + maximumRowsExtra_ + 1 <= firstCountAddress_ + CoinMax(5 * numberRows_, 4 * numberRows_ + 2 * maximumPivots_ + 4) + 2);
+    assert(startR + maximumRowsExtra_ + 1 <= firstCountAddress_ + std::max(5 * numberRows_, 4 * numberRows_ + 2 * maximumPivots_ + 4) + 2);
     CoinZeroN(startR, (maximumRowsExtra_ + 1));
   }
   goSparse2();

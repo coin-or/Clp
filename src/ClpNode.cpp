@@ -90,8 +90,8 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
   estimatedSolution_ = objectiveValue_;
   flags_ = 1; //say scaled
   if (!arraysExist) {
-    maximumRows_ = CoinMax(maximumRows_, numberRows);
-    maximumColumns_ = CoinMax(maximumColumns_, numberColumns);
+    maximumRows_ = std::max(maximumRows_, numberRows);
+    maximumColumns_ = std::max(maximumColumns_, numberColumns);
     maximumTotal = maximumRows_ + maximumColumns_;
     assert(!factorization_);
     factorization_ = new ClpFactorization(*model->factorization(), numberRows);
@@ -135,8 +135,8 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
       }
     } else {
       // size has changed
-      maximumRows_ = CoinMax(maximumRows_, numberRows);
-      maximumColumns_ = CoinMax(maximumColumns_, numberColumns);
+      maximumRows_ = std::max(maximumRows_, numberRows);
+      maximumColumns_ = std::max(maximumColumns_, numberColumns);
       maximumTotal = maximumRows_ + maximumColumns_;
       delete weights_;
       weights_ = NULL;
@@ -186,7 +186,7 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
   numberInfeasibilities_ = 0;
   int nFix = 0;
   // needs to be large (problem is perturbed)
-  double gap = CoinMax(model->dualObjectiveLimit() - objectiveValue_, 1.0e-1);
+  double gap = std::max(model->dualObjectiveLimit() - objectiveValue_, 1.0e-1);
 #define PSEUDO 3
 #if PSEUDO == 1 || PSEUDO == 2
   // Column copy of matrix
@@ -268,8 +268,8 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
   for (iColumn = 0; iColumn < numberColumns; iColumn++) {
     if (integerType[iColumn]) {
       double value = solution[iColumn];
-      value = CoinMax(value, static_cast< double >(lower[iColumn]));
-      value = CoinMin(value, static_cast< double >(upper[iColumn]));
+      value = std::max(value, static_cast< double >(lower[iColumn]));
+      value = std::min(value, static_cast< double >(upper[iColumn]));
       double nearest = floor(value + 0.5);
       if (fabs(value - nearest) > integerTolerance) {
         numberInfeasibilities_++;
@@ -319,27 +319,27 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
         }
         //printf("col %d - downPi %g up %g, downPs %g up %g\n",
         //     iColumn,upValue,downValue,upValue2,downValue2);
-        upValue = CoinMax(0.1 * upValue, upValue2);
-        downValue = CoinMax(0.1 * downValue, downValue2);
-        //upValue = CoinMax(upValue,1.0e-8);
-        //downValue = CoinMax(downValue,1.0e-8);
+        upValue = std::max(0.1 * upValue, upValue2);
+        downValue = std::max(0.1 * downValue, downValue2);
+        //upValue = std::max(upValue,1.0e-8);
+        //downValue = std::max(downValue,1.0e-8);
         upValue *= ceil(value) - value;
         downValue *= value - floor(value);
         double infeasibility;
         //if (depth>1000)
-        //infeasibility = CoinMax(upValue,downValue)+integerTolerance;
+        //infeasibility = std::max(upValue,downValue)+integerTolerance;
         //else
         if (stateOfSearch <= 2) {
           // no solution
-          infeasibility = (1.0 - WEIGHT_BEFORE) * CoinMax(upValue, downValue) + WEIGHT_BEFORE * CoinMin(upValue, downValue) + integerTolerance;
+          infeasibility = (1.0 - WEIGHT_BEFORE) * std::max(upValue, downValue) + WEIGHT_BEFORE * std::min(upValue, downValue) + integerTolerance;
         } else {
 #ifndef WEIGHT_PRODUCT
-          infeasibility = (1.0 - WEIGHT_AFTER) * CoinMax(upValue, downValue) + WEIGHT_AFTER * CoinMin(upValue, downValue) + integerTolerance;
+          infeasibility = (1.0 - WEIGHT_AFTER) * std::max(upValue, downValue) + WEIGHT_AFTER * std::min(upValue, downValue) + integerTolerance;
 #else
-          infeasibility = CoinMax(CoinMax(upValue, downValue), smallChange) * CoinMax(CoinMin(upValue, downValue), smallChange);
+          infeasibility = std::max(std::max(upValue, downValue), smallChange) * std::max(std::min(upValue, downValue), smallChange);
 #endif
         }
-        estimatedSolution_ += CoinMin(upValue2, downValue2);
+        estimatedSolution_ += std::min(upValue2, downValue2);
 #elif PSEUDO == 3
         int nUp = numberUp[iInteger];
         int nDown = numberDown[iInteger];
@@ -361,22 +361,22 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
 
         double infeasibility;
         //if (depth>1000)
-        //infeasibility = CoinMax(upValue,downValue)+integerTolerance;
+        //infeasibility = std::max(upValue,downValue)+integerTolerance;
         //else
         if (stateOfSearch <= 2) {
           // no solution
-          infeasibility = (1.0 - WEIGHT_BEFORE) * CoinMax(upValue, downValue) + WEIGHT_BEFORE * CoinMin(upValue, downValue) + integerTolerance;
+          infeasibility = (1.0 - WEIGHT_BEFORE) * std::max(upValue, downValue) + WEIGHT_BEFORE * std::min(upValue, downValue) + integerTolerance;
         } else {
 #ifndef WEIGHT_PRODUCT
-          infeasibility = (1.0 - WEIGHT_AFTER) * CoinMax(upValue, downValue) + WEIGHT_AFTER * CoinMin(upValue, downValue) + integerTolerance;
+          infeasibility = (1.0 - WEIGHT_AFTER) * std::max(upValue, downValue) + WEIGHT_AFTER * std::min(upValue, downValue) + integerTolerance;
 #else
-          infeasibility = CoinMax(CoinMax(upValue, downValue), smallChange) * CoinMax(CoinMin(upValue, downValue), smallChange);
-          //infeasibility += CoinMin(upValue,downValue)*smallChange;
+          infeasibility = std::max(std::max(upValue, downValue), smallChange) * std::max(std::min(upValue, downValue), smallChange);
+          //infeasibility += std::min(upValue,downValue)*smallChange;
 #endif
         }
-        //infeasibility = 0.1*CoinMax(upValue,downValue)+
-        //0.9*CoinMin(upValue,downValue) + integerTolerance;
-        estimatedSolution_ += CoinMin(upValue, downValue);
+        //infeasibility = 0.1*std::max(upValue,downValue)+
+        //0.9*std::min(upValue,downValue) + integerTolerance;
+        estimatedSolution_ += std::min(upValue, downValue);
 #else
         double infeasibility = fabs(value - nearest);
 #endif
@@ -927,12 +927,12 @@ void ClpNodeStuff::update(int way, int sequence, double change, bool feasible)
     numberDown_[sequence]++;
     if (!feasible)
       numberDownInfeasible_[sequence]++;
-    downPseudo_[sequence] += CoinMax(change, 1.0e-12);
+    downPseudo_[sequence] += std::max(change, 1.0e-12);
   } else {
     numberUp_[sequence]++;
     if (!feasible)
       numberUpInfeasible_[sequence]++;
-    upPseudo_[sequence] += CoinMax(change, 1.0e-12);
+    upPseudo_[sequence] += std::max(change, 1.0e-12);
   }
 }
 //#############################################################################

@@ -86,7 +86,7 @@ int main(int argc, const char *argv[])
      numberSort /= 2;
      // Just add this number of rows each time in small problem
      int smallNumberRows = 2 * numberColumns;
-     smallNumberRows = CoinMin(smallNumberRows, originalNumberRows / 20);
+     smallNumberRows = std::min(smallNumberRows, originalNumberRows / 20);
      // and pad out with random rows
      double ratio = ((double)(smallNumberRows - numberSort)) / ((double) originalNumberRows);
      for (iRow = 0; iRow < originalNumberRows; iRow++) {
@@ -104,8 +104,8 @@ int main(int argc, const char *argv[])
      double * columnLower = model2->columnLower();
      double * columnUpper = model2->columnUpper();
      for (iColumn = 0; iColumn < numberColumns; iColumn++) {
-          columnLower[iColumn] = CoinMax(-1.0e6, columnLower[iColumn]);
-          columnUpper[iColumn] = CoinMin(1.0e6, columnUpper[iColumn]);
+          columnLower[iColumn] = std::max(-1.0e6, columnLower[iColumn]);
+          columnUpper[iColumn] = std::min(1.0e6, columnUpper[iColumn]);
      }
 #endif
      model2->tightenPrimalBounds(-1.0e4, true);
@@ -183,7 +183,7 @@ int main(int argc, const char *argv[])
                          // Basic - we can get rid of if early on
                          if (iPass < takeOutPass && !dualInfeasible) {
                               // may have hit max iterations so check
-                              double infeasibility = CoinMax(fullSolution[iRow] - rowUpper[iRow],
+                              double infeasibility = std::max(fullSolution[iRow] - rowUpper[iRow],
                                                              rowLower[iRow] - fullSolution[iRow]);
                               weight[iRow] = -infeasibility;
                               if (infeasibility > 1.0e-8) {
@@ -210,7 +210,7 @@ int main(int argc, const char *argv[])
                     sort[iRow] = iRow;
                     if (weight[iRow] == 1.123e50) {
                          // not looked at yet
-                         double infeasibility = CoinMax(fullSolution[iRow] - rowUpper[iRow],
+                         double infeasibility = std::max(fullSolution[iRow] - rowUpper[iRow],
                                                         rowLower[iRow] - fullSolution[iRow]);
                          weight[iRow] = -infeasibility;
                          if (infeasibility > 1.0e-8) {
@@ -221,7 +221,7 @@ int main(int argc, const char *argv[])
                }
                // sort
                CoinSort_2(weight, weight + originalNumberRows, sort);
-               numberSort = CoinMin(originalNumberRows, smallNumberRows + numberKept);
+               numberSort = std::min(originalNumberRows, smallNumberRows + numberKept);
                memset(take, 0, originalNumberRows);
                for (iRow = 0; iRow < numberSort; iRow++)
                     take[sort[iRow]] = 1;

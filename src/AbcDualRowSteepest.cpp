@@ -49,7 +49,7 @@ AbcDualRowSteepest::AbcDualRowSteepest(const AbcDualRowSteepest &rhs)
   if ((model_ && model_->whatsChanged() & 1) != 0) {
     int number = model_->numberRows();
     if (rhs.savedWeights_)
-      number = CoinMin(number, rhs.savedWeights_->capacity());
+      number = std::min(number, rhs.savedWeights_->capacity());
     if (rhs.infeasible_) {
       infeasible_ = new CoinIndexedVector(rhs.infeasible_);
     } else {
@@ -103,7 +103,7 @@ AbcDualRowSteepest::operator=(const AbcDualRowSteepest &rhs)
     assert(model_);
     int number = model_->numberRows();
     if (rhs.savedWeights_)
-      number = CoinMin(number, rhs.savedWeights_->capacity());
+      number = std::min(number, rhs.savedWeights_->capacity());
     if (rhs.infeasible_ != NULL) {
       infeasible_ = new CoinIndexedVector(rhs.infeasible_);
     } else {
@@ -135,7 +135,7 @@ void AbcDualRowSteepest::fill(const AbcDualRowSteepest &rhs)
   assert(model_);
   int number = model_->numberRows();
   if (rhs.savedWeights_)
-    number = CoinMin(number, rhs.savedWeights_->capacity());
+    number = std::min(number, rhs.savedWeights_->capacity());
   if (rhs.infeasible_ != NULL) {
     if (!infeasible_)
       infeasible_ = new CoinIndexedVector(rhs.infeasible_);
@@ -182,7 +182,7 @@ static void choose(int &chosenRow, double &largest, int n,
     int iRow = index[i];
     double value = infeas[iRow];
     if (value > tolerance) {
-      double thisWeight = CoinMin(weights[iRow], 1.0e50);
+      double thisWeight = std::min(weights[iRow], 1.0e50);
       maximumIndex.calc_max(iRow, value / thisWeight);
     }
   }
@@ -218,7 +218,7 @@ static void choose(AbcDualRowSteepest *steepest,
         int iRow = index[i];
         double value = infeas[iRow];
         if (value > tolerance) {
-          double thisWeight = CoinMin(weights[iRow], 1.0e50);
+          double thisWeight = std::min(weights[iRow], 1.0e50);
           if (value > largest * thisWeight) {
             largest = value / thisWeight;
             chosenRow = iRow;
@@ -234,7 +234,7 @@ static void choose(AbcDualRowSteepest *steepest,
         if (value > tolerance) {
           int iSequence = pivotVariable[iRow];
           value *= (fabs(fakeDjs[iSequence]) + 1.0e-6);
-          double thisWeight = CoinMin(weights[iRow], 1.0e50);
+          double thisWeight = std::min(weights[iRow], 1.0e50);
           /*
 	    Ideas
 	    always use fake
@@ -302,11 +302,11 @@ int AbcDualRowSteepest::pivotRow()
   double tolerance = model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
   // this coding has to mimic coding in checkPrimalSolution
-  double error = CoinMin(1.0e-2, model_->largestPrimalError());
+  double error = std::min(1.0e-2, model_->largestPrimalError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   // But cap
-  tolerance = CoinMin(1000.0, tolerance);
+  tolerance = std::min(1000.0, tolerance);
   tolerance *= tolerance; // as we are using squares
   bool toleranceChanged = false;
   const double *COIN_RESTRICT solutionBasic = model_->solutionBasic();
@@ -343,7 +343,7 @@ int AbcDualRowSteepest::pivotRow()
   if (model_->numberIterations() < model_->lastBadIteration() + 200) {
     // we can't really trust infeasibilities if there is dual error
     if (model_->largestDualError() > model_->largestPrimalError()) {
-      tolerance *= CoinMin(model_->largestDualError() / model_->largestPrimalError(), 1000.0);
+      tolerance *= std::min(model_->largestDualError() / model_->largestPrimalError(), 1000.0);
       toleranceChanged = true;
     }
   }
@@ -382,28 +382,28 @@ int AbcDualRowSteepest::pivotRow()
     // look at this and modify
     numberWanted = number+1;
     if (factorizationRatio_ < 1.0) {
-      numberWanted = CoinMax(2000, numberRows / 20);
+      numberWanted = std::max(2000, numberRows / 20);
 #if 0
     } else if (factorizationRatio_ > 10.0) {
       double ratio = number * (factorizationRatio_ / 80.0);
       if (ratio > number)
 	numberWanted = number + 1;
       else
-	numberWanted = CoinMax(2000, static_cast<int> (ratio));
+	numberWanted = std::max(2000, static_cast<int> (ratio));
 #else
     } else {
-      //double multiplier=CoinMin(factorizationRatio_*0.1,1.0)
+      //double multiplier=std::min(factorizationRatio_*0.1,1.0)
 #endif
     }
 #else
-    numberWanted = CoinMax(2000, number / 8);
+    numberWanted = std::max(2000, number / 8);
     if (factorizationRatio_ < 1.5) {
-      numberWanted = CoinMax(2000, number / 20);
+      numberWanted = std::max(2000, number / 20);
     } else if (factorizationRatio_ > 5.0) {
       numberWanted = number + 1;
     }
 #endif
-    numberWanted = CoinMin(numberWanted, number + 1);
+    numberWanted = std::min(numberWanted, number + 1);
   }
   if (model_->largestPrimalError() > 1.0e-3)
     numberWanted = number + 1; // be safe
@@ -439,7 +439,7 @@ int AbcDualRowSteepest::pivotRow()
     int endThis = start[2 * iPass + 1];
     int startThis = start[2 * iPass];
     while (startThis < endThis) {
-      int end = CoinMin(endThis, startThis + numberWanted);
+      int end = std::min(endThis, startThis + numberWanted);
 #ifdef DO_REDUCE
       if (doReduce) {
 #if DO_REDUCE == 1
@@ -474,9 +474,9 @@ int AbcDualRowSteepest::pivotRow()
             if (upper[iRow] == lower[iRow])
               value *= 2.0;
 #endif
-            double thisWeight = CoinMin(weights[iRow], 1.0e50);
-            //largestWeight = CoinMax(largestWeight,weight);
-            //smallestWeight = CoinMin(smallestWeight,weight);
+            double thisWeight = std::min(weights[iRow], 1.0e50);
+            //largestWeight = std::max(largestWeight,weight);
+            //smallestWeight = std::min(smallestWeight,weight);
             //double dubious = dubiousWeights_[iRow];
             //weight *= dubious;
             //if (value>2.0*largest*weight||(value>0.5*largest*weight&&value*largestWeight>dubious*largest*weight)) {
@@ -496,7 +496,7 @@ int AbcDualRowSteepest::pivotRow()
                   value2 = solutionBasic[iRow] - upperBasic[iRow];
                 else if (solutionBasic[iRow] < lowerBasic[iRow] - tolerance)
                   value2 = solutionBasic[iRow] - lowerBasic[iRow];
-                assert(fabs(value2 * value2 - infeas[iRow]) < 1.0e-8 * CoinMin(value2 * value2, infeas[iRow]));
+                assert(fabs(value2 * value2 - infeas[iRow]) < 1.0e-8 * std::min(value2 * value2, infeas[iRow]));
 #endif
                 if (solutionBasic[iRow] > upperBasic[iRow] + tolerance || solutionBasic[iRow] < lowerBasic[iRow] - tolerance) {
                   chosenRow = iRow;
@@ -592,7 +592,7 @@ AbcDualRowSteepest::updateWeights(CoinIndexedVector &input,
         array[iRow] = 0.0;
       }
       temp.setNumElements(0);
-      double w = CoinMax(weights[i], value) * .1;
+      double w = std::max(weights[i], value) * .1;
       if (fabs(weights[i] - value) > w) {
         printf("%d old %g, true %g\n", i, weights[i], value);
         weights[i] = value; // to reduce printout
@@ -722,7 +722,7 @@ AbcDualRowSteepest::updateWeights1(CoinIndexedVector &input, CoinIndexedVector &
         array[iRow] = 0.0;
       }
       temp.setNumElements(0);
-      double w = CoinMax(weights[i], value) * .1;
+      double w = std::max(weights[i], value) * .1;
       if (fabs(weights[i] - value) > w) {
         printf("XX row %d (variable %d) old %g, true %g\n", i, pivotVariable[i],
           weights[i], value);
@@ -1229,7 +1229,7 @@ void AbcDualRowSteepest::saveWeights(AbcSimplex *model, int mode)
         } else {
           // parallel
           // get arrays
-          int numberCpuMinusOne = CoinMin(model_->parallelMode(), 3);
+          int numberCpuMinusOne = std::min(model_->parallelMode(), 3);
           int which[3];
           CoinIndexedVector *whichVector[4];
           for (int i = 0; i < numberCpuMinusOne; i++) {
@@ -1426,11 +1426,11 @@ bool AbcDualRowSteepest::looksOptimal() const
   double tolerance = model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
   // this coding has to mimic coding in checkPrimalSolution
-  double error = CoinMin(1.0e-2, model_->largestPrimalError());
+  double error = std::min(1.0e-2, model_->largestPrimalError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   // But cap
-  tolerance = CoinMin(1000.0, tolerance);
+  tolerance = std::min(1000.0, tolerance);
   int numberRows = model_->numberRows();
   int numberInfeasible = 0;
   const double *COIN_RESTRICT solutionBasic = model_->solutionBasic();

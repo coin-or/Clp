@@ -129,7 +129,7 @@ int main(int argc, const char *argv[])
           model.dual();
           // Print column solution Just first 3 columns
           int numberColumns = model.numberColumns();
-          numberColumns = CoinMin(3, numberColumns);
+          numberColumns = std::min(3, numberColumns);
 
           // Alternatively getColSolution()
           double * columnPrimal = model.primalColumnSolution();

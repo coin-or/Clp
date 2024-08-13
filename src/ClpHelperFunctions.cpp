@@ -21,7 +21,7 @@ maximumAbsElement(const double *region, int size)
   int i;
   double maxValue = 0.0;
   for (i = 0; i < size; i++)
-    maxValue = CoinMax(maxValue, fabs(region[i]));
+    maxValue = std::max(maxValue, fabs(region[i]));
   return maxValue;
 }
 void setElements(double *region, int size, double value)
@@ -107,7 +107,7 @@ void getNorms(const double *region, int size, double &norm1, double &norm2)
   int i;
   for (i = 0; i < size; i++) {
     norm2 += region[i] * region[i];
-    norm1 = CoinMax(norm1, fabs(region[i]));
+    norm1 = std::max(norm1, fabs(region[i]));
   }
 }
 #ifndef NDEBUG
@@ -136,7 +136,7 @@ maximumAbsElement(const CoinWorkDouble *region, int size)
   int i;
   CoinWorkDouble maxValue = 0.0;
   for (i = 0; i < size; i++)
-    maxValue = CoinMax(maxValue, CoinAbs(region[i]));
+    maxValue = std::max(maxValue, CoinAbs(region[i]));
   return maxValue;
 }
 void setElements(CoinWorkDouble *region, int size, CoinWorkDouble value)
@@ -222,7 +222,7 @@ void getNorms(const CoinWorkDouble *region, int size, CoinWorkDouble &norm1, Coi
   int i;
   for (i = 0; i < size; i++) {
     norm2 += region[i] * region[i];
-    norm1 = CoinMax(norm1, CoinAbs(region[i]));
+    norm1 = std::max(norm1, CoinAbs(region[i]));
   }
 }
 #endif

@@ -224,9 +224,9 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
           }
         }
         for (int j = iRow + 1; j < numberRows_; j++)
-          largest2 = CoinMax(largest2, CoinAbs(work[j]));
+          largest2 = std::max(largest2, CoinAbs(work[j]));
         diagonal_[iRow] = diagonalValue;
-        largest2 = CoinMax(largest2, CoinAbs(diagonalValue));
+        largest2 = std::max(largest2, CoinAbs(diagonalValue));
       } else {
         /* dropped*/
         diagonal_[iRow] = 1.0;
@@ -236,7 +236,7 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
     }
     /*check sizes*/
     largest2 *= 1.0e-20;
-    largest = CoinMin(largest2, CHOL_SMALL_VALUE);
+    largest = std::min(largest2, CHOL_SMALL_VALUE);
     int numberDroppedBefore = 0;
     for (iRow = 0; iRow < numberRows_; iRow++) {
       int dropped = rowsDropped_[iRow];
@@ -253,7 +253,7 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
         }
       }
     }
-    doubleParameters_[10] = CoinMax(1.0e-20, largest);
+    doubleParameters_[10] = std::max(1.0e-20, largest);
     integerParameters_[20] = 0;
     doubleParameters_[3] = 0.0;
     doubleParameters_[4] = COIN_DBL_MAX;
@@ -303,7 +303,7 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
         CoinWorkDouble value = diagonal[iColumn];
         if (CoinAbs(value) > 1.0e-100) {
           value = 1.0 / value;
-          largest = CoinMax(largest, CoinAbs(value));
+          largest = std::max(largest, CoinAbs(value));
           diagonal_[iColumn] = -value;
           CoinBigIndex start = columnStart[iColumn];
           CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
@@ -311,7 +311,7 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
             /*choleskyRow_[numberElements]=row[j]+numberTotal;*/
             /*sparseFactor_[numberElements++]=element[j];*/
             work[row[j] + numberTotal] = element[j];
-            largest = CoinMax(largest, CoinAbs(element[j]));
+            largest = std::max(largest, CoinAbs(element[j]));
           }
         } else {
           diagonal_[iColumn] = -value;
@@ -339,13 +339,13 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
               value += quadraticElement[j];
             }
           }
-          largest = CoinMax(largest, CoinAbs(value));
+          largest = std::max(largest, CoinAbs(value));
           diagonal_[iColumn] = -value;
           CoinBigIndex start = columnStart[iColumn];
           CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
           for (j = start; j < end; j++) {
             work[row[j] + numberTotal] = element[j];
-            largest = CoinMax(largest, CoinAbs(element[j]));
+            largest = std::max(largest, CoinAbs(element[j]));
           }
         } else {
           value = 1.0e100;
@@ -360,7 +360,7 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
       CoinWorkDouble value = diagonal[iColumn];
       if (CoinAbs(value) > 1.0e-100) {
         value = 1.0 / value;
-        largest = CoinMax(largest, CoinAbs(value));
+        largest = std::max(largest, CoinAbs(value));
       } else {
         value = 1.0e100;
       }
@@ -375,8 +375,8 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
     }
     /*check sizes*/
     largest *= 1.0e-20;
-    largest = CoinMin(largest, CHOL_SMALL_VALUE);
-    doubleParameters_[10] = CoinMax(1.0e-20, largest);
+    largest = std::min(largest, CHOL_SMALL_VALUE);
+    doubleParameters_[10] = std::max(1.0e-20, largest);
     integerParameters_[20] = 0;
     doubleParameters_[3] = 0.0;
     doubleParameters_[4] = COIN_DBL_MAX;
@@ -460,8 +460,8 @@ void ClpCholeskyDense::factorizePart3(int *rowsDropped)
     if (iColumn < firstPositive) {
       /* must be negative*/
       if (diagonalValue <= -dropValue) {
-        smallest = CoinMin(smallest, -diagonalValue);
-        largest = CoinMax(largest, -diagonalValue);
+        smallest = std::min(smallest, -diagonalValue);
+        largest = std::max(largest, -diagonalValue);
         workDouble_[iColumn] = diagonalValue;
         diagonalValue = 1.0 / diagonalValue;
       } else {
@@ -473,8 +473,8 @@ void ClpCholeskyDense::factorizePart3(int *rowsDropped)
     } else {
       /* must be positive*/
       if (diagonalValue >= dropValue) {
-        smallest = CoinMin(smallest, diagonalValue);
-        largest = CoinMax(largest, diagonalValue);
+        smallest = std::min(smallest, diagonalValue);
+        largest = std::max(largest, diagonalValue);
         workDouble_[iColumn] = diagonalValue;
         diagonalValue = 1.0 / diagonalValue;
       } else {
@@ -618,7 +618,7 @@ void ClpCholeskyDense::factorizePart2(int *rowsDropped)
       int j = rowLast;
       for (int jBlock = 0; jBlock <= nBlock; jBlock++) {
         int put2 = put;
-        int last = CoinMax(j - BLOCK, iColumn);
+        int last = std::max(j - BLOCK, iColumn);
         for (int iRow = j; iRow > last; iRow--) {
           aPut[--put2] = sparseFactor_[--get];
           assert(aPut + put2 >= sparseFactor_ + get);
@@ -656,14 +656,14 @@ void ClpCholeskyDense::factorizePart2(int *rowsDropped)
   int numberDropped = 0;
   for (int i = 0; i < numberRows_; i++) {
     if (diagonal_[i]) {
-      largest = CoinMax(largest, CoinAbs(diagonal_[i]));
-      smallest = CoinMin(smallest, CoinAbs(diagonal_[i]));
+      largest = std::max(largest, CoinAbs(diagonal_[i]));
+      smallest = std::min(smallest, CoinAbs(diagonal_[i]));
     } else {
       numberDropped++;
     }
   }
-  doubleParameters_[3] = CoinMax(doubleParameters_[3], 1.0 / smallest);
-  doubleParameters_[4] = CoinMin(doubleParameters_[4], 1.0 / largest);
+  doubleParameters_[3] = std::max(doubleParameters_[3], 1.0 / smallest);
+  doubleParameters_[4] = std::min(doubleParameters_[4], 1.0 / largest);
   integerParameters_[20] += numberDropped;
 }
 /* Non leaf recursive factor*/

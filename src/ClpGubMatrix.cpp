@@ -95,7 +95,7 @@ ClpGubMatrix::ClpGubMatrix(const ClpGubMatrix &rhs)
   }
   int length = 0;
   for (j = 0; j < numberSets_; j++)
-    length = CoinMax(length, longest[j]);
+    length = std::max(length, longest[j]);
   next_ = ClpCopyOfArray(rhs.next_, numberColumns + numberSets_ + 2 * length);
   toIndex_ = ClpCopyOfArray(rhs.toIndex_, numberSets_);
   sumDualInfeasibilities_ = rhs.sumDualInfeasibilities_;
@@ -210,8 +210,8 @@ ClpGubMatrix::ClpGubMatrix(ClpPackedMatrix *matrix, int numberSets,
   int i;
   for (i = 0; i < numberColumns; i++) {
     if (backward_[i] >= 0) {
-      firstGub_ = CoinMin(firstGub_, i);
-      lastGub_ = CoinMax(lastGub_, i);
+      firstGub_ = std::min(firstGub_, i);
+      lastGub_ = std::max(lastGub_, i);
     }
   }
   gubType_ = 0;
@@ -351,7 +351,7 @@ ClpGubMatrix::operator=(const ClpGubMatrix &rhs)
     }
     int length = 0;
     for (j = 0; j < numberSets_; j++)
-      length = CoinMax(length, longest[j]);
+      length = std::max(length, longest[j]);
     next_ = ClpCopyOfArray(rhs.next_, numberColumns + numberSets_ + 2 * length);
     toIndex_ = ClpCopyOfArray(rhs.toIndex_, numberSets_);
     sumDualInfeasibilities_ = rhs.sumDualInfeasibilities_;
@@ -461,8 +461,8 @@ ClpGubMatrix::ClpGubMatrix(
   lastGub_ = -1;
   for (i = 0; i < numberColumns; i++) {
     if (backward_[i] >= 0) {
-      firstGub_ = CoinMin(firstGub_, i);
-      lastGub_ = CoinMax(lastGub_, i);
+      firstGub_ = std::min(firstGub_, i);
+      lastGub_ = std::max(lastGub_, i);
     }
   }
   if (lastGub_ > 0)
@@ -1365,7 +1365,7 @@ void ClpGubMatrix::partialPricing(ClpSimplex *model, double startFraction, doubl
       int saveSequence = bestSequence;
       int startG = firstGub_ + static_cast< int >(startFraction * (lastGub_ - firstGub_));
       int endG = firstGub_ + static_cast< int >(endFraction * (lastGub_ - firstGub_));
-      endG = CoinMin(lastGub_, endG + 1);
+      endG = std::min(lastGub_, endG + 1);
       // If nothing found yet can go all the way to end
       int endAll = endG;
       if (bestSequence < 0 && !startG)
@@ -1765,7 +1765,7 @@ void ClpGubMatrix::partialPricing(ClpSimplex *model, double startFraction, doubl
       double offset = static_cast< double >(lastGub_) / static_cast< double >(numberColumns);
       double ratio = static_cast< double >(numberColumns) / static_cast< double >(numberColumns) - offset;
       double start2 = offset + ratio * startFraction;
-      double end2 = CoinMin(1.0, offset + ratio * endFraction + 1.0e-6);
+      double end2 = std::min(1.0, offset + ratio * endFraction + 1.0e-6);
       ClpPackedMatrix::partialPricing(model, start2, end2, bestSequence, numberWanted);
     }
   } else {
@@ -2109,7 +2109,7 @@ void ClpGubMatrix::primalExpanded(ClpSimplex *model, int mode)
     double primalTolerance = model->primalTolerance();
     double relaxedTolerance = primalTolerance;
     // we can't really trust infeasibilities if there is primal error
-    double error = CoinMin(1.0e-2, model->largestPrimalError());
+    double error = std::min(1.0e-2, model->largestPrimalError());
     // allow tolerance at least slightly bigger than standard
     relaxedTolerance = relaxedTolerance + error;
     // but we will be using difference
@@ -2298,7 +2298,7 @@ void ClpGubMatrix::dualExpanded(ClpSimplex *model,
     double dualTolerance = model->dualTolerance();
     double relaxedTolerance = dualTolerance;
     // we can't really trust infeasibilities if there is dual error
-    double error = CoinMin(1.0e-2, model->largestDualError());
+    double error = std::min(1.0e-2, model->largestDualError());
     // allow tolerance at least slightly bigger than standard
     relaxedTolerance = relaxedTolerance + error;
     // but we will be using difference
@@ -2700,7 +2700,7 @@ int ClpGubMatrix::generalExpanded(ClpSimplex *model, int mode, int &number)
                 model->rowArray(2),
                 model->rowArray(3),
                 iRow, alpha);
-              returnCode = CoinMax(updateStatus, returnCode);
+              returnCode = std::max(updateStatus, returnCode);
               model->rowArray(3)->clear();
               if (returnCode)
                 break;
@@ -2723,7 +2723,7 @@ int ClpGubMatrix::generalExpanded(ClpSimplex *model, int mode, int &number)
               model->rowArray(2),
               model->rowArray(3),
               pivotRow, alpha);
-            returnCode = CoinMax(updateStatus, returnCode);
+            returnCode = std::max(updateStatus, returnCode);
             model->rowArray(3)->clear();
           }
           // restore key
@@ -2739,7 +2739,7 @@ int ClpGubMatrix::generalExpanded(ClpSimplex *model, int mode, int &number)
             model->rowArray(1),
             possiblePivotKey_,
             bestAlpha);
-          returnCode = CoinMax(updateStatus, returnCode);
+          returnCode = std::max(updateStatus, returnCode);
           incomingColumn = pivotVariable[possiblePivotKey_];
         }
 
@@ -2787,7 +2787,7 @@ int ClpGubMatrix::generalExpanded(ClpSimplex *model, int mode, int &number)
             model->rowArray(2),
             model->rowArray(3),
             iRow, alpha);
-          returnCode = CoinMax(updateStatus, returnCode);
+          returnCode = std::max(updateStatus, returnCode);
           model->rowArray(3)->clear();
           if (returnCode)
             break;
@@ -2836,7 +2836,7 @@ int ClpGubMatrix::generalExpanded(ClpSimplex *model, int mode, int &number)
             model->rowArray(2),
             model->rowArray(3),
             iRow, alpha);
-          returnCode = CoinMax(updateStatus, returnCode);
+          returnCode = std::max(updateStatus, returnCode);
           model->rowArray(3)->clear();
           if (returnCode)
             break;
@@ -2858,7 +2858,7 @@ int ClpGubMatrix::generalExpanded(ClpSimplex *model, int mode, int &number)
           model->rowArray(2),
           model->rowArray(3),
           pivotRow, alpha);
-        returnCode = CoinMax(updateStatus, returnCode);
+        returnCode = std::max(updateStatus, returnCode);
         model->rowArray(3)->clear();
       }
       // restore key
@@ -2877,7 +2877,7 @@ int ClpGubMatrix::generalExpanded(ClpSimplex *model, int mode, int &number)
       number, returnCode, model->pivotRow());
 #endif
     // see if column generation says time to re-factorize
-    returnCode = CoinMax(returnCode, synchronize(model, 5));
+    returnCode = std::max(returnCode, synchronize(model, 5));
     number = -1; // say no need for normal replaceColumn
     break;
   // To see if can dual or primal
@@ -2992,7 +2992,7 @@ void ClpGubMatrix::useEffectiveRhs(ClpSimplex *model, bool cheapest)
   int longestSet = 0;
   int iSet;
   for (iSet = 0; iSet < numberSets_; iSet++)
-    longestSet = CoinMax(longestSet, end_[iSet] - start_[iSet]);
+    longestSet = std::max(longestSet, end_[iSet] - start_[iSet]);
 
   double *upper = new double[longestSet + 1];
   double *cost = new double[longestSet + 1];
@@ -3198,7 +3198,7 @@ void ClpGubMatrix::useEffectiveRhs(ClpSimplex *model, bool cheapest)
                     basicDistance = solution[iBasic] - lower[iBasic];
                   }
                   // need extra coding for unbounded
-                  assert(CoinMin(distance, basicDistance) < 1.0e20);
+                  assert(std::min(distance, basicDistance) < 1.0e20);
                   if (distance > basicDistance) {
                     // incoming becomes basic
                     solution[chosen] += basicDistance;
@@ -3225,7 +3225,7 @@ void ClpGubMatrix::useEffectiveRhs(ClpSimplex *model, bool cheapest)
                     basicDistance = upper[iBasic] - solution[iBasic];
                   }
                   // need extra coding for unbounded - for now just exit
-                  if (CoinMin(distance, basicDistance) > 1.0e20) {
+                  if (std::min(distance, basicDistance) > 1.0e20) {
                     printf("unbounded on set %d\n", iSet);
                     iphase = 1;
                     iBasic = numberInSet;

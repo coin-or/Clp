@@ -695,12 +695,12 @@ void CoinAbcTypeFactorization::updateColumnLDensish(CoinIndexedVector *regionSpa
 #endif
 #if ABC_SMALL < 3
     if (jPivot >= baseL_)
-      smallestIndex = CoinMin(jPivot, smallestIndex);
+      smallestIndex = std::min(jPivot, smallestIndex);
     else
       regionIndex[numberNonZero++] = iPivot;
 #else
     if (jPivot >= baseL_)
-      smallestIndex = CoinMin(jPivot, smallestIndex);
+      smallestIndex = std::min(jPivot, smallestIndex);
 #endif
   }
   instrument_start("CoinAbcFactorizationUpdateLDensish", number + (last - smallestIndex));
@@ -708,7 +708,7 @@ void CoinAbcTypeFactorization::updateColumnLDensish(CoinIndexedVector *regionSpa
   for (CoinSimplexInt k = smallestIndex; k < last; k++) {
 #if 0
     for (int j=0;j<numberRows_;j+=10) {
-      for (int jj=j;jj<CoinMin(j+10,numberRows_);jj++)
+      for (int jj=j;jj<std::min(j+10,numberRows_);jj++)
 	printf("%g ",region[jj]);
       printf("\n");
     }
@@ -798,12 +798,12 @@ void CoinAbcTypeFactorization::updateColumnLDense(CoinIndexedVector *regionSpars
 #endif
 #if ABC_SMALL < 3
     if (jPivot >= baseL_)
-      smallestIndex = CoinMin(jPivot, smallestIndex);
+      smallestIndex = std::min(jPivot, smallestIndex);
     else
       regionIndex[numberNonZero++] = iPivot;
 #else
     if (jPivot >= baseL_)
-      smallestIndex = CoinMin(jPivot, smallestIndex);
+      smallestIndex = std::min(jPivot, smallestIndex);
 #endif
   }
   instrument_start("CoinAbcFactorizationUpdateLDensish", number + (last - smallestIndex));

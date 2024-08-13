@@ -989,8 +989,8 @@ void ClpInterior::checkSolution()
   const CoinWorkDouble *upper = upper_ + numberColumns_;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     CoinWorkDouble infeasibility = 0.0;
-    CoinWorkDouble distanceUp = CoinMin(upper[iRow] - rowActivity_[iRow], static_cast< CoinWorkDouble >(1.0e10));
-    CoinWorkDouble distanceDown = CoinMin(rowActivity_[iRow] - lower[iRow], static_cast< CoinWorkDouble >(1.0e10));
+    CoinWorkDouble distanceUp = std::min(upper[iRow] - rowActivity_[iRow], static_cast< CoinWorkDouble >(1.0e10));
+    CoinWorkDouble distanceDown = std::min(rowActivity_[iRow] - lower[iRow], static_cast< CoinWorkDouble >(1.0e10));
     if (distanceUp > primalTolerance2) {
       CoinWorkDouble value = dual[iRow];
       // should not be negative
@@ -1027,8 +1027,8 @@ void ClpInterior::checkSolution()
   for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
     CoinWorkDouble infeasibility = 0.0;
     objectiveValue_ += cost_[iColumn] * columnActivity_[iColumn];
-    CoinWorkDouble distanceUp = CoinMin(upper[iColumn] - columnActivity_[iColumn], static_cast< CoinWorkDouble >(1.0e10));
-    CoinWorkDouble distanceDown = CoinMin(columnActivity_[iColumn] - lower[iColumn], static_cast< CoinWorkDouble >(1.0e10));
+    CoinWorkDouble distanceUp = std::min(upper[iColumn] - columnActivity_[iColumn], static_cast< CoinWorkDouble >(1.0e10));
+    CoinWorkDouble distanceDown = std::min(columnActivity_[iColumn] - lower[iColumn], static_cast< CoinWorkDouble >(1.0e10));
     if (distanceUp > primalTolerance2) {
       CoinWorkDouble value = reducedCost[iColumn];
       // should not be negative

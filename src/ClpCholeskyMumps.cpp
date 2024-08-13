@@ -386,9 +386,9 @@ int ClpCholeskyMumps::factorize(const double *diagonal, int *rowsDropped)
       int start = choleskyStart_[iRow] - 1; // to Fortran
       double diagonal = sparseFactor_[start];
       if (diagonal > largest2) {
-        sparseFactor_[start] = CoinMax(diagonal, 1.0e-10);
+        sparseFactor_[start] = std::max(diagonal, 1.0e-10);
       } else {
-        sparseFactor_[start] = CoinMax(diagonal, 1.0e-10);
+        sparseFactor_[start] = std::max(diagonal, 1.0e-10);
         rowsDropped[iRow] = 2;
       }
     }

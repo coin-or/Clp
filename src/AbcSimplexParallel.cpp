@@ -46,7 +46,7 @@ int AbcSimplexDual::whileIteratingSerial()
 #endif
   // if can't trust much and long way from optimal then relax
   //if (largestPrimalError_ > 10.0)
-  //abcFactorization_->relaxAccuracyCheck(CoinMin(1.0e2, largestPrimalError_ / 10.0));
+  //abcFactorization_->relaxAccuracyCheck(std::min(1.0e2, largestPrimalError_ / 10.0));
   //else
   //abcFactorization_->relaxAccuracyCheck(1.0);
   // status stays at -1 while iterating, >=0 finished, -2 to invert
@@ -296,7 +296,7 @@ int AbcSimplexDual::getTableauColumnFlipAndStartReplaceSerial()
     double diff1 = fabs(alpha_ - btranAlpha_);
     double diff2 = fabs(fabs(alpha_) - fabs(ft));
     double diff3 = fabs(fabs(ft) - fabs(btranAlpha_));
-    double largest = CoinMax(CoinMax(diff1, diff2), diff3);
+    double largest = std::max(std::max(diff1, diff2), diff3);
     printf("btran alpha %g, ftran alpha %g ftAlpha %g largest diff %g\n",
       btranAlpha_, alpha_, ft, largest);
     if (largest > 0.001 * fabs(alpha_)) {
@@ -309,7 +309,7 @@ int AbcSimplexDual::getTableauColumnFlipAndStartReplaceSerial()
   double checkValue = numberPivots ? 1.0e-7 : 1.0e-5;
   // if can't trust much and long way from optimal then relax
   if (largestPrimalError_ > 10.0)
-    checkValue = CoinMin(1.0e-4, 1.0e-8 * largestPrimalError_);
+    checkValue = std::min(1.0e-4, 1.0e-8 * largestPrimalError_);
   if (fabs(btranAlpha_) < 1.0e-12 || fabs(alpha_) < 1.0e-12 || fabs(btranAlpha_ - alpha_) > checkValue * (1.0 + fabs(alpha_))) {
     handler_->message(CLP_DUAL_CHECK, messages_)
       << btranAlpha_
@@ -322,14 +322,14 @@ int AbcSimplexDual::getTableauColumnFlipAndStartReplaceSerial()
     else
       test = 10.0 * checkValue; //1.0e-4 * (1.0 + fabs(alpha_));
     bool needFlag = (fabs(btranAlpha_) < 1.0e-12 || fabs(alpha_) < 1.0e-12 || fabs(btranAlpha_ - alpha_) > test);
-    double derror = CoinMin(fabs(btranAlpha_ - alpha_) / (1.0 + fabs(alpha_)), 1.0) * 0.9999e7;
+    double derror = std::min(fabs(btranAlpha_ - alpha_) / (1.0 + fabs(alpha_)), 1.0) * 0.9999e7;
     int error = 0;
     while (derror > 1.0) {
       error++;
       derror *= 0.1;
     }
     int frequency[8] = { 99999999, 100, 10, 2, 1, 1, 1, 1 };
-    int newFactorFrequency = CoinMin(forceFactorization_, frequency[error]);
+    int newFactorFrequency = std::min(forceFactorization_, frequency[error]);
 #if ABC_NORMAL_DEBUG > 0
     if (newFactorFrequency < forceFactorization_)
       printf("Error of %g after %d pivots old forceFact %d now %d\n",
@@ -452,7 +452,7 @@ int AbcSimplexDual::whileIteratingThread()
 #endif
   // if can't trust much and long way from optimal then relax
   //if (largestPrimalError_ > 10.0)
-  //abcFactorization_->relaxAccuracyCheck(CoinMin(1.0e2, largestPrimalError_ / 10.0));
+  //abcFactorization_->relaxAccuracyCheck(std::min(1.0e2, largestPrimalError_ / 10.0));
   //else
   //abcFactorization_->relaxAccuracyCheck(1.0);
   // status stays at -1 while iterating, >=0 finished, -2 to invert
@@ -764,7 +764,7 @@ int AbcSimplexDual::getTableauColumnFlipAndStartReplaceThread()
     double diff1 = fabs(alpha_ - btranAlpha_);
     double diff2 = fabs(fabs(alpha_) - fabs(ft));
     double diff3 = fabs(fabs(ft) - fabs(btranAlpha_));
-    double largest = CoinMax(CoinMax(diff1, diff2), diff3);
+    double largest = std::max(std::max(diff1, diff2), diff3);
     printf("btran alpha %g, ftran alpha %g ftAlpha %g largest diff %g\n",
       btranAlpha_, alpha_, ft, largest);
     if (largest > 0.001 * fabs(alpha_)) {
@@ -777,7 +777,7 @@ int AbcSimplexDual::getTableauColumnFlipAndStartReplaceThread()
   double checkValue = numberPivots ? 1.0e-7 : 1.0e-5;
   // if can't trust much and long way from optimal then relax
   if (largestPrimalError_ > 10.0)
-    checkValue = CoinMin(1.0e-4, 1.0e-8 * largestPrimalError_);
+    checkValue = std::min(1.0e-4, 1.0e-8 * largestPrimalError_);
   if (fabs(btranAlpha_) < 1.0e-12 || fabs(alpha_) < 1.0e-12 || fabs(btranAlpha_ - alpha_) > checkValue * (1.0 + fabs(alpha_))) {
     handler_->message(CLP_DUAL_CHECK, messages_)
       << btranAlpha_
@@ -790,14 +790,14 @@ int AbcSimplexDual::getTableauColumnFlipAndStartReplaceThread()
     else
       test = 10.0 * checkValue; //1.0e-4 * (1.0 + fabs(alpha_));
     bool needFlag = (fabs(btranAlpha_) < 1.0e-12 || fabs(alpha_) < 1.0e-12 || fabs(btranAlpha_ - alpha_) > test);
-    double derror = CoinMin(fabs(btranAlpha_ - alpha_) / (1.0 + fabs(alpha_)), 1.0) * 0.9999e7;
+    double derror = std::min(fabs(btranAlpha_ - alpha_) / (1.0 + fabs(alpha_)), 1.0) * 0.9999e7;
     int error = 0;
     while (derror > 1.0) {
       error++;
       derror *= 0.1;
     }
     int frequency[8] = { 99999999, 100, 10, 2, 1, 1, 1, 1 };
-    int newFactorFrequency = CoinMin(forceFactorization_, frequency[error]);
+    int newFactorFrequency = std::min(forceFactorization_, frequency[error]);
 #if ABC_NORMAL_DEBUG > 0
     if (newFactorFrequency < forceFactorization_)
       printf("Error of %g after %d pivots old forceFact %d now %d\n",
@@ -952,7 +952,7 @@ int AbcSimplexDual::whileIteratingCilk()
 #endif
   // if can't trust much and long way from optimal then relax
   //if (largestPrimalError_ > 10.0)
-  //abcFactorization_->relaxAccuracyCheck(CoinMin(1.0e2, largestPrimalError_ / 10.0));
+  //abcFactorization_->relaxAccuracyCheck(std::min(1.0e2, largestPrimalError_ / 10.0));
   //else
   //abcFactorization_->relaxAccuracyCheck(1.0);
   // status stays at -1 while iterating, >=0 finished, -2 to invert
@@ -1028,7 +1028,7 @@ int AbcSimplexDual::whileIteratingCilk()
     int numberEarly = 0;
     if (numberPivots > 20 && (numberEarly_ & 0xffff) > 5) {
       numberEarly = numberEarly_ & 0xffff;
-      numberPivots = CoinMax(numberPivots - numberEarly - abcFactorization_->pivots(), numberPivots / 2);
+      numberPivots = std::max(numberPivots - numberEarly - abcFactorization_->pivots(), numberPivots / 2);
     }
     returnCode = whileIteratingParallel(numberPivots);
     if (returnCode == -99) {
@@ -1195,7 +1195,7 @@ int AbcSimplexDual::getTableauColumnFlipAndStartReplaceCilk()
     double diff1 = fabs(alpha_ - btranAlpha_);
     double diff2 = fabs(fabs(alpha_) - fabs(ft));
     double diff3 = fabs(fabs(ft) - fabs(btranAlpha_));
-    double largest = CoinMax(CoinMax(diff1, diff2), diff3);
+    double largest = std::max(std::max(diff1, diff2), diff3);
     printf("btran alpha %g, ftran alpha %g ftAlpha %g largest diff %g\n",
       btranAlpha_, alpha_, ft, largest);
     if (largest > 0.001 * fabs(alpha_)) {
@@ -1208,7 +1208,7 @@ int AbcSimplexDual::getTableauColumnFlipAndStartReplaceCilk()
   double checkValue = numberPivots ? 1.0e-7 : 1.0e-5;
   // if can't trust much and long way from optimal then relax
   if (largestPrimalError_ > 10.0)
-    checkValue = CoinMin(1.0e-4, 1.0e-8 * largestPrimalError_);
+    checkValue = std::min(1.0e-4, 1.0e-8 * largestPrimalError_);
   if (fabs(btranAlpha_) < 1.0e-12 || fabs(alpha_) < 1.0e-12 || fabs(btranAlpha_ - alpha_) > checkValue * (1.0 + fabs(alpha_))) {
     handler_->message(CLP_DUAL_CHECK, messages_)
       << btranAlpha_
@@ -1219,16 +1219,16 @@ int AbcSimplexDual::getTableauColumnFlipAndStartReplaceCilk()
     if (fabs(btranAlpha_) < 1.0e-8 || fabs(alpha_) < 1.0e-8)
       test = 1.0e-1 * fabs(alpha_);
     else
-      test = CoinMin(10.0 * checkValue, 1.0e-4 * (1.0 + fabs(alpha_)));
+      test = std::min(10.0 * checkValue, 1.0e-4 * (1.0 + fabs(alpha_)));
     bool needFlag = (fabs(btranAlpha_) < 1.0e-12 || fabs(alpha_) < 1.0e-12 || fabs(btranAlpha_ - alpha_) > test);
-    double derror = CoinMin(fabs(btranAlpha_ - alpha_) / (1.0 + fabs(alpha_)), 1.0) * 0.9999e7;
+    double derror = std::min(fabs(btranAlpha_ - alpha_) / (1.0 + fabs(alpha_)), 1.0) * 0.9999e7;
     int error = 0;
     while (derror > 1.0) {
       error++;
       derror *= 0.1;
     }
     int frequency[8] = { 99999999, 100, 10, 2, 1, 1, 1, 1 };
-    int newFactorFrequency = CoinMin(forceFactorization_, frequency[error]);
+    int newFactorFrequency = std::min(forceFactorization_, frequency[error]);
 #if ABC_NORMAL_DEBUG > 0
     if (newFactorFrequency < forceFactorization_)
       printf("Error of %g after %d pivots old forceFact %d now %d\n",
@@ -1597,7 +1597,7 @@ double parallelDual4(AbcSimplexDual *dual)
   //assert (upperTheta>-100*dual->dualTolerance()||dual->sequenceIn()>=0||dual->lastFirstFree()>=0);
 #if ABC_PARALLEL
 #define NUMBER_BLOCKS NUMBER_ROW_BLOCKS
-  int numberBlocks = CoinMin(NUMBER_BLOCKS, dual->numberCpus());
+  int numberBlocks = std::min(NUMBER_BLOCKS, dual->numberCpus());
 #else
 #define NUMBER_BLOCKS 1
   int numberBlocks = NUMBER_BLOCKS;
@@ -1755,7 +1755,7 @@ double parallelDual4(AbcSimplexDual *dual)
     sequenceIn[i] = info[i].stuff[2];
     if (sequenceIn[i] >= 0)
       anyFree = true;
-    upperTheta = CoinMin(info[i].result, upperTheta);
+    upperTheta = std::min(info[i].result, upperTheta);
     //assert (info[i].result>-100*dual->dualTolerance()||sequenceIn[i]>=0||dual->lastFirstFree()>=0);
   }
   if (anyFree) {
@@ -1948,7 +1948,7 @@ static void CoinAbcDtrsmFactor(int m, int n, double *COIN_RESTRICT a, int lda)
 static void dtrsm0(int kkk, int first, int last,
   int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
 {
-  int mm = CoinMin(kkk + UNROLL_DTRSM * BLOCKING8, m);
+  int mm = std::min(kkk + UNROLL_DTRSM * BLOCKING8, m);
   assert((last - first) % BLOCKING8 == 0);
   if (last - first > CILK_DTRSM) {
     int mid = ((first + last) >> 4) << 3;
@@ -2036,7 +2036,7 @@ void CoinAbcDtrsm0(int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
   assert((m & (BLOCKING8 - 1)) == 0);
   // 0 Left Lower NoTranspose Unit
   for (int kkk = 0; kkk < m; kkk += UNROLL_DTRSM * BLOCKING8) {
-    int mm = CoinMin(m, kkk + UNROLL_DTRSM * BLOCKING8);
+    int mm = std::min(m, kkk + UNROLL_DTRSM * BLOCKING8);
     for (int kk = kkk; kk < mm; kk += BLOCKING8) {
       const double *COIN_RESTRICT aBase2 = a + kk * (m + BLOCKING8);
       double *COIN_RESTRICT bBase = b + kk;
@@ -2063,7 +2063,7 @@ void CoinAbcDtrsm0(int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
 static void dtrsm1(int kkk, int first, int last,
   int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
 {
-  int mm = CoinMax(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
+  int mm = std::max(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
   assert((last - first) % BLOCKING8 == 0);
   if (last - first > CILK_DTRSM) {
     int mid = ((first + last) >> 4) << 3;
@@ -2143,7 +2143,7 @@ void CoinAbcDtrsm1(int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
   assert((m & (BLOCKING8 - 1)) == 0);
   // 1 Left Upper NoTranspose NonUnit
   for (int kkk = m - BLOCKING8; kkk >= 0; kkk -= UNROLL_DTRSM * BLOCKING8) {
-    int mm = CoinMax(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
+    int mm = std::max(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
     for (int ii = kkk; ii >= mm; ii -= BLOCKING8) {
       const double *COIN_RESTRICT aBase = a + m * ii + ii * BLOCKING8;
       double *COIN_RESTRICT bBase = b + ii;
@@ -2171,7 +2171,7 @@ void CoinAbcDtrsm1(int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
 static void dtrsm2(int kkk, int first, int last,
   int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
 {
-  int mm = CoinMax(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
+  int mm = std::max(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
   assert((last - first) % BLOCKING8 == 0);
   if (last - first > CILK_DTRSM) {
     int mid = ((first + last) >> 4) << 3;
@@ -2236,7 +2236,7 @@ void CoinAbcDtrsm2(int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
   assert((m & (BLOCKING8 - 1)) == 0);
   // 2 Left Lower Transpose Unit
   for (int kkk = m - BLOCKING8; kkk >= 0; kkk -= UNROLL_DTRSM * BLOCKING8) {
-    int mm = CoinMax(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
+    int mm = std::max(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
     for (int ii = kkk; ii >= mm; ii -= BLOCKING8) {
       double *COIN_RESTRICT bBase = b + ii;
       double *COIN_RESTRICT bBase2 = bBase;
@@ -2268,7 +2268,7 @@ void CoinAbcDtrsm2(int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
 static void dtrsm3(int kkk, int first, int last,
   int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
 {
-  //int mm=CoinMin(kkk+UNROLL_DTRSM3*BLOCKING8,m);
+  //int mm=std::min(kkk+UNROLL_DTRSM3*BLOCKING8,m);
   assert((last - first) % BLOCKING8 == 0);
   if (last - first > CILK_DTRSM3) {
     int mid = ((first + last) >> 4) << 3;
@@ -2333,7 +2333,7 @@ void CoinAbcDtrsm3(int m, double *COIN_RESTRICT a, double *COIN_RESTRICT b)
   assert((m & (BLOCKING8 - 1)) == 0);
   // 3 Left Upper Transpose NonUnit
   for (int kkk = 0; kkk < m; kkk += UNROLL_DTRSM3 * BLOCKING8) {
-    int mm = CoinMin(m, kkk + UNROLL_DTRSM3 * BLOCKING8);
+    int mm = std::min(m, kkk + UNROLL_DTRSM3 * BLOCKING8);
     dtrsm3(kkk, kkk, mm, m, a, b);
     for (int ii = kkk; ii < mm; ii += BLOCKING8) {
       double *COIN_RESTRICT bBase = b + ii;
@@ -2396,7 +2396,7 @@ static int CoinAbcDgetrf2(int m, int n, double *COIN_RESTRICT a, int *ipiv)
 {
   assert((m & (BLOCKING8 - 1)) == 0 && (n & (BLOCKING8 - 1)) == 0);
   assert(n == BLOCKING8);
-  int dimension = CoinMin(m, n);
+  int dimension = std::min(m, n);
   /* entry for column j and row i (when multiple of BLOCKING8)
      is at aBlocked+j*m+i*BLOCKING8
   */
@@ -2502,7 +2502,7 @@ int CoinAbcDgetrf(int m, int n, double *COIN_RESTRICT a, int lda, int *ipiv
   } else {
     for (int j = 0; j < n; j += BLOCKING8) {
       int start = j;
-      int newSize = CoinMin(BLOCKING8, n - j);
+      int newSize = std::min(BLOCKING8, n - j);
       int end = j + newSize;
       int returnCode = CoinAbcDgetrf2(m - start, newSize, a + (start * lda + start * BLOCKING8),
         ipiv + start);
@@ -2635,7 +2635,7 @@ static void CoinAbcDtrsmFactor(int m, int n, long double *COIN_RESTRICT a, int l
 static void dtrsm0(int kkk, int first, int last,
   int m, long double *COIN_RESTRICT a, long double *COIN_RESTRICT b)
 {
-  int mm = CoinMin(kkk + UNROLL_DTRSM * BLOCKING8, m);
+  int mm = std::min(kkk + UNROLL_DTRSM * BLOCKING8, m);
   assert((last - first) % BLOCKING8 == 0);
   if (last - first > CILK_DTRSM) {
     int mid = ((first + last) >> 4) << 3;
@@ -2723,7 +2723,7 @@ void CoinAbcDtrsm0(int m, long double *COIN_RESTRICT a, long double *COIN_RESTRI
   assert((m & (BLOCKING8 - 1)) == 0);
   // 0 Left Lower NoTranspose Unit
   for (int kkk = 0; kkk < m; kkk += UNROLL_DTRSM * BLOCKING8) {
-    int mm = CoinMin(m, kkk + UNROLL_DTRSM * BLOCKING8);
+    int mm = std::min(m, kkk + UNROLL_DTRSM * BLOCKING8);
     for (int kk = kkk; kk < mm; kk += BLOCKING8) {
       const long double *COIN_RESTRICT aBase2 = a + kk * (m + BLOCKING8);
       long double *COIN_RESTRICT bBase = b + kk;
@@ -2750,7 +2750,7 @@ void CoinAbcDtrsm0(int m, long double *COIN_RESTRICT a, long double *COIN_RESTRI
 static void dtrsm1(int kkk, int first, int last,
   int m, long double *COIN_RESTRICT a, long double *COIN_RESTRICT b)
 {
-  int mm = CoinMax(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
+  int mm = std::max(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
   assert((last - first) % BLOCKING8 == 0);
   if (last - first > CILK_DTRSM) {
     int mid = ((first + last) >> 4) << 3;
@@ -2830,7 +2830,7 @@ void CoinAbcDtrsm1(int m, long double *COIN_RESTRICT a, long double *COIN_RESTRI
   assert((m & (BLOCKING8 - 1)) == 0);
   // 1 Left Upper NoTranspose NonUnit
   for (int kkk = m - BLOCKING8; kkk >= 0; kkk -= UNROLL_DTRSM * BLOCKING8) {
-    int mm = CoinMax(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
+    int mm = std::max(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
     for (int ii = kkk; ii >= mm; ii -= BLOCKING8) {
       const long double *COIN_RESTRICT aBase = a + m * ii + ii * BLOCKING8;
       long double *COIN_RESTRICT bBase = b + ii;
@@ -2858,7 +2858,7 @@ void CoinAbcDtrsm1(int m, long double *COIN_RESTRICT a, long double *COIN_RESTRI
 static void dtrsm2(int kkk, int first, int last,
   int m, long double *COIN_RESTRICT a, long double *COIN_RESTRICT b)
 {
-  int mm = CoinMax(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
+  int mm = std::max(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
   assert((last - first) % BLOCKING8 == 0);
   if (last - first > CILK_DTRSM) {
     int mid = ((first + last) >> 4) << 3;
@@ -2923,7 +2923,7 @@ void CoinAbcDtrsm2(int m, long double *COIN_RESTRICT a, long double *COIN_RESTRI
   assert((m & (BLOCKING8 - 1)) == 0);
   // 2 Left Lower Transpose Unit
   for (int kkk = m - BLOCKING8; kkk >= 0; kkk -= UNROLL_DTRSM * BLOCKING8) {
-    int mm = CoinMax(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
+    int mm = std::max(0, kkk - (UNROLL_DTRSM - 1) * BLOCKING8);
     for (int ii = kkk; ii >= mm; ii -= BLOCKING8) {
       long double *COIN_RESTRICT bBase = b + ii;
       long double *COIN_RESTRICT bBase2 = bBase;
@@ -2955,7 +2955,7 @@ void CoinAbcDtrsm2(int m, long double *COIN_RESTRICT a, long double *COIN_RESTRI
 static void dtrsm3(int kkk, int first, int last,
   int m, long double *COIN_RESTRICT a, long double *COIN_RESTRICT b)
 {
-  //int mm=CoinMin(kkk+UNROLL_DTRSM3*BLOCKING8,m);
+  //int mm=std::min(kkk+UNROLL_DTRSM3*BLOCKING8,m);
   assert((last - first) % BLOCKING8 == 0);
   if (last - first > CILK_DTRSM3) {
     int mid = ((first + last) >> 4) << 3;
@@ -3020,7 +3020,7 @@ void CoinAbcDtrsm3(int m, long double *COIN_RESTRICT a, long double *COIN_RESTRI
   assert((m & (BLOCKING8 - 1)) == 0);
   // 3 Left Upper Transpose NonUnit
   for (int kkk = 0; kkk < m; kkk += UNROLL_DTRSM3 * BLOCKING8) {
-    int mm = CoinMin(m, kkk + UNROLL_DTRSM3 * BLOCKING8);
+    int mm = std::min(m, kkk + UNROLL_DTRSM3 * BLOCKING8);
     dtrsm3(kkk, kkk, mm, m, a, b);
     for (int ii = kkk; ii < mm; ii += BLOCKING8) {
       long double *COIN_RESTRICT bBase = b + ii;
@@ -3083,7 +3083,7 @@ static int CoinAbcDgetrf2(int m, int n, long double *COIN_RESTRICT a, int *ipiv)
 {
   assert((m & (BLOCKING8 - 1)) == 0 && (n & (BLOCKING8 - 1)) == 0);
   assert(n == BLOCKING8);
-  int dimension = CoinMin(m, n);
+  int dimension = std::min(m, n);
   /* entry for column j and row i (when multiple of BLOCKING8)
      is at aBlocked+j*m+i*BLOCKING8
   */
@@ -3189,7 +3189,7 @@ int CoinAbcDgetrf(int m, int n, long double *COIN_RESTRICT a, int lda, int *ipiv
   } else {
     for (int j = 0; j < n; j += BLOCKING8) {
       int start = j;
-      int newSize = CoinMin(BLOCKING8, n - j);
+      int newSize = std::min(BLOCKING8, n - j);
       int end = j + newSize;
       int returnCode = CoinAbcDgetrf2(m - start, newSize, a + (start * lda + start * BLOCKING8),
         ipiv + start);

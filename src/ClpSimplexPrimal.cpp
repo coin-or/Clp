@@ -222,7 +222,7 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
   ClpDataSave data = saveData();
   if (problemStatus_ == 10 && sumPrimalInfeasibilities_ == -123456789.0) {
     // large infeasibility cost wanted
-    infeasibilityCost_ = CoinMax(infeasibilityCost_, 1.0e13);
+    infeasibilityCost_ = std::max(infeasibilityCost_, 1.0e13);
   }
   matrix_->refresh(this); // make sure matrix okay
 
@@ -466,7 +466,7 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
           lastObjectiveValue = objectiveValue() * optimizationDirection_;
           // sort
           CoinSort_2(weight, weight + numberColumns_, whichColumns);
-          numberSort = CoinMin(numberColumns_ - numberFixed, numberBasic + numberSprintColumns);
+          numberSort = std::min(numberColumns_ - numberFixed, numberBasic + numberSprintColumns);
           // Sort to make consistent ?
           std::sort(whichColumns, whichColumns + numberSort);
           saveModel = new ClpSimplex(this, numberSort, whichColumns);
@@ -819,12 +819,12 @@ int ClpSimplexPrimal::whileIterating(int valuesOption)
           problemStatus_ = status - 10;
           break;
         } else {
-          forceFactorization_ = CoinMin(forceFactorization_, (numberPivots + 1) >> 1);
+          forceFactorization_ = std::min(forceFactorization_, (numberPivots + 1) >> 1);
           break;
         }
       }
 #else
-      forceFactorization_ = CoinMin(forceFactorization_, (numberPivots + 1) >> 1);
+      forceFactorization_ = std::min(forceFactorization_, (numberPivots + 1) >> 1);
       break;
 #endif
     }
@@ -933,7 +933,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
               } else if (sequenceOut_ >= 0 && getStatus(sequenceOut_) != basic) {
                 setFlagged(sequenceOut_);
               }
-              double newTolerance = CoinMax(0.5 + 0.499 * randomNumberGenerator_.randomDouble(), factorization_->pivotTolerance());
+              double newTolerance = std::max(0.5 + 0.499 * randomNumberGenerator_.randomDouble(), factorization_->pivotTolerance());
               factorization_->pivotTolerance(newTolerance);
             } else {
               // Go to safe
@@ -972,8 +972,8 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
           if (average > 0.1)
             break;
           average /= static_cast< double >(n);
-          minAverage = CoinMin(minAverage, average);
-          maxAverage = CoinMax(maxAverage, average);
+          minAverage = std::min(minAverage, average);
+          maxAverage = std::max(maxAverage, average);
         }
       }
       if (iP == CLP_PROGRESS && minAverage < 1.0e-5 && maxAverage < 1.0e-3) {
@@ -1047,13 +1047,13 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       // I would have thought 1.0e-6 might be better but ??
 #define HOW_BAD_SHOULD_IT_BE 1.0e-3
       if (currentWeighted>lastWeighted + 1.0e-5 +
-	  HOW_BAD_SHOULD_IT_BE*CoinMax(fabs(lastWeighted),fabs(currentWeighted)) && numberPrimalInfeasibilities_) {
+	  HOW_BAD_SHOULD_IT_BE*std::max(fabs(lastWeighted),fabs(currentWeighted)) && numberPrimalInfeasibilities_) {
 	reason2 = 2;
 	printf("ITs trouble %d inf %g obj %g wt %g -> %g - was %g\n",
 	       numberIterations_,sumInf,obj,infeasibilityCost_,
 	       currentWeighted,lastWeighted);
 	nonLinearCost_->setAverageTheta(0.987e40);
-	factorization_->pivotTolerance(CoinMin(0.99, 1.01 * factorization_->pivotTolerance()));
+	factorization_->pivotTolerance(std::min(0.99, 1.01 * factorization_->pivotTolerance()));
       }
     }
 #endif
@@ -1072,13 +1072,13 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
         matrix_->generalExpanded(this, 6, dummy);
         if (reason2 < 3) {
           // Go to safe
-          factorization_->pivotTolerance(CoinMin(0.99, 1.01 * factorization_->pivotTolerance()));
+          factorization_->pivotTolerance(std::min(0.99, 1.01 * factorization_->pivotTolerance()));
           forceFactorization_ = 1; // a bit drastic but ..
         } else if (forceFactorization_ < 0) {
-          forceFactorization_ = CoinMin(numberPivots / 2, 100);
+          forceFactorization_ = std::min(numberPivots / 2, 100);
         } else {
-          forceFactorization_ = CoinMin(forceFactorization_,
-            CoinMax(3, numberPivots / 2));
+          forceFactorization_ = std::min(forceFactorization_,
+            std::max(3, numberPivots / 2));
         }
         pivotRow_ = -1; // say no weights update
         changeMade_++; // say change made
@@ -1296,8 +1296,8 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       printf("XXXX inf cost %g take %g (range %g %g)\n", infeasibilityCost_, take2, -dj_[0] * infeasibilityCost_, -dj_[n - 1] * infeasibilityCost_);
 #endif
       double take = -dj_[0] * infeasibilityCost_;
-      // was infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e8), 1.0000001e10);
-      infeasibilityCost_ = CoinMin(CoinMax(1000.0 * take, 1.0e3), 1.0000001e10);
+      // was infeasibilityCost_ = std::min(std::max(1000.0 * take, 1.0e8), 1.0000001e10);
+      infeasibilityCost_ = std::min(std::max(1000.0 * take, 1.0e3), 1.0000001e10);
 #ifdef CLP_USEFUL_PRINTOUT
       printf("XXXX changing weight to %g\n", infeasibilityCost_);
 #endif
@@ -1316,7 +1316,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   double trueInfeasibility = nonLinearCost_->sumInfeasibilities();
   if (!nonLinearCost_->numberInfeasibilities() && infeasibilityCost_ == 1.0e10 && !ifValuesPass && true) {
     // relax if default
-    infeasibilityCost_ = CoinMin(CoinMax(100.0 * sumDualInfeasibilities_, 1.0e8), 1.00000001e10);
+    infeasibilityCost_ = std::min(std::max(100.0 * sumDualInfeasibilities_, 1.0e8), 1.00000001e10);
     // reset looping criterion
     progress->reset();
     trueInfeasibility = 1.123456e10;
@@ -1336,7 +1336,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
     assert(thisObj <= COIN_DBL_MAX);
     assert(lastObj <= COIN_DBL_MAX);
     assert(lastObj3 <= COIN_DBL_MAX);
-    if (lastObj < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj)) - 1.0e-7
+    if (lastObj < thisObj - 1.0e-5 * std::max(fabs(thisObj), fabs(lastObj)) - 1.0e-7
       && firstFree_ < 0 && thisInf >= lastInf) {
       if (handler_->logLevel() == 63)
         printf("lastobj %g this %g force %d\n", lastObj, thisObj, forceFactorization_);
@@ -1344,11 +1344,11 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       if (maxFactor > 10) {
         if (forceFactorization_ < 0)
           forceFactorization_ = maxFactor;
-        forceFactorization_ = CoinMax(1, (forceFactorization_ >> 2));
+        forceFactorization_ = std::max(1, (forceFactorization_ >> 2));
         if (handler_->logLevel() == 63)
           printf("Reducing factorization frequency to %d\n", forceFactorization_);
       }
-    } else if (lastObj3 < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj3)) - 1.0e-7
+    } else if (lastObj3 < thisObj - 1.0e-5 * std::max(fabs(thisObj), fabs(lastObj3)) - 1.0e-7
       && firstFree_ < 0 && thisInf >= lastInf) {
       if (handler_->logLevel() == 63)
         printf("lastobj3 %g this3 %g force %d\n", lastObj3, thisObj, forceFactorization_);
@@ -1356,7 +1356,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       if (maxFactor > 10) {
         if (forceFactorization_ < 0)
           forceFactorization_ = maxFactor;
-        forceFactorization_ = CoinMax(1, (forceFactorization_ * 2) / 3);
+        forceFactorization_ = std::max(1, (forceFactorization_ * 2) / 3);
         if (handler_->logLevel() == 63)
           printf("Reducing factorization frequency to %d\n", forceFactorization_);
       }
@@ -1390,7 +1390,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       // most likely to happen if infeasible
       double relaxedToleranceP = primalTolerance_;
       // we can't really trust infeasibilities if there is primal error
-      double error = CoinMin(1.0e-2, largestPrimalError_);
+      double error = std::min(1.0e-2, largestPrimalError_);
       // allow tolerance at least slightly bigger than standard
       relaxedToleranceP = relaxedToleranceP + error;
       int ninfeas = nonLinearCost_->numberInfeasibilities();
@@ -1462,7 +1462,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
 #endif
         infeasibilityCost_ = 1.0e30;
         gutsOfSolution(NULL, NULL, ifValuesPass != 0 && firstFree_ >= 0);
-        infeasibilityCost_ = CoinMax(saveWeight, saveOriginalWeight);
+        infeasibilityCost_ = std::max(saveWeight, saveOriginalWeight);
         if ((infeasibilityCost_ >= MAX_INFEASIBILITY_COST || numberDualInfeasibilities_ == 0) && perturbation_ == 101) {
           goToDual = unPerturb(); // stop any further perturbation
           if (nonLinearCost_->sumInfeasibilities() > 1.0e-1)
@@ -1472,7 +1472,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
           problemStatus_ = -1;
         } else if (numberDualInfeasibilities_ == 0 && largestDualError_ > 1.0e-2 && (moreSpecialOptions_ & (256 | 8192)) == 0) {
           goToDual = true;
-          factorization_->pivotTolerance(CoinMax(0.9, factorization_->pivotTolerance()));
+          factorization_->pivotTolerance(std::max(0.9, factorization_->pivotTolerance()));
         }
         if (!goToDual) {
           if (infeasibilityCost_ >= MAX_INFEASIBILITY_COST || numberDualInfeasibilities_ == 0) {
@@ -1526,19 +1526,19 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
               double largestCost = 0.0;
               if (columnScale_) {
                 for (int i = 0; i < numberColumns_; i++) {
-                  largestCost = CoinMax(largestCost, fabs(obj[i] * columnScale_[i]));
+                  largestCost = std::max(largestCost, fabs(obj[i] * columnScale_[i]));
                 }
               } else {
                 for (int i = 0; i < numberColumns_; i++) {
-                  largestCost = CoinMax(largestCost, fabs(obj[i]));
+                  largestCost = std::max(largestCost, fabs(obj[i]));
                 }
               }
               testValue = 1.0e12 * (largestCost + 1.0e-6);
               if (numberDualInfeasibilities_) {
                 double average = sumDualInfeasibilities_ / numberDualInfeasibilities_;
-                testValue = CoinMax(testValue, average);
+                testValue = std::max(testValue, average);
               }
-              testValue = CoinMin(testValue, MAX_INFEASIBILITY_COST);
+              testValue = std::min(testValue, MAX_INFEASIBILITY_COST);
             }
             if (infeasibilityCost_ < testValue) {
               infeasibilityCost_ *= 5.0;
@@ -1587,7 +1587,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
           changeMade_++; // say change made
           if (numberTimesOptimal_ == 1) {
             // better to have small tolerance even if slower
-            factorization_->zeroTolerance(CoinMin(factorization_->zeroTolerance(), 1.0e-15));
+            factorization_->zeroTolerance(std::min(factorization_->zeroTolerance(), 1.0e-15));
           }
           lastCleaned = numberIterations_;
           if (primalTolerance_ != dblParam_[ClpPrimalTolerance])
@@ -1658,7 +1658,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
         /* Previous code here mostly works but
 		    sumOfRelaxed is rubbish in primal 
 		 - so give benefit of doubt still */
-        double error = CoinMin(1.0e-4, largestPrimalError_);
+        double error = std::min(1.0e-4, largestPrimalError_);
         // allow bigger tolerance than standard
         double saveTolerance = primalTolerance_;
         primalTolerance_ = 2.0 * primalTolerance_ + error;
@@ -1733,7 +1733,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
     double objVal = (nonLinearCost_->feasibleCost()
       + objective_->nonlinearOffset());
     objVal /= (objectiveScale_ * rhsScale_);
-    double tol = 1.0e-10 * CoinMax(fabs(objVal), fabs(objectiveValue_)) + 1.0e-8;
+    double tol = 1.0e-10 * std::max(fabs(objVal), fabs(objectiveValue_)) + 1.0e-8;
     if (fabs(objVal - objectiveValue_) > tol) {
 #ifdef COIN_DEVELOP
       if (handler_->logLevel() > 0)
@@ -1971,12 +1971,12 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
   double way = directionIn_;
   double maximumMovement;
   if (way > 0.0)
-    maximumMovement = CoinMin(1.0e30, upperIn_ - valueIn_);
+    maximumMovement = std::min(1.0e30, upperIn_ - valueIn_);
   else
-    maximumMovement = CoinMin(1.0e30, valueIn_ - lowerIn_);
+    maximumMovement = std::min(1.0e30, valueIn_ - lowerIn_);
 
   double averageTheta = nonLinearCost_->averageTheta();
-  double tentativeTheta = CoinMin(10.0 * averageTheta, maximumMovement);
+  double tentativeTheta = std::min(10.0 * averageTheta, maximumMovement);
   /* CLP_MOVEMENT 
      - 0 guess theta and use as maximum (current code)
      - 1 use infinity as maximum
@@ -1996,7 +1996,7 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
     tentativeTheta *= 1.1;
   double dualCheck = fabs(dualIn_);
   // but make a bit more pessimistic
-  dualCheck = CoinMax(dualCheck - 100.0 * dualTolerance_, 0.99 * dualCheck);
+  dualCheck = std::max(dualCheck - 100.0 * dualTolerance_, 0.99 * dualCheck);
 
   int iIndex;
   int pivotOne = -1;
@@ -2076,7 +2076,7 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
       //assert (oldValue >= -10.0*tolerance);
       if (possible) {
 #if CLP_MOVEMENT==2
-	largestAlpha = CoinMax(largestAlpha,alpha);
+	largestAlpha = std::max(largestAlpha,alpha);
 #endif
         value = oldValue - upperTheta * alpha;
 #ifdef CLP_USER_DRIVEN1
@@ -2411,14 +2411,14 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
     else
       distance = upperOut_ - valueOut_;
     if (distance - minimumTheta * fabs(alpha_) < -primalTolerance_)
-      minimumTheta = CoinMax(0.0, (distance + 0.5 * primalTolerance_) / fabs(alpha_));
+      minimumTheta = std::max(0.0, (distance + 0.5 * primalTolerance_) / fabs(alpha_));
     // will we need to increase tolerance
     //#define CLP_DEBUG
     double largestInfeasibility = primalTolerance_;
     if (theta_ < minimumTheta && (specialOptions_ & 4) == 0 && !valuesPass) {
       theta_ = minimumTheta;
       for (iIndex = 0; iIndex < numberRemaining - numberRemaining; iIndex++) {
-        largestInfeasibility = CoinMax(largestInfeasibility,
+        largestInfeasibility = std::max(largestInfeasibility,
           -(rhs[iIndex] - spare[iIndex] * theta_));
       }
 //#define CLP_DEBUG
@@ -2428,7 +2428,7 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
           primalTolerance_, largestInfeasibility);
 #endif
       //#undef CLP_DEBUG
-      primalTolerance_ = CoinMax(primalTolerance_, largestInfeasibility);
+      primalTolerance_ = std::max(primalTolerance_, largestInfeasibility);
     }
     // Need to look at all in some cases
     if (theta_ > tentativeTheta) {
@@ -2474,16 +2474,16 @@ void ClpSimplexPrimal::primalRow(CoinIndexedVector *rowArray,
   }
 
 #if 1
-  double theta1 = CoinMax(fabs(theta_), 1.0e-12);
+  double theta1 = std::max(fabs(theta_), 1.0e-12);
   double theta2 = numberIterations_ * nonLinearCost_->averageTheta();
   // Set average theta
   if (averageTheta!=0.987e40)
   nonLinearCost_->setAverageTheta((theta1 + theta2) / (static_cast< double >(numberIterations_ + 1)));
 #else
-  double theta1 = CoinMax(theta_, 1.0e-12) +
+  double theta1 = std::max(theta_, 1.0e-12) +
     numberIterations_ * nonLinearCost_->averageTheta();
   theta1 /= (static_cast< double >(numberIterations_ + 1));
-  theta1 = CoinMax(theta1,1.0e-2);
+  theta1 = std::max(theta1,1.0e-2);
   // Set average theta
   nonLinearCost_->setAverageTheta(theta1);
 #endif
@@ -2769,12 +2769,12 @@ void ClpSimplexPrimal::perturb(int type)
   double largestPositive;
   matrix_->rangeOfElements(smallestNegative, largestNegative,
     smallestPositive, largestPositive);
-  smallestPositive = CoinMin(fabs(smallestNegative), smallestPositive);
-  largestPositive = CoinMax(fabs(largestNegative), largestPositive);
+  smallestPositive = std::min(fabs(smallestNegative), smallestPositive);
+  largestPositive = std::max(fabs(largestNegative), largestPositive);
   double elementRatio = largestPositive / smallestPositive;
   if (!numberIterations_ && perturbation_ == 50) {
     // See if we need to perturb
-    int numberTotal = CoinMax(numberRows_, numberColumns_);
+    int numberTotal = std::max(numberRows_, numberColumns_);
     double *sort = new double[numberTotal];
     //int nFixed = 0;
     for (i = 0; i < numberRows_; i++) {
@@ -2872,15 +2872,15 @@ void ClpSimplexPrimal::perturb(int type)
           upperValue = fabs(upper_[i]);
         else
           upperValue = 0.0;
-        double value = CoinMax(fabs(lowerValue), fabs(upperValue));
-        value = CoinMin(value, upper_[i] - lower_[i]);
+        double value = std::max(fabs(lowerValue), fabs(upperValue));
+        value = std::min(value, upper_[i] - lower_[i]);
 #if 1
         if (value) {
           perturbation += value;
           numberNonZero++;
         }
 #else
-        perturbation = CoinMax(perturbation, value);
+        perturbation = std::max(perturbation, value);
 #endif
       }
     }
@@ -2925,7 +2925,7 @@ void ClpSimplexPrimal::perturb(int type)
     maximumFraction *= 0.1;
   }
   if (savePerturbation == 51) {
-    perturbation = CoinMin(0.1, perturbation);
+    perturbation = std::min(0.1, perturbation);
     maximumFraction *= 0.1;
   }
   if (number != numberRows_)
@@ -2959,11 +2959,11 @@ void ClpSimplexPrimal::perturb(int type)
         if (upperValue > lowerValue + tolerance) {
           double solutionValue = solution_[iSequence];
           double difference = upperValue - lowerValue;
-          difference = CoinMin(difference, perturbation);
-          difference = CoinMin(difference, fabs(solutionValue) + 1.0);
+          difference = std::min(difference, perturbation);
+          difference = std::min(difference, fabs(solutionValue) + 1.0);
           double value = maximumFraction * (difference + bias);
-          value = CoinMin(value, 0.1);
-          value = CoinMax(value, primalTolerance_);
+          value = std::min(value, 0.1);
+          value = std::max(value, primalTolerance_);
 #ifndef SAVE_PERT
           value *= randomNumberGenerator_.randomDouble();
 #else
@@ -2997,11 +2997,11 @@ void ClpSimplexPrimal::perturb(int type)
               printf("col %d lower from %g to %g, upper from %g to %g\n",
                 iSequence, lowerValue, lower_[iSequence], upperValue, upper_[iSequence]);
             if (solutionValue) {
-              largest = CoinMax(largest, value);
+              largest = std::max(largest, value);
               if (value > (fabs(solutionValue) + 1.0) * largestPerCent)
                 largestPerCent = value / (fabs(solutionValue) + 1.0);
             } else {
-              largestZero = CoinMax(largestZero, value);
+              largestZero = std::max(largestZero, value);
             }
           }
         }
@@ -3014,7 +3014,7 @@ void ClpSimplexPrimal::perturb(int type)
       double lowerValue = lower_[i], upperValue = upper_[i];
       if (upperValue > lowerValue + primalTolerance_) {
         double value = perturbation * maximumFraction;
-        value = CoinMin(value, 0.1);
+        value = std::min(value, 0.1);
 #ifndef SAVE_PERT
         value *= randomNumberGenerator_.randomDouble();
 #else
@@ -3026,7 +3026,7 @@ void ClpSimplexPrimal::perturb(int type)
             value = 0.0;
         }
         if (value) {
-          double valueL = value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+          double valueL = value * (std::max(1.0e-2, 1.0e-5 * fabs(lowerValue)));
           // get in range
           if (valueL <= tolerance) {
             valueL *= 10.0;
@@ -3039,7 +3039,7 @@ void ClpSimplexPrimal::perturb(int type)
           }
           if (lowerValue > -1.0e20 && lowerValue)
             lowerValue -= valueL;
-          double valueU = value * (CoinMax(1.0e-2, 1.0e-5 * fabs(upperValue)));
+          double valueU = value * (std::max(1.0e-2, 1.0e-5 * fabs(upperValue)));
           // get in range
           if (valueU <= tolerance) {
             valueU *= 10.0;
@@ -3055,13 +3055,13 @@ void ClpSimplexPrimal::perturb(int type)
         }
         if (lowerValue != lower_[i]) {
           double difference = fabs(lowerValue - lower_[i]);
-          largest = CoinMax(largest, difference);
+          largest = std::max(largest, difference);
           if (difference > fabs(lower_[i]) * largestPerCent)
             largestPerCent = fabs(difference / lower_[i]);
         }
         if (upperValue != upper_[i]) {
           double difference = fabs(upperValue - upper_[i]);
-          largest = CoinMax(largest, difference);
+          largest = std::max(largest, difference);
           if (difference > fabs(upper_[i]) * largestPerCent)
             largestPerCent = fabs(difference / upper_[i]);
         }
@@ -3078,18 +3078,18 @@ void ClpSimplexPrimal::perturb(int type)
     for (; i < numberColumns_ + numberRows_; i++) {
       double lowerValue = lower_[i], upperValue = upper_[i];
       double value = perturbation * maximumFraction;
-      value = CoinMin(value, 0.1);
+      value = std::min(value, 0.1);
       value *= randomNumberGenerator_.randomDouble();
       if (rowLower[i] != rowUpper[i] && upperValue > lowerValue + tolerance) {
         if (savePerturbation != 50) {
           if (fabs(value) <= primalTolerance_)
             value = 0.0;
           if (lowerValue > -1.0e20 && lowerValue)
-            lowerValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+            lowerValue -= value * (std::max(1.0e-2, 1.0e-5 * fabs(lowerValue)));
           if (upperValue < 1.0e20 && upperValue)
-            upperValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(upperValue)));
+            upperValue += value * (std::max(1.0e-2, 1.0e-5 * fabs(upperValue)));
         } else if (value) {
-          double valueL = value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+          double valueL = value * (std::max(1.0e-2, 1.0e-5 * fabs(lowerValue)));
           // get in range
           if (valueL <= tolerance) {
             valueL *= 10.0;
@@ -3102,7 +3102,7 @@ void ClpSimplexPrimal::perturb(int type)
           }
           if (lowerValue > -1.0e20 && lowerValue)
             lowerValue -= valueL;
-          double valueU = value * (CoinMax(1.0e-2, 1.0e-5 * fabs(upperValue)));
+          double valueU = value * (std::max(1.0e-2, 1.0e-5 * fabs(upperValue)));
           // get in range
           if (valueU <= tolerance) {
             valueU *= 10.0;
@@ -3117,22 +3117,22 @@ void ClpSimplexPrimal::perturb(int type)
             upperValue += valueU;
         }
       } else if (upperValue > 0.0) {
-        //upperValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
-        // lowerValue -= value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+        //upperValue -= value * (std::max(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+        // lowerValue -= value * (std::max(1.0e-2, 1.0e-5 * fabs(lowerValue)));
       } else if (upperValue < 0.0) {
-        // upperValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
-        // lowerValue += value * (CoinMax(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+        // upperValue += value * (std::max(1.0e-2, 1.0e-5 * fabs(lowerValue)));
+        // lowerValue += value * (std::max(1.0e-2, 1.0e-5 * fabs(lowerValue)));
       } else {
       }
       if (lowerValue != lower_[i]) {
         double difference = fabs(lowerValue - lower_[i]);
-        largest = CoinMax(largest, difference);
+        largest = std::max(largest, difference);
         if (difference > fabs(lower_[i]) * largestPerCent)
           largestPerCent = fabs(difference / lower_[i]);
       }
       if (upperValue != upper_[i]) {
         double difference = fabs(upperValue - upper_[i]);
-        largest = CoinMax(largest, difference);
+        largest = std::max(largest, difference);
         if (difference > fabs(upper_[i]) * largestPerCent)
           largestPerCent = fabs(difference / upper_[i]);
       }
@@ -3205,7 +3205,7 @@ int ClpSimplexPrimal::unflag()
   int numberFlagged = 0;
   // we can't really trust infeasibilities if there is dual error
   // allow tolerance bigger than standard to check on duals
-  double relaxedToleranceD = dualTolerance_ + CoinMin(1.0e-2, 10.0 * largestDualError_);
+  double relaxedToleranceD = dualTolerance_ + std::min(1.0e-2, 10.0 * largestDualError_);
   for (i = 0; i < number; i++) {
     if (flagged(i)) {
       clearFlagged(i);
@@ -3338,7 +3338,7 @@ int ClpSimplexPrimal::pivotResult(int ifValuesPass)
                               int iPivot = pivotVariable_[iRow];
                               djval -= alpha * cost_[iPivot];
                          }
-                         double comp = 1.0e-8 + 1.0e-7 * (CoinMax(fabs(dj_[iSeq]), fabs(djval)));
+                         double comp = 1.0e-8 + 1.0e-7 * (std::max(fabs(dj_[iSeq]), fabs(djval)));
                          if (fabs(djval - dj_[iSeq]) > comp)
                               printf("Bad dj %g for %d - true is %g\n",
                                      dj_[iSeq], iSeq, djval);
@@ -3432,7 +3432,7 @@ int ClpSimplexPrimal::pivotResult(int ifValuesPass)
           }
 #endif
     if (!ifValuesPass && solveType_ == 1 && (saveDj * dualIn_ < test1 || fabs(saveDj - dualIn_) > checkValue * (1.0 + fabs(saveDj)) || fabs(dualIn_) < test2)) {
-      if (!(saveDj * dualIn_ > 0.0 && CoinMin(fabs(saveDj), fabs(dualIn_)) > 1.0e5)) {
+      if (!(saveDj * dualIn_ > 0.0 && std::min(fabs(saveDj), fabs(dualIn_)) > 1.0e5)) {
         char x = isColumn(sequenceIn_) ? 'C' : 'R';
         handler_->message(CLP_PRIMAL_DJ, messages_)
           << x << sequenceWithin(sequenceIn_)
@@ -3577,12 +3577,12 @@ int ClpSimplexPrimal::pivotResult(int ifValuesPass)
       } else if (updateStatus == 2) {
         // major error
         // better to have small tolerance even if slower
-        factorization_->zeroTolerance(CoinMin(factorization_->zeroTolerance(), 1.0e-15));
+        factorization_->zeroTolerance(std::min(factorization_->zeroTolerance(), 1.0e-15));
         int maxFactor = factorization_->maximumPivots();
         if (maxFactor > 10) {
           if (forceFactorization_ < 0)
             forceFactorization_ = maxFactor;
-          forceFactorization_ = CoinMax(1, (forceFactorization_ >> 1));
+          forceFactorization_ = std::max(1, (forceFactorization_ >> 1));
         }
         // later we may need to unwind more e.g. fake bounds
         if (lastGoodIteration_ != numberIterations_) {
@@ -3890,12 +3890,12 @@ int ClpSimplexPrimal::nextSuperBasic(int superBasicType,
 #define TRY_VALUES_PASS 0
 #if TRY_VALUES_PASS == 0
                 // choose ones near bounds first
-                work[number] = -CoinMin(solution_[iColumn] - lower_[iColumn],
+                work[number] = -std::min(solution_[iColumn] - lower_[iColumn],
 				       0.8*(upper_[iColumn] -
 					    solution_[iColumn]));
 #elif TRY_VALUES_PASS == 1
                 // choose ones near bounds last
-                work[number] = CoinMin(solution_[iColumn] - lower_[iColumn],
+                work[number] = std::min(solution_[iColumn] - lower_[iColumn],
 				       0.8*(upper_[iColumn] -
 					    solution_[iColumn]));
 #elif TRY_VALUES_PASS == 2
@@ -4224,7 +4224,7 @@ int ClpSimplexPrimal::lexSolve()
           lastObjectiveValue = objectiveValue() * optimizationDirection_;
           // sort
           CoinSort_2(weight, weight + numberColumns_, whichColumns);
-          numberSort = CoinMin(numberColumns_ - numberFixed, numberBasic + numberSprintColumns);
+          numberSort = std::min(numberColumns_ - numberFixed, numberBasic + numberSprintColumns);
           // Sort to make consistent ?
           std::sort(whichColumns, whichColumns + numberSort);
           saveModel = new ClpSimplex(this, numberSort, whichColumns);

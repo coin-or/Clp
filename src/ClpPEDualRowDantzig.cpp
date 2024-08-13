@@ -226,7 +226,7 @@ int ClpPEDualRowDantzig::pivotRow()
     double value = model_->solution(iSequence);
     double lower = model_->lower(iSequence);
     double upper = model_->upper(iSequence);
-    double infeas = CoinMax(value - upper, lower - value);
+    double infeas = std::max(value - upper, lower - value);
     double largestMax = std::max(psi_ * largest, largestComp);
     if (infeas > tolerance) {
 #ifdef CLP_DUAL_COLUMN_MULTIPLIER

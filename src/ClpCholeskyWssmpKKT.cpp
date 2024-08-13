@@ -315,7 +315,7 @@ int ClpCholeskyWssmpKKT::factorize(const double *diagonal, int *rowsDropped)
       double value = diagonal[iColumn];
       if (fabs(value) > 1.0e-100) {
         value = 1.0 / value;
-        largest = CoinMax(largest, fabs(value));
+        largest = std::max(largest, fabs(value));
         sparseFactor_[numberElements] = -value;
         choleskyRow_[numberElements++] = iColumn;
         CoinBigIndex start = columnStart[iColumn];
@@ -323,7 +323,7 @@ int ClpCholeskyWssmpKKT::factorize(const double *diagonal, int *rowsDropped)
         for (CoinBigIndex j = start; j < end; j++) {
           choleskyRow_[numberElements] = row[j] + numberTotal;
           sparseFactor_[numberElements++] = element[j];
-          largest = CoinMax(largest, fabs(element[j]));
+          largest = std::max(largest, fabs(element[j]));
         }
       } else {
         sparseFactor_[numberElements] = -1.0e100;
@@ -353,14 +353,14 @@ int ClpCholeskyWssmpKKT::factorize(const double *diagonal, int *rowsDropped)
             value += quadraticElement[j];
           }
         }
-        largest = CoinMax(largest, fabs(value));
+        largest = std::max(largest, fabs(value));
         sparseFactor_[savePosition] = -value;
         CoinBigIndex start = columnStart[iColumn];
         CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
         for (CoinBigIndex j = start; j < end; j++) {
           choleskyRow_[numberElements] = row[j] + numberTotal;
           sparseFactor_[numberElements++] = element[j];
-          largest = CoinMax(largest, fabs(element[j]));
+          largest = std::max(largest, fabs(element[j]));
         }
       } else {
         value = 1.0e100;
@@ -377,7 +377,7 @@ int ClpCholeskyWssmpKKT::factorize(const double *diagonal, int *rowsDropped)
     double value = diagonal[iColumn];
     if (fabs(value) > 1.0e-100) {
       value = 1.0 / value;
-      largest = CoinMax(largest, fabs(value));
+      largest = std::max(largest, fabs(value));
     } else {
       value = 1.0e100;
     }
@@ -406,8 +406,8 @@ int ClpCholeskyWssmpKKT::factorize(const double *diagonal, int *rowsDropped)
   integerParameters_[30] = 1;
   doubleParameters_[20] = 1.0e100;
   double largest2 = largest * 1.0e-20;
-  largest = CoinMin(largest2, 1.0e-11);
-  doubleParameters_[10] = CoinMax(1.0e-20, largest);
+  largest = std::min(largest2, 1.0e-11);
+  doubleParameters_[10] = std::max(1.0e-20, largest);
   if (doubleParameters_[10] > 1.0e-3)
     integerParameters_[9] = 1;
   else

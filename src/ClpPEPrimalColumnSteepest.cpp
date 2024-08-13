@@ -116,7 +116,7 @@ int ClpPEPrimalColumnSteepest::pivotColumn(CoinIndexedVector *updates,
   double tolerance = model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   int pivotRow = model_->pivotRow();
@@ -398,11 +398,11 @@ int ClpPEPrimalColumnSteepest::pivotColumn(CoinIndexedVector *updates,
     // Still in devex mode
     // Go to steepest if lot of iterations?
     if (ratio < 5.0) {
-      numberWanted = CoinMax(2000, number / 10);
-      numberWanted = CoinMax(numberWanted, numberColumns / 20);
+      numberWanted = std::max(2000, number / 10);
+      numberWanted = std::max(numberWanted, numberColumns / 20);
     } else if (ratio < 7.0) {
-      numberWanted = CoinMax(2000, number / 5);
-      numberWanted = CoinMax(numberWanted, numberColumns / 10);
+      numberWanted = std::max(2000, number / 5);
+      numberWanted = std::max(numberWanted, numberColumns / 10);
     } else {
       // we can zero out
       updates->clear();
@@ -426,23 +426,23 @@ int ClpPEPrimalColumnSteepest::pivotColumn(CoinIndexedVector *updates,
     if (switchType < 2) {
       numberWanted = number + 1;
     } else if (switchType == 2) {
-      numberWanted = CoinMax(2000, number / 8);
+      numberWanted = std::max(2000, number / 8);
     } else {
       if (ratio < 1.0) {
-        numberWanted = CoinMax(2000, number / 20);
+        numberWanted = std::max(2000, number / 20);
       } else if (ratio < 5.0) {
-        numberWanted = CoinMax(2000, number / 10);
-        numberWanted = CoinMax(numberWanted, numberColumns / 40);
+        numberWanted = std::max(2000, number / 10);
+        numberWanted = std::max(numberWanted, numberColumns / 40);
       } else if (ratio < 10.0) {
-        numberWanted = CoinMax(2000, number / 8);
-        numberWanted = CoinMax(numberWanted, numberColumns / 20);
+        numberWanted = std::max(2000, number / 8);
+        numberWanted = std::max(numberWanted, numberColumns / 20);
       } else {
         ratio = number * (ratio / 80.0);
         if (ratio > number) {
           numberWanted = number + 1;
         } else {
-          numberWanted = CoinMax(2000, static_cast< int >(ratio));
-          numberWanted = CoinMax(numberWanted, numberColumns / 10);
+          numberWanted = std::max(2000, static_cast< int >(ratio));
+          numberWanted = std::max(numberWanted, numberColumns / 10);
         }
       }
     }
@@ -478,7 +478,7 @@ int ClpPEPrimalColumnSteepest::pivotColumn(CoinIndexedVector *updates,
     if (model_->largestDualError() > checkTolerance)
       tolerance *= model_->largestDualError() / checkTolerance;
     // But cap
-    tolerance = CoinMin(1000.0, tolerance);
+    tolerance = std::min(1000.0, tolerance);
   }
 
   // stop last one coming immediately
@@ -488,7 +488,7 @@ int ClpPEPrimalColumnSteepest::pivotColumn(CoinIndexedVector *updates,
     infeas[sequenceOut] = 0.0;
   }
   if (model_->factorization()->pivots() && model_->numberPrimalInfeasibilities())
-    tolerance = CoinMax(tolerance, 1.0e-10 * model_->infeasibilityCost());
+    tolerance = std::max(tolerance, 1.0e-10 * model_->infeasibilityCost());
   tolerance *= tolerance; // as we are using squares
 
   // only check the compatible variables when the bidimensional factor is less than 1

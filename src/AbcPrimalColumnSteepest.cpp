@@ -186,7 +186,7 @@ int AbcPrimalColumnSteepest::pivotColumn(CoinPartitionedVector *updates,
   double tolerance = model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   int pivotRow = model_->pivotRow();
@@ -243,19 +243,19 @@ int AbcPrimalColumnSteepest::pivotColumn(CoinPartitionedVector *updates,
     double ratio = static_cast< double >(sizeFactorization_) / static_cast< double >(numberRows);
     // Number of dual infeasibilities at last invert
     int numberDual = model_->numberDualInfeasibilities();
-    int numberLook = CoinMin(numberDual, numberColumns / 10);
+    int numberLook = std::min(numberDual, numberColumns / 10);
     if (ratio < 1.0) {
       numberWanted = 100;
       numberLook /= 20;
-      numberWanted = CoinMax(numberWanted, numberLook);
+      numberWanted = std::max(numberWanted, numberLook);
     } else if (ratio < 3.0) {
       numberWanted = 500;
       numberLook /= 15;
-      numberWanted = CoinMax(numberWanted, numberLook);
+      numberWanted = std::max(numberWanted, numberLook);
     } else if (ratio < 4.0 || mode_ == 5) {
       numberWanted = 1000;
       numberLook /= 10;
-      numberWanted = CoinMax(numberWanted, numberLook);
+      numberWanted = std::max(numberWanted, numberLook);
     } else if (mode_ != 5) {
       switchType = 4;
       // initialize
@@ -384,12 +384,12 @@ int AbcPrimalColumnSteepest::pivotColumn(CoinPartitionedVector *updates,
     //double ratio = static_cast<double> sizeFactorization_/static_cast<double> numberColumns;
     double ratio = static_cast< double >(sizeFactorization_) / static_cast< double >(numberRows);
     if (ratio < 1.0) {
-      numberWanted = CoinMax(100, number / 200);
+      numberWanted = std::max(100, number / 200);
     } else if (ratio < 2.0 - 1.0) {
-      numberWanted = CoinMax(500, number / 40);
+      numberWanted = std::max(500, number / 40);
     } else if (ratio < 4.0 - 3.0 || mode_ == 5) {
-      numberWanted = CoinMax(2000, number / 10);
-      numberWanted = CoinMax(numberWanted, numberColumns / 30);
+      numberWanted = std::max(2000, number / 10);
+      numberWanted = std::max(numberWanted, numberColumns / 30);
     } else if (mode_ != 5) {
       switchType = 4;
       // initialize
@@ -410,11 +410,11 @@ int AbcPrimalColumnSteepest::pivotColumn(CoinPartitionedVector *updates,
     // Still in devex mode
     // Go to steepest if lot of iterations?
     if (ratio < 5.0) {
-      numberWanted = CoinMax(2000, number / 10);
-      numberWanted = CoinMax(numberWanted, numberColumns / 20);
+      numberWanted = std::max(2000, number / 10);
+      numberWanted = std::max(numberWanted, numberColumns / 20);
     } else if (ratio < 7.0) {
-      numberWanted = CoinMax(2000, number / 5);
-      numberWanted = CoinMax(numberWanted, numberColumns / 10);
+      numberWanted = std::max(2000, number / 5);
+      numberWanted = std::max(numberWanted, numberColumns / 10);
     } else {
       // we can zero out
       updates->clear();
@@ -438,23 +438,23 @@ int AbcPrimalColumnSteepest::pivotColumn(CoinPartitionedVector *updates,
     if (switchType < 2) {
       numberWanted = number + 1;
     } else if (switchType == 2) {
-      numberWanted = CoinMax(2000, number / 8);
+      numberWanted = std::max(2000, number / 8);
     } else {
       if (ratio < 1.0) {
-        numberWanted = CoinMax(2000, number / 20);
+        numberWanted = std::max(2000, number / 20);
       } else if (ratio < 5.0) {
-        numberWanted = CoinMax(2000, number / 10);
-        numberWanted = CoinMax(numberWanted, numberColumns / 40);
+        numberWanted = std::max(2000, number / 10);
+        numberWanted = std::max(numberWanted, numberColumns / 40);
       } else if (ratio < 10.0) {
-        numberWanted = CoinMax(2000, number / 8);
-        numberWanted = CoinMax(numberWanted, numberColumns / 20);
+        numberWanted = std::max(2000, number / 8);
+        numberWanted = std::max(numberWanted, numberColumns / 20);
       } else {
         ratio = number * (ratio / 80.0);
         if (ratio > number) {
           numberWanted = number + 1;
         } else {
-          numberWanted = CoinMax(2000, static_cast< int >(ratio));
-          numberWanted = CoinMax(numberWanted, numberColumns / 10);
+          numberWanted = std::max(2000, static_cast< int >(ratio));
+          numberWanted = std::max(numberWanted, numberColumns / 10);
         }
       }
     }
@@ -475,7 +475,7 @@ int AbcPrimalColumnSteepest::pivotColumn(CoinPartitionedVector *updates,
     if (model_->largestDualError() > checkTolerance)
       tolerance *= model_->largestDualError() / checkTolerance;
     // But cap
-    tolerance = CoinMin(1000.0, tolerance);
+    tolerance = std::min(1000.0, tolerance);
   }
 #ifdef CLP_DEBUG
   if (model_->numberDualInfeasibilities() == 1)
@@ -490,7 +490,7 @@ int AbcPrimalColumnSteepest::pivotColumn(CoinPartitionedVector *updates,
     infeas[sequenceOut] = 0.0;
   }
   if (model_->factorization()->pivots() && model_->numberPrimalInfeasibilities())
-    tolerance = CoinMax(tolerance, 1.0e-15 * model_->infeasibilityCost());
+    tolerance = std::max(tolerance, 1.0e-15 * model_->infeasibilityCost());
   tolerance *= tolerance; // as we are using squares
 
   int iPass;
@@ -718,7 +718,7 @@ void AbcPrimalColumnSteepest::justDjs(CoinIndexedVector *updates,
   double tolerance = model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   int pivotRow = model_->pivotRow();
@@ -842,7 +842,7 @@ void AbcPrimalColumnSteepest::djsAndDevex(CoinIndexedVector *updates,
   double tolerance = model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   // for weights update we use pivotSequence
@@ -903,7 +903,7 @@ void AbcPrimalColumnSteepest::djsAndDevex(CoinIndexedVector *updates,
       value3 = pivot * pivot * devex_;
       if (reference(iSequence))
         value3 += 1.0;
-      weight[iSequence] = CoinMax(0.99 * thisWeight, value3);
+      weight[iSequence] = std::max(0.99 * thisWeight, value3);
       if (fabs(value) > FREE_ACCEPT * tolerance) {
         // we are going to bias towards free (but only if reasonable)
         value *= FREE_BIAS;
@@ -923,7 +923,7 @@ void AbcPrimalColumnSteepest::djsAndDevex(CoinIndexedVector *updates,
       value3 = pivot * pivot * devex_;
       if (reference(iSequence))
         value3 += 1.0;
-      weight[iSequence] = CoinMax(0.99 * thisWeight, value3);
+      weight[iSequence] = std::max(0.99 * thisWeight, value3);
       if (value > tolerance) {
         // store square in list
 #ifdef CLP_PRIMAL_SLACK_MULTIPLIER
@@ -946,7 +946,7 @@ void AbcPrimalColumnSteepest::djsAndDevex(CoinIndexedVector *updates,
       value3 = pivot * pivot * devex_;
       if (reference(iSequence))
         value3 += 1.0;
-      weight[iSequence] = CoinMax(0.99 * thisWeight, value3);
+      weight[iSequence] = std::max(0.99 * thisWeight, value3);
       if (value < -tolerance) {
         // store square in list
 #ifdef CLP_PRIMAL_SLACK_MULTIPLIER
@@ -1001,7 +1001,7 @@ void AbcPrimalColumnSteepest::djsAndDevex(CoinIndexedVector *updates,
       value3 = pivot * pivot * devex_;
       if (reference(iSequence))
         value3 += 1.0;
-      weight[iSequence] = CoinMax(0.99 * thisWeight, value3);
+      weight[iSequence] = std::max(0.99 * thisWeight, value3);
       if (fabs(value) > FREE_ACCEPT * tolerance) {
         // we are going to bias towards free (but only if reasonable)
         value *= FREE_BIAS;
@@ -1021,7 +1021,7 @@ void AbcPrimalColumnSteepest::djsAndDevex(CoinIndexedVector *updates,
       value3 = pivot * pivot * devex_;
       if (reference(iSequence))
         value3 += 1.0;
-      weight[iSequence] = CoinMax(0.99 * thisWeight, value3);
+      weight[iSequence] = std::max(0.99 * thisWeight, value3);
       if (value > tolerance) {
         // store square in list
         if (infeas[iSequence])
@@ -1039,7 +1039,7 @@ void AbcPrimalColumnSteepest::djsAndDevex(CoinIndexedVector *updates,
       value3 = pivot * pivot * devex_;
       if (reference(iSequence))
         value3 += 1.0;
-      weight[iSequence] = CoinMax(0.99 * thisWeight, value3);
+      weight[iSequence] = std::max(0.99 * thisWeight, value3);
       if (value < -tolerance) {
         // store square in list
         if (infeas[iSequence])
@@ -1087,7 +1087,7 @@ void AbcPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector *updates,
   double tolerance = model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   int pivotRow = model_->pivotRow();
@@ -1243,7 +1243,7 @@ void AbcPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector *updates,
       double value = pivot * pivot * devex_;
       if (reference(iSequence + numberColumns))
         value += 1.0;
-      weight[iSequence] = CoinMax(0.99 * thisWeight, value);
+      weight[iSequence] = std::max(0.99 * thisWeight, value);
     }
 
     // columns
@@ -1261,7 +1261,7 @@ void AbcPrimalColumnSteepest::djsAndDevex2(CoinIndexedVector *updates,
       double value = pivot * pivot * devex_;
       if (reference(iSequence))
         value += 1.0;
-      weight[iSequence] = CoinMax(0.99 * thisWeight, value);
+      weight[iSequence] = std::max(0.99 * thisWeight, value);
     }
     // restore outgoing weight
     if (sequenceOut >= 0)
@@ -1295,7 +1295,7 @@ void AbcPrimalColumnSteepest::justDevex(CoinIndexedVector *updates,
   double tolerance = model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   int pivotRow = model_->pivotRow();
@@ -1343,7 +1343,7 @@ void AbcPrimalColumnSteepest::justDevex(CoinIndexedVector *updates,
     double value = pivot * pivot * devex_;
     if (reference(iSequence))
       value += 1.0;
-    weight[iSequence] = CoinMax(0.99 * thisWeight, value);
+    weight[iSequence] = std::max(0.99 * thisWeight, value);
   }
 
   // columns
@@ -1362,7 +1362,7 @@ void AbcPrimalColumnSteepest::justDevex(CoinIndexedVector *updates,
     double value = pivot * pivot * devex_;
     if (reference(iSequence))
       value += 1.0;
-    weight[iSequence] = CoinMax(0.99 * thisWeight, value);
+    weight[iSequence] = std::max(0.99 * thisWeight, value);
   }
   // restore outgoing weight
   if (sequenceOut >= 0)
@@ -1739,7 +1739,7 @@ void AbcPrimalColumnSteepest::updateWeights(CoinIndexedVector *input)
         devex_ += work[iRow] * work[iRow];
         newWork[iRow] = -2.0 * work[iRow];
       }
-      newWork[pivotRow] = -2.0 * CoinMax(devex_, 0.0);
+      newWork[pivotRow] = -2.0 * std::max(devex_, 0.0);
       devex_ += ADD_ONE;
       weights_[sequenceOut] = 1.0 + ADD_ONE;
       CoinMemcpyN(which, number, newWhich);
@@ -1757,7 +1757,7 @@ void AbcPrimalColumnSteepest::updateWeights(CoinIndexedVector *input)
         }
         if (!newWork[pivotRow] && devex_ > 0.0)
           newWhich[newNumber++] = pivotRow; // add if not already in
-        newWork[pivotRow] = -2.0 * CoinMax(devex_, 0.0);
+        newWork[pivotRow] = -2.0 * std::max(devex_, 0.0);
       } else {
         for (i = 0; i < number; i++) {
           int iRow = which[i];
@@ -1801,7 +1801,7 @@ void AbcPrimalColumnSteepest::updateWeights(CoinIndexedVector *input)
   if ((model_->messageHandler()->logLevel() & 32))
     printf("old weight %g, new %g\n", oldDevex, devex_);
 #endif
-  double check = CoinMax(devex_, oldDevex) + 0.1;
+  double check = std::max(devex_, oldDevex) + 0.1;
   weights_[sequenceIn] = devex_;
   double testValue = 0.1;
   if (mode_ == 4 && numberSwitched_ == 1)
@@ -1870,7 +1870,7 @@ void AbcPrimalColumnSteepest::checkAccuracy(int sequence,
   }
 
   double oldDevex = weights_[sequence];
-  double check = CoinMax(devex, oldDevex);
+  double check = std::max(devex, oldDevex);
   ;
   if (fabs(devex - oldDevex) > relativeTolerance * check) {
     COIN_DETAIL_PRINT(printf("check %d old weight %g, new %g\n", sequence, oldDevex, devex));
@@ -1963,7 +1963,7 @@ bool AbcPrimalColumnSteepest::looksOptimal() const
   double tolerance = model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   if (model_->numberIterations() < model_->lastBadIteration() + 200) {
@@ -1974,7 +1974,7 @@ bool AbcPrimalColumnSteepest::looksOptimal() const
     if (model_->largestDualError() > checkTolerance)
       tolerance *= model_->largestDualError() / checkTolerance;
     // But cap
-    tolerance = CoinMin(1000.0, tolerance);
+    tolerance = std::min(1000.0, tolerance);
   }
   int number = model_->numberRows() + model_->numberColumns();
   int iSequence;
@@ -2019,7 +2019,7 @@ int AbcPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
   double tolerance = model_->currentDualTolerance();
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   if (model_->numberIterations() < model_->lastBadIteration() + 200) {
@@ -2030,10 +2030,10 @@ int AbcPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
     if (model_->largestDualError() > checkTolerance)
       tolerance *= model_->largestDualError() / checkTolerance;
     // But cap
-    tolerance = CoinMin(1000.0, tolerance);
+    tolerance = std::min(1000.0, tolerance);
   }
   if (model_->factorization()->pivots() && model_->numberPrimalInfeasibilities())
-    tolerance = CoinMax(tolerance, 1.0e-15 * model_->infeasibilityCost());
+    tolerance = std::max(tolerance, 1.0e-15 * model_->infeasibilityCost());
   // So partial pricing can use
   model_->setCurrentDualTolerance(tolerance);
   model_->factorization()->updateColumnTranspose(*updates);
@@ -2122,7 +2122,7 @@ int AbcPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
   startC[3] = randomC;
   reducedCost = model_->djRegion();
   int sequenceOut = model_->sequenceOut();
-  int chunk = CoinMin(1024, (numberColumns + nSlacks) / 32);
+  int chunk = std::min(1024, (numberColumns + nSlacks) / 32);
 #ifdef COIN_DETAIL
   if (model_->numberIterations() % 1000 == 0 && model_->logLevel() > 1) {
     printf("%d wanted, nSlacks %d, chunk %d\n", numberWanted, nSlacks, chunk);
@@ -2132,7 +2132,7 @@ int AbcPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
     printf("\n");
   }
 #endif
-  chunk = CoinMax(chunk, 256);
+  chunk = std::max(chunk, 256);
   bool finishedR = false, finishedC = false;
   bool doingR = randomR > randomC;
   //doingR=false;
@@ -2143,7 +2143,7 @@ int AbcPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
     if (doingR) {
       int saveSequence = bestSequence;
       int start = startR[iPassR];
-      int end = CoinMin(startR[iPassR + 1], start + chunk / 2);
+      int end = std::min(startR[iPassR + 1], start + chunk / 2);
       int jSequence;
       for (jSequence = start; jSequence < end; jSequence++) {
         int iSequence = which[jSequence];
@@ -2245,7 +2245,7 @@ int AbcPrimalColumnSteepest::partialPricing(CoinIndexedVector *updates,
       // If we put this idea back then each function needs to update endFraction **
 #if 0
 	    double dchunk = (static_cast<double> chunk) / (static_cast<double> numberColumns);
-	    double end = CoinMin(startC[iPassC+1], start + dchunk);;
+	    double end = std::min(startC[iPassC+1], start + dchunk);;
 #else
       double end = startC[iPassC + 1]; // force end
 #endif

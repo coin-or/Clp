@@ -304,7 +304,7 @@ int ClpCholeskyTaucs::factorize(const double *diagonal, int *rowsDropped)
   //check sizes
   double largest2 = maximumAbsElement(sparseFactorT_, sizeFactorT_);
   largest2 *= 1.0e-19;
-  largest = CoinMin(largest2, 1.0e-11);
+  largest = std::min(largest2, 1.0e-11);
   int numberDroppedBefore = 0;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int dropped = rowsDropped_[iRow];

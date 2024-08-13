@@ -571,7 +571,7 @@ CoinAbcTypeFactorization::factorSparse()
 
             minimumValue = fabs(minimumValue) * pivotTolerance;
             if (count == 1)
-              minimumValue = CoinMin(minimumValue, 0.999999);
+              minimumValue = std::min(minimumValue, 0.999999);
             while (indexRow[where] != iRow) {
               where++;
             } /* endwhile */
@@ -849,12 +849,12 @@ CoinAbcTypeFactorization::factorSparse()
       }
       double pivotValue = fabs(pivotRegion[numberGoodU_]);
 #if ABC_NORMAL_DEBUG > 0
-      largestPivot = CoinMax(largestPivot, pivotValue);
-      smallestPivot = CoinMin(smallestPivot, pivotValue);
+      largestPivot = std::max(largestPivot, pivotValue);
+      smallestPivot = std::min(smallestPivot, pivotValue);
 #endif
       if (pivotValue < initialLargest) {
         if (pivotTolerance_ < 0.95) {
-          pivotTolerance_ = CoinMin(1.1 * pivotTolerance_, 0.99);
+          pivotTolerance_ = std::min(1.1 * pivotTolerance_, 0.99);
 #if ABC_NORMAL_DEBUG > 0
           printf("PPPivot value of %g increasing pivot tolerance to %g\n",
             pivotValue, pivotTolerance_);

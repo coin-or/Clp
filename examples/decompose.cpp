@@ -344,8 +344,8 @@ int main(int argc, const char *argv[])
                               double value = elementAdd[start+i];
                               if (fabs(value) > 1.0e-15) {
                                    dj -= dual[i] * value;
-                                   smallest = CoinMin(smallest, fabs(value));
-                                   largest = CoinMax(largest, fabs(value));
+                                   smallest = std::min(smallest, fabs(value));
+                                   largest = std::max(largest, fabs(value));
                                    rowAdd[number] = i;
                                    elementAdd[number++] = value;
                               }
@@ -380,8 +380,8 @@ int main(int argc, const char *argv[])
                               double value = elementAdd[start+i];
                               if (fabs(value) > 1.0e-15) {
                                    dj -= dual[i] * value;
-                                   smallest = CoinMin(smallest, fabs(value));
-                                   largest = CoinMax(largest, fabs(value));
+                                   smallest = std::min(smallest, fabs(value));
+                                   largest = std::max(largest, fabs(value));
                                    rowAdd[number] = i;
                                    elementAdd[number++] = value;
                               }

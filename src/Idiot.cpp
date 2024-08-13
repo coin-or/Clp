@@ -47,7 +47,7 @@ int Idiot::dropping(IdiotResult result,
   int *nbad)
 {
   if (result.infeas <= small) {
-    double value = CoinMax(fabs(result.objval), fabs(result.dropThis)) + 1.0;
+    double value = std::max(fabs(result.objval), fabs(result.dropThis)) + 1.0;
     if (result.dropThis > tolerance * value) {
       *nbad = 0;
       return 1;
@@ -146,12 +146,12 @@ int Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
         // slide all slack down
         double rowValue = rowsol[i];
         CoinBigIndex j = columnStart[iCol];
-        double lowerValue = CoinMax(CoinMin(colsol[iCol], 0.0) - 1000.0, lower[iCol]);
+        double lowerValue = std::max(std::min(colsol[iCol], 0.0) - 1000.0, lower[iCol]);
         rowSave += (colsol[iCol] - lowerValue) * element[j];
         colsol[iCol] = lowerValue;
         while (nextSlack[iCol] >= 0) {
           iCol = nextSlack[iCol];
-          double lowerValue = CoinMax(CoinMin(colsol[iCol], 0.0) - 1000.0, lower[iCol]);
+          double lowerValue = std::max(std::min(colsol[iCol], 0.0) - 1000.0, lower[iCol]);
           j = columnStart[iCol];
           rowSave += (colsol[iCol] - lowerValue) * element[j];
           colsol[iCol] = lowerValue;
@@ -212,13 +212,13 @@ int Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
         // slide all slack down
         double rowValue = rowsol[i];
         CoinBigIndex j = columnStart[iCol];
-        double lowerValue = CoinMax(CoinMin(colsol[iCol], 0.0) - 1000.0, lower[iCol]);
+        double lowerValue = std::max(std::min(colsol[iCol], 0.0) - 1000.0, lower[iCol]);
         rowSave += (colsol[iCol] - lowerValue) * element[j];
         colsol[iCol] = lowerValue;
         while (nextSlack[iCol] >= 0) {
           iCol = nextSlack[iCol];
           j = columnStart[iCol];
-          double lowerValue = CoinMax(CoinMin(colsol[iCol], 0.0) - 1000.0, lower[iCol]);
+          double lowerValue = std::max(std::min(colsol[iCol], 0.0) - 1000.0, lower[iCol]);
           rowSave += (colsol[iCol] - lowerValue) * element[j];
           colsol[iCol] = lowerValue;
         }
@@ -273,9 +273,9 @@ int Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
         }
         rowsol[i] = rowValue;
       }
-      double infeasibility = CoinMax(CoinMax(0.0, rowLower[i] - rowsol[i]), rowsol[i] - rowUpper[i]);
+      double infeasibility = std::max(std::max(0.0, rowLower[i] - rowsol[i]), rowsol[i] - rowUpper[i]);
       infValue += infeasibility;
-      maxInfeasibility = CoinMax(maxInfeasibility, infeasibility);
+      maxInfeasibility = std::max(maxInfeasibility, infeasibility);
       // just change
       rowsol[i] -= rowSave;
     }
@@ -357,7 +357,7 @@ void Idiot::crash(int numberPass, CoinMessageHandler *handler,
     majorIterations_ = numberPass;
   // If mu not changed then compute
   if (mu_ == 1e-4)
-    mu_ = CoinMax(1.0e-3, sum * 1.0e-5);
+    mu_ = std::max(1.0e-3, sum * 1.0e-5);
   if (maxIts2_ == 100) {
     if (!lightWeight_) {
       maxIts2_ = 105;
@@ -718,8 +718,8 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
         for (j = columnStart[i]; j < columnStart[i] + columnLength[i]; j++) {
           int jrow = row[j];
           double scaledValue = fabs(scale * element[j]);
-          rowlower[jrow] = CoinMin(rowlower[jrow], scaledValue);
-          rowupper[jrow] = CoinMax(rowupper[jrow], scaledValue);
+          rowlower[jrow] = std::min(rowlower[jrow], scaledValue);
+          rowupper[jrow] = std::max(rowupper[jrow], scaledValue);
         }
 #endif
       }
@@ -899,8 +899,8 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
     } else {
       maxInfeasibility = 0.0;
       for (i = 0; i < nrows; i++) {
-        double infeasibility = CoinMax(CoinMax(0.0, rowlower[i] - rowsol[i]), rowsol[i] - rowupper[i]);
-        maxInfeasibility = CoinMax(maxInfeasibility, infeasibility);
+        double infeasibility = std::max(std::max(0.0, rowlower[i] - rowsol[i]), rowsol[i] - rowupper[i]);
+        maxInfeasibility = std::max(maxInfeasibility, infeasibility);
       }
     }
     if ( ((logLevel_ & 1) != 0) && (CoinWallclockTime()-lastStatusUpdate_ > minIntervalStatusUpdate_) ) {
@@ -967,8 +967,8 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
       }
     }
     if (lightWeight_ == 1 && iteration > 10 && result.infeas > 1.0 && maxIts != 7) {
-      if (lastInfeas != bestInfeas && CoinMin(result.infeas, lastInfeas) > 0.95 * bestInfeas)
-        majorIterations_ = CoinMin(majorIterations_, iteration); // not getting feasible
+      if (lastInfeas != bestInfeas && std::min(result.infeas, lastInfeas) > 0.95 * bestInfeas)
+        majorIterations_ = std::min(majorIterations_, iteration); // not getting feasible
     }
     lastInfeas = result.infeas;
     numberAway = n;
@@ -1004,7 +1004,7 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
       }
     } else {
     }
-    bestInfeas = CoinMin(bestInfeas, result.infeas);
+    bestInfeas = std::min(bestInfeas, result.infeas);
     if (majorIterations_ > 100 && majorIterations_ < 200) {
       if (iteration == majorIterations_ - 100) {
         // redo
@@ -1025,10 +1025,10 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
       }
       saveLambdaScale = 0.0;
       if (result.infeas > reasonableInfeas || (nTry + 1 == maxBigIts && result.infeas > fakeSmall)) {
-        if (result.infeas > lastResult.infeas * (1.0 - dropEnoughFeasibility_) || nTry + 1 == maxBigIts || (result.infeas > lastResult.infeas * 0.9 && result.weighted > lastResult.weighted - dropEnoughWeighted_ * CoinMax(fabs(lastResult.weighted), fabs(result.weighted)))) {
+        if (result.infeas > lastResult.infeas * (1.0 - dropEnoughFeasibility_) || nTry + 1 == maxBigIts || (result.infeas > lastResult.infeas * 0.9 && result.weighted > lastResult.weighted - dropEnoughWeighted_ * std::max(fabs(lastResult.weighted), fabs(result.weighted)))) {
           mu *= changeMu;
           if ((saveStrategy & 32) != 0 && result.infeas < reasonableInfeas && 0) {
-            reasonableInfeas = CoinMax(smallInfeas, reasonableInfeas * sqrt(changeMu));
+            reasonableInfeas = std::max(smallInfeas, reasonableInfeas * sqrt(changeMu));
             COIN_DETAIL_PRINT(printf("reasonable infeas now %g\n", reasonableInfeas));
           }
           result.weighted = 1.0e60;
@@ -1367,7 +1367,7 @@ void Idiot::crossOver(int mode)
       CoinMemcpyN(rowupper, nrows, saveRowUpper);
       CoinMemcpyN(rowlower, nrows, saveRowLower);
       double averageInfeas = model_->sumPrimalInfeasibilities() / static_cast< double >(model_->numberRows());
-      fixTolerance = CoinMax(fixTolerance, 1.0e-5 * averageInfeas);
+      fixTolerance = std::max(fixTolerance, 1.0e-5 * averageInfeas);
     }
   }
   if (slackStart >= 0) {
@@ -1757,22 +1757,22 @@ void Idiot::crossOver(int mode)
           if (value > 0.0) {
             /* reduce */
             if (csol + move < clo)
-              move = CoinMin(0.0, clo - csol);
+              move = std::min(0.0, clo - csol);
           } else {
             /* increase */
             if (csol + move > cup)
-              move = CoinMax(0.0, cup - csol);
+              move = std::max(0.0, cup - csol);
           }
         } else if (rowsol[irow] < rlo) {
           move = (rlo - rowsol[irow]) / value;
           if (value > 0.0) {
             /* increase */
             if (csol + move > cup)
-              move = CoinMax(0.0, cup - csol);
+              move = std::max(0.0, cup - csol);
           } else {
             /* reduce */
             if (csol + move < clo)
-              move = CoinMin(0.0, clo - csol);
+              move = std::min(0.0, clo - csol);
           }
         } else {
           /* move to improve objective */
@@ -1781,24 +1781,24 @@ void Idiot::crossOver(int mode)
               move = (rlo - rowsol[irow]) / value;
               /* reduce */
               if (csol + move < clo)
-                move = CoinMin(0.0, clo - csol);
+                move = std::min(0.0, clo - csol);
             } else {
               move = (rup - rowsol[irow]) / value;
               /* increase */
               if (csol + move > cup)
-                move = CoinMax(0.0, cup - csol);
+                move = std::max(0.0, cup - csol);
             }
           } else if (cost[i] * maxmin < 0.0) {
             if (value > 0.0) {
               move = (rup - rowsol[irow]) / value;
               /* increase */
               if (csol + move > cup)
-                move = CoinMax(0.0, cup - csol);
+                move = std::max(0.0, cup - csol);
             } else {
               move = (rlo - rowsol[irow]) / value;
               /* reduce */
               if (csol + move < clo)
-                move = CoinMin(0.0, clo - csol);
+                move = std::min(0.0, clo - csol);
             }
           }
         }
@@ -1842,8 +1842,8 @@ void Idiot::crossOver(int mode)
         int nSmall = nrows;
         int nMedium = nrows;
         double largest = rhs[nrows - 1];
-        double small = CoinMax(1.0e-4, 1.0e-5 * largest);
-        small = CoinMin(small, 1.0e-2);
+        double small = std::max(1.0e-4, 1.0e-5 * largest);
+        small = std::min(small, 1.0e-2);
         double medium = small * 100.0;
         double *rowupper = model_->rowUpper();
         double *rowlower = model_->rowLower();
@@ -1888,7 +1888,7 @@ void Idiot::crossOver(int mode)
           }
         }
         double averageInfeasibility = sum / nrows;
-        double check = CoinMin(1.0e-3, 0.1 * averageInfeasibility);
+        double check = std::min(1.0e-3, 0.1 * averageInfeasibility);
         int nFixedRows = 0;
         int nFreed = 0;
 #define MESS_UP 0
@@ -1984,11 +1984,11 @@ void Idiot::crossOver(int mode)
         int *which = new int[2 * ncols + nrows];
         double *dj = model_->dualColumnSolution();
         for (int i = 0; i < ncols; i++) {
-          dj[i] = -CoinMin(upper[i] - colsol[i], colsol[i] - lower[i]);
+          dj[i] = -std::min(upper[i] - colsol[i], colsol[i] - lower[i]);
           which[i] = i;
         }
         CoinSort_2(dj, dj + ncols, which);
-        ninbas = CoinMin(ncols, nrows);
+        ninbas = std::min(ncols, nrows);
         int *columnIsBasic = which + ncols;
         int *rowIsBasic = columnIsBasic + ncols;
         for (int i = 0; i < nrows + ncols; i++)
