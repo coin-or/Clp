@@ -99,7 +99,7 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex *model, int numberSets,
   // Number of columns needed
   int numberGubInSmall = numberSets_ + numberRows + 2 * model->factorizationFrequency() + 2;
   // for small problems this could be too big
-  //numberGubInSmall = CoinMin(numberGubInSmall,numberGubColumns_);
+  //numberGubInSmall = std::min(numberGubInSmall,numberGubColumns_);
   int numberNeeded = numberGubInSmall + numberColumns;
   firstAvailable_ = numberColumns;
   savedFirstAvailable_ = numberColumns;
@@ -165,8 +165,8 @@ ClpGubDynamicMatrix::ClpGubDynamicMatrix(ClpSimplex *model, int numberSets,
   double guess = originalMatrix->getNumElements() + 10;
   guess /= static_cast< double >(numberColumns);
   guess *= 2 * numberGubColumns_;
-  numberElements_ = static_cast< int >(CoinMin(guess, 10000000.0));
-  numberElements_ = CoinMin(numberElements_, numberElements) + originalMatrix->getNumElements();
+  numberElements_ = static_cast< int >(std::min(guess, 10000000.0));
+  numberElements_ = std::min(numberElements_, numberElements) + originalMatrix->getNumElements();
   matrix_ = originalMatrix;
   flags_ &= ~1;
   // resize model (matrix stays same)
@@ -298,7 +298,7 @@ void ClpGubDynamicMatrix::partialPricing(ClpSimplex *model, double startFraction
     // and do some proportion of full set
     int startG2 = static_cast< int >(startFraction * numberSets_);
     int endG2 = static_cast< int >(endFraction * numberSets_ + 0.1);
-    endG2 = CoinMin(endG2, numberSets_);
+    endG2 = std::min(endG2, numberSets_);
     //printf("gub price - set start %d end %d\n",
     //   startG2,endG2);
     double tolerance = model->currentDualTolerance();
@@ -482,7 +482,7 @@ void ClpGubDynamicMatrix::partialPricing(ClpSimplex *model, double startFraction
         int numberThis = startColumn_[bestSequence + 1] - startColumn_[bestSequence];
         if (numberElements + numberThis > numberElements_) {
           // need to redo
-          numberElements_ = CoinMax(3 * numberElements_ / 2, numberElements + numberThis);
+          numberElements_ = std::max(3 * numberElements_ / 2, numberElements + numberThis);
           matrix_->reserve(numberColumns, numberElements_);
           element = matrix_->getMutableElements();
           row = matrix_->getMutableIndices();
@@ -708,7 +708,7 @@ int ClpGubDynamicMatrix::synchronize(ClpSimplex *model, int mode)
     // move to next_
     CoinMemcpyN(temp + firstDynamic_, (firstAvailable_ - firstDynamic_), next_ + firstDynamic_);
     // if odd iterations may be one out so adjust currentNumber
-    currentNumber = CoinMin(currentNumber + 1, lastDynamic_);
+    currentNumber = std::min(currentNumber + 1, lastDynamic_);
     // zero solution
     CoinZeroN(solution + firstAvailable_, currentNumber - firstAvailable_);
     // zero cost
@@ -839,7 +839,7 @@ int ClpGubDynamicMatrix::synchronize(ClpSimplex *model, int mode)
     double dualTolerance = model->dualTolerance();
     double relaxedTolerance = dualTolerance;
     // we can't really trust infeasibilities if there is dual error
-    double error = CoinMin(1.0e-2, model->largestDualError());
+    double error = std::min(1.0e-2, model->largestDualError());
     // allow tolerance at least slightly bigger than standard
     relaxedTolerance = relaxedTolerance + error;
     // but we will be using difference
@@ -1017,7 +1017,7 @@ void ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex *model, bool cheapest)
   int longestSet = 0;
   int iSet;
   for (iSet = 0; iSet < numberSets_; iSet++)
-    longestSet = CoinMax(longestSet, fullStart_[iSet + 1] - fullStart_[iSet]);
+    longestSet = std::max(longestSet, fullStart_[iSet + 1] - fullStart_[iSet]);
 
   double *upper = new double[longestSet + 1];
   double *cost = new double[longestSet + 1];
@@ -1026,7 +1026,7 @@ void ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex *model, bool cheapest)
   assert(!next_);
   delete[] next_;
   int numberColumns = model->numberColumns();
-  next_ = new int[numberColumns + numberSets_ + CoinMax(2 * longestSet, lastDynamic_ - firstDynamic_)];
+  next_ = new int[numberColumns + numberSets_ + std::max(2 * longestSet, lastDynamic_ - firstDynamic_)];
   char *mark = new char[numberColumns];
   memset(mark, 0, numberColumns);
   for (int iColumn = 0; iColumn < numberColumns; iColumn++)
@@ -1247,7 +1247,7 @@ void ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex *model, bool cheapest)
                   basicDistance = solution[iBasic] - lower[iBasic];
                 }
                 // need extra coding for unbounded
-                assert(CoinMin(distance, basicDistance) < 1.0e20);
+                assert(std::min(distance, basicDistance) < 1.0e20);
                 if (distance > basicDistance) {
                   // incoming becomes basic
                   solution[chosen] += basicDistance;
@@ -1274,7 +1274,7 @@ void ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex *model, bool cheapest)
                   basicDistance = upper[iBasic] - solution[iBasic];
                 }
                 // need extra coding for unbounded - for now just exit
-                if (CoinMin(distance, basicDistance) > 1.0e20) {
+                if (std::min(distance, basicDistance) > 1.0e20) {
                   printf("unbounded on set %d\n", iSet);
                   iphase = 1;
                   iBasic = numberInSet;
@@ -1335,7 +1335,7 @@ void ClpGubDynamicMatrix::useEffectiveRhs(ClpSimplex *model, bool cheapest)
             int numberThis = startColumn_[iBasic + 1] - startColumn_[iBasic];
             if (numberElements + numberThis > numberElements_) {
               // need to redo
-              numberElements_ = CoinMax(3 * numberElements_ / 2, numberElements + numberThis);
+              numberElements_ = std::max(3 * numberElements_ / 2, numberElements + numberThis);
               matrix_->reserve(numberColumns, numberElements_);
               element = matrix_->getMutableElements();
               row = matrix_->getMutableIndices();
@@ -1990,7 +1990,7 @@ int ClpGubDynamicMatrix::checkFeasible(ClpSimplex * /*model*/, double &sum) cons
       //printf("row %d %g %g %g\n",
       //     iRow,rowLower[iRow],value,rowUpper[iRow]);
       numberInfeasible++;
-      sum += CoinMax(rowLower[iRow] - value, value - rowUpper[iRow]);
+      sum += std::max(rowLower[iRow] - value, value - rowUpper[iRow]);
     }
     rhs[iRow] = value;
   }
@@ -2002,7 +2002,7 @@ int ClpGubDynamicMatrix::checkFeasible(ClpSimplex * /*model*/, double &sum) cons
       //printf("column %d %g %g %g\n",
       //     iColumn,columnLower[iColumn],value,columnUpper[iColumn]);
       numberInfeasible++;
-      sum += CoinMax(columnLower[iColumn] - value, value - columnUpper[iColumn]);
+      sum += std::max(columnLower[iColumn] - value, value - columnUpper[iColumn]);
     }
     for (CoinBigIndex j = startColumn[iColumn];
          j < startColumn[iColumn] + length[iColumn]; j++) {

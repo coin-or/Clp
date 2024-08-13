@@ -247,7 +247,7 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
   double mu0 = options.mu0;
   int LSproblem = options.LSproblem; // See below
   int LSmethod = options.LSmethod; // 1=Cholesky    2=QR    3=LSQR
-  int itnlim = options.LSQRMaxIter * CoinMin(m, n);
+  int itnlim = options.LSQRMaxIter * std::min(m, n);
   double atol1 = options.LSQRatol1; // Initial  atol
   double atol2 = options.LSQRatol2; // Smallest atol,unless atol1 is smaller
   double conlim = options.LSQRconlim;
@@ -428,14 +428,14 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
   double *z2_elts = z2.getElements();
 
   for (int k = 0; k < nlow; k++) {
-    x_elts[low[k]] = CoinMax(x_elts[low[k]], bl[low[k]]);
-    x1_elts[low[k]] = CoinMax(x_elts[low[k]] - bl[low[k]], x0min);
-    z1_elts[low[k]] = CoinMax(z_elts[low[k]], z0min);
+    x_elts[low[k]] = std::max(x_elts[low[k]], bl[low[k]]);
+    x1_elts[low[k]] = std::max(x_elts[low[k]] - bl[low[k]], x0min);
+    z1_elts[low[k]] = std::max(z_elts[low[k]], z0min);
   }
   for (int k = 0; k < nupp; k++) {
-    x_elts[upp[k]] = CoinMin(x_elts[upp[k]], bu[upp[k]]);
-    x2_elts[upp[k]] = CoinMax(bu[upp[k]] - x_elts[upp[k]], x0min);
-    z2_elts[upp[k]] = CoinMax(-z_elts[upp[k]], z0min);
+    x_elts[upp[k]] = std::min(x_elts[upp[k]], bu[upp[k]]);
+    x2_elts[upp[k]] = std::max(bu[upp[k]] - x_elts[upp[k]], x0min);
+    z2_elts[upp[k]] = std::max(-z_elts[upp[k]], z0min);
   }
   //////////////////// Assume hessian is diagonal. //////////////////////
 
@@ -484,7 +484,7 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
   //  double mufirst = mu0*(x0min * z0min);
   double mufirst = mu0; // revert to absolute value
   double mulast = 0.1 * opttol;
-  mulast = CoinMin(mulast, mufirst);
+  mulast = std::min(mulast, mufirst);
   double mu = mufirst;
   double center, fmerit;
   pdxxxresid2(mu, nlow, nupp, low, upp, cL, cU, x1, x2,
@@ -497,7 +497,7 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
   double PDitns = 0;
   //bool converged = false;
   double atol = atol1;
-  atol2 = CoinMax(atol2, atolmin);
+  atol2 = std::max(atol2, atolmin);
   atolmin = atol2;
   //  pdDDD2    = d2;    // Global vector for diagonal matrix D2
 
@@ -546,9 +546,9 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
     // 25 Apr 2001: 0.01 seems wasteful for Star problem.
     //              Now that starting conditions are better, go back to 0.1.
 
-    double r3norm = CoinMax(Pinf, CoinMax(Dinf, Cinf));
-    atol = CoinMin(atol, r3norm * 0.1);
-    atol = CoinMax(atol, atolmin);
+    double r3norm = std::max(Pinf, std::max(Dinf, Cinf));
+    atol = std::min(atol, r3norm * 0.1);
+    atol = std::max(atol, atolmin);
     info.r3norm = r3norm;
 
     //-------------------------------------------------------------------
@@ -675,12 +675,12 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
     double stepz2 = inf;
     if (nupp > 0)
       stepz2 = pdxxxstep(z2, dz2);
-    double stepx = CoinMin(stepx1, stepx2);
-    double stepz = CoinMin(stepz1, stepz2);
-    stepx = CoinMin(steptol * stepx, 1.0);
-    stepz = CoinMin(steptol * stepz, 1.0);
+    double stepx = std::min(stepx1, stepx2);
+    double stepz = std::min(stepz1, stepz2);
+    stepx = std::min(steptol * stepx, 1.0);
+    stepz = std::min(steptol * stepz, 1.0);
     if (stepSame) { // For NLPs, force same step
-      stepx = CoinMin(stepx, stepz); // (true Newton method)
+      stepx = std::min(stepx, stepz); // (true Newton method)
       stepz = stepx;
     }
 
@@ -722,7 +722,7 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
       pdxxxresid2(mu, nlow, nupp, low, upp, cL, cU, x1, x2, z1, z2,
         &center, &Cinf, &Cinf0);
       double fmeritnew = pdxxxmerit(nlow, nupp, low, upp, r1, r2, rL, rU, cL, cU);
-      double step = CoinMin(stepx, stepz);
+      double step = std::min(stepx, stepz);
 
       if (fmeritnew <= (1 - eta * step) * fmerit) {
         fail = false;
@@ -822,17 +822,17 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
 
       // Reduce mu, and reset certain residuals.
 
-      double stepmu = CoinMin(stepx, stepz);
-      stepmu = CoinMin(stepmu, steptol);
+      double stepmu = std::min(stepx, stepz);
+      stepmu = std::min(stepmu, steptol);
       double muold = mu;
       mu = mu - stepmu * mu;
       if (center >= bigcenter)
         mu = muold;
 
       // mutrad = mu0*(sum(Xz)/n); // 24 May 1998: Traditional value, but
-      // mu     = CoinMin(mu,mutrad ); // it seemed to decrease mu too much.
+      // mu     = std::min(mu,mutrad ); // it seemed to decrease mu too much.
 
-      mu = CoinMax(mu, mulast); // 13 Jun 1998: No need for smaller mu.
+      mu = std::max(mu, mulast); // 13 Jun 1998: No need for smaller mu.
       //      [cL,cU,center,Cinf,Cinf0] = ...
       pdxxxresid2(mu, nlow, nupp, low, upp, cL, cU, x1, x2, z1, z2,
         &center, &Cinf, &Cinf0);
@@ -844,11 +844,11 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
       atolold = atol;
       // if atol > atol2
       //   atolfac = (mu/mufirst)^0.25;
-      //   atol    = CoinMax( atol*atolfac, atol2 );
+      //   atol    = std::max( atol*atolfac, atol2 );
       // end
 
-      // atol = CoinMin( atol, mu );     // 22 Jan 2001: a la Inexact Newton.
-      // atol = CoinMin( atol, 0.5*mu ); // 30 Jan 2001: A bit tighter
+      // atol = std::min( atol, mu );     // 22 Jan 2001: a la Inexact Newton.
+      // atol = std::min( atol, 0.5*mu ); // 30 Jan 2001: A bit tighter
 
       // If the linesearch took more than one function (nf > 1),
       // we assume the search direction needed more accuracy
@@ -858,7 +858,7 @@ int ClpPdco::pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo
       // 30 Jan 2001: Small steps might be ok with warm start.
       // 06 Feb 2001: Not necessarily.  Reinstated tests in next line.
 
-      if (nf > 2 || CoinMin(stepx, stepz) <= 0.01)
+      if (nf > 2 || std::min(stepx, stepz) <= 0.01)
         atol = atolold * 0.1;
     }
     //---------------------------------------------------------------------

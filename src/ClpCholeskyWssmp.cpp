@@ -146,7 +146,7 @@ int ClpCholeskyWssmp::order(ClpInterior *model)
       used[length] += 1;
     }
     int nLong = 0;
-    int stop = CoinMax(denseThreshold_ / 2, 100);
+    int stop = std::max(denseThreshold_ / 2, 100);
     for (iRow = numberRows_; iRow >= stop; iRow--) {
       if (used[iRow])
         COIN_DETAIL_PRINT(printf("%d columns are of length %d\n", used[iRow], iRow));
@@ -435,7 +435,7 @@ int ClpCholeskyWssmp::factorize(const double *diagonal, int *rowsDropped)
   //check sizes
   double largest2 = maximumAbsElement(sparseFactor_, sizeFactor_);
   largest2 *= 1.0e-20;
-  largest = CoinMin(largest2, 1.0e-11);
+  largest = std::min(largest2, 1.0e-11);
   int numberDroppedBefore = 0;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int dropped = rowsDropped_[iRow];
@@ -460,7 +460,7 @@ int ClpCholeskyWssmp::factorize(const double *diagonal, int *rowsDropped)
   integerParameters_[10] = 2;
   //integerParameters_[11]=1;
   integerParameters_[12] = 2;
-  doubleParameters_[10] = CoinMax(1.0e-20, largest);
+  doubleParameters_[10] = std::max(1.0e-20, largest);
   if (doubleParameters_[10] > 1.0e-3)
     integerParameters_[9] = 1;
   else

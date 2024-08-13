@@ -417,7 +417,7 @@ void AbcMatrix::createRowCopy()
     numberRowBlocks_ = 1;
 #if ABC_PARALLEL
   else
-    numberRowBlocks_ = CoinMin(NUMBER_ROW_BLOCKS, model_->numberCpus());
+    numberRowBlocks_ = std::min(NUMBER_ROW_BLOCKS, model_->numberCpus());
 #endif
   int maximumRows = model_->maximumAbcNumberRows();
   int numberRows = model_->numberRows();
@@ -691,8 +691,8 @@ void AbcMatrix::scale(int numberAlreadyScaled)
         if (end > start) {
           for (CoinBigIndex j = start; j < end; j++) {
             double value = fabs(elementByColumn[j]);
-            overallLargest = CoinMax(overallLargest, value);
-            overallSmallest = CoinMin(overallSmallest, value);
+            overallLargest = std::max(overallLargest, value);
+            overallSmallest = std::min(overallSmallest, value);
           }
         } else {
           usefulColumn[iColumn] = 0;
@@ -709,8 +709,8 @@ void AbcMatrix::scale(int numberAlreadyScaled)
         int iColumn = column[j];
         if (usefulColumn[iColumn]) {
           double value = fabs(elementByColumn[j]) * columnScale[iColumn];
-          overallLargest = CoinMax(overallLargest, value);
-          overallSmallest = CoinMin(overallSmallest, value);
+          overallLargest = std::max(overallLargest, value);
+          overallSmallest = std::min(overallSmallest, value);
         }
       }
     }
@@ -760,15 +760,15 @@ void AbcMatrix::scale(int numberAlreadyScaled)
           int iColumn = column[j];
           if (usefulColumn[iColumn]) {
             double value = fabs(element[j]);
-            largest = CoinMax(largest, value);
+            largest = std::max(largest, value);
             assert(largest < 1.0e40);
           }
         }
         rowScale[iRow] = 1.0 / largest;
 #ifdef COIN_DEVELOP
         if (extraDetails) {
-          overallLargest = CoinMax(overallLargest, largest);
-          overallSmallest = CoinMin(overallSmallest, largest);
+          overallLargest = std::max(overallLargest, largest);
+          overallSmallest = std::min(overallSmallest, largest);
         }
 #endif
       }
@@ -786,8 +786,8 @@ void AbcMatrix::scale(int numberAlreadyScaled)
             if (usefulColumn[iColumn]) {
               double value = fabs(element[j]);
               value *= columnScale[iColumn];
-              largest = CoinMax(largest, value);
-              smallest = CoinMin(smallest, value);
+              largest = std::max(largest, value);
+              smallest = std::min(smallest, value);
             }
           }
 #ifdef SQRT_ARRAY
@@ -796,8 +796,8 @@ void AbcMatrix::scale(int numberAlreadyScaled)
           rowScale[iRow] = 1.0 / sqrt(smallest * largest);
 #endif
           if (extraDetails) {
-            overallLargest = CoinMax(largest * rowScale[iRow], overallLargest);
-            overallSmallest = CoinMin(smallest * rowScale[iRow], overallSmallest);
+            overallLargest = std::max(largest * rowScale[iRow], overallLargest);
+            overallSmallest = std::min(smallest * rowScale[iRow], overallSmallest);
           }
         }
         if (model_->scalingFlag() == 5)
@@ -823,8 +823,8 @@ void AbcMatrix::scale(int numberAlreadyScaled)
               int iRow = row[j];
               double value = fabs(elementByColumn[j]);
               value *= rowScale[iRow];
-              largest = CoinMax(largest, value);
-              smallest = CoinMin(smallest, value);
+              largest = std::max(largest, value);
+              smallest = std::min(smallest, value);
             }
 #ifdef SQRT_ARRAY
             columnScale[iColumn] = smallest * largest;
@@ -845,7 +845,7 @@ void AbcMatrix::scale(int numberAlreadyScaled)
       if (scaledDifference > tolerance && scaledDifference < 1.0e-4) {
         // make gap larger
         rowScale[iRow] *= 1.0e-4 / scaledDifference;
-        rowScale[iRow] = CoinMax(1.0e-10, CoinMin(1.0e10, rowScale[iRow]));
+        rowScale[iRow] = std::max(1.0e-10, std::min(1.0e10, rowScale[iRow]));
         //printf("Row %d difference %g scaled diff %g => %g\n",iRow,difference,
         // scaledDifference,difference*rowScale[iRow]);
       }
@@ -861,8 +861,8 @@ void AbcMatrix::scale(int numberAlreadyScaled)
           for (CoinBigIndex j = columnStart[iColumn]; j < columnStart[iColumn + 1]; j++) {
             int iRow = row[j];
             double value = fabs(elementByColumn[j] * rowScale[iRow]);
-            largest = CoinMax(largest, value);
-            smallest = CoinMin(smallest, value);
+            largest = std::max(largest, value);
+            smallest = std::min(smallest, value);
           }
           if (overallSmallest * largest > smallest)
             overallSmallest = smallest / largest;
@@ -916,7 +916,7 @@ void AbcMatrix::scale(int numberAlreadyScaled)
   overallLargest = 1.0;
   if (overallSmallest < 1.0e-1)
     overallLargest = 1.0 / sqrt(overallSmallest);
-  overallLargest = CoinMin(100.0, overallLargest);
+  overallLargest = std::min(100.0, overallLargest);
   overallSmallest = 1.0e50;
   char *COIN_RESTRICT usedRow = reinterpret_cast< char * >(inverseRowScale);
   memset(usedRow, 0, numberRows);
@@ -930,11 +930,11 @@ void AbcMatrix::scale(int numberAlreadyScaled)
           int iRow = row[j];
           usedRow[iRow] = 1;
           double value = fabs(elementByColumn[j] * rowScale[iRow]);
-          largest = CoinMax(largest, value);
-          smallest = CoinMin(smallest, value);
+          largest = std::max(largest, value);
+          smallest = std::min(smallest, value);
         }
         columnScale[iColumn] = overallLargest / largest;
-        //columnScale[iColumn]=CoinMax(1.0e-10,CoinMin(1.0e10,columnScale[iColumn]));
+        //columnScale[iColumn]=std::max(1.0e-10,std::min(1.0e10,columnScale[iColumn]));
 #ifdef RANDOMIZE
         if (!numberAlreadyScaled) {
           double value = 0.5 - randomNumberGenerator_.randomDouble(); //between -0.5 to + 0.5
@@ -951,7 +951,7 @@ void AbcMatrix::scale(int numberAlreadyScaled)
         double value = smallest * columnScale[iColumn];
         if (overallSmallest > value)
           overallSmallest = value;
-        //overallSmallest = CoinMin(overallSmallest,smallest*columnScale[iColumn]);
+        //overallSmallest = std::min(overallSmallest,smallest*columnScale[iColumn]);
       } else {
         assert(columnScale[iColumn] == 1.0);
         //columnScale[iColumn]=1.0;
@@ -970,11 +970,11 @@ void AbcMatrix::scale(int numberAlreadyScaled)
       << CoinMessageEol;
   if (overallSmallest < 1.0e-13) {
     // Change factorization zero tolerance
-    double newTolerance = CoinMax(1.0e-15 * (overallSmallest / 1.0e-13),
+    double newTolerance = std::max(1.0e-15 * (overallSmallest / 1.0e-13),
       1.0e-18);
     if (model_->factorization()->zeroTolerance() > newTolerance)
       model_->factorization()->zeroTolerance(newTolerance);
-    newTolerance = CoinMax(overallSmallest * 0.5, 1.0e-18);
+    newTolerance = std::max(overallSmallest * 0.5, 1.0e-18);
     model_->setZeroTolerance(newTolerance);
 #ifndef NDEBUG
     assert(newTolerance < 0.0); // just so we can fix
@@ -1200,7 +1200,7 @@ static double firstPass(AbcSimplex *model, int iBlock,
       double oldValue = abcDj[iSequence] * mult;
       double value = oldValue - tentativeTheta * alpha;
       if (value < dualT) {
-        bestPossible = CoinMax(bestPossible, alpha);
+        bestPossible = std::max(bestPossible, alpha);
         value = oldValue - upperTheta * alpha;
         if (value < dualT && alpha >= acceptablePivot) {
           upperTheta = (oldValue - dualT) / alpha;
@@ -1225,7 +1225,7 @@ static double firstPass(AbcSimplex *model, int iBlock,
         double oldValue = abcDj[iSequence] * mult;
         double value = oldValue - tentativeTheta * alpha;
         if (value < dualT) {
-          bestPossible = CoinMax(bestPossible, alpha);
+          bestPossible = std::max(bestPossible, alpha);
           value = oldValue - upperTheta * alpha;
           if (value < dualT && alpha >= acceptablePivot) {
             upperTheta = (oldValue - dualT) / alpha;
@@ -1236,7 +1236,7 @@ static double firstPass(AbcSimplex *model, int iBlock,
         }
       } else {
         bool keep;
-        bestPossible = CoinMax(bestPossible, fabs(tableauValue));
+        bestPossible = std::max(bestPossible, fabs(tableauValue));
         double oldValue = abcDj[iSequence];
         // If free has to be very large - should come in via dualRow
         //if (getInternalStatus(iSequence+addSequence)==isFree&&fabs(tableauValue)<1.0e-3)
@@ -1246,11 +1246,11 @@ static double firstPass(AbcSimplex *model, int iBlock,
         } else if (oldValue < -currentDualTolerance) {
           keep = true;
         } else {
-          if (fabs(tableauValue) > CoinMax(10.0 * acceptablePivot, 1.0e-5)) {
+          if (fabs(tableauValue) > std::max(10.0 * acceptablePivot, 1.0e-5)) {
             keep = true;
           } else {
             keep = false;
-            badFree = CoinMax(badFree, fabs(tableauValue));
+            badFree = std::max(badFree, fabs(tableauValue));
           }
         }
         if (keep) {
@@ -1383,7 +1383,7 @@ AbcMatrix::dualColumn1Row(int iBlock, double upperTheta, int &freeSequence,
             double oldValue = abcDj[iSequence] * mult;
             double value = oldValue - tentativeTheta * alpha;
             if (value < dualT) {
-              bestPossible = CoinMax(bestPossible, alpha);
+              bestPossible = std::max(bestPossible, alpha);
               value = oldValue - upperTheta * alpha;
               if (value < dualT && alpha >= acceptablePivot) {
                 upperTheta = (oldValue - dualT) / alpha;
@@ -1417,7 +1417,7 @@ AbcMatrix::dualColumn1Row(int iBlock, double upperTheta, int &freeSequence,
               double oldValue = abcDj[iSequence] * mult;
               double value = oldValue - tentativeTheta * alpha;
               if (value < dualT) {
-                bestPossible = CoinMax(bestPossible, alpha);
+                bestPossible = std::max(bestPossible, alpha);
                 value = oldValue - upperTheta * alpha;
                 if (value < dualT && alpha >= acceptablePivot) {
                   upperTheta = (oldValue - dualT) / alpha;
@@ -1430,7 +1430,7 @@ AbcMatrix::dualColumn1Row(int iBlock, double upperTheta, int &freeSequence,
               bool keep;
               index[numberNonZero] = iSequence;
               array[numberNonZero++] = tableauValue;
-              bestPossible = CoinMax(bestPossible, fabs(tableauValue));
+              bestPossible = std::max(bestPossible, fabs(tableauValue));
               double oldValue = abcDj[iSequence];
               // If free has to be very large - should come in via dualRow
               //if (getInternalStatus(iSequence+addSequence)==isFree&&fabs(tableauValue)<1.0e-3)
@@ -1441,11 +1441,11 @@ AbcMatrix::dualColumn1Row(int iBlock, double upperTheta, int &freeSequence,
               } else if (oldValue < -currentDualTolerance) {
                 keep = true;
               } else {
-                if (fabs(tableauValue) > CoinMax(10.0 * acceptablePivot, 1.0e-5)) {
+                if (fabs(tableauValue) > std::max(10.0 * acceptablePivot, 1.0e-5)) {
                   keep = true;
                 } else {
                   keep = false;
-                  badFree = CoinMax(badFree, fabs(tableauValue));
+                  badFree = std::max(badFree, fabs(tableauValue));
                 }
               }
 #if 0
@@ -1696,7 +1696,7 @@ AbcMatrix::dualColumn1Row1(double upperTheta, int &freeSequence,
           double oldValue = abcDj[iSequence] * mult;
           double value = oldValue - tentativeTheta * alpha;
           if (value < dualT) {
-            bestPossible = CoinMax(bestPossible, alpha);
+            bestPossible = std::max(bestPossible, alpha);
             value = oldValue - upperTheta * alpha;
             if (value < dualT && alpha >= acceptablePivot) {
               upperTheta = (oldValue - dualT) / alpha;
@@ -1728,7 +1728,7 @@ AbcMatrix::dualColumn1Row1(double upperTheta, int &freeSequence,
             double oldValue = abcDj[iSequence] * mult;
             double value = oldValue - tentativeTheta * alpha;
             if (value < dualT) {
-              bestPossible = CoinMax(bestPossible, alpha);
+              bestPossible = std::max(bestPossible, alpha);
               value = oldValue - upperTheta * alpha;
               if (value < dualT && alpha >= acceptablePivot) {
                 upperTheta = (oldValue - dualT) / alpha;
@@ -1741,7 +1741,7 @@ AbcMatrix::dualColumn1Row1(double upperTheta, int &freeSequence,
             bool keep;
             index[numberNonZero] = iSequence;
             array[numberNonZero++] = tableauValue;
-            bestPossible = CoinMax(bestPossible, fabs(tableauValue));
+            bestPossible = std::max(bestPossible, fabs(tableauValue));
             double oldValue = abcDj[iSequence];
             // If free has to be very large - should come in via dualRow
             //if (getInternalStatus(iSequence+addSequence)==isFree&&fabs(tableauValue)<1.0e-3)
@@ -1751,11 +1751,11 @@ AbcMatrix::dualColumn1Row1(double upperTheta, int &freeSequence,
             } else if (oldValue < -currentDualTolerance) {
               keep = true;
             } else {
-              if (fabs(tableauValue) > CoinMax(10.0 * acceptablePivot, 1.0e-5)) {
+              if (fabs(tableauValue) > std::max(10.0 * acceptablePivot, 1.0e-5)) {
                 keep = true;
               } else {
                 keep = false;
-                badFree = CoinMax(badFree, fabs(tableauValue));
+                badFree = std::max(badFree, fabs(tableauValue));
               }
             }
             if (keep) {
@@ -1822,7 +1822,7 @@ void AbcMatrix::rebalance() const
      each real slack is 3
    */
 #if ABC_PARALLEL
-  int howOften = CoinMax(model_->factorization()->maximumPivots(), 200);
+  int howOften = std::max(model_->factorization()->maximumPivots(), 200);
   if ((model_->numberIterations() % howOften) == 0 || !startColumnBlock_[1]) {
     int numberCpus = model_->numberCpus();
     if (numberCpus > 1) {
@@ -2057,7 +2057,7 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
             double oldValue = abcDj[iSequence] * mult;
             double value = oldValue - tentativeTheta * alpha;
             if (value < dualT) {
-              bestPossible = CoinMax(bestPossible, alpha);
+              bestPossible = std::max(bestPossible, alpha);
               value = oldValue - upperTheta * alpha;
               if (value < dualT && alpha >= acceptablePivot) {
                 upperTheta = (oldValue - dualT) / alpha;
@@ -2110,7 +2110,7 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
               double oldValue = abcDj[iSequence] * mult;
               double value = oldValue - tentativeTheta * alpha;
               if (value < dualT) {
-                bestPossible = CoinMax(bestPossible, alpha);
+                bestPossible = std::max(bestPossible, alpha);
                 value = oldValue - upperTheta * alpha;
                 if (value < dualT && alpha >= acceptablePivot) {
                   upperTheta = (oldValue - dualT) / alpha;
@@ -2132,7 +2132,7 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
               double oldValue = abcDj[iSequence] * mult;
               double value = oldValue - tentativeTheta * alpha;
               if (value < dualT) {
-                bestPossible = CoinMax(bestPossible, alpha);
+                bestPossible = std::max(bestPossible, alpha);
                 value = oldValue - upperTheta * alpha;
                 if (value < dualT && alpha >= acceptablePivot) {
                   upperTheta = (oldValue - dualT) / alpha;
@@ -2154,7 +2154,7 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
               double oldValue = abcDj[iSequence] * mult;
               double value = oldValue - tentativeTheta * alpha;
               if (value < dualT) {
-                bestPossible = CoinMax(bestPossible, alpha);
+                bestPossible = std::max(bestPossible, alpha);
                 value = oldValue - upperTheta * alpha;
                 if (value < dualT && alpha >= acceptablePivot) {
                   upperTheta = (oldValue - dualT) / alpha;
@@ -2176,7 +2176,7 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
               double oldValue = abcDj[iSequence] * mult;
               double value = oldValue - tentativeTheta * alpha;
               if (value < dualT) {
-                bestPossible = CoinMax(bestPossible, alpha);
+                bestPossible = std::max(bestPossible, alpha);
                 value = oldValue - upperTheta * alpha;
                 if (value < dualT && alpha >= acceptablePivot) {
                   upperTheta = (oldValue - dualT) / alpha;
@@ -2206,7 +2206,7 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
               double oldValue = abcDj[iSequence] * mult;
               double value = oldValue - tentativeTheta * alpha;
               if (value < dualT) {
-                bestPossible = CoinMax(bestPossible, alpha);
+                bestPossible = std::max(bestPossible, alpha);
                 value = oldValue - upperTheta * alpha;
                 if (value < dualT && alpha >= acceptablePivot) {
                   upperTheta = (oldValue - dualT) / alpha;
@@ -2243,7 +2243,7 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
             double oldValue = abcDj[iSequence] * mult;
             double value = oldValue - tentativeTheta * alpha;
             if (value < dualT) {
-              bestPossible = CoinMax(bestPossible, alpha);
+              bestPossible = std::max(bestPossible, alpha);
               value = oldValue - upperTheta * alpha;
               if (value < dualT && alpha >= acceptablePivot) {
                 upperTheta = (oldValue - dualT) / alpha;
@@ -2281,7 +2281,7 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
             double oldValue = abcDj[iSequence] * mult;
             double value = oldValue - tentativeTheta * alpha;
             if (value < dualT) {
-              bestPossible = CoinMax(bestPossible, alpha);
+              bestPossible = std::max(bestPossible, alpha);
               value = oldValue - upperTheta * alpha;
               if (value < dualT && alpha >= acceptablePivot) {
                 upperTheta = (oldValue - dualT) / alpha;
@@ -2294,7 +2294,7 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
             bool keep;
             index[numberNonZero] = iSequence;
             array[numberNonZero++] = tableauValue;
-            bestPossible = CoinMax(bestPossible, fabs(tableauValue));
+            bestPossible = std::max(bestPossible, fabs(tableauValue));
             double oldValue = abcDj[iSequence];
             // If free has to be very large - should come in via dualRow
             //if (getInternalStatus(iSequence+addSequence)==isFree&&fabs(tableauValue)<1.0e-3)
@@ -2304,11 +2304,11 @@ void AbcMatrix::dualColumn1Part(int iBlock, int &sequenceIn, double &upperThetaR
             } else if (oldValue < -currentDualTolerance) {
               keep = true;
             } else {
-              if (fabs(tableauValue) > CoinMax(10.0 * acceptablePivot, 1.0e-5)) {
+              if (fabs(tableauValue) > std::max(10.0 * acceptablePivot, 1.0e-5)) {
                 keep = true;
               } else {
                 keep = false;
-                badFree = CoinMax(badFree, fabs(tableauValue));
+                badFree = std::max(badFree, fabs(tableauValue));
               }
             }
             if (keep) {
@@ -2468,7 +2468,7 @@ int AbcMatrix::pivotColumnDantzig(const CoinIndexedVector &updates,
     starts = startColumnBlock();
 #if ABC_PARALLEL
 #define NUMBER_BLOCKS NUMBER_ROW_BLOCKS
-  int numberBlocks = CoinMin(NUMBER_BLOCKS, model_->numberCpus());
+  int numberBlocks = std::min(NUMBER_BLOCKS, model_->numberCpus());
 #else
 #define NUMBER_BLOCKS 1
   int numberBlocks = NUMBER_BLOCKS;
@@ -2696,7 +2696,7 @@ int AbcMatrix::primalColumnDouble(int iBlock, CoinPartitionedVector &updateForTa
   int numberNewInfeas = 0;
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   double mult[2] = { 1.0, -1.0 };
@@ -2766,13 +2766,13 @@ int AbcMatrix::primalColumnDouble(int iBlock, CoinPartitionedVector &updateForTa
         if (thisWeight < DEVEX_TRY_NORM) {
           if (referenceIn < 0.0) {
             // steepest
-            thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+            thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
           } else {
             // exact
             thisWeight = referenceIn * pivotSquared;
             if (isReference(iRow))
               thisWeight += 1.0;
-            thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+            thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
           }
         }
         weights[iRow] = thisWeight;
@@ -2847,13 +2847,13 @@ int AbcMatrix::primalColumnDouble(int iBlock, CoinPartitionedVector &updateForTa
         if (thisWeight < DEVEX_TRY_NORM) {
           if (referenceIn < 0.0) {
             // steepest
-            thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+            thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
           } else {
             // exact
             thisWeight = referenceIn * pivotSquared;
             if (isReference(iSequence))
               thisWeight += 1.0;
-            thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+            thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
           }
         }
         weights[iSequence] = thisWeight;
@@ -2906,7 +2906,7 @@ int AbcMatrix::primalColumnSparseDouble(int iBlock, CoinPartitionedVector &updat
   int numberNewInfeas = 0;
   // we can't really trust infeasibilities if there is dual error
   // this coding has to mimic coding in checkDualSolution
-  double error = CoinMin(1.0e-2, model_->largestDualError());
+  double error = std::min(1.0e-2, model_->largestDualError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   double mult[2] = { 1.0, -1.0 };
@@ -2952,13 +2952,13 @@ int AbcMatrix::primalColumnSparseDouble(int iBlock, CoinPartitionedVector &updat
         if (thisWeight < DEVEX_TRY_NORM) {
           if (referenceIn < 0.0) {
             // steepest
-            thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+            thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
           } else {
             // exact
             thisWeight = referenceIn * pivotSquared;
             if (isReference(iRow))
               thisWeight += 1.0;
-            thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+            thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
           }
         }
         weights[iRow] = thisWeight;
@@ -3101,13 +3101,13 @@ int AbcMatrix::primalColumnSparseDouble(int iBlock, CoinPartitionedVector &updat
         if (thisWeight < DEVEX_TRY_NORM) {
           if (referenceIn < 0.0) {
             // steepest
-            thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+            thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
           } else {
             // exact
             thisWeight = referenceIn * pivotSquared;
             if (isReference(iSequence))
               thisWeight += 1.0;
-            thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+            thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
           }
         }
         weights[iSequence] = thisWeight;
@@ -3261,7 +3261,7 @@ void AbcMatrix::partialPricing(double startFraction, double endFraction,
   const double *COIN_RESTRICT elementByColumn = matrix_->getElements();
   int numberColumns = model_->numberColumns();
   int start = static_cast< int >(startFraction * numberColumns);
-  int end = CoinMin(static_cast< int >(endFraction * numberColumns + 1), numberColumns);
+  int end = std::min(static_cast< int >(endFraction * numberColumns + 1), numberColumns);
   // adjust
   start += maximumRows;
   end += maximumRows;

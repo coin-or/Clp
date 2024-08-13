@@ -377,8 +377,8 @@ void AbcSimplexDual::gutsOfDual()
       // may factorize, checks if problem finished
       statusOfProblemInDual(factorizationType);
       factorizationType = 1;
-      largestPrimalError = CoinMax(largestPrimalError, largestPrimalError_);
-      largestDualError = CoinMax(largestDualError, largestDualError_);
+      largestPrimalError = std::max(largestPrimalError, largestPrimalError_);
+      largestDualError = std::max(largestDualError, largestDualError_);
       if (disaster)
         problemStatus_ = 3;
     }
@@ -458,7 +458,7 @@ void AbcSimplexDual::gutsOfDual()
           if (pivotTolerance < abcFactorization_->pivotTolerance()) {
             pivotTolerance = abcFactorization_->pivotTolerance();
             if (!abcFactorization_->pivots())
-              abcFactorization_->minimumPivotTolerance(CoinMin(0.25, 1.05 * abcFactorization_->minimumPivotTolerance()));
+              abcFactorization_->minimumPivotTolerance(std::min(0.25, 1.05 * abcFactorization_->minimumPivotTolerance()));
           }
           break;
         } else {
@@ -749,7 +749,7 @@ void AbcSimplexDual::dualPivotRow()
             infeasibility = value - upper;
           else if (value < lower)
             infeasibility = lower - value;
-          infeasibility = CoinMin(maxInfeas, infeasibility);
+          infeasibility = std::min(maxInfeas, infeasibility);
           if (infeasibility * alpha > bestInfeasibleAlpha && alpha > 1.0e-1) {
             if (!flagged(pivotVariable[iRow])) {
               bestInfeasibleAlpha = infeasibility * alpha;
@@ -936,11 +936,11 @@ int AbcSimplexDual::changeBounds(int initialize,
         if (status == atUpperBound || status == atLowerBound) {
           double value = abcSolution[iSequence];
           if (value - lowerValue <= upperValue - value) {
-            newLowerValue = CoinMax(lowerValue, value - 0.666667 * newBound);
-            newUpperValue = CoinMin(upperValue, newLowerValue + newBound);
+            newLowerValue = std::max(lowerValue, value - 0.666667 * newBound);
+            newUpperValue = std::min(upperValue, newLowerValue + newBound);
           } else {
-            newUpperValue = CoinMin(upperValue, value + 0.666667 * newBound);
-            newLowerValue = CoinMax(lowerValue, newUpperValue - newBound);
+            newUpperValue = std::min(upperValue, value + 0.666667 * newBound);
+            newLowerValue = std::max(lowerValue, newUpperValue - newBound);
           }
           abcLower[iSequence] = newLowerValue;
           abcUpper[iSequence] = newUpperValue;
@@ -1052,13 +1052,13 @@ int AbcSimplexDual::changeBounds(int initialize,
                 if (upperSaved_[iSequence] - abcUpper[iSequence] > abcLower[iSequence] - lowerSaved_[iSequence]) {
                   setFakeBound(iSequence, AbcSimplexDual::upperFake);
                   //assert (abcLower[iSequence]==lowerSaved_[iSequence]);
-                  abcLower[iSequence] = CoinMax(abcLower[iSequence], lowerSaved_[iSequence]);
+                  abcLower[iSequence] = std::max(abcLower[iSequence], lowerSaved_[iSequence]);
                   assert(abcUpper[iSequence] < upperSaved_[iSequence]);
                 } else {
                   setFakeBound(iSequence, AbcSimplexDual::lowerFake);
                   assert(abcLower[iSequence] > lowerSaved_[iSequence]);
                   //assert (abcUpper[iSequence]==upperSaved_[iSequence]);
-                  abcUpper[iSequence] = CoinMin(abcUpper[iSequence], upperSaved_[iSequence]);
+                  abcUpper[iSequence] = std::min(abcUpper[iSequence], upperSaved_[iSequence]);
                 }
               }
             }
@@ -1185,7 +1185,7 @@ AbcSimplexDual::dualColumn1A()
         double oldValue = abcDj[iRow] * mult;
         double value = oldValue - tentativeTheta * alpha;
         if (value < dualT) {
-          bestPossible = CoinMax(bestPossible, alpha);
+          bestPossible = std::max(bestPossible, alpha);
           value = oldValue - upperTheta * alpha;
           if (value < dualT && alpha >= acceptablePivot) {
             upperTheta = (oldValue - dualT) / alpha;
@@ -1214,7 +1214,7 @@ AbcSimplexDual::dualColumn1A()
         double oldValue = abcDj[iRow] * mult;
         double value = oldValue - tentativeTheta * alpha;
         if (value < dualT) {
-          bestPossible = CoinMax(bestPossible, alpha);
+          bestPossible = std::max(bestPossible, alpha);
           value = oldValue - upperTheta * alpha;
           if (value < dualT && alpha >= acceptablePivot) {
             upperTheta = (oldValue - dualT) / alpha;
@@ -1228,7 +1228,7 @@ AbcSimplexDual::dualColumn1A()
         bool keep;
         index[numberNonZero] = iRow;
         array[numberNonZero++] = piValue;
-        bestPossible = CoinMax(bestPossible, fabs(piValue));
+        bestPossible = std::max(bestPossible, fabs(piValue));
         double oldValue = abcDj[iRow];
         // If free has to be very large - should come in via dualRow
         //if (getInternalStatus(iRow+addSequence)==isFree&&fabs(piValue)<1.0e-3)
@@ -1238,11 +1238,11 @@ AbcSimplexDual::dualColumn1A()
         } else if (oldValue < -currentDualTolerance_) {
           keep = true;
         } else {
-          if (fabs(piValue) > CoinMax(10.0 * currentAcceptablePivot_, 1.0e-5)) {
+          if (fabs(piValue) > std::max(10.0 * currentAcceptablePivot_, 1.0e-5)) {
             keep = true;
           } else {
             keep = false;
-            badFree = CoinMax(badFree, fabs(piValue));
+            badFree = std::max(badFree, fabs(piValue));
           }
         }
         if (keep) {
@@ -1311,7 +1311,7 @@ AbcSimplexDual::dualColumn1B()
           double oldValue = abcDj[iSequence] * mult;
           double value = oldValue - tentativeTheta * alpha;
           if (value < dualT) {
-            bestPossible = CoinMax(bestPossible, alpha);
+            bestPossible = std::max(bestPossible, alpha);
             value = oldValue - upperTheta * alpha;
             if (value < dualT && alpha >= acceptablePivot) {
               upperTheta = (oldValue - dualT) / alpha;
@@ -1339,7 +1339,7 @@ AbcSimplexDual::dualColumn1B()
             double oldValue = abcDj[iSequence] * mult;
             double value = oldValue - tentativeTheta * alpha;
             if (value < dualT) {
-              bestPossible = CoinMax(bestPossible, alpha);
+              bestPossible = std::max(bestPossible, alpha);
               value = oldValue - upperTheta * alpha;
               if (value < dualT && alpha >= acceptablePivot) {
                 upperTheta = (oldValue - dualT) / alpha;
@@ -1350,7 +1350,7 @@ AbcSimplexDual::dualColumn1B()
             }
           } else {
             bool keep;
-            bestPossible = CoinMax(bestPossible, fabs(tableauValue));
+            bestPossible = std::max(bestPossible, fabs(tableauValue));
             double oldValue = abcDj[iSequence];
             // If free has to be very large - should come in via dualRow
             //if (getInternalStatus(iSequence+addSequence)==isFree&&fabs(tableauValue)<1.0e-3)
@@ -1360,11 +1360,11 @@ AbcSimplexDual::dualColumn1B()
             } else if (oldValue < -currentDualTolerance) {
               keep = true;
             } else {
-              if (fabs(tableauValue) > CoinMax(10.0 * acceptablePivot, 1.0e-5)) {
+              if (fabs(tableauValue) > std::max(10.0 * acceptablePivot, 1.0e-5)) {
                 keep = true;
               } else {
                 keep = false;
-                badFree = CoinMax(badFree, fabs(tableauValue));
+                badFree = std::max(badFree, fabs(tableauValue));
               }
             }
             if (keep) {
@@ -1579,7 +1579,7 @@ void AbcSimplexDual::dualColumn2Most(dualColumnResult &result)
   // if free then always choose , otherwise ...
   double theta = 1.0e50;
   // now flip flop between spare arrays until reasonable theta
-  tentativeTheta = CoinMax(10.0 * upperTheta_, 1.0e-7);
+  tentativeTheta = std::max(10.0 * upperTheta_, 1.0e-7);
 
   // loops increasing tentative theta until can't go through
 #ifdef PRINT_RATIO_PROGRESS
@@ -1743,7 +1743,7 @@ void AbcSimplexDual::dualColumn2Most(dualColumnResult &result)
               bestSequence = iSequence;
               theta = (oldValue + goToTolerance1()) / alpha;
               //assert (oldValue==abcDj[iSequence]);
-              largestPivot = CoinMax(largestPivot, 0.5 * bestPivot);
+              largestPivot = std::max(largestPivot, 0.5 * bestPivot);
             }
             double range = abcUpper[iSequence] - abcLower[iSequence];
             thruThis += range * fabs(alpha);
@@ -1934,7 +1934,7 @@ void AbcSimplexDual::dualColumn2()
     candidateList.compact();
   //usefulArray_[arrayForTableauRow_].compact();
   // But factorizations complain if <1.0e-8
-  //acceptablePivot=CoinMax(acceptablePivot,1.0e-8);
+  //acceptablePivot=std::max(acceptablePivot,1.0e-8);
   // do ratio test for normal iteration
   currentAcceptablePivot_ = 1.0e-1 * acceptablePivot_;
   if (numberIterations_ > 100)
@@ -1947,8 +1947,8 @@ void AbcSimplexDual::dualColumn2()
     currentAcceptablePivot_ = acceptablePivot_; // relax
   // If very large infeasibility use larger acceptable pivot
   if (abcFactorization_->pivots()) {
-    double value = CoinMax(currentAcceptablePivot_, 1.0e-12 * fabs(dualOut_));
-    currentAcceptablePivot_ = CoinMin(1.0e2 * currentAcceptablePivot_, value);
+    double value = std::max(currentAcceptablePivot_, 1.0e-12 * fabs(dualOut_));
+    currentAcceptablePivot_ = std::min(1.0e2 * currentAcceptablePivot_, value);
   }
   // return at once if no free but there were free
   if (lastFirstFree_ >= 0 && sequenceIn_ < 0) {
@@ -2036,7 +2036,7 @@ void AbcSimplexDual::dualColumn2()
       int iStatus = internalStatus[sequenceIn_] & 3;
       alpha_ *= multiplier[iStatus];
       oldValue = abcDj[sequenceIn_];
-      theta_ = CoinMax(oldValue / alpha_, 0.0);
+      theta_ = std::max(oldValue / alpha_, 0.0);
       if (theta_ < minimumTheta && fabs(alpha_) < 1.0e5 && 1) {
         // can't pivot to zero
         theta_ = minimumTheta;
@@ -2116,7 +2116,7 @@ void AbcSimplexDual::dualColumn2()
       // But should not move objective too much ??
 #ifdef DONT_MOVE_OBJECTIVE
       double moveObjective = fabs(modification * abcSolution[sequenceIn_]);
-      double smallMove = CoinMax(fabs(rawObjectiveValue_), 1.0e-3);
+      double smallMove = std::max(fabs(rawObjectiveValue_), 1.0e-3);
       if (moveObjective > smallMove) {
 #if ABC_NORMAL_DEBUG > 0
         if (handler_->logLevel() > 1)
@@ -2394,7 +2394,7 @@ int AbcSimplex::gutsOfSolution(int type)
     double useOldDualError = oldLargestDualError;
     double useDualError = largestDualError_;
     if (algorithm_ > 0 && abcNonLinearCost_ && abcNonLinearCost_->sumInfeasibilities()) {
-      double factor = CoinMax(1.0, CoinMin(1.0e3, infeasibilityCost_ * 1.0e-6));
+      double factor = std::max(1.0, std::min(1.0e3, infeasibilityCost_ * 1.0e-6));
       useOldDualError /= factor;
       useDualError /= factor;
     }
@@ -2406,7 +2406,7 @@ int AbcSimplex::gutsOfSolution(int type)
       if (pivotTolerance < 0.1)
         abcFactorization_->pivotTolerance(0.1);
       else if (pivotTolerance < 0.98999999)
-        abcFactorization_->pivotTolerance(CoinMin(0.99, pivotTolerance * factor));
+        abcFactorization_->pivotTolerance(std::min(0.99, pivotTolerance * factor));
       notChanged = pivotTolerance == abcFactorization_->pivotTolerance();
 #if defined(CLP_USEFUL_PRINTOUT) && !defined(GCC_4_9)
       if (pivotTolerance < 0.9899999) {
@@ -2455,10 +2455,10 @@ int AbcSimplexDual::makeNonFreeVariablesDualFeasible(bool changeCosts)
       double mult = multiplier[iStatus];
       double dj = abcDj_[iSequence] * mult;
       if (dj < dualT) {
-        largestCost = CoinMax(fabs(abcPerturbation_[iSequence]), largestCost);
+        largestCost = std::max(fabs(abcPerturbation_[iSequence]), largestCost);
       }
     } else if (iStatus != 7) {
-      largestCost = CoinMax(fabs(abcPerturbation_[iSequence]), largestCost);
+      largestCost = std::max(fabs(abcPerturbation_[iSequence]), largestCost);
     }
   }
   for (int iSequence = 0; iSequence < numberTotal_; iSequence++) {
@@ -2491,7 +2491,7 @@ int AbcSimplexDual::makeNonFreeVariablesDualFeasible(bool changeCosts)
         }
         double changeInObjective = -gap * dj;
         // probably need to be more intelligent
-        if ((changeInObjective > 1.0e3 || gap > CoinMax(0.5 * dualBound_, 1.0e3)) && dj > -1.0e-1) {
+        if ((changeInObjective > 1.0e3 || gap > std::max(0.5 * dualBound_, 1.0e3)) && dj > -1.0e-1) {
           // change cost
           costDifference = (-dj - 0.5 * dualTolerance_) * mult;
           if (fabs(costDifference) < 100000.0 * dualTolerance_) {
@@ -2546,7 +2546,7 @@ int AbcSimplexDual::whatNext()
     checkValue = 1.0e-5;
   // if can't trust much and long way from optimal then relax
   if (largestPrimalError_ > 10.0)
-    checkValue = CoinMin(1.0e-4, 1.0e-8 * largestPrimalError_);
+    checkValue = std::min(1.0e-4, 1.0e-8 * largestPrimalError_);
   if (fabs(btranAlpha_) < 1.0e-12 || fabs(alpha_) < 1.0e-12 || fabs(btranAlpha_ - alpha_) > checkValue * (1.0 + fabs(alpha_))) {
     handler_->message(CLP_DUAL_CHECK, messages_)
       << btranAlpha_
@@ -2660,7 +2660,7 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
     // be optimistic
     stateOfProblem_ &= ~PESSIMISTIC;
     // but use 0.1
-    double newTolerance = CoinMax(0.1, saveData_.pivotTolerance_);
+    double newTolerance = std::max(0.1, saveData_.pivotTolerance_);
     abcFactorization_->pivotTolerance(newTolerance);
   }
   if (type != 3 && (numberPivots > dontFactorizePivots_ || numberIterations_ == baseIteration_)) {
@@ -2672,7 +2672,7 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
     int factorizationStatus = 0;
     if ((largestPrimalError_ > 1.0e1 || largestDualError_ > 1.0e1)
       && numberRows_ > 100 && numberIterations_ > baseIteration_) {
-      double newTolerance = CoinMin(1.1 * abcFactorization_->pivotTolerance(), 0.99);
+      double newTolerance = std::min(1.1 * abcFactorization_->pivotTolerance(), 0.99);
       abcFactorization_->pivotTolerance(newTolerance);
     }
 #ifdef EARLY_FACTORIZE
@@ -2681,7 +2681,7 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
 #ifdef KEEP_TRYING_EARLY
       int savedEarly = numberEarly_ >> 16;
       int newEarly = (numberEarly_ & 0xffff);
-      newEarly = CoinMin(savedEarly, 1 + 2 * newEarly);
+      newEarly = std::min(savedEarly, 1 + 2 * newEarly);
       numberEarly_ = (savedEarly << 16) | newEarly;
 #endif
       factorizationStatus = internalFactorize(type ? 1 : 2);
@@ -2882,13 +2882,13 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
   {
     double thisObj = rawObjectiveValue();
     double lastObj = abcProgress_.lastObjective(0);
-    if ((lastObj > thisObj + 1.0e-3 * CoinMax(fabs(thisObj), fabs(lastObj)) + 1.0e-4 || (sumPrimalInfeasibilities_ > 10.0 * lastSumPrimalInfeasibilities + 1.0e3 && sumDualInfeasibilities_ > 10.0 * CoinMax(lastSumDualInfeasibilities, 1.0)))
+    if ((lastObj > thisObj + 1.0e-3 * std::max(fabs(thisObj), fabs(lastObj)) + 1.0e-4 || (sumPrimalInfeasibilities_ > 10.0 * lastSumPrimalInfeasibilities + 1.0e3 && sumDualInfeasibilities_ > 10.0 * std::max(lastSumDualInfeasibilities, 1.0)))
       && !ignoreStuff) {
 #if ABC_NORMAL_DEBUG > 0
       printf("bad - objective backwards %g %g errors %g %g suminf %g %g\n", lastObj, thisObj, largestDualError_, largestPrimalError_, sumDualInfeasibilities_, sumPrimalInfeasibilities_);
 #endif
       numberBlackMarks++;
-      if (largestDualError_ > 1.0e-3 || largestPrimalError_ > 1.0e-3 || (sumDualInfeasibilities_ > 10.0 * CoinMax(lastSumDualInfeasibilities, 1.0) && firstFree_ < 0)) {
+      if (largestDualError_ > 1.0e-3 || largestPrimalError_ > 1.0e-3 || (sumDualInfeasibilities_ > 10.0 * std::max(lastSumDualInfeasibilities, 1.0) && firstFree_ < 0)) {
 #if ABC_NORMAL_DEBUG > 0
         printf("backtracking %d iterations - dual error %g primal error %g - sumDualInf %g\n",
           numberPivots,
@@ -2970,11 +2970,11 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
       if (status == atLowerBound && djValue < -currentDualTolerance_) {
         double gap = upper[i] - lower[i];
         if (gap > 100000000.0)
-          badValue = -djValue * CoinMin(gap, 1.0e10);
+          badValue = -djValue * std::min(gap, 1.0e10);
       } else if (status == atUpperBound && djValue > currentDualTolerance_) {
         double gap = upper[i] - lower[i];
         if (gap > 100000000.0) {
-          badValue = djValue * CoinMin(gap, 1.0e10);
+          badValue = djValue * std::min(gap, 1.0e10);
 #if PRINT_PAN
           nAtUb++;
 #endif
@@ -2994,7 +2994,7 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
     }
     if (number && ignoreStuff != 2) {
       CoinSort_2(work, work + number, which);
-      int numberToDo = CoinMin(number, numberRows_ / 10); // ??
+      int numberToDo = std::min(number, numberRows_ / 10); // ??
 #if PRINT_PAN > 1
       CoinSort_2(which, which + numberToDo, work);
       int n = 0;
@@ -3016,7 +3016,7 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
         }
 #endif
         setInternalStatus(iSequence, superBasic);
-        firstFree_ = CoinMin(firstFree_, iSequence);
+        firstFree_ = std::min(firstFree_, iSequence);
       }
 #if PRINT_PAN > 1
       if (n)
@@ -3136,13 +3136,13 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
 #endif
   } else if (goodAccuracy() && numberIterations_ > lastBadIteration_ + 200) {
     // Can reduce tolerance
-    double newTolerance = CoinMax(0.995 * abcFactorization_->pivotTolerance(), saveData_.pivotTolerance_);
+    double newTolerance = std::max(0.995 * abcFactorization_->pivotTolerance(), saveData_.pivotTolerance_);
     if (!type)
       newTolerance = saveData_.pivotTolerance_;
     if (newTolerance > abcFactorization_->minimumPivotTolerance())
       abcFactorization_->pivotTolerance(newTolerance);
   }
-  bestObjectiveValue_ = CoinMax(bestObjectiveValue_,
+  bestObjectiveValue_ = std::max(bestObjectiveValue_,
     rawObjectiveValue_ - bestPossibleImprovement_);
   // Double check infeasibility if no action
   if (abcProgress_.lastIterationNumber(0) == numberIterations_) {
@@ -3168,18 +3168,18 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
     resetFakeBounds(-1);
 #endif
 #endif
-    if (lastObj < thisObj - 1.0e-5 * CoinMax(fabs(thisObj), fabs(lastObj)) - 1.0e-3 && saveType < 9) {
+    if (lastObj < thisObj - 1.0e-5 * std::max(fabs(thisObj), fabs(lastObj)) - 1.0e-3 && saveType < 9) {
       numberTimesOptimal_ = 0;
     }
   }
   // Up tolerance if looks a bit odd
-  if (numberIterations_ > CoinMax(1000, numberRows_ >> 4) && (specialOptions_ & 64) != 0) {
+  if (numberIterations_ > std::max(1000, numberRows_ >> 4) && (specialOptions_ & 64) != 0) {
     if (sumPrimalInfeasibilities_ && sumPrimalInfeasibilities_ < 1.0e5) {
       int backIteration = abcProgress_.lastIterationNumber(CLP_PROGRESS - 1);
       if (backIteration > 0 && numberIterations_ - backIteration < 9 * CLP_PROGRESS) {
         if (abcFactorization_->pivotTolerance() < 0.9) {
           // up tolerance
-          abcFactorization_->pivotTolerance(CoinMin(abcFactorization_->pivotTolerance() * 1.05 + 0.02, 0.91));
+          abcFactorization_->pivotTolerance(std::min(abcFactorization_->pivotTolerance() * 1.05 + 0.02, 0.91));
           //printf("tol now %g\n",abcFactorization_->pivotTolerance());
           abcProgress_.clearIterationNumbers();
         }
@@ -3323,7 +3323,7 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
           } else {
             if (numberTimesOptimal_ == 2) {
               // better to have small tolerance even if slower
-              abcFactorization_->zeroTolerance(CoinMin(abcFactorization_->zeroTolerance(), 1.0e-15));
+              abcFactorization_->zeroTolerance(std::min(abcFactorization_->zeroTolerance(), 1.0e-15));
             }
 #if ABC_NORMAL_DEBUG > 0
             printf("changing dual tolerance from %g to %g (numberTimesOptimal_==%d)\n",
@@ -3482,13 +3482,13 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
     if (largestPrimalError_ * largestDualError_ > 1.0e2) {
       looksBad = 1;
     } else if (largestPrimalError_ > 1.0e-2
-      && rawObjectiveValue_ > CoinMin(1.0e15, 1.0e3 * limit)) {
+      && rawObjectiveValue_ > std::min(1.0e15, 1.0e3 * limit)) {
       looksBad = 2;
     }
     if (looksBad) {
       if (abcFactorization_->pivotTolerance() < 0.9) {
         // up tolerance
-        abcFactorization_->pivotTolerance(CoinMin(abcFactorization_->pivotTolerance() * 1.05 + 0.02, 0.91));
+        abcFactorization_->pivotTolerance(std::min(abcFactorization_->pivotTolerance() * 1.05 + 0.02, 0.91));
       } else if (numberIterations_ > 10000) {
 #if ABC_NORMAL_DEBUG > 0
         if (handler_->logLevel() > 2)
@@ -3533,7 +3533,7 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
   }
   double thisObj = abcProgress_.lastObjective(0);
   double lastObj = abcProgress_.lastObjective(1);
-  if (lastObj > thisObj + 1.0e-4 * CoinMax(fabs(thisObj), fabs(lastObj)) + 1.0e-4 && lastFirstFree_ < 0) {
+  if (lastObj > thisObj + 1.0e-4 * std::max(fabs(thisObj), fabs(lastObj)) + 1.0e-4 && lastFirstFree_ < 0) {
     //printf("BAD - objective backwards\n");
     //bounceTolerances(3);
     numberBlackMarks += 3;
@@ -3543,12 +3543,12 @@ void AbcSimplexDual::statusOfProblemInDual(int type)
     int maxFactor = abcFactorization_->maximumPivots();
     if (maxFactor > 10) {
       if ((stateOfProblem_ & PESSIMISTIC) == 0 || true) {
-        if (largestDualError_ > 10.0 * CoinMax(lastDualError_, 1.0e-6)
-          || largestPrimalError_ > 10.0 * CoinMax(lastPrimalError_, 1.0e-6))
-          maxFactor = CoinMin(maxFactor, 20);
-        forceFactorization_ = CoinMax(1, (maxFactor >> 1));
+        if (largestDualError_ > 10.0 * std::max(lastDualError_, 1.0e-6)
+          || largestPrimalError_ > 10.0 * std::max(lastPrimalError_, 1.0e-6))
+          maxFactor = std::min(maxFactor, 20);
+        forceFactorization_ = std::max(1, (maxFactor >> 1));
       } else if (numberBlackMarks > 2) {
-        forceFactorization_ = CoinMax(1, (forceFactorization_ >> 1));
+        forceFactorization_ = std::max(1, (forceFactorization_ >> 1));
       }
     }
     stateOfProblem_ |= PESSIMISTIC;
@@ -3798,7 +3798,7 @@ int AbcSimplexDual::flipBounds()
             solution[iSequence] = upper[iSequence];
 #if CLEANUP_DJS
             if (cost[iSequence] < originalCost[iSequence]) {
-              double difference = CoinMax(cost[iSequence] - originalCost[iSequence], djValue);
+              double difference = std::max(cost[iSequence] - originalCost[iSequence], djValue);
               dj[iSequence] -= difference;
               cost[iSequence] -= difference;
             }
@@ -3810,7 +3810,7 @@ int AbcSimplexDual::flipBounds()
             solution[iSequence] = lower[iSequence];
 #if CLEANUP_DJS
             if (cost[iSequence] > originalCost[iSequence]) {
-              double difference = CoinMin(cost[iSequence] - originalCost[iSequence], -djValue);
+              double difference = std::min(cost[iSequence] - originalCost[iSequence], -djValue);
               dj[iSequence] -= difference;
               cost[iSequence] -= difference;
             }
@@ -3850,7 +3850,7 @@ int AbcSimplexDual::flipBounds()
   double movementOld = oldDualOut * directionOut_ / alpha_;
   // so objective should increase by fabs(dj)*movement_
   // but we already have objective change - so check will be good
-  if (objectiveChange_ + fabs(movementOld * dualIn_) < -CoinMax(1.0e-5, 1.0e-12 * fabs(rawObjectiveValue_))) {
+  if (objectiveChange_ + fabs(movementOld * dualIn_) < -std::max(1.0e-5, 1.0e-12 * fabs(rawObjectiveValue_))) {
 #if ABC_NORMAL_DEBUG > 3
     if (handler_->logLevel() & 32)
       printf("movement %g, movementOld %g swap change %g, rest %g  * %g\n",
@@ -4182,7 +4182,7 @@ void AbcSimplex::checkDualSolutionPlusFake()
   int numberSuperBasicWithDj = 0;
   bestPossibleImprovement_ = 0.0;
   // we can't really trust infeasibilities if there is dual error
-  double error = CoinMin(1.0e-2, largestDualError_);
+  double error = std::min(1.0e-2, largestDualError_);
   // allow tolerance at least slightly bigger than standard
   double relaxedTolerance = currentDualTolerance_ + error;
   // allow bigger tolerance for possible improvement
@@ -4236,7 +4236,7 @@ void AbcSimplex::checkDualSolutionPlusFake()
                 sumDualInfeasibilities_ += value - currentDualTolerance_;
                 badDjSequence = iSequence;
                 if (value > possTolerance)
-                  bestPossibleImprovement_ += CoinMin(distanceUp, 1.0e10) * value;
+                  bestPossibleImprovement_ += std::min(distanceUp, 1.0e10) * value;
                 if (value > relaxedTolerance)
                   sumOfRelaxedDualInfeasibilities_ += value - relaxedTolerance;
                 numberDualInfeasibilities_++;
@@ -4246,7 +4246,7 @@ void AbcSimplex::checkDualSolutionPlusFake()
           } else {
             // adjust cost etc
             if (abcCost[iSequence] > originalCost[iSequence]) {
-              double difference = CoinMin(abcCost[iSequence] - originalCost[iSequence], value);
+              double difference = std::min(abcCost[iSequence] - originalCost[iSequence], value);
               //printf("Lb %d changing cost from %g to %g, dj from %g to %g\n",
               //     iSequence,abcCost[iSequence],abcCost[iSequence]-difference,
               //     abcDj[iSequence],abcDj[iSequence]-difference);
@@ -4266,7 +4266,7 @@ void AbcSimplex::checkDualSolutionPlusFake()
           if (value > currentDualTolerance_) {
             sumDualInfeasibilities_ += value - currentDualTolerance_;
             if (value > possTolerance)
-              bestPossibleImprovement_ += CoinMin(distanceUp, 1.0e10) * value;
+              bestPossibleImprovement_ += std::min(distanceUp, 1.0e10) * value;
             if (value > relaxedTolerance)
               sumOfRelaxedDualInfeasibilities_ += value - relaxedTolerance;
             numberDualInfeasibilities_++;
@@ -4295,7 +4295,7 @@ void AbcSimplex::checkDualSolutionPlusFake()
               sumDualInfeasibilities_ += value - currentDualTolerance_;
               badDjSequence = iSequence;
               if (value > possTolerance)
-                bestPossibleImprovement_ += value * CoinMin(distanceDown, 1.0e10);
+                bestPossibleImprovement_ += value * std::min(distanceDown, 1.0e10);
               if (value > relaxedTolerance)
                 sumOfRelaxedDualInfeasibilities_ += value - relaxedTolerance;
               numberDualInfeasibilities_++;
@@ -4305,7 +4305,7 @@ void AbcSimplex::checkDualSolutionPlusFake()
         } else {
           // adjust cost etc
           if (abcCost[iSequence] < originalCost[iSequence]) {
-            double difference = CoinMax(abcCost[iSequence] - originalCost[iSequence], value);
+            double difference = std::max(abcCost[iSequence] - originalCost[iSequence], value);
             //printf("Ub %d changing cost from %g to %g, dj from %g to %g\n",
             //	     iSequence,abcCost[iSequence],abcCost[iSequence]-difference,
             //	     abcDj[iSequence],abcDj[iSequence]-difference);
@@ -4488,8 +4488,8 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
     if (lower[iSequence] < upper[iSequence]) {
       int length = columnLength[iSequence];
       if (length > 2) {
-        maxLength = CoinMax(maxLength, length);
-        minLength = CoinMin(minLength, length);
+        maxLength = std::max(maxLength, length);
+        minLength = std::min(minLength, length);
       }
     }
   }
@@ -4510,7 +4510,7 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
     // Experiment
     // maximumFraction could be 1.0e-10 to 1.0
     double m[] = { 1.0e-10, 1.0e-9, 1.0e-8, 1.0e-7, 1.0e-6, 1.0e-5, 1.0e-4, 1.0e-3, 1.0e-2, 1.0e-1, 1.0 };
-    int whichOne = CoinMin(perturbation_ - 51, 10);
+    int whichOne = std::min(perturbation_ - 51, 10);
     if (whichOne < 0) {
       if (numberRows_ < 5000)
         whichOne = 2; // treat 50 as if 53
@@ -4532,7 +4532,7 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
   bool modifyRowCosts = false;
   numberNonZero = 0;
   //perturbation = 1.0e-10;
-  perturbation = CoinMax(1.0e-10, maximumFraction);
+  perturbation = std::max(1.0e-10, maximumFraction);
   double *COIN_RESTRICT cost = abcCost_;
   bool allSame = true;
   double lastValue = 0.0;
@@ -4542,10 +4542,10 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
     double up = upper[iRow];
     if (lo < up) {
       double value = fabs(cost[iRow]);
-      perturbation = CoinMax(perturbation, value);
+      perturbation = std::max(perturbation, value);
       if (value) {
         modifyRowCosts = true;
-        smallestNonZero = CoinMin(smallestNonZero, value);
+        smallestNonZero = std::min(smallestNonZero, value);
       }
     }
     if (lo && lo > -1.0e10) {
@@ -4571,9 +4571,9 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
     double up = upper[iSequence];
     if (lo < up) {
       double value = fabs(cost[iSequence]);
-      perturbation = CoinMax(perturbation, value);
+      perturbation = std::max(perturbation, value);
       if (value) {
-        smallestNonZero = CoinMin(smallestNonZero, value);
+        smallestNonZero = std::min(smallestNonZero, value);
       }
     }
     if (lo && lo > -1.0e10) {
@@ -4603,11 +4603,11 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
       smallestPositive, largestPositive);
     if (smallestNegative == largestNegative && smallestPositive == largestPositive) {
       // Really hit perturbation
-      double adjust = CoinMin(100.0 * maximumFraction, 1.0e-3 * CoinMax(lastValue, lastValue2));
-      maximumFraction = CoinMax(adjust, maximumFraction);
+      double adjust = std::min(100.0 * maximumFraction, 1.0e-3 * std::max(lastValue, lastValue2));
+      maximumFraction = std::max(adjust, maximumFraction);
     }
   }
-  perturbation = CoinMin(perturbation, smallestNonZero / maximumFraction);
+  perturbation = std::min(perturbation, smallestNonZero / maximumFraction);
   double largestZero = 0.0;
   double largest = 0.0;
   double largestPerCent = 0.0;
@@ -4622,7 +4622,7 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
       if (lower[iRow] < upper[iRow]) {
         double value = perturbation;
         double currentValue = cost[iRow];
-        value = CoinMin(value, maximumFraction * (fabs(currentValue) + 1.0e-1 * perturbation + 1.0e-3));
+        value = std::min(value, maximumFraction * (fabs(currentValue) + 1.0e-1 * perturbation + 1.0e-3));
         double perturbationValue = 2.0 * (perturbationArray[iRow] - 0.5); // for now back to normal random
         if (lower[iRow] > -largeValue_) {
           if (fabs(lower[iRow]) < fabs(upper[iRow]))
@@ -4635,11 +4635,11 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
           value = 0.0;
         }
         if (currentValue) {
-          largest = CoinMax(largest, fabs(value));
+          largest = std::max(largest, fabs(value));
           if (fabs(value) > fabs(currentValue) * largestPerCent)
             largestPerCent = fabs(value / currentValue);
         } else {
-          largestZero = CoinMax(largestZero, fabs(value));
+          largestZero = std::max(largestZero, fabs(value));
         }
         if (printOut)
           printf("row %d cost %g change %g\n", iRow, cost[iRow], value);
@@ -4667,12 +4667,12 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
   }
   // Make variables with more elements more expensive
   const double m1 = 0.5;
-  double smallestAllowed = overallMultiplier * CoinMin(1.0e-2 * dualTolerance_, maximumFraction);
-  double largestAllowed = overallMultiplier * CoinMax(1.0e3 * dualTolerance_, maximumFraction * averageCost);
+  double smallestAllowed = overallMultiplier * std::min(1.0e-2 * dualTolerance_, maximumFraction);
+  double largestAllowed = overallMultiplier * std::max(1.0e3 * dualTolerance_, maximumFraction * averageCost);
   // smaller if in BAB
   //if (inCbcOrOther)
-  //largestAllowed=CoinMin(largestAllowed,1.0e-5);
-  //smallestAllowed = CoinMin(smallestAllowed,0.1*largestAllowed);
+  //largestAllowed=std::min(largestAllowed,1.0e-5);
+  //smallestAllowed = std::min(smallestAllowed,0.1*largestAllowed);
   randomNumberGenerator_.setSeed(1000000000);
 #if ABC_NORMAL_DEBUG > 0
   printf("perturbation %g constantPerturbation %g smallestNonZero %g maximumFraction %g smallestAllowed %g\n",
@@ -4688,8 +4688,8 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
         currentLargestAllowed = 1.0e-3;
       if (currentLargestAllowed <= 10.0 * smallestAllowed)
         continue; // don't perturb tiny value
-      value = CoinMin(value, constantPerturbation + maximumFraction * (fabs(currentValue) + 1.0e-1 * perturbation + 1.0e-8));
-      //value = CoinMin(value,constantPerturbation;+maximumFraction*fabs(currentValue));
+      value = std::min(value, constantPerturbation + maximumFraction * (fabs(currentValue) + 1.0e-1 * perturbation + 1.0e-8));
+      //value = std::min(value,constantPerturbation;+maximumFraction*fabs(currentValue));
       double value2 = constantPerturbation + 1.0e-1 * smallestNonZero;
       if (uniformChange) {
         value = maximumFraction;
@@ -4717,7 +4717,7 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
         int length = columnLength[iSequence];
         if (length > 3) {
           length = static_cast< int >(static_cast< double >(length) * factor);
-          length = CoinMax(3, length);
+          length = std::max(3, length);
         }
         double multiplier;
         if (length < 10)
@@ -4725,7 +4725,7 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
         else
           multiplier = weight[10];
         value *= multiplier;
-        value = CoinMin(value, value2);
+        value = std::min(value, value2);
         if (value) {
           // get in range
           if (fabs(value) <= smallestAllowed) {
@@ -4739,11 +4739,11 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
           }
         }
         if (currentValue) {
-          largest = CoinMax(largest, fabs(value));
+          largest = std::max(largest, fabs(value));
           if (fabs(value) > fabs(currentValue) * largestPerCent)
             largestPerCent = fabs(value / currentValue);
         } else {
-          largestZero = CoinMax(largestZero, fabs(value));
+          largestZero = std::max(largestZero, fabs(value));
         }
         // but negative if at ub
         if (getInternalStatus(iSequence) == atUpperBound)
@@ -4763,7 +4763,7 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
     int whichOne = perturbation_ - 51;
     //if (inCbcOrOther&&whichOne>0)
     //whichOne--;
-    maximumFraction = m[CoinMin(whichOne, 10)];
+    maximumFraction = m[std::min(whichOne, 10)];
   } else if (inCbcOrOther) {
     //maximumFraction = 1.0e-6;
   }
@@ -4773,7 +4773,7 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
   if (perturbation_ >= 50) {
     perturbation = 1.0e-8;
     if (perturbation_ > 50 && perturbation_ < 60)
-      perturbation = CoinMax(1.0e-8, maximumFraction);
+      perturbation = std::max(1.0e-8, maximumFraction);
     bool allSame = true;
     double lastValue = 0.0;
     for (iRow = 0; iRow < numberRows_; iRow++) {
@@ -4802,9 +4802,9 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
       double up = abcUpper_[iColumn];
       if (lo < up) {
         double value = fabs(abcCost_[iColumn]);
-        perturbation = CoinMax(perturbation, value);
+        perturbation = std::max(perturbation, value);
         if (value) {
-          smallestNonZero = CoinMin(smallestNonZero, value);
+          smallestNonZero = std::min(smallestNonZero, value);
         }
       }
       if (lo && lo > -1.0e10) {
@@ -4834,11 +4834,11 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
         smallestPositive, largestPositive);
       if (smallestNegative == largestNegative && smallestPositive == largestPositive) {
         // Really hit perturbation
-        double adjust = CoinMin(100.0 * maximumFraction, 1.0e-3 * CoinMax(lastValue, lastValue2));
-        maximumFraction = CoinMax(adjust, maximumFraction);
+        double adjust = std::min(100.0 * maximumFraction, 1.0e-3 * std::max(lastValue, lastValue2));
+        maximumFraction = std::max(adjust, maximumFraction);
       }
     }
-    perturbation = CoinMin(perturbation, smallestNonZero / maximumFraction);
+    perturbation = std::min(perturbation, smallestNonZero / maximumFraction);
   }
   double largestZero = 0.0;
   double largest = 0.0;
@@ -4865,19 +4865,19 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
   }
   // Make variables with more elements more expensive
   const double m1 = 0.5;
-  double smallestAllowed = CoinMin(1.0e-2 * dualTolerance_, maximumFraction);
-  double largestAllowed = CoinMax(1.0e3 * dualTolerance_, maximumFraction * averageCost);
+  double smallestAllowed = std::min(1.0e-2 * dualTolerance_, maximumFraction);
+  double largestAllowed = std::max(1.0e3 * dualTolerance_, maximumFraction * averageCost);
   // smaller if in BAB
   //if (inCbcOrOther)
-  //largestAllowed=CoinMin(largestAllowed,1.0e-5);
-  //smallestAllowed = CoinMin(smallestAllowed,0.1*largestAllowed);
+  //largestAllowed=std::min(largestAllowed,1.0e-5);
+  //smallestAllowed = std::min(smallestAllowed,0.1*largestAllowed);
   for (int iColumn = maximumAbcNumberRows_; iColumn < numberTotal_; iColumn++) {
     if (abcLower_[iColumn] < abcUpper_[iColumn]
       && getInternalStatus(iColumn) != basic) {
       double value = perturbation;
       double currentValue = abcCost_[iColumn];
-      value = CoinMin(value, constantPerturbation + maximumFraction * (fabs(currentValue) + 1.0e-1 * perturbation + 1.0e-8));
-      //value = CoinMin(value,constantPerturbation;+maximumFraction*fabs(currentValue));
+      value = std::min(value, constantPerturbation + maximumFraction * (fabs(currentValue) + 1.0e-1 * perturbation + 1.0e-8));
+      //value = std::min(value,constantPerturbation;+maximumFraction*fabs(currentValue));
       double value2 = constantPerturbation + 1.0e-1 * smallestNonZero;
       if (uniformChange) {
         value = maximumFraction;
@@ -4902,7 +4902,7 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
         int length = columnLength[iColumn];
         if (length > 3) {
           length = static_cast< int >(static_cast< double >(length) * factor);
-          length = CoinMax(3, length);
+          length = std::max(3, length);
         }
         double multiplier;
 #if 1
@@ -4918,7 +4918,7 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
         multiplier *= 0.5;
 #endif
         value *= multiplier;
-        value = CoinMin(value, value2);
+        value = std::min(value, value2);
         if (value) {
           // get in range
           if (fabs(value) <= smallestAllowed) {
@@ -4932,11 +4932,11 @@ void AbcSimplexDual::perturbB(double /*factorIn*/, int /*type*/)
           }
         }
         if (currentValue) {
-          largest = CoinMax(largest, fabs(value));
+          largest = std::max(largest, fabs(value));
           if (fabs(value) > fabs(currentValue) * largestPerCent)
             largestPerCent = fabs(value / currentValue);
         } else {
-          largestZero = CoinMax(largestZero, fabs(value));
+          largestZero = std::max(largestZero, fabs(value));
         }
         // but negative if at ub
         if (getInternalStatus(iColumn) == atUpperBound)
@@ -5002,11 +5002,11 @@ int AbcSimplexDual::bounceTolerances(int type)
       perturbationFactor_ = 0.001;
     CoinAbcMemcpy(abcCost_, costSaved_, numberTotal_);
     if (!perturbationFactor_) {
-      //currentDualBound_=CoinMin(dualBound_,1.0e11);
+      //currentDualBound_=std::min(dualBound_,1.0e11);
       //CoinAbcMultiplyAdd(perturbationSaved_,numberTotal_,currentDualTolerance_,
       //		 abcPerturbation_,0.0);
     } else {
-      //currentDualBound_=CoinMin(dualBound_,1.0e11);
+      //currentDualBound_=std::min(dualBound_,1.0e11);
       double factor = currentDualTolerance_ * perturbationFactor_;
       perturbB(factor, 0);
     }
@@ -5015,7 +5015,7 @@ int AbcSimplexDual::bounceTolerances(int type)
 #endif
   } else {
     if (stateDualColumn_ == -2) {
-      double newTolerance = CoinMin(1.0e-1, dualTolerance_ * 100.0);
+      double newTolerance = std::min(1.0e-1, dualTolerance_ * 100.0);
 #if ABC_NORMAL_DEBUG > 0
       printf("After %d iterations reducing dual tolerance from %g to %g\n",
         numberIterations_, currentDualTolerance_, newTolerance);
@@ -5031,7 +5031,7 @@ int AbcSimplexDual::bounceTolerances(int type)
       stateDualColumn_ = 0;
     } else {
       if (stateDualColumn_ > 1) {
-        normalDualColumnIteration_ = numberIterations_ + CoinMax(10, numberRows_ / 4);
+        normalDualColumnIteration_ = numberIterations_ + std::max(10, numberRows_ / 4);
 #if ABC_NORMAL_DEBUG > 0
         printf("no cost modification until iteration %d\n", normalDualColumnIteration_);
 #endif
@@ -5141,7 +5141,7 @@ int AbcSimplexDual::noPivotRow()
   bool specialCase;
   int useNumberFake;
   int returnCode = 0;
-  if (numberPivots <= CoinMax(dontFactorizePivots_, 20) && (specialOptions_ & 2048) != 0 && currentDualBound_ >= 1.0e8) {
+  if (numberPivots <= std::max(dontFactorizePivots_, 20) && (specialOptions_ & 2048) != 0 && currentDualBound_ >= 1.0e8) {
     specialCase = true;
     // as dual bound high - should be okay
     useNumberFake = 0;
@@ -5260,7 +5260,7 @@ int AbcSimplexDual::noPivotRow()
             int numberPivots = abcFactorization_->pivots();
             if (forceFactorization_ < 0)
               forceFactorization_ = 100000;
-            forceFactorization_ = CoinMin(forceFactorization_, (numberPivots + 1) >> 1);
+            forceFactorization_ = std::min(forceFactorization_, (numberPivots + 1) >> 1);
           }
         }
       }
@@ -5272,7 +5272,7 @@ int AbcSimplexDual::noPivotRow()
     int numberPivots = abcFactorization_->pivots();
     if (forceFactorization_ < 0)
       forceFactorization_ = 100000;
-    forceFactorization_ = CoinMin(forceFactorization_, (numberPivots + 1) >> 1);
+    forceFactorization_ = std::min(forceFactorization_, (numberPivots + 1) >> 1);
   }
   return returnCode;
 }
@@ -5346,7 +5346,7 @@ void AbcSimplexDual::dualPivotColumn()
             double oldValue = abcDj[iSequence] * mult;
             double value = oldValue - tentativeTheta * alpha;
             if (value < dualT) {
-              bestPossible = CoinMax(bestPossible, alpha);
+              bestPossible = std::max(bestPossible, alpha);
               value = oldValue - upperTheta_ * alpha;
               if (value < dualT && alpha >= acceptablePivot) {
                 upperTheta_ = (oldValue - dualT) / alpha;
@@ -5370,7 +5370,7 @@ void AbcSimplexDual::dualPivotColumn()
               double oldValue = abcDj[iSequence] * mult;
               double value = oldValue - tentativeTheta * alpha;
               if (value < dualT) {
-                bestPossible = CoinMax(bestPossible, alpha);
+                bestPossible = std::max(bestPossible, alpha);
                 value = oldValue - upperTheta_ * alpha;
                 if (value < dualT && alpha >= acceptablePivot) {
                   upperTheta_ = (oldValue - dualT) / alpha;
@@ -5381,7 +5381,7 @@ void AbcSimplexDual::dualPivotColumn()
               }
             } else {
               bool keep;
-              bestPossible = CoinMax(bestPossible, fabs(tableauValue));
+              bestPossible = std::max(bestPossible, fabs(tableauValue));
               double oldValue = abcDj[iSequence];
               // If free has to be very large - should come in via dualRow
               //if (getInternalStatus(iSequence+addSequence)==isFree&&fabs(tableauValue)<1.0e-3)
@@ -5391,11 +5391,11 @@ void AbcSimplexDual::dualPivotColumn()
               } else if (oldValue < -currentDualTolerance) {
                 keep = true;
               } else {
-                if (fabs(tableauValue) > CoinMax(10.0 * acceptablePivot, 1.0e-5)) {
+                if (fabs(tableauValue) > std::max(10.0 * acceptablePivot, 1.0e-5)) {
                   keep = true;
                 } else {
                   keep = false;
-                  badFree = CoinMax(badFree, fabs(tableauValue));
+                  badFree = std::max(badFree, fabs(tableauValue));
                 }
               }
               if (keep) {
@@ -5616,7 +5616,7 @@ int AbcSimplexDual::noPivotColumn()
     // If we have just factorized and infeasibility reasonable say infeas
     double dualTest = ((specialOptions_ & 4096) != 0) ? 1.0e8 : 1.0e13;
     if (largestGap_)
-      dualTest = CoinMin(largestGap_, dualTest);
+      dualTest = std::min(largestGap_, dualTest);
     // but ignore if none at fake bound
     if (currentDualBound_ < dualTest) {
       if (!numberAtFakeBound())
@@ -5892,7 +5892,7 @@ int AbcSimplexDual::dual()
       currentDualBound_ = 1.0e4;
       tryType -= 5;
     }
-    currentDualBound_ = CoinMin(currentDualBound_, dualBound_);
+    currentDualBound_ = std::min(currentDualBound_, dualBound_);
 #if ABC_NORMAL_DEBUG > 0
     printf("dual bound %g (initialize)\n", currentDualBound_);
 #endif
@@ -5902,19 +5902,19 @@ int AbcSimplexDual::dual()
       stateDualColumn_ = 0;
       break;
     case 1:
-      currentDualTolerance_ = CoinMin(1.0e-1, dualTolerance_ * 10.0);
+      currentDualTolerance_ = std::min(1.0e-1, dualTolerance_ * 10.0);
       stateDualColumn_ = -1;
       break;
     case 2:
-      currentDualTolerance_ = CoinMin(1.0e-1, dualTolerance_ * 100.0);
+      currentDualTolerance_ = std::min(1.0e-1, dualTolerance_ * 100.0);
       stateDualColumn_ = -1;
       break;
     case 3:
-      currentDualTolerance_ = CoinMin(1.0e-1, dualTolerance_ * 10000.0);
+      currentDualTolerance_ = std::min(1.0e-1, dualTolerance_ * 10000.0);
       stateDualColumn_ = -1; // was -2 but that doesn't seem to work
       break;
     case 4:
-      currentDualTolerance_ = CoinMin(1.0e-1, dualTolerance_ * 1000000.0);
+      currentDualTolerance_ = std::min(1.0e-1, dualTolerance_ * 1000000.0);
       stateDualColumn_ = -1; // was -2 but that doesn't seem to work
       break;
     }
@@ -6065,7 +6065,7 @@ int AbcSimplexDual::dual()
   restoreData(saveData_);
   dontFactorizePivots_ = saveDont;
   if (problemStatus_ == 3) {
-    rawObjectiveValue_ = CoinMax(bestObjectiveValue_, rawObjectiveValue_ - bestPossibleImprovement_);
+    rawObjectiveValue_ = std::max(bestObjectiveValue_, rawObjectiveValue_ - bestPossibleImprovement_);
     setClpSimplexObjectiveValue();
   }
 #if ABC_PARALLEL == 1

@@ -40,7 +40,7 @@ ClpQuadraticObjective::ClpQuadraticObjective(const double *objective,
   type_ = 2;
   numberColumns_ = numberColumns;
   if (numberExtendedColumns >= 0)
-    numberExtendedColumns_ = CoinMax(numberColumns_, numberExtendedColumns);
+    numberExtendedColumns_ = std::max(numberColumns_, numberExtendedColumns);
   else
     numberExtendedColumns_ = numberColumns_;
   if (objective) {
@@ -500,7 +500,7 @@ void ClpQuadraticObjective::resize(int newNumberColumns)
     int i;
     double *newArray = new double[newExtended];
     if (objective_)
-      CoinMemcpyN(objective_, CoinMin(newExtended, numberExtendedColumns_), newArray);
+      CoinMemcpyN(objective_, std::min(newExtended, numberExtendedColumns_), newArray);
     delete[] objective_;
     objective_ = newArray;
     for (i = numberColumns_; i < newNumberColumns; i++)
@@ -508,7 +508,7 @@ void ClpQuadraticObjective::resize(int newNumberColumns)
     if (gradient_) {
       newArray = new double[newExtended];
       if (gradient_)
-        CoinMemcpyN(gradient_, CoinMin(newExtended, numberExtendedColumns_), newArray);
+        CoinMemcpyN(gradient_, std::min(newExtended, numberExtendedColumns_), newArray);
       delete[] gradient_;
       gradient_ = newArray;
       for (i = numberColumns_; i < newNumberColumns; i++)
@@ -881,7 +881,7 @@ ClpQuadraticObjective::stepLength(ClpSimplex *model,
       printf("a %g b %g c %g => %g\n", a, b, c, theta);
     b = 0.0;
   }
-  return CoinMin(theta, maximumTheta);
+  return std::min(theta, maximumTheta);
 }
 // Return objective value (without any ClpModel offset) (model may be NULL)
 double

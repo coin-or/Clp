@@ -1276,7 +1276,7 @@ void OsiClpSolverInterface::resolve()
 	int numberColumns = modelPtr_->numberColumns_;
 	const double * lower = modelPtr_->columnLower();
 	const double * upper = modelPtr_->columnUpper();
-	int target=CoinMax(1,numberColumns/10000);
+	int target=std::max(1,numberColumns/10000);
 	for (int i=0;i<numberColumns;i++) {
 	  if (integerInformation[i]) {
 	    if (lower[i]==upper[i]) {
@@ -1584,7 +1584,7 @@ void OsiClpSolverInterface::resolveGub(int needed)
     // move in solution
     static_cast< ClpSimplexOther * >(model2)->setGubBasis(*modelPtr_,
       which, whichC);
-    model2->setLogLevel(CoinMin(1, model2->logLevel()));
+    model2->setLogLevel(std::min(1, model2->logLevel()));
     ClpPrimalColumnSteepest steepest(5);
     model2->setPrimalColumnPivotAlgorithm(steepest);
     //double time1 = CoinCpuTime();
@@ -2178,7 +2178,7 @@ void OsiClpSolverInterface::markHotStart()
 #ifndef NDEBUG
       int nCopy = 3 * numberRows + 2 * numberColumns;
       for (int i = 0; i < nCopy; i++)
-        assert(whichRow[i] >= -CoinMax(numberRows, numberColumns) && whichRow[i] < CoinMax(numberRows, numberColumns));
+        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns));
 #endif
       smallModel_ = small;
       //int hotIts = small->intParam_[ClpMaxNumIterationHotStart];
@@ -2194,7 +2194,7 @@ void OsiClpSolverInterface::markHotStart()
       nBound = whichRow[nCopy];
 #ifndef NDEBUG
       for (int i = 0; i < nCopy; i++)
-        assert(whichRow[i] >= -CoinMax(numberRows, numberColumns) && whichRow[i] < CoinMax(numberRows, numberColumns));
+        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns));
 #endif
       needSolveInSetupHotStart = false;
       small = smallModel_;
@@ -2349,9 +2349,9 @@ void OsiClpSolverInterface::markHotStart()
     // But modify if bounds changed in small
     for (int i = 0; i < numberColumns2; i++) {
       int iColumn = whichColumn[i];
-      saveLowerOriginal[iColumn] = CoinMax(saveLowerOriginal[iColumn],
+      saveLowerOriginal[iColumn] = std::max(saveLowerOriginal[iColumn],
         smallLower[i]);
-      saveUpperOriginal[iColumn] = CoinMin(saveUpperOriginal[iColumn],
+      saveUpperOriginal[iColumn] = std::min(saveUpperOriginal[iColumn],
         smallUpper[i]);
     }
     if (whichRange_ && whichRange_[0]) {
@@ -2483,7 +2483,7 @@ void OsiClpSolverInterface::solveFromHotStart()
     double objectiveValue = modelPtr_->objectiveValue() * modelPtr_->optimizationDirection();
     CoinAssert(modelPtr_->problemStatus() || modelPtr_->objectiveValue() < 1.0e50);
     // make sure plausible
-    double obj = CoinMax(objectiveValue, saveObjectiveValue);
+    double obj = std::max(objectiveValue, saveObjectiveValue);
     if (problemStatus == 10 || problemStatus < 0) {
       // was trying to clean up or something odd
       if (problemStatus == 10) {
@@ -2500,7 +2500,7 @@ void OsiClpSolverInterface::solveFromHotStart()
       //if (problemStatus==3)
       //modelPtr_->computeObjectiveValue();
       objectiveValue = modelPtr_->objectiveValue() * modelPtr_->optimizationDirection();
-      obj = CoinMax(objectiveValue, saveObjectiveValue);
+      obj = std::max(objectiveValue, saveObjectiveValue);
       if (!modelPtr_->numberDualInfeasibilities()) {
         double limit = 0.0;
         modelPtr_->getDblParam(ClpDualObjectiveLimit, limit);
@@ -2595,7 +2595,7 @@ void OsiClpSolverInterface::solveFromHotStart()
     setWarmStart(ws_);
     CoinMemcpyN(rowActivity_, numberRows, modelPtr_->primalRowSolution());
     CoinMemcpyN(columnActivity_, numberColumns, modelPtr_->primalColumnSolution());
-    modelPtr_->setIntParam(ClpMaxNumIteration, CoinMin(itlim, 9999));
+    modelPtr_->setIntParam(ClpMaxNumIteration, std::min(itlim, 9999));
     resolve();
   } else {
     assert(spareArrays_);
@@ -2752,7 +2752,7 @@ void OsiClpSolverInterface::solveFromHotStart()
     double objectiveValue = smallModel_->objectiveValue() * modelPtr_->optimizationDirection();
     CoinAssert(smallModel_->problemStatus() || smallModel_->objectiveValue() < 1.0e50);
     // make sure plausible
-    double obj = CoinMax(objectiveValue, saveObjectiveValue);
+    double obj = std::max(objectiveValue, saveObjectiveValue);
     if (problemStatus == 10 || problemStatus < 0) {
       // was trying to clean up or something odd
       if (problemStatus == 10)
@@ -2770,7 +2770,7 @@ void OsiClpSolverInterface::solveFromHotStart()
       //smallModel_->computeObjectiveValue();
       objectiveValue = smallModel_->objectiveValue() * modelPtr_->optimizationDirection();
       if (problemStatus != 10)
-        obj = CoinMax(objectiveValue, saveObjectiveValue);
+        obj = std::max(objectiveValue, saveObjectiveValue);
       if (!smallModel_->numberDualInfeasibilities()) {
         double limit = 0.0;
         modelPtr_->getDblParam(ClpDualObjectiveLimit, limit);
@@ -3595,8 +3595,8 @@ OsiClpSolverInterface::modelCut(const double *originalLower, const double *origi
               //printf("%d ptr farkas %g dual farkas %g\n",i,farkas[i],farkas2[i]);
               if (fabs(farkas[i] - farkas2[i]) > 1.0e-7) {
                 nBad++;
-                largest = CoinMax(largest, fabs(farkas[i] - farkas2[i]));
-                smallest = CoinMin(smallest, fabs(farkas[i] - farkas2[i]));
+                largest = std::max(largest, fabs(farkas[i] - farkas2[i]));
+                smallest = std::min(smallest, fabs(farkas[i] - farkas2[i]));
                 //printf("%d ptr farkas %g dual farkas %g\n",i,farkas[i],farkas2[i]);
               }
             }
@@ -5619,12 +5619,12 @@ void OsiClpSolverInterface::redoScaleFactors(int numberAdd, const CoinBigIndex *
         // Don't bother with tiny elements
         if (value > 1.0e-20) {
           value *= columnScale[iColumn];
-          largest = CoinMax(largest, value);
-          smallest = CoinMin(smallest, value);
+          largest = std::max(largest, value);
+          smallest = std::min(smallest, value);
         }
       }
       double scale = sqrt(smallest * largest);
-      scale = CoinMax(1.0e-10, CoinMin(1.0e10, scale));
+      scale = std::max(1.0e-10, std::min(1.0e10, scale));
       inverseRowScale[iRow] = scale;
       rowScale[iRow] = 1.0 / scale;
     }
@@ -6048,7 +6048,7 @@ int OsiClpSolverInterface::readMps(const char *filename, bool keepNames, bool al
   m.setInfinity(getInfinity());
   m.passInMessageHandler(modelPtr_->messageHandler());
   *m.messagesPointer() = modelPtr_->coinMessages();
-  m.setSmallElementValue(CoinMax(modelPtr_->getSmallElementValue(),
+  m.setSmallElementValue(std::max(modelPtr_->getSmallElementValue(),
     m.getSmallElementValue()));
 
   delete[] setInfo_;
@@ -7945,7 +7945,7 @@ void OsiClpSolverInterface::crunch()
       for (int i = 0; i < nCopy; i++) {
 	if (i>=small->getNumRows()&&i<numberRows)
 	  continue;  // row was removed so doesn't matter
-	assert(whichRow[i] >= -CoinMax(numberRows, numberColumns) && whichRow[i] < CoinMax(numberRows, numberColumns));
+	assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns));
       }
     }
 #endif
@@ -7962,7 +7962,7 @@ void OsiClpSolverInterface::crunch()
     for (int i = 0; i < nCopy; i++) {
       if (i>=smallModel_->getNumRows()&&i<numberRows)
 	continue;  // row was removed so doesn't matter
-      assert(whichRow[i] >= -CoinMax(numberRows, numberColumns) && whichRow[i] < CoinMax(numberRows, numberColumns));
+      assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns));
     }
 #endif
     small = smallModel_;
@@ -8218,11 +8218,11 @@ void OsiClpSolverInterface::crunch()
                 if (upper[iRow] == lower[iRow])
                   continue;
                 if (solution[iRow] < lower[iRow] + modelPtr_->primalTolerance_) {
-                  largestBadDj = CoinMax(largestBadDj, -dj[iRow]);
-                  largestBad = CoinMax(largestBad, ray[iRow]);
+                  largestBadDj = std::max(largestBadDj, -dj[iRow]);
+                  largestBad = std::max(largestBad, ray[iRow]);
                 } else if (solution[iRow] > upper[iRow] - modelPtr_->primalTolerance_) {
-                  largestBadDj = CoinMax(largestBadDj, dj[iRow]);
-                  largestBad = CoinMax(largestBad, -ray[iRow]);
+                  largestBadDj = std::max(largestBadDj, dj[iRow]);
+                  largestBad = std::max(largestBad, -ray[iRow]);
                 }
               }
               double *result = new double[modelPtr_->numberColumns_];
@@ -8238,11 +8238,11 @@ void OsiClpSolverInterface::crunch()
                 if (upper[iColumn] == lower[iColumn])
                   continue;
                 if (solution[iColumn] < lower[iColumn] + modelPtr_->primalTolerance_) {
-                  largestBadDj = CoinMax(largestBadDj, -dj[iColumn]);
-                  largestBad = CoinMax(largestBad, result[iColumn]);
+                  largestBadDj = std::max(largestBadDj, -dj[iColumn]);
+                  largestBad = std::max(largestBad, result[iColumn]);
                 } else if (solution[iColumn] > upper[iColumn] - modelPtr_->primalTolerance_) {
-                  largestBadDj = CoinMax(largestBadDj, dj[iColumn]);
-                  largestBad = CoinMax(largestBad, -result[iColumn]);
+                  largestBadDj = std::max(largestBadDj, dj[iColumn]);
+                  largestBad = std::max(largestBad, -result[iColumn]);
                 }
               }
               if (largestBad > 1.0e-5 || largestBadDj > 1.0e-5) {
@@ -8596,8 +8596,8 @@ void OsiNodeSimple::gutsOfConstructor(OsiSolverInterface &model,
     lower_[i] = static_cast< int >(lower[iColumn]);
     upper_[i] = static_cast< int >(upper[iColumn]);
     double value = solution[iColumn];
-    value = CoinMax(value, static_cast< double >(lower_[i]));
-    value = CoinMin(value, static_cast< double >(upper_[i]));
+    value = std::max(value, static_cast< double >(lower_[i]));
+    value = std::min(value, static_cast< double >(upper_[i]));
     double nearest = floor(value + 0.5);
     //if (fabs(value - nearest) > INTEGER_TOLERANCE)
     //  numberAway++;
@@ -8646,8 +8646,8 @@ void OsiNodeSimple::gutsOfConstructor(OsiSolverInterface &model,
     // just one - makes it easy
     int iColumn = integer[variable_];
     double value = solution[iColumn];
-    value = CoinMax(value, static_cast< double >(lower_[variable_]));
-    value = CoinMin(value, static_cast< double >(upper_[variable_]));
+    value = std::max(value, static_cast< double >(lower_[variable_]));
+    value = std::min(value, static_cast< double >(upper_[variable_]));
     double nearest = floor(value + 0.5);
     value_ = value;
     if (value <= nearest)
@@ -8664,8 +8664,8 @@ void OsiNodeSimple::gutsOfConstructor(OsiSolverInterface &model,
         int iColumn = integer[iInt];
         double value = solutionValue[i]; // value of variable in original
         double objectiveChange;
-        value = CoinMax(value, static_cast< double >(lower_[iInt]));
-        value = CoinMin(value, static_cast< double >(upper_[iInt]));
+        value = std::max(value, static_cast< double >(lower_[iInt]));
+        value = std::min(value, static_cast< double >(upper_[iInt]));
 
         // try down
 
@@ -8679,7 +8679,7 @@ void OsiNodeSimple::gutsOfConstructor(OsiSolverInterface &model,
           objectiveChange = 1.0e100;
         }
         assert(objectiveChange > -1.0e-5);
-        objectiveChange = CoinMax(objectiveChange, 0.0);
+        objectiveChange = std::max(objectiveChange, 0.0);
         downMovement[i] = objectiveChange;
 
         // try up
@@ -8694,7 +8694,7 @@ void OsiNodeSimple::gutsOfConstructor(OsiSolverInterface &model,
           objectiveChange = 1.0e100;
         }
         assert(objectiveChange > -1.0e-5);
-        objectiveChange = CoinMax(objectiveChange, 0.0);
+        objectiveChange = std::max(objectiveChange, 0.0);
         upMovement[i] = objectiveChange;
 
         /* Possibilities are:
@@ -8744,22 +8744,22 @@ void OsiNodeSimple::gutsOfConstructor(OsiSolverInterface &model,
           //   <<" value "<<solutionValue[i]
           //   <<std::endl;
           bool better = false;
-          if (CoinMin(upMovement[i], downMovement[i]) > best) {
+          if (std::min(upMovement[i], downMovement[i]) > best) {
             // smaller is better
             better = true;
-          } else if (CoinMin(upMovement[i], downMovement[i]) > best - 1.0e-5) {
-            if (CoinMax(upMovement[i], downMovement[i]) > best2 + 1.0e-5) {
+          } else if (std::min(upMovement[i], downMovement[i]) > best - 1.0e-5) {
+            if (std::max(upMovement[i], downMovement[i]) > best2 + 1.0e-5) {
               // smaller is about same, but larger is better
               better = true;
             }
           }
           if (better) {
-            best = CoinMin(upMovement[i], downMovement[i]);
-            best2 = CoinMax(upMovement[i], downMovement[i]);
+            best = std::min(upMovement[i], downMovement[i]);
+            best2 = std::max(upMovement[i], downMovement[i]);
             variable_ = iInt;
             double value = solutionValue[i];
-            value = CoinMax(value, static_cast< double >(lower_[variable_]));
-            value = CoinMin(value, static_cast< double >(upper_[variable_]));
+            value = std::max(value, static_cast< double >(lower_[variable_]));
+            value = std::min(value, static_cast< double >(upper_[variable_]));
             value_ = value;
             if (upMovement[i] <= downMovement[i])
               way_ = 1; // up
@@ -8783,8 +8783,8 @@ void OsiNodeSimple::gutsOfConstructor(OsiSolverInterface &model,
     lower_[i] = static_cast< int >(lower[iColumn]);
     upper_[i] = static_cast< int >(upper[iColumn]);
     double value = solution[iColumn];
-    value = CoinMax(value, (double)lower_[i]);
-    value = CoinMin(value, (double)upper_[i]);
+    value = std::max(value, (double)lower_[i]);
+    value = std::min(value, (double)upper_[i]);
     double nearest = floor(value + 0.5);
     if (fabs(value - nearest) > INTEGER_TOLERANCE)
       numberAway++;
@@ -9735,15 +9735,15 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
           }
           if (newLower > lower + 10.0 * tolerance2 || newUpper < upper - 10.0 * tolerance2) {
             numberTightened++;
-            newLower = CoinMax(lower, newLower);
-            newUpper = CoinMin(upper, newUpper);
+            newLower = std::max(lower, newLower);
+            newUpper = std::min(upper, newUpper);
             if (newLower > newUpper + tolerance) {
               //printf("XXYY inf on bound\n");
               numberTightened = -1;
               break;
             }
             setColLower(iColumn, newLower);
-            setColUpper(iColumn, CoinMax(newLower, newUpper));
+            setColUpper(iColumn, std::max(newLower, newUpper));
           }
         }
       }
@@ -10141,7 +10141,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
               if (seqDown[iRow] != iColumn)
                 s -= lower * value;
               if (s + newUpper * value < rowLower[iRow]) {
-                newUpper = CoinMax(newUpper, (rowLower[iRow] - s) / value);
+                newUpper = std::max(newUpper, (rowLower[iRow] - s) / value);
               }
             } else {
               badUpper = true;
@@ -10153,7 +10153,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
               if (seqUp[iRow] != iColumn)
                 s -= upper * value;
               if (s + newLower * value > rowUpper[iRow]) {
-                newLower = CoinMin(newLower, (rowUpper[iRow] - s) / value);
+                newLower = std::min(newLower, (rowUpper[iRow] - s) / value);
               }
             } else {
               badLower = true;
@@ -10166,7 +10166,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
               if (seqUp[iRow] != iColumn)
                 s -= lower * value;
               if (s + newUpper * value > rowUpper[iRow]) {
-                newUpper = CoinMax(newUpper, (rowUpper[iRow] - s) / value);
+                newUpper = std::max(newUpper, (rowUpper[iRow] - s) / value);
               }
             } else {
               badUpper = true;
@@ -10178,7 +10178,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
               if (seqDown[iRow] != iColumn)
                 s -= lower * value;
               if (s + newLower * value < rowLower[iRow]) {
-                newLower = CoinMin(newLower, (rowLower[iRow] - s) / value);
+                newLower = std::min(newLower, (rowLower[iRow] - s) / value);
               }
             } else {
               badLower = true;
@@ -10200,8 +10200,8 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
           nTightened = -1;
           break;
         } else {
-          newLower = CoinMax(newLower, lower);
-          newUpper = CoinMin(newUpper, upper);
+          newLower = std::max(newLower, lower);
+          newUpper = std::min(newUpper, upper);
           if (integerInformation_[iColumn]) {
             newLower = ceil(newLower - 1.0e-5);
             newUpper = floor(newUpper + 1.0e-5);
@@ -10465,10 +10465,10 @@ void OsiClpSolverInterface::computeLargestAway()
     double above = value - rowLower[iRow];
     double below = rowUpper[iRow] - value;
     if (above < 1.0e12) {
-      largest = CoinMax(largest, above);
+      largest = std::max(largest, above);
     }
     if (below < 1.0e12) {
-      largest = CoinMax(largest, below);
+      largest = std::max(largest, below);
     }
     if (rowScale) {
       double multiplier = rowScale[iRow];
@@ -10476,10 +10476,10 @@ void OsiClpSolverInterface::computeLargestAway()
       below *= multiplier;
     }
     if (above < 1.0e12) {
-      largestScaled = CoinMax(largestScaled, above);
+      largestScaled = std::max(largestScaled, above);
     }
     if (below < 1.0e12) {
-      largestScaled = CoinMax(largestScaled, below);
+      largestScaled = std::max(largestScaled, below);
     }
   }
 
@@ -10494,10 +10494,10 @@ void OsiClpSolverInterface::computeLargestAway()
     double above = value - columnLower[iColumn];
     double below = columnUpper[iColumn] - value;
     if (above < 1.0e12) {
-      largest = CoinMax(largest, above);
+      largest = std::max(largest, above);
     }
     if (below < 1.0e12) {
-      largest = CoinMax(largest, below);
+      largest = std::max(largest, below);
     }
     if (columnScale) {
       double multiplier = 1.0 / columnScale[iColumn];
@@ -10505,10 +10505,10 @@ void OsiClpSolverInterface::computeLargestAway()
       below *= multiplier;
     }
     if (above < 1.0e12) {
-      largestScaled = CoinMax(largestScaled, above);
+      largestScaled = std::max(largestScaled, above);
     }
     if (below < 1.0e12) {
-      largestScaled = CoinMax(largestScaled, below);
+      largestScaled = std::max(largestScaled, below);
     }
   }
 #ifdef COIN_DEVELOP
@@ -10698,7 +10698,7 @@ void OsiClpSolverInterface::crossover(int options, int basis)
     for (i = 0; i < numberRows; i++)
       model2->setRowStatus(i, ClpSimplex::superBasic);
     for (i = 0; i < numberColumns; i++) {
-      double distance = CoinMin(columnUpper[i] - primalSolution[i],
+      double distance = std::min(columnUpper[i] - primalSolution[i],
         primalSolution[i] - columnLower[i]);
       if (distance > tolerance) {
         if (fabs(dualSolution[i]) < 1.0e-5)
@@ -10717,7 +10717,7 @@ void OsiClpSolverInterface::crossover(int options, int basis)
       }
     }
     CoinSort_2(dsort, dsort + n, sort);
-    n = CoinMin(numberRows, n);
+    n = std::min(numberRows, n);
     for (i = 0; i < n; i++) {
       int iColumn = sort[i];
       model2->setStatus(iColumn, ClpSimplex::basic);
@@ -10935,8 +10935,8 @@ bool OsiClpDisasterHandler::check() const
             frequency = 100;
           model_->setFactorizationFrequency(frequency);
           double oldBound = model_->dualBound();
-          double newBound = CoinMax(1.0001e8,
-            CoinMin(10.0 * osiModel_->largestAway(), 1.e10));
+          double newBound = std::max(1.0001e8,
+            std::min(10.0 * osiModel_->largestAway(), 1.e10));
           if (newBound != oldBound) {
             model_->setDualBound(newBound);
             if (model_->upperRegion() && model_->algorithm() < 0) {

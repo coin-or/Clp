@@ -112,7 +112,7 @@ int ClpCholeskyPardiso::order(ClpInterior *model)
       used[length] += 1;
     }
     int nLong = 0;
-    int stop = CoinMax(denseThreshold_ / 2, 100);
+    int stop = std::max(denseThreshold_ / 2, 100);
     for (iRow = numberRows_; iRow >= stop; iRow--) {
       if (used[iRow])
         COIN_DETAIL_PRINT(printf("%d columns are of length %d\n", used[iRow], iRow));
@@ -424,7 +424,7 @@ int ClpCholeskyPardiso::factorize(const double *diagonal, int *rowsDropped)
   //check sizes
   double largest2 = maximumAbsElement(sparseFactor_, sizeFactor_);
   largest2 *= 1.0e-20;
-  largest = CoinMin(largest2, 1.0e-11);
+  largest = std::min(largest2, 1.0e-11);
   int numberDroppedBefore = 0;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int dropped = rowsDropped_[iRow];
@@ -578,8 +578,8 @@ int ClpCholeskyPardiso::factorize(const double *diagonal, int *rowsDropped)
     if (value != 1.0e100) {
       //if (value>1.0e13)
       //printf("large diagonal %g at %d\n",value,i);
-      largest = CoinMax(largest, value);
-      smallest = CoinMin(smallest, value);
+      largest = std::max(largest, value);
+      smallest = std::min(smallest, value);
     } else if (!rowsDropped_[i]) {
       rowsDropped_[i] = 2;
       rowsDropped[i] = 2;

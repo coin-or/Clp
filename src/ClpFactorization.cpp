@@ -468,7 +468,7 @@ int ClpFactorization::factorize(ClpSimplex *model,
         ClpDisjointCopyN(permuteBack_.array(), useNumberRows, pivotColumnBack_.array());
 #ifndef SLIM_CLP
         if (networkMatrix) {
-          maximumPivots(CoinMax(2000, maximumPivots()));
+          maximumPivots(std::max(2000, maximumPivots()));
           // redo arrays
           for (int iRow = 0; iRow < 4; iRow++) {
             int length = model->numberRows() + maximumPivots();
@@ -508,14 +508,14 @@ int ClpFactorization::factorize(ClpSimplex *model,
 #endif
           // See if worth going sparse and when
           if (numberFtranCounts_ > 100) {
-            ftranCountInput_ = CoinMax(ftranCountInput_, 1.0);
-            ftranAverageAfterL_ = CoinMax(ftranCountAfterL_ / ftranCountInput_, 1.0);
-            ftranAverageAfterR_ = CoinMax(ftranCountAfterR_ / ftranCountAfterL_, 1.0);
-            ftranAverageAfterU_ = CoinMax(ftranCountAfterU_ / ftranCountAfterR_, 1.0);
+            ftranCountInput_ = std::max(ftranCountInput_, 1.0);
+            ftranAverageAfterL_ = std::max(ftranCountAfterL_ / ftranCountInput_, 1.0);
+            ftranAverageAfterR_ = std::max(ftranCountAfterR_ / ftranCountAfterL_, 1.0);
+            ftranAverageAfterU_ = std::max(ftranCountAfterU_ / ftranCountAfterR_, 1.0);
             if (btranCountInput_ && btranCountAfterU_ && btranCountAfterR_) {
-              btranAverageAfterU_ = CoinMax(btranCountAfterU_ / btranCountInput_, 1.0);
-              btranAverageAfterR_ = CoinMax(btranCountAfterR_ / btranCountAfterU_, 1.0);
-              btranAverageAfterL_ = CoinMax(btranCountAfterL_ / btranCountAfterR_, 1.0);
+              btranAverageAfterU_ = std::max(btranCountAfterU_ / btranCountInput_, 1.0);
+              btranAverageAfterR_ = std::max(btranCountAfterR_ / btranCountAfterU_, 1.0);
+              btranAverageAfterL_ = std::max(btranCountAfterL_ / btranCountAfterR_, 1.0);
             } else {
               // we have not done any useful btrans (values pass?)
               btranAverageAfterU_ = 1.0;
@@ -1578,7 +1578,7 @@ bool ClpFactorization::timeToRefactorize() const
       numberPivots,numberRows,effectiveStartNumberU_,
       lengthU,lengthL,lengthR,nnd,average);
 #endif
-      shortestAverage_ = CoinMin(shortestAverage_, average);
+      shortestAverage_ = std::min(shortestAverage_, average);
       if (average > increaseNeeded * shortestAverage_ && coinFactorizationA_->pivots() > 30) {
         //printf("PIVX %d nrow %d startU %d now %d L %d R %d dense %g average %g\n",
         //numberPivots,numberRows,effectiveStartNumberU_,
@@ -2336,7 +2336,7 @@ scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
         ClpDisjointCopyN(coinFactorizationA_->permuteBack(), useNumberRows, coinFactorizationA_->pivotColumnBack());
 #ifndef SLIM_CLP
         if (networkMatrix) {
-          maximumPivots(CoinMax(2000, maximumPivots()));
+          maximumPivots(std::max(2000, maximumPivots()));
           // redo arrays
           for (int iRow = 0; iRow < 4; iRow++) {
             int length = model->numberRows() + maximumPivots();
@@ -3241,13 +3241,13 @@ void ClpFactorization::saferTolerances(double zeroValue,
     newValue = zeroValue;
   else
     newValue = -zeroTolerance() * zeroValue;
-  zeroTolerance(CoinMin(zeroTolerance(), zeroValue));
+  zeroTolerance(std::min(zeroTolerance(), zeroValue));
   // better to have large tolerance even if slower
   if (pivotValue > 0.0)
     newValue = pivotValue;
   else
     newValue = -pivotTolerance() * pivotValue;
-  pivotTolerance(CoinMin(CoinMax(pivotTolerance(), newValue), 0.999));
+  pivotTolerance(std::min(std::max(pivotTolerance(), newValue), 0.999));
 }
 // Sets factorization
 void ClpFactorization::setFactorization(ClpFactorization &rhs)

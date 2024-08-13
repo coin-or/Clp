@@ -235,7 +235,7 @@ void ClpLinearObjective::resize(int newNumberColumns)
     int i;
     double *newArray = new double[newNumberColumns];
     if (objective_)
-      CoinMemcpyN(objective_, CoinMin(newNumberColumns, numberColumns_), newArray);
+      CoinMemcpyN(objective_, std::min(newNumberColumns, numberColumns_), newArray);
     delete[] objective_;
     objective_ = newArray;
     for (i = numberColumns_; i < newNumberColumns; i++)

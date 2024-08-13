@@ -87,7 +87,7 @@ bool CoinAbcTypeFactorization::getColumnSpaceIterateR(CoinSimplexInt iColumn, Co
   indexRowR[put++] = iRow;
   numberInColumnPlus[iColumn]++;
   //add 4 for luck
-  startR[maximumRowsExtra_] = CoinMin(static_cast< CoinBigIndex >(put + 4), lengthAreaR_);
+  startR[maximumRowsExtra_] = std::min(static_cast< CoinBigIndex >(put + 4), lengthAreaR_);
   return true;
 }
 #endif
@@ -920,7 +920,7 @@ CoinAbcTypeFactorization::replaceColumn ( CoinIndexedVector * regionSparse,
   
   startColumnR[number] = putR;  //for luck and first time
   number++;
-  //assert (startColumnR+number-firstCountAddress_<( CoinMax(5*numberRows_,2*numberRows_+2*maximumPivots_)+2));
+  //assert (startColumnR+number-firstCountAddress_<( std::max(5*numberRows_,2*numberRows_+2*maximumPivots_)+2));
   startColumnR[number] = putR + numberNonZero;
   numberR_ = number;
   lengthR_ = putR + numberNonZero;
@@ -1067,7 +1067,7 @@ CoinAbcTypeFactorization::replaceColumn ( CoinIndexedVector * regionSparse,
   {
     int k=-1;
     for (int i=0;i<numberRows_;i++) {
-      k=CoinMax(k,startRowU[i]+numberInRowU[i]);
+      k=std::max(k,startRowU[i]+numberInRowU[i]);
     }
     assert (k==lastEntryByRowU_);
   }
@@ -1075,9 +1075,9 @@ CoinAbcTypeFactorization::replaceColumn ( CoinIndexedVector * regionSparse,
   //pivotRegion[numberRowsExtra_] = pivotValue;
   pivotRegion[pivotRow] = pivotValue;
 #ifndef ABC_USE_FUNCTION_POINTERS
-  maximumU_ = CoinMax(maximumU_,startU+numberInColumnU2);
+  maximumU_ = std::max(maximumU_,startU+numberInColumnU2);
 #else
-  maximumU_ = CoinMax(maximumU_,lastEntryByColumnUPlus_);
+  maximumU_ = std::max(maximumU_,lastEntryByColumnUPlus_);
 #endif
   permuteLookup[pivotRow]=numberRowsExtra_;
   permuteLookup[numberRowsExtra_]=pivotRow;
@@ -1159,7 +1159,7 @@ CoinAbcTypeFactorization::replaceColumn ( CoinIndexedVector * regionSparse,
 	elementRR[put]=value;
 	//add 4 for luck
 	if (next==maximumRowsExtra_)
-	  startRR[maximumRowsExtra_] = CoinMin(static_cast<CoinBigIndex> (put + 4) ,lengthAreaR_);
+	  startRR[maximumRowsExtra_] = std::min(static_cast<CoinBigIndex> (put + 4) ,lengthAreaR_);
       } else {
 	// no space - do we shuffle?
 	if (!getColumnSpaceIterateR(iRow,value,pivotRow)) {
@@ -2119,7 +2119,7 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
 
   startColumnR[number] = putR; //for luck and first time
   number++;
-  //assert (startColumnR+number-firstCountAddress_<( CoinMax(5*numberRows_,2*numberRows_+2*maximumPivots_)+2));
+  //assert (startColumnR+number-firstCountAddress_<( std::max(5*numberRows_,2*numberRows_+2*maximumPivots_)+2));
   startColumnR[number] = putR + numberNonZero;
   numberR_ = number;
   lengthR_ = putR + numberNonZero;
@@ -2256,7 +2256,7 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
   {
     int k=-1;
     for (int i=0;i<numberRows_;i++) {
-      k=CoinMax(k,startRowU[i]+numberInRowU[i]);
+      k=std::max(k,startRowU[i]+numberInRowU[i]);
     }
     assert (k==lastEntryByRowU_);
   }
@@ -2264,9 +2264,9 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
   //pivotRegion[numberRowsExtra_] = pivotValue;
   pivotRegion[pivotRow] = pivotValue;
 #ifndef ABC_USE_FUNCTION_POINTERS
-  maximumU_ = CoinMax(maximumU_, startU + numberInColumnU2);
+  maximumU_ = std::max(maximumU_, startU + numberInColumnU2);
 #else
-  maximumU_ = CoinMax(maximumU_, lastEntryByColumnUPlus_);
+  maximumU_ = std::max(maximumU_, lastEntryByColumnUPlus_);
 #endif
   permuteLookup[pivotRow] = numberRowsExtra_;
   permuteLookup[numberRowsExtra_] = pivotRow;
@@ -2348,7 +2348,7 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
         elementRR[put] = value;
         //add 4 for luck
         if (next == maximumRowsExtra_)
-          startRR[maximumRowsExtra_] = CoinMin(static_cast< CoinBigIndex >(put + 4), lengthAreaR_);
+          startRR[maximumRowsExtra_] = std::min(static_cast< CoinBigIndex >(put + 4), lengthAreaR_);
       } else {
         // no space - do we shuffle?
         if (!getColumnSpaceIterateR(iRow, value, pivotRow)) {
@@ -2804,7 +2804,7 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
 
   startColumnR[number] = putR; //for luck and first time
   number++;
-  //assert (startColumnR+number-firstCountAddress_<( CoinMax(5*numberRows_,2*numberRows_+2*maximumPivots_)+2));
+  //assert (startColumnR+number-firstCountAddress_<( std::max(5*numberRows_,2*numberRows_+2*maximumPivots_)+2));
   startColumnR[number] = putR + numberNonZero;
   numberR_ = number;
   lengthR_ = putR + numberNonZero;
@@ -2941,7 +2941,7 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
   {
     int k=-1;
     for (int i=0;i<numberRows_;i++) {
-      k=CoinMax(k,startRowU[i]+numberInRowU[i]);
+      k=std::max(k,startRowU[i]+numberInRowU[i]);
     }
     assert (k==lastEntryByRowU_);
   }
@@ -2949,9 +2949,9 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
   //pivotRegion[numberRowsExtra_] = pivotValue;
   pivotRegion[pivotRow] = pivotValue;
 #ifndef ABC_USE_FUNCTION_POINTERS
-  maximumU_ = CoinMax(maximumU_, startU + numberInColumnU2);
+  maximumU_ = std::max(maximumU_, startU + numberInColumnU2);
 #else
-  maximumU_ = CoinMax(maximumU_, lastEntryByColumnUPlus_);
+  maximumU_ = std::max(maximumU_, lastEntryByColumnUPlus_);
 #endif
   permuteLookup[pivotRow] = numberRowsExtra_;
   permuteLookup[numberRowsExtra_] = pivotRow;
@@ -3033,7 +3033,7 @@ void CoinAbcTypeFactorization::replaceColumnPart3(const AbcSimplex * /*model*/,
         elementRR[put] = value;
         //add 4 for luck
         if (next == maximumRowsExtra_)
-          startRR[maximumRowsExtra_] = CoinMin(static_cast< CoinBigIndex >(put + 4), lengthAreaR_);
+          startRR[maximumRowsExtra_] = std::min(static_cast< CoinBigIndex >(put + 4), lengthAreaR_);
       } else {
         // no space - do we shuffle?
         if (!getColumnSpaceIterateR(iRow, value, pivotRow)) {
@@ -4247,7 +4247,7 @@ void CoinAbcTypeFactorization::updateColumnTransposeR(CoinIndexedVector *regionS
         // we have lost indices
         // make sure won't try and go sparse again
         if (factorizationStatistics())
-          statistics.countAfterR_ += CoinMin((numberNonZero << 1), numberRows_);
+          statistics.countAfterR_ += std::min((numberNonZero << 1), numberRows_);
         // temp +2 (was +1)
         regionSparse->setNumElements(numberRows_ + 2);
       }
@@ -4355,10 +4355,10 @@ void CoinAbcTypeFactorization::goSparse2()
   if (numberRows_ > minRowsSparse) {
 #endif
     if (numberRows_ < largeRowsSparse) {
-      sparseThreshold_ = CoinMin(numberRows_ / mediumRowsDivider, mediumRowsMinCount);
-      sparseThreshold_ = CoinMin(numberRows_ / 6, 500);
+      sparseThreshold_ = std::min(numberRows_ / mediumRowsDivider, mediumRowsMinCount);
+      sparseThreshold_ = std::min(numberRows_ / 6, 500);
     } else {
-      sparseThreshold_ = CoinMax(largeRowsCount, numberRows_ >> 3);
+      sparseThreshold_ = std::max(largeRowsCount, numberRows_ >> 3);
       sparseThreshold_ = 500;
     }
 #if FACTORIZATION_STATISTICS
@@ -4487,7 +4487,7 @@ void CoinAbcTypeFactorization::maximumPivots(CoinSimplexInt value)
 {
   if (value > 0) {
     if (numberRows_)
-      maximumMaximumPivots_ = CoinMax(maximumMaximumPivots_, value);
+      maximumMaximumPivots_ = std::max(maximumMaximumPivots_, value);
     else
       maximumMaximumPivots_ = value;
     maximumPivots_ = value;
@@ -4559,18 +4559,18 @@ void CoinAbcTypeFactorization::checkSparse()
 #if ABC_SMALL < 2
   // See if worth going sparse and when
   if (numberFtranCounts_ > 50) {
-    ftranCountInput_ = CoinMax(ftranCountInput_, 1.0);
-    ftranAverageAfterL_ = CoinMax(ftranCountAfterL_ / ftranCountInput_, INITIAL_AVERAGE2);
-    ftranAverageAfterR_ = CoinMax(ftranCountAfterR_ / ftranCountAfterL_, INITIAL_AVERAGE2);
-    ftranAverageAfterU_ = CoinMax(ftranCountAfterU_ / ftranCountAfterR_, INITIAL_AVERAGE2);
-    ftranFTCountInput_ = CoinMax(ftranFTCountInput_, INITIAL_AVERAGE2);
-    ftranFTAverageAfterL_ = CoinMax(ftranFTCountAfterL_ / ftranFTCountInput_, INITIAL_AVERAGE2);
-    ftranFTAverageAfterR_ = CoinMax(ftranFTCountAfterR_ / ftranFTCountAfterL_, INITIAL_AVERAGE2);
-    ftranFTAverageAfterU_ = CoinMax(ftranFTCountAfterU_ / ftranFTCountAfterR_, INITIAL_AVERAGE2);
+    ftranCountInput_ = std::max(ftranCountInput_, 1.0);
+    ftranAverageAfterL_ = std::max(ftranCountAfterL_ / ftranCountInput_, INITIAL_AVERAGE2);
+    ftranAverageAfterR_ = std::max(ftranCountAfterR_ / ftranCountAfterL_, INITIAL_AVERAGE2);
+    ftranAverageAfterU_ = std::max(ftranCountAfterU_ / ftranCountAfterR_, INITIAL_AVERAGE2);
+    ftranFTCountInput_ = std::max(ftranFTCountInput_, INITIAL_AVERAGE2);
+    ftranFTAverageAfterL_ = std::max(ftranFTCountAfterL_ / ftranFTCountInput_, INITIAL_AVERAGE2);
+    ftranFTAverageAfterR_ = std::max(ftranFTCountAfterR_ / ftranFTCountAfterL_, INITIAL_AVERAGE2);
+    ftranFTAverageAfterU_ = std::max(ftranFTCountAfterU_ / ftranFTCountAfterR_, INITIAL_AVERAGE2);
     if (btranCountInput_ && btranCountAfterU_ && btranCountAfterR_) {
-      btranAverageAfterU_ = CoinMax(btranCountAfterU_ / btranCountInput_, INITIAL_AVERAGE2);
-      btranAverageAfterR_ = CoinMax(btranCountAfterR_ / btranCountAfterU_, INITIAL_AVERAGE2);
-      btranAverageAfterL_ = CoinMax(btranCountAfterL_ / btranCountAfterR_, INITIAL_AVERAGE2);
+      btranAverageAfterU_ = std::max(btranCountAfterU_ / btranCountInput_, INITIAL_AVERAGE2);
+      btranAverageAfterR_ = std::max(btranCountAfterR_ / btranCountAfterU_, INITIAL_AVERAGE2);
+      btranAverageAfterL_ = std::max(btranCountAfterL_ / btranCountAfterR_, INITIAL_AVERAGE2);
     } else {
       // we have not done any useful btrans (values pass?)
       btranAverageAfterU_ = INITIAL_AVERAGE2;
@@ -4580,14 +4580,14 @@ void CoinAbcTypeFactorization::checkSparse()
       btranFullCountAfterR_ = INITIAL_AVERAGE2;
       btranFullCountAfterU_ = INITIAL_AVERAGE2;
     }
-    ftranFullCountInput_ = CoinMax(ftranFullCountInput_, 1.0);
-    ftranFullAverageAfterL_ = CoinMax(ftranFullCountAfterL_ / ftranFullCountInput_, INITIAL_AVERAGE2);
-    ftranFullAverageAfterR_ = CoinMax(ftranFullCountAfterR_ / ftranFullCountAfterL_, INITIAL_AVERAGE2);
-    ftranFullAverageAfterU_ = CoinMax(ftranFullCountAfterU_ / ftranFullCountAfterR_, INITIAL_AVERAGE2);
-    btranFullCountInput_ = CoinMax(btranFullCountInput_, 1.0);
-    btranFullAverageAfterL_ = CoinMax(btranFullCountAfterL_ / btranFullCountInput_, INITIAL_AVERAGE2);
-    btranFullAverageAfterR_ = CoinMax(btranFullCountAfterR_ / btranFullCountAfterL_, INITIAL_AVERAGE2);
-    btranFullAverageAfterU_ = CoinMax(btranFullCountAfterU_ / btranFullCountAfterR_, INITIAL_AVERAGE2);
+    ftranFullCountInput_ = std::max(ftranFullCountInput_, 1.0);
+    ftranFullAverageAfterL_ = std::max(ftranFullCountAfterL_ / ftranFullCountInput_, INITIAL_AVERAGE2);
+    ftranFullAverageAfterR_ = std::max(ftranFullCountAfterR_ / ftranFullCountAfterL_, INITIAL_AVERAGE2);
+    ftranFullAverageAfterU_ = std::max(ftranFullCountAfterU_ / ftranFullCountAfterR_, INITIAL_AVERAGE2);
+    btranFullCountInput_ = std::max(btranFullCountInput_, 1.0);
+    btranFullAverageAfterL_ = std::max(btranFullCountAfterL_ / btranFullCountInput_, INITIAL_AVERAGE2);
+    btranFullAverageAfterR_ = std::max(btranFullCountAfterR_ / btranFullCountAfterL_, INITIAL_AVERAGE2);
+    btranFullAverageAfterU_ = std::max(btranFullCountAfterU_ / btranFullCountAfterR_, INITIAL_AVERAGE2);
   }
   // scale back
 
@@ -4622,7 +4622,7 @@ CoinAbcTypeFactorization::conditionNumber() const
   for (CoinSimplexInt i = 0; i < numberRows_; i++) {
     condition *= pivotRegion[i];
   }
-  condition = CoinMax(fabs(condition), 1.0e-50);
+  condition = std::max(fabs(condition), 1.0e-50);
   return 1.0 / condition;
 }
 #ifndef NDEBUG

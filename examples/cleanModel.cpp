@@ -201,7 +201,7 @@ int main(int argc, const char *argv[])
 	    double value = mult*tempSave[i];
 	    if (value) {
 	      double vint = floor(value+0.01);
-	      largestError = CoinMax(largestError,fabs(value-vint));
+	      largestError = std::max(largestError,fabs(value-vint));
 	      assert (fabs(vint)>0.9);
 	    }
 	  }
@@ -240,7 +240,7 @@ int main(int argc, const char *argv[])
 	  if (fabs(rowScale[iRow])!=1.0) {
 	    value *= rowScale[iRow];
 	    double vint = floor(value+0.01);
-	    largestDelta = CoinMax(largestDelta,fabs(value-vint));
+	    largestDelta = std::max(largestDelta,fabs(value-vint));
 	    assert (largestDelta<1.0e-9);
 	    columnElements[j] = vint;
 	    assert (fabs(vint)>0.9);

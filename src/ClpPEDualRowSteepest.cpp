@@ -256,11 +256,11 @@ int ClpPEDualRowSteepest::pivotRow()
   double tolerance = model_->currentPrimalTolerance();
   // we can't really trust infeasibilities if there is primal error
   // this coding has to mimic coding in checkPrimalSolution
-  double error = CoinMin(1.0e-2, model_->largestPrimalError());
+  double error = std::min(1.0e-2, model_->largestPrimalError());
   // allow tolerance at least slightly bigger than standard
   tolerance = tolerance + error;
   // But cap
-  tolerance = CoinMin(1000.0, tolerance);
+  tolerance = std::min(1000.0, tolerance);
   tolerance *= tolerance; // as we are using squares
   bool toleranceChanged = false;
   double *solution = model_->solutionRegion();
@@ -310,7 +310,7 @@ int ClpPEDualRowSteepest::pivotRow()
   if (model_->numberIterations() < model_->lastBadIteration() + 200) {
     // we can't really trust infeasibilities if there is dual error
     if (model_->largestDualError() > model_->largestPrimalError()) {
-      tolerance *= CoinMin(model_->largestDualError() / model_->largestPrimalError(), 1000.0);
+      tolerance *= std::min(model_->largestDualError() / model_->largestPrimalError(), 1000.0);
       toleranceChanged = true;
     }
   }
@@ -318,19 +318,19 @@ int ClpPEDualRowSteepest::pivotRow()
   if (mode_ < 2) {
     numberWanted = number + 1;
   } else if (mode_ == 2) {
-    numberWanted = CoinMax(2000, number / 8);
+    numberWanted = std::max(2000, number / 8);
   } else {
     int numberElements = model_->factorization()->numberElements();
     double ratio = static_cast< double >(numberElements) / static_cast< double >(model_->numberRows());
-    numberWanted = CoinMax(2000, number / 8);
+    numberWanted = std::max(2000, number / 8);
     if (ratio < 1.0) {
-      numberWanted = CoinMax(2000, number / 20);
+      numberWanted = std::max(2000, number / 20);
     } else if (ratio > 10.0) {
       ratio = number * (ratio / 80.0);
       if (ratio > number)
         numberWanted = number + 1;
       else
-        numberWanted = CoinMax(2000, static_cast< int >(ratio));
+        numberWanted = std::max(2000, static_cast< int >(ratio));
     }
   }
   if (model_->largestPrimalError() > 1.0e-3)
@@ -372,7 +372,7 @@ int ClpPEDualRowSteepest::pivotRow()
             value *= 2.0;
         }
 #endif
-        double weight = CoinMin(weights_[iRow], 1.0e50);
+        double weight = std::min(weights_[iRow], 1.0e50);
         double largestMax = std::max(psiTmp * largest, largestComp);
         if (value > weight * largestMax) {
           // make last pivot row last resort choice

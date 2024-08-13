@@ -232,10 +232,10 @@ myPdco::myPdco(ClpInterior & model, FILE * fpData, FILE * fpParam)
           numlinks_++;
           ir[nonzpt++] = *ifrom;
           ir[nonzpt++] = *ito;
-          imax = CoinMax(imax, *ifrom);
-          imax = CoinMax(imax, *ito);
-          imin = CoinMin(imin, *ifrom);
-          imin = CoinMin(imin, *ito);
+          imax = std::max(imax, *ifrom);
+          imax = std::max(imax, *ito);
+          imin = std::min(imin, *ifrom);
+          imin = std::min(imin, *ito);
      }
      fclose(fpData);
      fclose(fpParam);
@@ -294,6 +294,6 @@ myPdco::myPdco(ClpInterior & model, FILE * fpData, FILE * fpParam)
      model.y_ = y;
      model.dj_ = dj;
      model.xsize_ = 50 / ncol;
-     model.xsize_ = CoinMin(model.xsize_, 1.0);
+     model.xsize_ = std::min(model.xsize_, 1.0);
      model.zsize_ = 1;
 }

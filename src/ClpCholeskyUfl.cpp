@@ -358,7 +358,7 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
   //check sizes
   double largest2 = maximumAbsElement(sparseFactor_, sizeFactor_);
   largest2 *= 1.0e-20;
-  largest = CoinMin(largest2, 1.0e-11);
+  largest = std::min(largest2, 1.0e-11);
   int numberDroppedBefore = 0;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int dropped = rowsDropped_[iRow];
@@ -368,9 +368,9 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
       CoinBigIndex start = choleskyStart_[iRow];
       double diagonal = sparseFactor_[start];
       if (diagonal > largest2) {
-        sparseFactor_[start] = CoinMax(diagonal, 1.0e-10);
+        sparseFactor_[start] = std::max(diagonal, 1.0e-10);
       } else {
-        sparseFactor_[start] = CoinMax(diagonal, 1.0e-10);
+        sparseFactor_[start] = std::max(diagonal, 1.0e-10);
         rowsDropped[iRow] = 2;
         numberDroppedBefore++;
       }

@@ -681,10 +681,10 @@ static int tightenDoubletons2(CoinPresolveMatrix *prob)
               binding1 |= 1 << k;
             thisHighest0 = thisHighest1;
           }
-          lowestLowest = CoinMin(lowestLowest, thisLowest0);
-          highestHighest = CoinMax(highestHighest, thisHighest0);
-          lowestHighest = CoinMin(lowestHighest, thisHighest0);
-          highestLowest = CoinMax(highestLowest, thisLowest0);
+          lowestLowest = std::min(lowestLowest, thisLowest0);
+          highestHighest = std::max(highestHighest, thisHighest0);
+          lowestHighest = std::min(lowestHighest, thisHighest0);
+          highestLowest = std::max(highestLowest, thisLowest0);
         }
         // see if any good
         //#define PRINT_VALUES
@@ -706,12 +706,12 @@ static int tightenDoubletons2(CoinPresolveMatrix *prob)
           // if costed may be able to adjust
           if (cost[icol] >= 0.0) {
             if (highestLowest < upperX && highestLowest >= lowerX && highestHighest < 1.0e30) {
-              highestHighest = CoinMin(highestHighest, highestLowest);
+              highestHighest = std::min(highestHighest, highestLowest);
             }
           }
           if (cost[icol] <= 0.0) {
             if (lowestHighest > lowerX && lowestHighest <= upperX && lowestHighest > -1.0e30) {
-              lowestLowest = CoinMax(lowestLowest, lowestHighest);
+              lowestLowest = std::max(lowestLowest, lowestHighest);
             }
           }
 #if 1
@@ -747,8 +747,8 @@ static int tightenDoubletons2(CoinPresolveMatrix *prob)
           xValue = (rowUpper0 * element1 - rowUpper1 * element0) / (alpha[0] * element1 - alpha[1] * element0);
           yValue0 = (rowUpper0 - xValue * alpha[0]) / element0;
           yValue1 = (rowUpper1 - xValue * alpha[1]) / element1;
-          newLower = CoinMin(newLower, CoinMax(yValue0, yValue1));
-          newUpper = CoinMax(newUpper, CoinMax(yValue0, yValue1));
+          newLower = std::min(newLower, std::max(yValue0, yValue1));
+          newUpper = std::max(newUpper, std::max(yValue0, yValue1));
           double xValueEqual = xValue;
           double yValueEqual = yValue0;
           costEqual = xValue * cost[otherCol] + yValueEqual * cost[icol];
@@ -789,7 +789,7 @@ static int tightenDoubletons2(CoinPresolveMatrix *prob)
           }
 #ifdef PRINT_VALUES
           printf("equal value of %d is %g, value of %d is max(%g,%g) - %g\n",
-            otherCol, xValue, icol, yValue0, yValue1, CoinMax(yValue0, yValue1));
+            otherCol, xValue, icol, yValue0, yValue1, std::max(yValue0, yValue1));
           printf("Cost at equality %g for constraint 0 ranges %g -> %g slope %g for constraint 1 ranges %g -> %g slope %g\n",
             costEqual, ranges0[0], ranges0[1], slope[0], ranges1[0], ranges1[1], slope[1]);
 #endif
@@ -798,25 +798,25 @@ static int tightenDoubletons2(CoinPresolveMatrix *prob)
           yValue1 = (rowUpper1 - xValue * alpha[1]) / element1;
 #ifdef PRINT_VALUES
           printf("value of %d is %g, value of %d is max(%g,%g) - %g\n",
-            otherCol, xValue, icol, yValue0, yValue1, CoinMax(yValue0, yValue1));
+            otherCol, xValue, icol, yValue0, yValue1, std::max(yValue0, yValue1));
 #endif
-          newLower = CoinMin(newLower, CoinMax(yValue0, yValue1));
+          newLower = std::min(newLower, std::max(yValue0, yValue1));
           // cost>0 so will be at lower
           //double yValueAtBound0=newLower;
-          newUpper = CoinMax(newUpper, CoinMax(yValue0, yValue1));
+          newUpper = std::max(newUpper, std::max(yValue0, yValue1));
           xValue = bound[1];
           yValue0 = (rowUpper0 - xValue * alpha[0]) / element0;
           yValue1 = (rowUpper1 - xValue * alpha[1]) / element1;
 #ifdef PRINT_VALUES
           printf("value of %d is %g, value of %d is max(%g,%g) - %g\n",
-            otherCol, xValue, icol, yValue0, yValue1, CoinMax(yValue0, yValue1));
+            otherCol, xValue, icol, yValue0, yValue1, std::max(yValue0, yValue1));
 #endif
-          newLower = CoinMin(newLower, CoinMax(yValue0, yValue1));
+          newLower = std::min(newLower, std::max(yValue0, yValue1));
           // cost>0 so will be at lower
           //double yValueAtBound1=newLower;
-          newUpper = CoinMax(newUpper, CoinMax(yValue0, yValue1));
-          lowerX = CoinMax(lowerX, newLower - 1.0e-12 * fabs(newLower));
-          upperX = CoinMin(upperX, newUpper + 1.0e-12 * fabs(newUpper));
+          newUpper = std::max(newUpper, std::max(yValue0, yValue1));
+          lowerX = std::max(lowerX, newLower - 1.0e-12 * fabs(newLower));
+          upperX = std::min(upperX, newUpper + 1.0e-12 * fabs(newUpper));
           // Now make duplicate row
           // keep row 0 so need to adjust costs so same
 #ifdef PRINT_VALUES
@@ -827,7 +827,7 @@ static int tightenDoubletons2(CoinPresolveMatrix *prob)
           double costOther = cost[otherCol] + slope[1];
           double costThis = cost[icol] + slope[1] * (element0 / alpha[0]);
           xValue = xValueEqual;
-          yValue0 = CoinMax((rowUpper0 - xValue * alpha[0]) / element0, lowerX);
+          yValue0 = std::max((rowUpper0 - xValue * alpha[0]) / element0, lowerX);
 #if ABC_NORMAL_DEBUG > 0 || defined(PRINT_VALUES) || !defined(NDEBUG)
           double thisOffset = costEqual - (costOther * xValue + costThis * yValue0);
 #endif
@@ -838,13 +838,13 @@ static int tightenDoubletons2(CoinPresolveMatrix *prob)
           printf("new cost at equal %g\n", costOther * xValue + costThis * yValue0 + thisOffset);
 #endif
           xValue = xValueEqual - 1.0;
-          yValue0 = CoinMax((rowUpper0 - xValue * alpha[0]) / element0, lowerX);
+          yValue0 = std::max((rowUpper0 - xValue * alpha[0]) / element0, lowerX);
 #ifdef PRINT_VALUES
           printf("new cost at -1 %g\n", costOther * xValue + costThis * yValue0 + thisOffset);
 #endif
           assert(fabs((costOther * xValue + costThis * yValue0 + thisOffset) - (costEqual - slope[0])) < 1.0e-5);
           xValue = xValueEqual + 1.0;
-          yValue0 = CoinMax((rowUpper0 - xValue * alpha[0]) / element0, lowerX);
+          yValue0 = std::max((rowUpper0 - xValue * alpha[0]) / element0, lowerX);
 #ifdef PRINT_VALUES
           printf("new cost at +1 %g\n", costOther * xValue + costThis * yValue0 + thisOffset);
 #endif
@@ -936,7 +936,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
   // Messages
   CoinMessages messages = CoinMessage(prob->messages().language());
   paction_ = 0;
-  prob->maxSubstLevel_ = CoinMax(3, prob->maxSubstLevel_);
+  prob->maxSubstLevel_ = std::max(3, prob->maxSubstLevel_);
 #ifndef PRESOLVE_DETAIL
   if (prob->tuning_) {
 #endif
@@ -1068,7 +1068,7 @@ const CoinPresolveAction *ClpPresolve::presolve(CoinPresolveMatrix *prob)
       printProgress('E', 0);
     }
     if (ifree) {
-      int fill_level = CoinMax(10, prob->maxSubstLevel_);
+      int fill_level = std::max(10, prob->maxSubstLevel_);
       const CoinPresolveAction *lastAction = NULL;
       int iPass = 4;
       while (lastAction != paction_ && iPass) {
@@ -1704,7 +1704,7 @@ void init_CoinPrePostsolveMatrix(
   cpm->handler_ = NULL;
   cpm->defaultHandler_ = false;
 
-  cpm->bulk0_ = static_cast< CoinBigIndex >(cpm->bulkRatio_ * CoinMax(nelems_in, cpm->nelems_)
+  cpm->bulk0_ = static_cast< CoinBigIndex >(cpm->bulkRatio_ * std::max(nelems_in, cpm->nelems_)
     + ncols_in);
   // allow for temporary overflow
   cpm->hrow_ = new int[cpm->bulk0_ + ncols_in];
@@ -2278,7 +2278,7 @@ ClpPresolve::gutsOfPresolvedModel(ClpSimplex *originalModel,
     // But limit ratio
 #if COIN_BIG_INDEX<2
     if (substitution_ > 3) {
-      ratio = CoinMin(ratio,1.0e9/nelems_)-5.0;
+      ratio = std::min(ratio,1.0e9/nelems_)-5.0;
       ratio *= ratio;
       substitution_ = static_cast<int>(ratio)+3;
       ratio = sqrt((substitution_ - 3) + 5.0);

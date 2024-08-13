@@ -179,8 +179,8 @@ int AbcDualRowDantzig::pivotRow()
   const double *COIN_RESTRICT upperBasic = model_->upperBasic();
   const int *pivotVariable = model_->pivotVariable();
   // code so has list of infeasibilities (like steepest)
-  int numberWanted = CoinMax(2000, numberRows >> 4);
-  numberWanted = CoinMax(numberWanted, number >> 2);
+  int numberWanted = std::max(2000, numberRows >> 4);
+  numberWanted = std::max(numberWanted, number >> 2);
   if (model_->largestPrimalError() > 1.0e-3)
     numberWanted = number + 1; // be safe
   // Setup two passes
@@ -202,7 +202,7 @@ int AbcDualRowDantzig::pivotRow()
     int endThis = start[2 * iPass + 1];
     int startThis = start[2 * iPass];
     while (startThis < endThis) {
-      int end = CoinMin(endThis, startThis + numberWanted);
+      int end = std::min(endThis, startThis + numberWanted);
 #ifdef DO_REDUCE
       if (doReduce) {
         choose(infeasible, chosenRow, largest, startThis, end, tolerance);

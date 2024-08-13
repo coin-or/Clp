@@ -306,7 +306,7 @@ CoinAbcMaximumAbsElement(const double *region, int sizeIn)
 // was #pragma simd
 #endif
   /*cilk_*/ for (int i = 0; i < size; i++)
-    maxValue = CoinMax(maxValue, fabs(region[i]));
+    maxValue = std::max(maxValue, fabs(region[i]));
   return maxValue;
 }
 void CoinAbcMinMaxAbsElement(const double *region, int sizeIn, double &minimum, double &maximum)
@@ -320,8 +320,8 @@ void CoinAbcMinMaxAbsElement(const double *region, int sizeIn, double &minimum, 
 #endif
   /*cilk_*/ for (int i = 0; i < size; i++) {
     double value = fabs(region[i]);
-    minValue = CoinMin(value, minValue);
-    maxValue = CoinMax(value, maxValue);
+    minValue = std::min(value, minValue);
+    maxValue = std::max(value, maxValue);
   }
   minimum = minValue;
   maximum = maxValue;
@@ -340,8 +340,8 @@ void CoinAbcMinMaxAbsNormalValues(const double *region, int sizeIn, double &mini
   /*cilk_*/ for (int i = 0; i < size; i++) {
     double value = fabs(region[i]);
     if (value > NORMAL_LOW_VALUE && value < NORMAL_HIGH_VALUE) {
-      minValue = CoinMin(value, minValue);
-      maxValue = CoinMax(value, maxValue);
+      minValue = std::min(value, minValue);
+      maxValue = std::max(value, maxValue);
     }
   }
   minimum = minValue;
@@ -397,7 +397,7 @@ CoinAbcMaximumAbsElementAndScale(double *region, double multiplier, int sizeIn)
   /*cilk_*/ for (int i = 0; i < size; i++) {
     double value = fabs(region[i]);
     region[i] *= multiplier;
-    maxValue = CoinMax(value, maxValue);
+    maxValue = std::max(value, maxValue);
   }
   return maxValue;
 }
@@ -544,7 +544,7 @@ void CoinAbcGetNorms(const double *region, int sizeIn, double &norm1, double &no
 #endif
   /*cilk_*/ for (int i = 0; i < size; i++) {
     norm2 += region[i] * region[i];
-    norm1 = CoinMax(norm1, fabs(region[i]));
+    norm1 = std::max(norm1, fabs(region[i]));
   }
 }
 // regionTo[index[i]]=regionFrom[i]
@@ -675,7 +675,7 @@ void CoinAbcMemmoveAndZero(double *array, double *arrayFrom, int size)
   memmove(array, arrayFrom, size * sizeof(double));
   double *endArray = array + size;
   double *endArrayFrom = arrayFrom + size;
-  double *startZero = CoinMax(arrayFrom, endArray);
+  double *startZero = std::max(arrayFrom, endArray);
   memset(startZero, 0, (endArrayFrom - startZero) * sizeof(double));
 }
 // This compacts several sections and zeroes out end
@@ -691,7 +691,7 @@ int CoinAbcCompact(int numberSections, int alreadyDone, double *array, const int
     int end = start + length;
     memmove(array + alreadyDone, array + start, length * sizeof(double));
     if (end > totalLength) {
-      start = CoinMax(start, totalLength);
+      start = std::max(start, totalLength);
       memset(array + start, 0, (end - start) * sizeof(double));
     }
     alreadyDone += length;

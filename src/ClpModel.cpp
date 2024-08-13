@@ -1132,7 +1132,7 @@ double *resizeDouble(double *array, int size, int newSize, double fill,
     int i;
     double *newArray = new double[newSize];
     if (array)
-      CoinMemcpyN(array, CoinMin(newSize, size), newArray);
+      CoinMemcpyN(array, std::min(newSize, size), newArray);
     delete[] array;
     array = newArray;
     for (i = size; i < newSize; i++)
@@ -1312,8 +1312,8 @@ void ClpModel::resize(int newNumberRows, int newNumberColumns)
         unsigned char *tempR = tempC + newNumberColumns;
         memset(tempC, 3, newNumberColumns * sizeof(unsigned char));
         memset(tempR, 1, newNumberRows * sizeof(unsigned char));
-        CoinMemcpyN(status_, CoinMin(newNumberColumns, numberColumns_), tempC);
-        CoinMemcpyN(status_ + numberColumns_, CoinMin(newNumberRows, numberRows_), tempR);
+        CoinMemcpyN(status_, std::min(newNumberColumns, numberColumns_), tempC);
+        CoinMemcpyN(status_ + numberColumns_, std::min(newNumberRows, numberRows_), tempR);
         delete[] status_;
         status_ = tempC;
       } else if (newNumberColumns < numberColumns_) {
@@ -1333,20 +1333,20 @@ void ClpModel::resize(int newNumberRows, int newNumberColumns)
 #ifndef CLP_NO_STD
   if (lengthNames_) {
     // redo row and column names (make sure clean)
-    int numberRowNames = CoinMin(static_cast< int >(rowNames_.size()), numberRows_);
+    int numberRowNames = std::min(static_cast< int >(rowNames_.size()), numberRows_);
     if (numberRowNames < newNumberRows) {
       rowNames_.resize(newNumberRows);
-      lengthNames_ = CoinMax(lengthNames_, 8);
+      lengthNames_ = std::max(lengthNames_, 8);
       char name[10];
       for (unsigned int iRow = numberRowNames; iRow < newNumberRows; iRow++) {
         sprintf(name, "R%7.7d", iRow);
         rowNames_[iRow] = name;
       }
     }
-    int numberColumnNames = CoinMin(static_cast< int >(columnNames_.size()), numberColumns_);
+    int numberColumnNames = std::min(static_cast< int >(columnNames_.size()), numberColumns_);
     if (numberColumnNames < newNumberColumns) {
       columnNames_.resize(newNumberColumns);
-      lengthNames_ = CoinMax(lengthNames_, 8);
+      lengthNames_ = std::max(lengthNames_, 8);
       char name[10];
       for (unsigned int iColumn = numberColumnNames;
            iColumn < newNumberColumns; iColumn++) {
@@ -1372,7 +1372,7 @@ void ClpModel::resize(int newNumberRows, int newNumberColumns)
     char *temp = new char[newNumberColumns];
     CoinZeroN(temp, newNumberColumns);
     CoinMemcpyN(integerType_,
-      CoinMin(newNumberColumns, numberColumns_), temp);
+      std::min(newNumberColumns, numberColumns_), temp);
     delete[] integerType_;
     integerType_ = temp;
   }
@@ -1384,16 +1384,16 @@ void ClpModel::resize(int newNumberRows, int newNumberColumns)
     if (numberRows_ > maximumRows_)
       COIN_DETAIL_PRINT(printf("resize %d rows, %d old maximum rows\n",
         numberRows_, maximumRows_));
-    maximumRows_ = CoinMax(maximumRows_, numberRows_);
-    maximumColumns_ = CoinMax(maximumColumns_, numberColumns_);
+    maximumRows_ = std::max(maximumRows_, numberRows_);
+    maximumColumns_ = std::max(maximumColumns_, numberColumns_);
   }
 }
 // Makes sure matrix dimensions are at least model dimensions
 void ClpModel::synchronizeMatrix()
 {
   if (matrix_) {
-    int numberRows = CoinMax(numberRows_,matrix_->getNumRows());
-    int numberColumns = CoinMax(numberColumns_,matrix_->getNumCols());
+    int numberRows = std::max(numberRows_,matrix_->getNumRows());
+    int numberColumns = std::max(numberColumns_,matrix_->getNumCols());
     matrix_->setDimensions(numberRows,numberColumns);
   }
 }
@@ -2011,7 +2011,7 @@ int ClpModel::addRows(const CoinBuild &buildObject, bool tryPlusMinusOne, bool c
               checkDuplicates = false;
             }
           }
-          maxColumn = CoinMax(maxColumn, iColumn);
+          maxColumn = std::max(maxColumn, iColumn);
           if (elements[i] == 1.0) {
             startPositive[iColumn]++;
           } else if (elements[i] == -1.0) {
@@ -2048,7 +2048,7 @@ int ClpModel::addRows(const CoinBuild &buildObject, bool tryPlusMinusOne, bool c
           columns, elements);
         for (int i = 0; i < numberElements; i++) {
           int iColumn = columns[i];
-          maxColumn = CoinMax(maxColumn, iColumn);
+          maxColumn = std::max(maxColumn, iColumn);
           if (elements[i] == 1.0) {
             CoinBigIndex position = startPositive[iColumn];
             indices[position] = iRow;
@@ -2427,7 +2427,7 @@ int ClpModel::addColumns(const CoinBuild &buildObject, bool tryPlusMinusOne, boo
         int numberElements = buildObject.column(iColumn, lower[iColumn],
           upper[iColumn], objective[iColumn],
           rows, elements);
-        maximumLength = CoinMax(maximumLength, numberElements);
+        maximumLength = std::max(maximumLength, numberElements);
         for (int i = 0; i < numberElements; i++) {
           // allow for zero elements
           if (elements[i]) {
@@ -2509,7 +2509,7 @@ int ClpModel::addColumns(const CoinBuild &buildObject, bool tryPlusMinusOne, boo
               checkDuplicates = false;
             }
           }
-          maxRow = CoinMax(maxRow, iRow);
+          maxRow = std::max(maxRow, iRow);
           if (elements[i] == 1.0) {
             indices[size++] = iRow;
           } else if (elements[i] == -1.0) {
@@ -2891,7 +2891,7 @@ int ClpModel::readMps(const char *fileName,
   *m.messagesPointer() = coinMessages();
   bool savePrefix = m.messageHandler()->prefix();
   m.messageHandler()->setPrefix(handler_->prefix());
-  m.setSmallElementValue(CoinMax(smallElement_, m.getSmallElementValue()));
+  m.setSmallElementValue(std::max(smallElement_, m.getSmallElementValue()));
   double time1 = CoinCpuTime(), time2;
   int status = 0;
   try {
@@ -2938,7 +2938,7 @@ int ClpModel::readMps(const char *fileName,
       rowNames_.reserve(numberRows_);
       for (iRow = 0; iRow < numberRows_; iRow++) {
 	const char *name = m.rowName(iRow);
-	maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(name)));
+	maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(name)));
 	rowNames_.push_back(name);
       }
 
@@ -2946,7 +2946,7 @@ int ClpModel::readMps(const char *fileName,
       columnNames_.reserve(numberColumns_);
       for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
         const char *name = m.columnName(iColumn);
-        maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(name)));
+        maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(name)));
         columnNames_.push_back(name);
       }
       lengthNames_ = static_cast< int >(maxLength);
@@ -3262,14 +3262,14 @@ ClpModel::modifyByIndicators(double startBigM,
     for (int iRow = 0; iRow < numberRows1; iRow++) {
       const char *name = saveNames[iRow].c_str();
       lengthNames_ =
-	CoinMax(lengthNames_, static_cast<int>(strlen(name)));
+	std::max(lengthNames_, static_cast<int>(strlen(name)));
       rowNames_.push_back(name);
       if ((rowType[iRow]&3)==3) {
 	char name2[300];
 	strcpy(name2,name);
 	strcat(name2,"_fake_");
 	lengthNames_ =
-	  CoinMax(lengthNames_, static_cast<int>(strlen(name2)));
+	  std::max(lengthNames_, static_cast<int>(strlen(name2)));
 	rowNames_.push_back(name2);
       }
     }
@@ -3338,7 +3338,7 @@ ClpModel::modifyByIndicators(double startBigM,
     double * solution = new double[numberColumns_];
     {
       FILE * fp =fopen("/tmp/c.dmp","rb");
-      double * temp = new double[CoinMax(numberRows,numberColumns_)];
+      double * temp = new double[std::max(numberRows,numberColumns_)];
       if (fp) {
 	int n = fread(temp,sizeof(double),numberColumns_,fp);
 	fclose(fp);
@@ -3364,10 +3364,10 @@ ClpModel::modifyByIndicators(double startBigM,
 	  double value = temp[i];
 	  if (value>rowUpper[i]+1.0e-8) {
 	    nBad++;
-	    worst = CoinMax(worst,value-rowUpper[i]);
+	    worst = std::max(worst,value-rowUpper[i]);
 	  } else if (value<rowLower[i]-1.0e-8) {
 	    nBad++;
-	    worst = CoinMax(worst,rowLower[i]-value);
+	    worst = std::max(worst,rowLower[i]-value);
 	  }
 	}
 	printf("%d bad rows - worst %g\n",nBad,worst);
@@ -3500,12 +3500,12 @@ ClpModel::modifyByIndicators(double startBigM,
 	  minimum = floor(minimum+0.5);
 	else
 	  minimum -= 1.0e-5;
-	minimum = CoinMax(minimum,-bigM);
+	minimum = std::max(minimum,-bigM);
 	if (fabs(maximum-floor(maximum+0.5))<1.0e-6&&allInt)
 	  maximum = floor(maximum+0.5);
 	else
 	  maximum += 1.0e-5;
-	maximum = CoinMin(maximum,bigM);
+	maximum = std::min(maximum,bigM);
 	if ((iType&4)!=0) {
 	  // active when 1 
 	  // sigma + mx <= m + rhs
@@ -3520,7 +3520,7 @@ ClpModel::modifyByIndicators(double startBigM,
 		 newValue,upper+newValue);
 #endif
 	  elementByColumn[j]=newValue;
-	  rowUpper[iRow] = upper + CoinMax(newValue,0.0);
+	  rowUpper[iRow] = upper + std::max(newValue,0.0);
 	  if (maximum < upper+1.0e-8)
 	    rowUpper[iRow] = COIN_DBL_MAX;
 #if DETAIL > 1
@@ -3801,7 +3801,7 @@ int ClpModel::readGMPL(const char *fileName, const char *dataName,
       rowNames_.reserve(numberRows_);
       for (iRow = 0; iRow < numberRows_; iRow++) {
         const char *name = m.rowName(iRow);
-        maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(name)));
+        maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(name)));
         rowNames_.push_back(name);
       }
 
@@ -3809,7 +3809,7 @@ int ClpModel::readGMPL(const char *fileName, const char *dataName,
       columnNames_.reserve(numberColumns_);
       for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
         const char *name = m.columnName(iColumn);
-        maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(name)));
+        maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(name)));
         columnNames_.push_back(name);
       }
       lengthNames_ = static_cast< int >(maxLength);
@@ -4121,13 +4121,13 @@ ClpModel::ClpModel(const ClpModel *rhs,
     rowNames_.reserve(numberRows_);
     for (iRow = 0; iRow < numberRows_; iRow++) {
       rowNames_.push_back(rhs->rowNames_[whichRow[iRow]]);
-      maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(rowNames_[iRow].c_str())));
+      maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(rowNames_[iRow].c_str())));
     }
     int iColumn;
     columnNames_.reserve(numberColumns_);
     for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
       columnNames_.push_back(rhs->columnNames_[whichColumn[iColumn]]);
-      maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(columnNames_[iColumn].c_str())));
+      maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(columnNames_[iColumn].c_str())));
     }
     lengthNames_ = static_cast< int >(maxLength);
   } else {
@@ -4208,13 +4208,13 @@ void ClpModel::copyNames(const std::vector< std::string > &rowNames,
   rowNames_.reserve(numberRows_);
   for (iRow = 0; iRow < numberRows_; iRow++) {
     rowNames_.push_back(rowNames[iRow]);
-    maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(rowNames_[iRow].c_str())));
+    maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(rowNames_[iRow].c_str())));
   }
   int iColumn;
   columnNames_.reserve(numberColumns_);
   for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
     columnNames_.push_back(columnNames[iColumn]);
-    maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(columnNames_[iColumn].c_str())));
+    maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(columnNames_[iColumn].c_str())));
   }
   lengthNames_ = static_cast< int >(maxLength);
 }
@@ -4250,7 +4250,7 @@ void ClpModel::setRowName(int iRow, std::string &name)
   if (size <= iRow)
     rowNames_.resize(iRow + 1);
   rowNames_[iRow] = name;
-  maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(name.c_str())));
+  maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(name.c_str())));
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_ = static_cast< int >(maxLength);
 }
@@ -4286,7 +4286,7 @@ void ClpModel::setColumnName(int iColumn, std::string &name)
   if (size <= iColumn)
     columnNames_.resize(iColumn + 1);
   columnNames_[iColumn] = name;
-  maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(name.c_str())));
+  maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(name.c_str())));
   // May be too big - but we would have to check both columns and columns to be exact
   lengthNames_ = static_cast< int >(maxLength);
 }
@@ -4305,7 +4305,7 @@ void ClpModel::copyRowNames(const std::vector< std::string > &rowNames, int firs
   int iRow;
   for (iRow = first; iRow < last; iRow++) {
     rowNames_[iRow] = rowNames[iRow - first];
-    maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(rowNames_[iRow - first].c_str())));
+    maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(rowNames_[iRow - first].c_str())));
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_ = static_cast< int >(maxLength);
@@ -4325,7 +4325,7 @@ void ClpModel::copyColumnNames(const std::vector< std::string > &columnNames, in
   int iColumn;
   for (iColumn = first; iColumn < last; iColumn++) {
     columnNames_[iColumn] = columnNames[iColumn - first];
-    maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(columnNames_[iColumn - first].c_str())));
+    maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(columnNames_[iColumn - first].c_str())));
   }
   // May be too big - but we would have to check both rows and columns to be exact
   lengthNames_ = static_cast< int >(maxLength);
@@ -4346,9 +4346,9 @@ void ClpModel::copyRowNames(const char *const *rowNames, int first, int last)
   for (iRow = first; iRow < last; iRow++) {
     if (rowNames && rowNames[iRow - first] && strlen(rowNames[iRow - first])) {
       rowNames_[iRow] = rowNames[iRow - first];
-      maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(rowNames[iRow - first])));
+      maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(rowNames[iRow - first])));
     } else {
-      maxLength = CoinMax(maxLength, static_cast< unsigned int >(8));
+      maxLength = std::max(maxLength, static_cast< unsigned int >(8));
       char name[10];
       sprintf(name, "R%7.7d", iRow);
       rowNames_[iRow] = name;
@@ -4373,9 +4373,9 @@ void ClpModel::copyColumnNames(const char *const *columnNames, int first, int la
   for (iColumn = first; iColumn < last; iColumn++) {
     if (columnNames && columnNames[iColumn - first] && strlen(columnNames[iColumn - first])) {
       columnNames_[iColumn] = columnNames[iColumn - first];
-      maxLength = CoinMax(maxLength, static_cast< unsigned int >(strlen(columnNames[iColumn - first])));
+      maxLength = std::max(maxLength, static_cast< unsigned int >(strlen(columnNames[iColumn - first])));
     } else {
-      maxLength = CoinMax(maxLength, static_cast< unsigned int >(8));
+      maxLength = std::max(maxLength, static_cast< unsigned int >(8));
       char name[10];
       sprintf(name, "C%7.7d", iColumn);
       columnNames_[iColumn] = name;
@@ -4436,7 +4436,7 @@ int ClpModel::emptyProblem(int *infeasNumber, double *infeasSum, bool printMessa
           } else {
             rowActivity_[i] = 0.0;
             numberPrimalInfeasibilities++;
-            sumPrimalInfeasibilities += CoinMin(rowLower_[i], -rowUpper_[i]);
+            sumPrimalInfeasibilities += std::min(rowLower_[i], -rowUpper_[i]);
             returnCode = 1;
           }
         } else {
@@ -4619,7 +4619,7 @@ ClpModel::rowNamesAsChar() const
   if (lengthNames()) {
     rowNames = new char *[numberRows_ + 1];
     int numberNames = static_cast< int >(rowNames_.size());
-    numberNames = CoinMin(numberRows_, numberNames);
+    numberNames = std::min(numberRows_, numberNames);
     unsigned int iRow;
     for (iRow = 0; iRow < numberNames; iRow++) {
       if (rowName(iRow) != "") {
@@ -4658,7 +4658,7 @@ ClpModel::columnNamesAsChar() const
   if (lengthNames()) {
     columnNames = new char *[numberColumns_];
     int numberNames = static_cast< int >(columnNames_.size());
-    numberNames = CoinMin(numberColumns_, numberNames);
+    numberNames = std::min(numberColumns_, numberNames);
     unsigned int iColumn;
     for (iColumn = 0; iColumn < numberNames; iColumn++) {
       if (columnName(iColumn) != "") {
@@ -5094,7 +5094,7 @@ int ClpModel::findNetwork(char *rotate, double fractionNeeded)
             int iCount = columnCount[iColumn];
             int absCount = CoinAbs(iCount);
             if (absCount < 2) {
-              merit = CoinMax(columnLength[iColumn] - absCount - 1, merit);
+              merit = std::max(columnLength[iColumn] - absCount - 1, merit);
               if (elementByRow[j] == iCount)
                 OK = false;
               else if (elementByRow[j] == -iCount)

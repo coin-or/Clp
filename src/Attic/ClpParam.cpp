@@ -2056,7 +2056,7 @@ void restoreSolution(ClpSimplex *lpSolver, std::string fileName, int mode)
           throw("Error in fread");
       } else {
         std::cout << "Mismatch on rows and/or columns - truncating" << std::endl;
-        double *temp = new double[CoinMax(numberRowsFile, numberColumnsFile)];
+        double *temp = new double[std::max(numberRowsFile, numberColumnsFile)];
         nRead = fread(temp, sizeof(double), numberRowsFile, fp);
         if (nRead != static_cast< size_t >(numberRowsFile))
           throw("Error in fread");

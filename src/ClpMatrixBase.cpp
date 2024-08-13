@@ -438,7 +438,7 @@ int ClpMatrixBase::checkFeasible(ClpSimplex *model, double &sum) const
     }
     if (value < rowLower[iRow] - tolerance || value > rowUpper[iRow] + tolerance) {
       numberInfeasible++;
-      sum += CoinMax(rowLower[iRow] - value, value - rowUpper[iRow]);
+      sum += std::max(rowLower[iRow] - value, value - rowUpper[iRow]);
     }
     if (value2 > rowLower[iRow] + tolerance && value2 < rowUpper[iRow] - tolerance && model->getRowStatus(iRow) != ClpSimplex::basic) {
       assert(model->getRowStatus(iRow) == ClpSimplex::superBasic);
@@ -451,7 +451,7 @@ int ClpMatrixBase::checkFeasible(ClpSimplex *model, double &sum) const
     double value = solution[iColumn];
     if (value < columnLower[iColumn] - tolerance || value > columnUpper[iColumn] + tolerance) {
       numberInfeasible++;
-      sum += CoinMax(columnLower[iColumn] - value, value - columnUpper[iColumn]);
+      sum += std::max(columnLower[iColumn] - value, value - columnUpper[iColumn]);
     }
     if (value > columnLower[iColumn] + tolerance && value < columnUpper[iColumn] - tolerance && model->getColumnStatus(iColumn) != ClpSimplex::basic) {
       assert(model->getColumnStatus(iColumn) == ClpSimplex::superBasic);
@@ -504,13 +504,13 @@ void ClpMatrixBase::subsetTimes2(const ClpSimplex *model,
       if (thisWeight < DEVEX_TRY_NORM) {
         if (referenceIn < 0.0) {
           // steepest
-          thisWeight = CoinMax(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
+          thisWeight = std::max(DEVEX_TRY_NORM, DEVEX_ADD_ONE + pivotSquared);
         } else {
           // exact
           thisWeight = referenceIn * pivotSquared;
           if (reference(iSequence))
             thisWeight += 1.0;
-          thisWeight = CoinMax(thisWeight, DEVEX_TRY_NORM);
+          thisWeight = std::max(thisWeight, DEVEX_TRY_NORM);
         }
       }
       weights[iSequence] = thisWeight;

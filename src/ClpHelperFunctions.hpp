@@ -43,22 +43,22 @@ CoinMemcpyN(const CoinWorkDouble *from, const int size, double *to)
     to[i] = static_cast< double >(from[i]);
 }
 inline CoinWorkDouble
-CoinMax(const CoinWorkDouble x1, const double x2)
+std::max(const CoinWorkDouble x1, const double x2)
 {
   return (x1 > x2) ? x1 : x2;
 }
 inline CoinWorkDouble
-CoinMax(double x1, const CoinWorkDouble x2)
+std::max(double x1, const CoinWorkDouble x2)
 {
   return (x1 > x2) ? x1 : x2;
 }
 inline CoinWorkDouble
-CoinMin(const CoinWorkDouble x1, const double x2)
+std::min(const CoinWorkDouble x1, const double x2)
 {
   return (x1 < x2) ? x1 : x2;
 }
 inline CoinWorkDouble
-CoinMin(double x1, const CoinWorkDouble x2)
+std::min(double x1, const CoinWorkDouble x2)
 {
   return (x1 < x2) ? x1 : x2;
 }
@@ -175,11 +175,11 @@ inline void pdxxxresid1(ClpPdco *model, const int nlow, const int nupp, const in
     if (rU[upp[k]] > normU)
       normU = rU[upp[k]];
 
-  *Pinf = CoinMax(normL, normU);
-  *Pinf = CoinMax(r1.infNorm(), *Pinf);
+  *Pinf = std::max(normL, normU);
+  *Pinf = std::max(r1.infNorm(), *Pinf);
   *Dinf = r2.infNorm();
-  *Pinf = CoinMax(*Pinf, 1e-99);
-  *Dinf = CoinMax(*Dinf, 1e-99);
+  *Pinf = std::max(*Pinf, 1e-99);
+  *Dinf = std::max(*Dinf, 1e-99);
 }
 
 //-----------------------------------------------------------------------
@@ -229,8 +229,8 @@ inline void pdxxxresid2(double mu, int nlow, int nupp, int *low, int *upp,
       minXz = x2z2;
   }
 
-  maxXz = CoinMax(maxXz, 1e-99);
-  minXz = CoinMax(minXz, 1e-99);
+  maxXz = std::max(maxXz, 1e-99);
+  minXz = std::max(minXz, 1e-99);
   *center = maxXz / minXz;
 
   double normL = 0.0;
@@ -241,7 +241,7 @@ inline void pdxxxresid2(double mu, int nlow, int nupp, int *low, int *upp,
   for (int k = 0; k < nupp; k++)
     if (cU_elts[upp[k]] > normU)
       normU = cU_elts[upp[k]];
-  *Cinf = CoinMax(normL, normU);
+  *Cinf = std::max(normL, normU);
   *Cinf0 = maxXz;
 }
 //-----------------------------------------------------------------------

@@ -442,7 +442,7 @@ void ClpDynamicExampleMatrix::partialPricing(ClpSimplex *model, double startFrac
     // and do some proportion of full set
     int startG2 = static_cast< int >(startFraction * numberSets_);
     int endG2 = static_cast< int >(endFraction * numberSets_ + 0.1);
-    endG2 = CoinMin(endG2, numberSets_);
+    endG2 = std::min(endG2, numberSets_);
     //printf("gub price - set start %d end %d\n",
     //   startG2,endG2);
     double tolerance = model->currentDualTolerance();

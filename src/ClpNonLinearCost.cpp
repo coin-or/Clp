@@ -250,7 +250,7 @@ ClpNonLinearCost::refresh()
 	   // below
 	   double infeasibility = lowerValue - value - primalTolerance;
 	   sumInfeasibilities_ += infeasibility;
-	   largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
+	   largestInfeasibility_ = std::max(largestInfeasibility_, infeasibility);
 	   cost[iSequence] -= infeasibilityCost;
 	   numberInfeasibilities_++;
 	   status_[iSequence] = static_cast<unsigned char>(CLP_BELOW_LOWER | (CLP_SAME << 4));
@@ -262,7 +262,7 @@ ClpNonLinearCost::refresh()
 	 // above
 	 double infeasibility = value - upperValue - primalTolerance;
 	 sumInfeasibilities_ += infeasibility;
-	 largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
+	 largestInfeasibility_ = std::max(largestInfeasibility_, infeasibility);
 	 cost[iSequence] += infeasibilityCost;
 	 numberInfeasibilities_++;
 	 status_[iSequence] = static_cast<unsigned char>(CLP_ABOVE_UPPER | (CLP_SAME << 4));
@@ -722,7 +722,7 @@ void ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
                 lowerValue);
 #endif
               sumInfeasibilities_ += value;
-              largestInfeasibility_ = CoinMax(largestInfeasibility_, value);
+              largestInfeasibility_ = std::max(largestInfeasibility_, value);
               changeCost_ -= lowerValue * (cost_[iRange] - cost[iSequence]);
               numberInfeasibilities_++;
             }
@@ -743,7 +743,7 @@ void ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
                 upperValue);
 #endif
               sumInfeasibilities_ += value;
-              largestInfeasibility_ = CoinMax(largestInfeasibility_, value);
+              largestInfeasibility_ = std::max(largestInfeasibility_, value);
               changeCost_ -= upperValue * (cost_[iRange] - cost[iSequence]);
               numberInfeasibilities_++;
             }
@@ -953,7 +953,7 @@ void ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
             assert(fabs(lowerValue) < 1.0e100);
             double infeasibility = lowerValue - value - primalTolerance;
             sumInfeasibilities_ += infeasibility;
-            largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
+            largestInfeasibility_ = std::max(largestInfeasibility_, infeasibility);
             costValue = trueCost - infeasibilityCost;
             changeCost_ -= lowerValue * (costValue - cost[iSequence]);
             numberInfeasibilities_++;
@@ -963,7 +963,7 @@ void ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
           newWhere = CLP_ABOVE_UPPER;
           double infeasibility = value - upperValue - primalTolerance;
           sumInfeasibilities_ += infeasibility;
-          largestInfeasibility_ = CoinMax(largestInfeasibility_, infeasibility);
+          largestInfeasibility_ = std::max(largestInfeasibility_, infeasibility);
           costValue = trueCost + infeasibilityCost;
           changeCost_ -= upperValue * (costValue - cost[iSequence]);
           numberInfeasibilities_++;
@@ -1102,7 +1102,7 @@ void ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
   }
 #ifdef NONLIN_DEBUG
   if (method_ == 3)
-    assert(fabs(saveCost - feasibleCost_) < 0.001 * (1.0 + CoinMax(fabs(saveCost), fabs(feasibleCost_))));
+    assert(fabs(saveCost - feasibleCost_) < 0.001 * (1.0 + std::max(fabs(saveCost), fabs(feasibleCost_))));
   delete[] saveSolution;
   delete[] saveLower;
   delete[] saveUpper;
@@ -1848,9 +1848,9 @@ int ClpNonLinearCost::setOneOutgoing(int iSequence, double &value)
     } else {
       // set correctly
       if (fabs(value - lower) <= primalTolerance * 1.001) {
-        value = CoinMin(value, lower + primalTolerance);
+        value = std::min(value, lower + primalTolerance);
       } else if (fabs(value - upper) <= primalTolerance * 1.001) {
-        value = CoinMax(value, upper - primalTolerance);
+        value = std::max(value, upper - primalTolerance);
       } else {
         //printf("*** variable wandered off bound %g %g %g!\n",
         //     lower,value,upper);
@@ -1933,9 +1933,9 @@ int ClpNonLinearCost::setOneOutgoing(int iSequence, double &value)
     }
     // set correctly
     if (fabs(value - lowerValue) <= primalTolerance * 1.001) {
-      value = CoinMin(value, lowerValue + primalTolerance);
+      value = std::min(value, lowerValue + primalTolerance);
     } else if (fabs(value - upperValue) <= primalTolerance * 1.001) {
-      value = CoinMax(value, upperValue - primalTolerance);
+      value = std::max(value, upperValue - primalTolerance);
     } else {
       //printf("*** variable wandered off bound %g %g %g!\n",
       //     lowerValue,value,upperValue);
