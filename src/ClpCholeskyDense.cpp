@@ -224,9 +224,9 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
           }
         }
         for (int j = iRow + 1; j < numberRows_; j++)
-          largest2 = std::max(largest2, CoinAbs(work[j]));
+          largest2 = std::max(largest2, std::abs(work[j]));
         diagonal_[iRow] = diagonalValue;
-        largest2 = std::max(largest2, CoinAbs(diagonalValue));
+        largest2 = std::max(largest2, std::abs(diagonalValue));
       } else {
         /* dropped*/
         diagonal_[iRow] = 1.0;
@@ -301,9 +301,9 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
     if (!quadratic) {
       for (iColumn = 0; iColumn < numberColumns; iColumn++) {
         CoinWorkDouble value = diagonal[iColumn];
-        if (CoinAbs(value) > 1.0e-100) {
+        if (std::abs(value) > 1.0e-100) {
           value = 1.0 / value;
-          largest = std::max(largest, CoinAbs(value));
+          largest = std::max(largest, std::abs(value));
           diagonal_[iColumn] = -value;
           CoinBigIndex start = columnStart[iColumn];
           CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
@@ -311,7 +311,7 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
             /*choleskyRow_[numberElements]=row[j]+numberTotal;*/
             /*sparseFactor_[numberElements++]=element[j];*/
             work[row[j] + numberTotal] = element[j];
-            largest = std::max(largest, CoinAbs(element[j]));
+            largest = std::max(largest, std::abs(element[j]));
           }
         } else {
           diagonal_[iColumn] = -value;
@@ -328,7 +328,7 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
       for (iColumn = 0; iColumn < numberColumns; iColumn++) {
         CoinWorkDouble value = diagonal[iColumn];
         CoinBigIndex j;
-        if (CoinAbs(value) > 1.0e-100) {
+        if (std::abs(value) > 1.0e-100) {
           value = 1.0 / value;
           for (j = columnQuadraticStart[iColumn];
                j < columnQuadraticStart[iColumn] + columnQuadraticLength[iColumn]; j++) {
@@ -339,13 +339,13 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
               value += quadraticElement[j];
             }
           }
-          largest = std::max(largest, CoinAbs(value));
+          largest = std::max(largest, std::abs(value));
           diagonal_[iColumn] = -value;
           CoinBigIndex start = columnStart[iColumn];
           CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
           for (j = start; j < end; j++) {
             work[row[j] + numberTotal] = element[j];
-            largest = std::max(largest, CoinAbs(element[j]));
+            largest = std::max(largest, std::abs(element[j]));
           }
         } else {
           value = 1.0e100;
@@ -358,9 +358,9 @@ int ClpCholeskyDense::factorize(const CoinWorkDouble *diagonal, int *rowsDropped
     /* slacks*/
     for (iColumn = numberColumns; iColumn < numberTotal; iColumn++) {
       CoinWorkDouble value = diagonal[iColumn];
-      if (CoinAbs(value) > 1.0e-100) {
+      if (std::abs(value) > 1.0e-100) {
         value = 1.0 / value;
-        largest = std::max(largest, CoinAbs(value));
+        largest = std::max(largest, std::abs(value));
       } else {
         value = 1.0e100;
       }
@@ -656,8 +656,8 @@ void ClpCholeskyDense::factorizePart2(int *rowsDropped)
   int numberDropped = 0;
   for (int i = 0; i < numberRows_; i++) {
     if (diagonal_[i]) {
-      largest = std::max(largest, CoinAbs(diagonal_[i]));
-      smallest = std::min(smallest, CoinAbs(diagonal_[i]));
+      largest = std::max(largest, std::abs(diagonal_[i]));
+      smallest = std::min(smallest, std::abs(diagonal_[i]));
     } else {
       numberDropped++;
     }
@@ -1312,7 +1312,7 @@ void ClpCholeskyDense::solve(CoinWorkDouble *region)
 #ifdef CHOL_COMPARE
   if (numberRows_ < 200) {
     for (int i = 0; i < numberRows_; i++) {
-      assert(CoinAbs(region[i] - region2[i]) < 1.0e-3);
+      assert(std::abs(region[i] - region2[i]) < 1.0e-3);
     }
     delete[] region2;
   }

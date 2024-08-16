@@ -267,12 +267,12 @@ void ClpCholeskyBase::solveKKT(CoinWorkDouble *region1, CoinWorkDouble *region2,
     solve(array);
     int iRow;
     for (iRow = 0; iRow < numberTotal; iRow++) {
-      if (rowsDropped_[iRow] && CoinAbs(array[iRow]) > 1.0e-8) {
+      if (rowsDropped_[iRow] && std::abs(array[iRow]) > 1.0e-8) {
         COIN_DETAIL_PRINT(printf("row region1 %d dropped %g\n", iRow, array[iRow]));
       }
     }
     for (; iRow < numberRows_; iRow++) {
-      if (rowsDropped_[iRow] && CoinAbs(array[iRow]) > 1.0e-8) {
+      if (rowsDropped_[iRow] && std::abs(array[iRow]) > 1.0e-8) {
         COIN_DETAIL_PRINT(printf("row region2 %d dropped %g\n", iRow, array[iRow]));
       }
     }
@@ -2813,13 +2813,13 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
           }
         }
         diagonal_[iRow] = work[iRow];
-        largest2 = std::max(largest2, CoinAbs(work[iRow]));
+        largest2 = std::max(largest2, std::abs(work[iRow]));
         work[iRow] = 0.0;
         int j;
         for (j = 0; j < number; j++) {
           int jRow = which[j];
           put[j] = work[jRow];
-          largest2 = std::max(largest2, CoinAbs(work[jRow]));
+          largest2 = std::max(largest2, std::abs(work[jRow]));
           work[jRow] = 0.0;
         }
       } else {
@@ -3009,9 +3009,9 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
           if (iOriginalRow < numberColumns) {
             iColumn = iOriginalRow;
             CoinWorkDouble value = diagonal[iColumn];
-            if (CoinAbs(value) > 1.0e-100) {
+            if (std::abs(value) > 1.0e-100) {
               value = 1.0 / value;
-              largest = std::max(largest, CoinAbs(value));
+              largest = std::max(largest, std::abs(value));
               diagonal_[iRow] = -value;
               CoinBigIndex start = columnStart[iColumn];
               CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
@@ -3020,7 +3020,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
                 kRow = permuteInverse_[kRow];
                 if (kRow > iRow) {
                   work[kRow] = element[j];
-                  largest = std::max(largest, CoinAbs(element[j]));
+                  largest = std::max(largest, std::abs(element[j]));
                 }
               }
             } else {
@@ -3028,9 +3028,9 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
             }
           } else if (iOriginalRow < numberTotal) {
             CoinWorkDouble value = diagonal[iOriginalRow];
-            if (CoinAbs(value) > 1.0e-100) {
+            if (std::abs(value) > 1.0e-100) {
               value = 1.0 / value;
-              largest = std::max(largest, CoinAbs(value));
+              largest = std::max(largest, std::abs(value));
             } else {
               value = 1.0e100;
             }
@@ -3048,7 +3048,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
               int jNewRow = permuteInverse_[jRow];
               if (jNewRow > iRow) {
                 work[jNewRow] = elementByRow[j];
-                largest = std::max(largest, CoinAbs(elementByRow[j]));
+                largest = std::max(largest, std::abs(elementByRow[j]));
               }
             }
             // slack - should it be permute
@@ -3078,7 +3078,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
             CoinBigIndex j;
             iColumn = iOriginalRow;
             CoinWorkDouble value = diagonal[iColumn];
-            if (CoinAbs(value) > 1.0e-100) {
+            if (std::abs(value) > 1.0e-100) {
               value = 1.0 / value;
               for (j = columnQuadraticStart[iColumn];
                    j < columnQuadraticStart[iColumn] + columnQuadraticLength[iColumn]; j++) {
@@ -3090,7 +3090,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
                   value += quadraticElement[j];
                 }
               }
-              largest = std::max(largest, CoinAbs(value));
+              largest = std::max(largest, std::abs(value));
               diagonal_[iRow] = -value;
               CoinBigIndex start = columnStart[iColumn];
               CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
@@ -3099,7 +3099,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
                 kRow = permuteInverse_[kRow];
                 if (kRow > iRow) {
                   work[kRow] = element[j];
-                  largest = std::max(largest, CoinAbs(element[j]));
+                  largest = std::max(largest, std::abs(element[j]));
                 }
               }
             } else {
@@ -3107,9 +3107,9 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
             }
           } else if (iOriginalRow < numberTotal) {
             CoinWorkDouble value = diagonal[iOriginalRow];
-            if (CoinAbs(value) > 1.0e-100) {
+            if (std::abs(value) > 1.0e-100) {
               value = 1.0 / value;
-              largest = std::max(largest, CoinAbs(value));
+              largest = std::max(largest, std::abs(value));
             } else {
               value = 1.0e100;
             }
@@ -3127,7 +3127,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
               int jNewRow = permuteInverse_[jRow];
               if (jNewRow > iRow) {
                 work[jNewRow] = elementByRow[j];
-                largest = std::max(largest, CoinAbs(elementByRow[j]));
+                largest = std::max(largest, std::abs(elementByRow[j]));
               }
             }
             // slack - should it be permute
@@ -3152,9 +3152,9 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
           longDouble *put = sparseFactor_ + choleskyStart_[iColumn];
           CoinBigIndex *which = choleskyRow_ + indexStart_[iColumn];
           CoinWorkDouble value = diagonal[iColumn];
-          if (CoinAbs(value) > 1.0e-100) {
+          if (std::abs(value) > 1.0e-100) {
             value = 1.0 / value;
-            largest = std::max(largest, CoinAbs(value));
+            largest = std::max(largest, std::abs(value));
             diagonal_[iColumn] = -value;
             CoinBigIndex start = columnStart[iColumn];
             CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
@@ -3162,7 +3162,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
               //choleskyRow_[numberElements]=row[j]+numberTotal;
               //sparseFactor_[numberElements++]=element[j];
               work[row[j] + numberTotal] = element[j];
-              largest = std::max(largest, CoinAbs(element[j]));
+              largest = std::max(largest, std::abs(element[j]));
             }
           } else {
             diagonal_[iColumn] = -value;
@@ -3187,7 +3187,7 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
           int number = choleskyStart_[iColumn + 1] - choleskyStart_[iColumn];
           CoinWorkDouble value = diagonal[iColumn];
           CoinBigIndex j;
-          if (CoinAbs(value) > 1.0e-100) {
+          if (std::abs(value) > 1.0e-100) {
             value = 1.0 / value;
             for (j = columnQuadraticStart[iColumn];
                  j < columnQuadraticStart[iColumn] + columnQuadraticLength[iColumn]; j++) {
@@ -3198,13 +3198,13 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
                 value += quadraticElement[j];
               }
             }
-            largest = std::max(largest, CoinAbs(value));
+            largest = std::max(largest, std::abs(value));
             diagonal_[iColumn] = -value;
             CoinBigIndex start = columnStart[iColumn];
             CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
             for (j = start; j < end; j++) {
               work[row[j] + numberTotal] = element[j];
-              largest = std::max(largest, CoinAbs(element[j]));
+              largest = std::max(largest, std::abs(element[j]));
             }
             for (j = 0; j < number; j++) {
               int jRow = which[j];
@@ -3226,9 +3226,9 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
         longDouble *put = sparseFactor_ + choleskyStart_[iColumn];
         CoinBigIndex *which = choleskyRow_ + indexStart_[iColumn];
         CoinWorkDouble value = diagonal[iColumn];
-        if (CoinAbs(value) > 1.0e-100) {
+        if (std::abs(value) > 1.0e-100) {
           value = 1.0 / value;
-          largest = std::max(largest, CoinAbs(value));
+          largest = std::max(largest, std::abs(value));
         } else {
           value = 1.0e100;
         }
@@ -3839,7 +3839,7 @@ void ClpCholeskyBase::solve(CoinWorkDouble *region, int type)
     int j;
     double largestO = 0.0;
     for (i = 0; i < numberRows_; i++) {
-      largestO = std::max(largestO, CoinAbs(regionX[i]));
+      largestO = std::max(largestO, std::abs(regionX[i]));
     }
     for (i = 0; i < numberRows_; i++) {
       int iRow = permute_[i];
@@ -3880,8 +3880,8 @@ void ClpCholeskyBase::solve(CoinWorkDouble *region, int type)
     double largest = 0.0;
     double largestV = 0.0;
     for (i = 0; i < numberRows_; i++) {
-      largest = std::max(largest, CoinAbs(region[i] - regionX[i]));
-      largestV = std::max(largestV, CoinAbs(region[i]));
+      largest = std::max(largest, std::abs(region[i] - regionX[i]));
+      largestV = std::max(largestV, std::abs(region[i]));
     }
     printf("largest difference %g, largest %g, largest original %g\n",
       largest, largestV, largestO);

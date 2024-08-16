@@ -136,7 +136,7 @@ maximumAbsElement(const CoinWorkDouble *region, int size)
   int i;
   CoinWorkDouble maxValue = 0.0;
   for (i = 0; i < size; i++)
-    maxValue = std::max(maxValue, CoinAbs(region[i]));
+    maxValue = std::max(maxValue, std::abs(region[i]));
   return maxValue;
 }
 void setElements(CoinWorkDouble *region, int size, CoinWorkDouble value)
@@ -222,7 +222,7 @@ void getNorms(const CoinWorkDouble *region, int size, CoinWorkDouble &norm1, Coi
   int i;
   for (i = 0; i < size; i++) {
     norm2 += region[i] * region[i];
-    norm1 = std::max(norm1, CoinAbs(region[i]));
+    norm1 = std::max(norm1, std::abs(region[i]));
   }
 }
 #endif

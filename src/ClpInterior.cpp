@@ -762,7 +762,7 @@ bool ClpInterior::sanityCheck()
   CoinWorkDouble fixTolerance = 1.1 * primalTolerance();
   for (i = numberColumns_; i < numberColumns_ + numberRows_; i++) {
     CoinWorkDouble value;
-    value = CoinAbs(cost_[i]);
+    value = std::abs(cost_[i]);
     if (value > 1.0e50) {
       numberBad++;
       if (firstBad < 0)
@@ -789,14 +789,14 @@ bool ClpInterior::sanityCheck()
         minimumGap = value;
     }
     if (lower_[i] > -1.0e100 && lower_[i]) {
-      value = CoinAbs(lower_[i]);
+      value = std::abs(lower_[i]);
       if (value > largestBound)
         largestBound = value;
       if (value < smallestBound)
         smallestBound = value;
     }
     if (upper_[i] < 1.0e100 && upper_[i]) {
-      value = CoinAbs(upper_[i]);
+      value = std::abs(upper_[i]);
       if (value > largestBound)
         largestBound = value;
       if (value < smallestBound)
@@ -814,7 +814,7 @@ bool ClpInterior::sanityCheck()
   largestBound = 0.0;
   for (i = 0; i < numberColumns_; i++) {
     CoinWorkDouble value;
-    value = CoinAbs(cost_[i]);
+    value = std::abs(cost_[i]);
     if (value > 1.0e50) {
       numberBad++;
       if (firstBad < 0)
@@ -841,14 +841,14 @@ bool ClpInterior::sanityCheck()
         minimumGap = value;
     }
     if (lower_[i] > -1.0e100 && lower_[i]) {
-      value = CoinAbs(lower_[i]);
+      value = std::abs(lower_[i]);
       if (value > largestBound)
         largestBound = value;
       if (value < smallestBound)
         smallestBound = value;
     }
     if (upper_[i] < 1.0e100 && upper_[i]) {
-      value = CoinAbs(upper_[i]);
+      value = std::abs(upper_[i]);
       if (value > largestBound)
         largestBound = value;
       if (value < smallestBound)
@@ -1126,7 +1126,7 @@ void ClpInterior::fixFixed(bool reallyFix)
         if (fixedOrFree(i)) {
           if (columnActivity_[i] - columnLower_[i] < columnUpper_[i] - columnActivity_[i]) {
             CoinWorkDouble change = columnLower_[i] - columnActivity_[i];
-            if (CoinAbs(change) < tolerance) {
+            if (std::abs(change) < tolerance) {
               if (reallyFix)
                 columnUpper_[i] = columnLower_[i];
               columnChange[i] = change;
@@ -1134,7 +1134,7 @@ void ClpInterior::fixFixed(bool reallyFix)
             }
           } else {
             CoinWorkDouble change = columnUpper_[i] - columnActivity_[i];
-            if (CoinAbs(change) < tolerance) {
+            if (std::abs(change) < tolerance) {
               if (reallyFix)
                 columnLower_[i] = columnUpper_[i];
               columnChange[i] = change;
@@ -1170,14 +1170,14 @@ void ClpInterior::fixFixed(bool reallyFix)
             if (fixedOrFree(i + numberColumns_)) {
               if (rowActivity_[i] - rowLower_[i] < rowUpper_[i] - rowActivity_[i]) {
                 CoinWorkDouble change = rowLower_[i] - rowActivity_[i];
-                if (CoinAbs(change) < tolerance) {
+                if (std::abs(change) < tolerance) {
                   if (reallyFix)
                     rowUpper_[i] = rowLower_[i];
                   rowActivity_[i] = rowLower_[i];
                 }
               } else {
                 CoinWorkDouble change = rowLower_[i] - rowActivity_[i];
-                if (CoinAbs(change) < tolerance) {
+                if (std::abs(change) < tolerance) {
                   if (reallyFix)
                     rowLower_[i] = rowUpper_[i];
                   rowActivity_[i] = rowUpper_[i];
