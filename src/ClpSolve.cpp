@@ -12,15 +12,6 @@
 #endif
 
 #include <math.h>
-#ifdef _MSC_VER
-#define NOMINMAX
-#include <windows.h> // for Sleep()
-#ifdef small
-#undef small
-#endif
-#else
-#include <unistd.h> // for usleep()
-#endif
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpHelperFunctions.hpp"
