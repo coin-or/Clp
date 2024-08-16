@@ -325,7 +325,7 @@ solveWithVolume(ClpSimplex *model, int numberPasses, int doIdiot)
   for (i = 0; i < dsize; ++i) {
     switch (sense[i]) {
     case 'E':
-      avg += CoinAbs(volprob.viol[i]);
+      avg += std::abs(volprob.viol[i]);
       break;
     case 'L':
       if (volprob.viol[i] < 0)

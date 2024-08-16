@@ -5092,7 +5092,7 @@ int ClpModel::findNetwork(char *rotate, double fractionNeeded)
           for (CoinBigIndex j = rowStart[iRow]; j < rowStart[iRow + 1]; j++) {
             iColumn = column[j];
             int iCount = columnCount[iColumn];
-            int absCount = CoinAbs(iCount);
+            int absCount = std::abs(iCount);
             if (absCount < 2) {
               merit = std::max(columnLength[iColumn] - absCount - 1, merit);
               if (elementByRow[j] == iCount)
@@ -5139,7 +5139,7 @@ int ClpModel::findNetwork(char *rotate, double fractionNeeded)
             iColumn = column[j];
             currentColumnCount[iColumn]++;
             int iCount = columnCount[iColumn];
-            int absCount = CoinAbs(iCount);
+            int absCount = std::abs(iCount);
             if (!absCount) {
               columnCount[iColumn] = static_cast< char >(elementByRow[j] * multiplier);
             } else {
@@ -5157,7 +5157,7 @@ int ClpModel::findNetwork(char *rotate, double fractionNeeded)
 #endif
     trueNetwork = true;
     for (iColumn = 0; iColumn < numberColumns_; iColumn++) {
-      if (CoinAbs(static_cast< int >(columnCount[iColumn])) == 1) {
+      if (std::abs(static_cast< int >(columnCount[iColumn])) == 1) {
         trueNetwork = false;
         break;
       }
