@@ -1,4 +1,0 @@
-<map id="CoinAbcDenseFactorization" name="CoinAbcDenseFactorization">
-<area shape="rect" id="node1" title="This deals with Factorization and Updates This is a simple dense version so other people can write a ..." alt="" coords="5,80,188,107"/>
-<area shape="rect" id="node2" href="$classCoinAbcAnyFactorization.html" title="Abstract base class which also has some scalars so can be used from Dense or Simp." alt="" coords="13,5,180,32"/>
-</map>

@@ -1,6 +1,0 @@
-<map id="AbcSimplexPrimal" name="AbcSimplexPrimal">
-<area shape="rect" id="node1" title="This solves LPs using the primal simplex method." alt="" coords="5,229,133,256"/>
-<area shape="rect" id="node2" href="$classAbcSimplex.html" title=" " alt="" coords="24,155,115,181"/>
-<area shape="rect" id="node3" href="$classClpSimplex.html" title="This solves LPs using the simplex method." alt="" coords="26,80,113,107"/>
-<area shape="rect" id="node4" href="$classClpModel.html" title=" " alt="" coords="31,5,107,32"/>
-</map>

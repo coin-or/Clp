@@ -1,5 +1,0 @@
-<map id="ClpSimplexDual" name="ClpSimplexDual">
-<area shape="rect" id="node1" title="This solves LPs using the dual simplex method." alt="" coords="5,155,119,181"/>
-<area shape="rect" id="node2" href="$classClpSimplex.html" title="This solves LPs using the simplex method." alt="" coords="19,80,105,107"/>
-<area shape="rect" id="node3" href="$classClpModel.html" title=" " alt="" coords="24,5,100,32"/>
-</map>

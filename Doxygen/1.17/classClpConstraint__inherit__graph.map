@@ -1,5 +1,0 @@
-<map id="ClpConstraint" name="ClpConstraint">
-<area shape="rect" id="node1" title="Constraint Abstract Base Class." alt="" coords="109,5,209,32"/>
-<area shape="rect" id="node2" href="$classClpConstraintLinear.html" title="Linear Constraint Class." alt="" coords="5,80,141,107"/>
-<area shape="rect" id="node3" href="$classClpConstraintQuadratic.html" title="Quadratic Constraint Class." alt="" coords="166,80,322,107"/>
-</map>

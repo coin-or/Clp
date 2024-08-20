@@ -1,9 +1,0 @@
-<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classClpCholeskyBase.html" title="Base class for Clp Cholesky factorization Will do better factorization." alt="" coords="5,132,129,159"/>
-<area shape="rect" id="node2" href="$classClpCholeskyDense.html" title=" " alt="" coords="194,5,325,32"/>
-<area shape="rect" id="node3" href="$classClpCholeskyMumps.html" title="Mumps class for Clp Cholesky factorization." alt="" coords="191,56,328,83"/>
-<area shape="rect" id="node4" href="$classClpCholeskyTaucs.html" title="Taucs class for Clp Cholesky factorization." alt="" coords="194,107,325,133"/>
-<area shape="rect" id="node5" href="$classClpCholeskyUfl.html" title="Ufl class for Clp Cholesky factorization." alt="" coords="204,157,315,184"/>
-<area shape="rect" id="node6" href="$classClpCholeskyWssmp.html" title="Wssmp class for Clp Cholesky factorization." alt="" coords="190,208,329,235"/>
-<area shape="rect" id="node7" href="$classClpCholeskyWssmpKKT.html" title="WssmpKKT class for Clp Cholesky factorization." alt="" coords="177,259,341,285"/>
-</map>

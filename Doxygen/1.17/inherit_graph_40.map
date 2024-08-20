@@ -1,8 +1,0 @@
-<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classClpPrimalColumnPivot.html" title="Primal Column Pivot Abstract Base Class." alt="" coords="5,56,157,83"/>
-<area shape="rect" id="node2" href="$classClpPrimalColumnDantzig.html" title="Primal Column Pivot Dantzig Algorithm Class." alt="" coords="211,5,377,32"/>
-<area shape="rect" id="node4" href="$classClpPrimalColumnSteepest.html" title="Primal Column Pivot Steepest Edge Algorithm Class." alt="" coords="207,56,381,83"/>
-<area shape="rect" id="node6" href="$classClpPrimalQuadraticDantzig.html" title="Primal Column Pivot Dantzig Algorithm Class." alt="" coords="205,107,383,133"/>
-<area shape="rect" id="node3" href="$classClpPEPrimalColumnDantzig.html" title=" " alt="" coords="435,5,617,32"/>
-<area shape="rect" id="node5" href="$classClpPEPrimalColumnSteepest.html" title="Primal Column Pivot Steepest Edge Algorithm Class." alt="" coords="431,56,621,83"/>
-</map>

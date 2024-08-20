@@ -1,6 +1,0 @@
-<map id="ClpInterior" name="ClpInterior">
-<area shape="rect" id="node1" title="This solves LPs using interior point methods." alt="" coords="67,80,148,107"/>
-<area shape="rect" id="node3" href="$classClpPdco.html" title="This solves problems in Primal Dual Convex Optimization." alt="" coords="5,155,76,181"/>
-<area shape="rect" id="node4" href="$classClpPredictorCorrector.html" title="This solves LPs using the predictor&#45;corrector method due to Mehrotra." alt="" coords="101,155,247,181"/>
-<area shape="rect" id="node2" href="$classClpModel.html" title=" " alt="" coords="69,5,145,32"/>
-</map>

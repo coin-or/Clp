@@ -1,7 +1,0 @@
-<map id="ClpDualRowPivot" name="ClpDualRowPivot">
-<area shape="rect" id="node1" title="Dual Row Pivot Abstract Base Class." alt="" coords="111,5,234,32"/>
-<area shape="rect" id="node2" href="$classClpDualRowDantzig.html" title="Dual Row Pivot Dantzig Algorithm Class." alt="" coords="22,80,158,107"/>
-<area shape="rect" id="node4" href="$classClpDualRowSteepest.html" title="Dual Row Pivot Steepest Edge Algorithm Class." alt="" coords="187,80,332,107"/>
-<area shape="rect" id="node3" href="$classClpPEDualRowDantzig.html" title=" " alt="" coords="5,155,159,181"/>
-<area shape="rect" id="node5" href="$classClpPEDualRowSteepest.html" title="Dual Row Pivot Steepest Edge Algorithm Class." alt="" coords="183,155,346,181"/>
-</map>
