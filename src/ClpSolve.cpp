@@ -4468,6 +4468,7 @@ int ClpSimplexProgress::looping()
     if (model_->numberIterations()<25*model_->numberRows()
 	+8*model_->numberColumns()+300) {
       model_->forceFactorization(1);
+      numberReallyBadTimes_++;
     } else {
       // give up
       numberMatched = 1000;
