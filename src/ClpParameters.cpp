@@ -341,16 +341,17 @@ void ClpParameters::synchronizeModel() {
       printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
 #endif
     model_->setDblParam(ClpPresolveTolerance, doubleValue);
-#if CLP_OLD_PROGRESS == 0
-    // I dislike new way
     parameters_[ClpParam::PROGRESS]->getVal(doubleValue);
 #ifdef PRINT_CLP_CHANGES
     modelDoubleValue = model_->getMinIntervalProgressUpdate();
     if (doubleValue!=modelDoubleValue)
       printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
+#endif
+#if CLP_OLD_PROGRESS
+    // I dislike new way
+    if (doubleValue < 0.0)
+#endif
     model_->setMinIntervalProgressUpdate(doubleValue);
-#endif
-#endif
   }
 }
 #endif
