@@ -1,4 +1,4 @@
-# Clp 1.17
+# Clp 1.17.10
 
 [![A COIN-OR Project](https://coin-or.github.io/coin-or-badge.png)](https://www.coin-or.org)
 
@@ -43,9 +43,9 @@ Code: [![DOI](https://zenodo.org/badge/173496299.svg)](https://zenodo.org/badge/
 
 ## CURRENT BUILD STATUS
 
-[![Windows Builds](https://github.com/coin-or/Clp/actions/workflows/windows-ci.yml/badge.svg?branch=stable/1.17)](https://github.com/coin-or/Clp/actions/workflows/windows-ci.yml?query=branch%3Astable/1.17)
+[![Windows Builds](https://github.com/coin-or/Clp/actions/workflows/windows-ci.yml/badge.svg?branch=releases/1.17.10)](https://github.com/coin-or/Clp/actions/workflows/windows-ci.yml?query=branch%3Areleases/1.17.10)
 
-[![Linux and MacOS Builds](https://github.com/coin-or/Clp/actions/workflows/linux-ci.yml/badge.svg?branch=stable/1.17)](https://github.com/coin-or/Clp/actions/workflows/linux-ci.yml?query=branch%3Astable/1.17)
+[![Linux and MacOS Builds](https://github.com/coin-or/Clp/actions/workflows/linux-ci.yml/badge.svg?branch=releases/1.17.10)](https://github.com/coin-or/Clp/actions/workflows/linux-ci.yml?query=branch%3Areleases/1.17.10)
 
 ## DOWNLOAD
 
@@ -136,7 +136,7 @@ following on the command line.
 ```
 wget https://raw.githubusercontent.com/coin-or/coinbrew/master/coinbrew
 chmod u+x coinbrew
-./coinbrew fetch Clp@1.17
+./coinbrew fetch Clp@1.17.10
 ./coinbrew build Clp
 ```
 For more detailed instructions on coinbrew, see https://coin-or.github.io/coinbrew.
@@ -199,7 +199,7 @@ works well.
 There are examples in [examples](examples).  To create an executable, build 
 with `coinbrew` as above and then do
 ```
-cd build/Cbc/1.17/examples
+cd build/Cbc/1.17.10/examples
 make DRIVER=minimum #build the driver minimum.cpp
 ```
 or whichever driver you want.  A list is in [Makefile](Makefile.in).
@@ -220,10 +220,10 @@ Other ones can get complicated so start simple and work your way up.
 
 If you have `Doxygen` available, you can build a HTML documentation by typing
 
-`make doxygen-docs` 
+`make doxydoc` 
 
 in the build directory. If Clp was built via `coinbrew`, then the build
-directory will be `./build/Clp/1.17` by default. The doxygen documentation main file
+directory will be `./build/Clp/1.17.10` by default. The doxygen documentation main file
 is found at `<build-dir>/doxydoc/html/index.html`.
 
 If you don't have `doxygen` installed locally, you can use also find the
