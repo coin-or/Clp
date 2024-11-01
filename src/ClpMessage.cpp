@@ -72,7 +72,7 @@ static Clp_message clp_us_english[] = {
   { CLP_MATRIX_CHANGE, 31, 2, "Matrix can not be converted into %s" },
   { CLP_TIMING, 32, 1, "%s objective %.10g - %d iterations time %.2f2%?, Presolve %.2f%?, Idiot %.2f%?" },
   { CLP_INTERVAL_TIMING, 33, 2, "%s took %.2f seconds (total %.2f)" },
-  { CLP_SPRINT, 34, 1, "Pass %d took %d iterations, objective %g, dual infeasibilities %g( %d)" },
+  { CLP_SPRINT, 34, 1, "Pass %d took %d iterations, objective %g, dual infeasibilities %g( %d) - sum artificials %g - %d columns" },
   { CLP_BARRIER_ITERATION, 35, 1, "%d Primal %g Dual %g Complementarity %g - %d fixed, rank %d" },
   { CLP_BARRIER_OBJECTIVE_GAP, 36, 3, "Feasible - objective gap %g" },
   { CLP_BARRIER_GONE_INFEASIBLE, 37, 2, "Infeasible" },

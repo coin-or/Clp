@@ -542,10 +542,12 @@ void instrument_print()
   }
 }
 #endif
-#if ABC_PARALLEL == 2
+//#if ABC_PARALLEL == 2
+#if CLP_HAS_ABC > 2
 #ifndef FAKE_CILK
 int number_cilk_workers = 0;
 #include <cilk/cilk_api.h>
+#include <cilk/cilk.h>
 #endif
 #endif
 #ifdef ABC_INHERIT
@@ -659,8 +661,8 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
 #ifndef FAKE_CILK
       char temp[3];
       sprintf(temp, "%d", numberCpu);
-      __cilkrts_set_param("nworkers", temp);
-      printf("setting cilk workers to %d\n", numberCpu);
+      //__cilkrts_set_param("nworkers", temp);
+      printf("setting cilk workers to %d  XX use env CILK_NWORKERS\n", numberCpu);
       number_cilk_workers = numberCpu;
 
 #endif
@@ -2410,7 +2412,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     }
 #endif
 #ifndef LACI_TRY
-    if (options.getSpecialOption(1) != 2 || options.getExtraInfo(1) < 1000000) {
+    if (model2->status()&&
+	(options.getSpecialOption(1) != 2 || options.getExtraInfo(1) < 1000000)) {
       if (dynamic_cast< ClpPackedMatrix * >(matrix_)) {
         // See if original wanted vector
         ClpPackedMatrix *clpMatrixO = dynamic_cast< ClpPackedMatrix * >(matrix_);
@@ -2795,7 +2798,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     int totalIterations = 0;
     double lastSumArtificials = COIN_DBL_MAX;
     int originalMaxSprintPass = maxSprintPass;
-    maxSprintPass = 20; // so we do that many if infeasible
+    maxSprintPass = std::max(0,maxSprintPass); // so we do that many if infeasible
     for (iPass = 0; iPass < maxSprintPass; iPass++) {
       //printf("Bug until submodel new version\n");
       //CoinSort_2(sort,sort+numberSort,weight);
@@ -2832,6 +2835,9 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 	       }
 #endif
       small.setDblParam(ClpObjOffset, originalOffset - offset);
+      int smallMore = small.moreSpecialOptions();
+      smallMore &= ~1048576; // make sure can't stop early
+      small.setMoreSpecialOptions(smallMore);
       model2->clpMatrix()->times(1.0, fullSolution, sumFixed);
 
       double *lower = small.rowLower();
@@ -2862,6 +2868,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         if (dynamic_cast< ClpPackedMatrix * >(matrix) && clpMatrixO->wantsSpecialColumnCopy()) {
           ClpPackedMatrix *clpMatrix = dynamic_cast< ClpPackedMatrix * >(matrix);
           clpMatrix->makeSpecialColumnCopy();
+	  small.setMaximumIterations(std::max(small.numberRows(),1000));
           small.primal(1);
           clpMatrix->releaseSpecialColumnCopy();
         } else {
@@ -2954,19 +2961,17 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       }
       int smallIterations = small.numberIterations();
       totalIterations += smallIterations;
-      if (2 * smallIterations < std::min(numberRows, 1000) && iPass) {
+      if ((2 * smallIterations < std::min(numberRows, 1000)||small.status()==3) && iPass) {
         int oldNumber = smallNumberColumns;
         if (smallIterations < 100)
           smallNumberColumns *= 1.2;
         else
           smallNumberColumns *= 1.1;
         smallNumberColumns = std::min(smallNumberColumns, numberColumns);
-        if (smallIterations < 200 && smallNumberColumns > 2 * saveSmallNumber) {
+        if (smallIterations < 200) {
           // try kicking it
-          emergencyMode = true;
-          smallNumberColumns = numberColumns;
+          smallNumberColumns *= 1.5;
         }
-        //		 smallNumberColumns = std::min(smallNumberColumns, 3*saveSmallNumber);
         char line[100];
         sprintf(line, "sample size increased from %d to %d",
           oldNumber, smallNumberColumns);
@@ -3020,15 +3025,13 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       }
       handler_->message(CLP_SPRINT, messages_)
         << iPass + 1 << small.numberIterations() << small.objectiveValue() << sumNegative
-        << numberNegative
+        << numberNegative << sumArtificials << small.numberColumns()
         << CoinMessageEol;
       if (sumArtificials < 1.0e-8 && originalMaxSprintPass >= 0) {
         maxSprintPass = iPass + originalMaxSprintPass;
         originalMaxSprintPass = -1;
       }
-      if (iPass > 20)
-        sumArtificials = 0.0;
-      if ((small.objectiveValue() * optimizationDirection_ > lastObjective[1] - 1.0e-7 && iPass > 15 && sumArtificials < 1.0e-8 && maxSprintPass < 200) || (!small.numberIterations() && iPass) || iPass == maxSprintPass - 1 || small.status() == 3) {
+      if ((small.objectiveValue() * optimizationDirection_ > lastObjective[1] - 1.0e-7 && iPass > 15 && sumArtificials < 1.0e-8 && maxSprintPass < 200) || (!small.numberIterations() && iPass) || iPass == maxSprintPass - 1) {
 
         break; // finished
       } else {
@@ -3045,22 +3048,21 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         int saveN = numberSort;
         for (iColumn = 0; iColumn < numberColumns; iColumn++) {
           double dj = djs[iColumn] * optimizationDirection_;
-          double value = fullSolution[iColumn];
-          if (model2->getColumnStatus(iColumn) != ClpSimplex::basic) {
-            if (dj < -dualTolerance_ && value < columnUpper[iColumn])
-              /*dj = dj*/;
-            else if (dj > dualTolerance_ && value > columnLower[iColumn])
-              dj = -dj;
-            else if (columnUpper[iColumn] > columnLower[iColumn])
-              dj = fabs(dj);
-            else
-              dj = 1.0e50;
-            if (dj < tolerance) {
-              weight[numberSort] = dj;
-              sort[numberSort++] = iColumn;
-            }
-          }
-        }
+	  ClpSimplex::Status colStatus = model2->getColumnStatus(iColumn);
+	  if (colStatus == ClpSimplex::isFree || colStatus == ClpSimplex::superBasic) {
+	    dj = - fabs(dj);
+	  } else if (colStatus == ClpSimplex::atLowerBound) {
+	    dj = dj;
+	  } else if (colStatus == ClpSimplex::atUpperBound) {
+	    dj = -dj;
+	  } else {
+	    continue;
+	  }
+	  if (dj < tolerance) {
+	    weight[numberSort] = dj;
+	    sort[numberSort++] = iColumn;
+	  }
+	}
         // sort
         CoinSort_2(weight + saveN, weight + numberSort, sort + saveN);
         //if (numberSort < smallNumberColumns)

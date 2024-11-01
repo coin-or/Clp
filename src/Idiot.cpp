@@ -336,6 +336,18 @@ static int countCostedSlacks(OsiSolverInterface *model)
 void Idiot::crash(int numberPass, CoinMessageHandler *handler,
   const CoinMessages *messages, bool doCrossover)
 {
+  // use last digit
+  if (numberPass%10) {
+    lightWeight_=0;
+    int option = numberPass%10;
+    numberPass -= option;
+    if ((option&1)!=0)
+      strategy_ |= 1048576; // extra bit at end
+    if ((option&2)!=0) 
+      strategy_ |= 4194304; // limited presolve
+    else if ((option&4)!=0)
+      strategy_ |= 2097152; // no presolve
+  }
   // lightweight options
   int numberColumns = model_->getNumCols();
   const double *objective = model_->getObjCoefficients();
@@ -974,6 +986,12 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
     numberAway = n;
     keepinfeas = result.infeas;
     lastWeighted = result.weighted;
+    if (iteration == majorIterations_&&(strategy_&1048576)!=0) {
+      // do a few more
+      mu = std::min(mu,1.0e-11);
+      majorIterations_+=10;
+      strategy_ &= ~1048576; // switch off
+    }
     //iterationTotal += result.iteration;
     if (iteration == 1) {
       if ((strategy_ & 1024) != 0 && mu < 1.0e-10)
@@ -1305,6 +1323,8 @@ void Idiot::crossOver(int mode)
     return;
   }
   double fixTolerance = IDIOT_FIX_TOLERANCE;
+  bool wantVector = false;
+  bool justValuesPass = false;
 #ifdef COIN_DEVELOP
   double startTime = CoinCpuTime();
 #endif
@@ -1356,6 +1376,9 @@ void Idiot::crossOver(int mode)
   double *saveRowUpper = NULL;
   double *saveRowLower = NULL;
   bool allowInfeasible = ((strategy_ & 8192) != 0) || (majorIterations_ > 1000000);
+  ClpSimplex * saveModelX = NULL;
+  if ((strategy_&(2097152|4194304))!=0)
+    saveModelX = new ClpSimplex (*model_);
   if (addAll < 3) {
     saveUpper = new double[ncols];
     saveLower = new double[ncols];
@@ -1447,6 +1470,7 @@ void Idiot::crossOver(int mode)
   //   model_->setPerturbation(56);
 #endif
   model_->createStatus();
+  if(!saveModelX) {
   /* addAll
         0 - chosen,all used, all
         1 - chosen, all
@@ -1726,7 +1750,7 @@ void Idiot::crossOver(int mode)
   } else {
     maxmin = 1.0;
   }
-  bool justValuesPass = majorIterations_ > 1000000;
+  justValuesPass = majorIterations_ > 1000000;
   if (slackStart >= 0) {
     for (i = 0; i < nrows; i++) {
       model_->setRowStatus(i, ClpSimplex::superBasic);
@@ -1814,7 +1838,6 @@ void Idiot::crossOver(int mode)
     }
     /*printf("%d in basis\n",ninbas);*/
   }
-  bool wantVector = false;
   if (dynamic_cast< ClpPackedMatrix * >(model_->clpMatrix())) {
     // See if original wanted vector
     ClpPackedMatrix *clpMatrixO = dynamic_cast< ClpPackedMatrix * >(model_->clpMatrix());
@@ -1825,6 +1848,85 @@ void Idiot::crossOver(int mode)
   if ((strategy_ & 65536) != 0)
     justValuesPass = true;
   //double * saveBounds=NULL;
+  } else {
+  addAll = 3;
+  memcpy(model_->columnLower(),saveModelX->columnLower(),ncols*sizeof(double));
+  memcpy(model_->columnUpper(),saveModelX->columnUpper(),ncols*sizeof(double));
+  memcpy(model_->rowLower(),saveModelX->rowLower(),nrows*sizeof(double));
+  memcpy(model_->rowUpper(),saveModelX->rowUpper(),nrows*sizeof(double));
+  delete saveModelX;
+  if (strategy_&4194304) {
+  int nAway = 0;
+  double *away = new double[ncols+nrows];
+  int *choose = new int[ncols+nrows];
+  for (int i=0;i<ncols;i++) {
+    if (colsol[i] < lower[i] + fixTolerance) {
+      colsol[i] = lower[i];
+      model_->setColumnStatus(i,ClpSimplex::atLowerBound);
+    } else if (colsol[i] > upper[i] - fixTolerance) {
+      colsol[i] = upper[i];
+      model_->setColumnStatus(i,ClpSimplex::atUpperBound);
+    } else if (lower[i]<-1.0e50 && upper[i]>1.0e50) {
+      model_->setColumnStatus(i,ClpSimplex::isFree);
+      away[i] = -1.0e50;
+      choose[nAway++] = i;
+    } else {
+      away[i] = -std::min(upper[i]-colsol[i],colsol[i]-lower[i]);
+      model_->setColumnStatus(i, ClpSimplex::superBasic);
+      choose[nAway++] = i;
+    }
+  }
+  for (int i=0;i<nrows;i++) {
+    if (rowsol[i] < lower[i] + fixTolerance) {
+      rowsol[i] = lower[i];
+      model_->setRowStatus(i,ClpSimplex::atLowerBound);
+    } else if (rowsol[i] > upper[i] - fixTolerance) {
+      rowsol[i] = upper[i];
+      model_->setRowStatus(i,ClpSimplex::atUpperBound);
+    } else if (lower[i]<-1.0e50 && upper[i]>1.0e50) {
+      model_->setRowStatus(i,ClpSimplex::isFree);
+      away[i] = -1.0e50;
+      choose[nAway++] = i+ncols;
+    } else {
+      away[i] = -std::min(upper[i]-rowsol[i],rowsol[i]-lower[i]);
+      model_->setRowStatus(i, ClpSimplex::superBasic);
+      choose[nAway++] = i+ncols;
+    }
+  }
+  CoinSort_2(away, away + nAway, choose);
+  //nAway = std::min(nAway,(3*nrows/4));
+  nAway = std::min(nAway,nrows);
+  for (int i=0;i<nAway;i++)
+    model_->setColumnStatus(choose[i],ClpSimplex::basic);
+  delete [] away;
+  delete [] choose;
+  } else {
+  for (int i=0;i<ncols;i++) {
+    if (colsol[i] < lower[i] + fixTolerance) {
+      colsol[i] = lower[i];
+      model_->setColumnStatus(i,ClpSimplex::atLowerBound);
+    } else if (colsol[i] > upper[i] - fixTolerance) {
+      colsol[i] = upper[i];
+      model_->setColumnStatus(i,ClpSimplex::atUpperBound);
+    } else if (lower[i]<-1.0e50 && upper[i]>1.0e50) {
+      model_->setColumnStatus(i,ClpSimplex::isFree);
+    } else {
+      model_->setColumnStatus(i, ClpSimplex::superBasic);
+    }
+  }
+  for (int i=0;i<nrows;i++) {
+    model_->setRowStatus(i,ClpSimplex::basic);
+  }
+  }
+  bool justValuesPass = false;
+  bool wantVector =true;
+  matrix = model_->clpMatrix();
+  ClpPackedMatrix *clpMatrix = dynamic_cast< ClpPackedMatrix * >(matrix);
+  assert(clpMatrix);
+  clpMatrix->makeSpecialColumnCopy();
+  model_->primal(1);
+  clpMatrix->releaseSpecialColumnCopy();
+  }
   if (addAll < 3) {
     ClpPresolve pinfo;
     if (presolve) {
@@ -1965,6 +2067,16 @@ void Idiot::crossOver(int mode)
       saveModel = model_;
       pinfo.setPresolveActions(pinfo.presolveActions() | 16384);
       model_ = pinfo.presolvedModel(*model_, 1.0e-8, false, 5);
+      if ((strategy_&4194304)!=0) {
+      if (!model_||model_->numberRows()>0.8*saveModel->numberRows()) {
+	// do not presolve
+	presolve=0;
+	delete model_;
+	model_=saveModel;
+	delete [] saveBounds;
+	saveBounds = NULL;
+      }
+      }
       if (saveBounds) {
         memcpy(saveModel->columnLower(), saveBounds, ncols * sizeof(double));
         memcpy(saveModel->columnUpper(), saveBounds + ncols, ncols * sizeof(double));
@@ -2049,10 +2161,12 @@ void Idiot::crossOver(int mode)
         delete[] which;
       }
     }
+    if ((strategy_&(2097152|4194304))==0) {
     // Maybe presolve did nothing!
     if (pinfo.nullPresolve()) {
       delete model_;
       model_ = NULL;
+    }
     }
     if (model_) {
       // See if we want to go all way
@@ -2160,6 +2274,14 @@ void Idiot::crossOver(int mode)
       if (presolve) {
         saveModel = model_;
         model_ = pinfo.presolvedModel(*model_, 1.0e-8, false, 5);
+	if ((strategy_&(2097152|4194304))!=0) {
+	  if (!model_||(strategy_&2097152)==0||model_->numberRows()>0.8*saveModel->numberRows()) {
+	  // do not presolve
+	  presolve=0;
+	  delete model_;
+	  model_=saveModel;
+	}
+	}
       } else {
         presolve = 0;
       }
@@ -2212,6 +2334,14 @@ void Idiot::crossOver(int mode)
       if (presolve) {
         saveModel = model_;
         model_ = pinfo.presolvedModel(*model_, 1.0e-8, false, 5);
+	if ((strategy_&(2097152|4194304))!=0) {
+	  if (!model_||(strategy_&2097152)==0||model_->numberRows()>0.8*saveModel->numberRows()) {
+	  // do not presolve
+	  presolve=0;
+	  delete model_;
+	  model_=saveModel;
+	}
+	}
       } else {
         presolve = 0;
       }
@@ -2417,5 +2547,3 @@ Idiot::~Idiot()
   delete[] whenUsed_;
 }
 
-/* vi: softtabstop=2 shiftwidth=2 expandtab tabstop=2
-*/

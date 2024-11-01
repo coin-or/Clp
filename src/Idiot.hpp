@@ -69,7 +69,12 @@ public:
   //@{
   /// Get an approximate solution with the idiot code
   void solve();
-  /// Lightweight "crash"
+  /** Lightweight "crash"
+      Last digit ignored for number of passes
+      1 - extra 10 with small mu
+      2 - limited presolve (3 extra 10 with small mu)
+      4 - no presolve on crossover (5 extra 10 with small mu)
+   */
   void crash(int numberPass, CoinMessageHandler *handler,
     const CoinMessages *messages, bool doCrossover = true);
   /** Use simplex to get an optimal solution
@@ -328,7 +333,10 @@ private:
 		 65536 - experimental 2
 		 131072 - experimental 3 
 		 262144 - just values pass etc 
-		 524288 - don't treat structural slacks as slacks */
+		 524288 - don't treat structural slacks as slacks
+		 1048576 - do extra few iterations with tiny mu
+		 2097152 - keep simple - no presolves or basis
+		 4194304 - kill presolve if doing little */
 
   int lightWeight_; // 0 - normal, 1 lightweight
 };

@@ -2925,8 +2925,8 @@ void ClpSimplexPrimal::perturb(int type)
     maximumFraction *= 0.1;
   }
   if (savePerturbation == 51) {
-    perturbation = std::min(0.1, perturbation);
-    maximumFraction *= 0.1;
+    perturbation = std::min(0.001, perturbation);
+    maximumFraction *= 0.001;
   }
   if (number != numberRows_)
     type = 1;
