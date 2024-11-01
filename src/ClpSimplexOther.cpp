@@ -2300,6 +2300,10 @@ ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
     assert(n == small->numberRows());
   }
 #endif
+  if (small) {
+    ClpPackedMatrix * matrix = static_cast<ClpPackedMatrix *>(small->clpMatrix());
+    matrix->specialColumnCopy(small); // vector copy?
+  }
   return small;
 }
 /* After very cursory presolve.

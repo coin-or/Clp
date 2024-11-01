@@ -5801,12 +5801,29 @@ void ClpPackedMatrix::specialColumnCopy(ClpSimplex *model)
     if (pricing && pricing->mode() > 1)
       pricing->setMode(0);
   }
-  if ((flags_ & 16) != 0 && model->numberRows() > 100 && model->numberColumns() > 500) {
+#if 0 // seems better to decide using number elements
+#define COPY_ROWS 100
+#define COPY_COLS 500
+  if ((flags_ & 16) != 0 && model->numberRows() > COPY_ROWS && model->numberColumns() > COPY_COLS) {
     columnCopy_ = new ClpPackedMatrix3(model, matrix_);
     flags_ |= 8;
   } else {
     columnCopy_ = NULL;
   }
+  if ((flags_ & 16) != 0) {
+    inFlags++;
+    if(model->numberRows() > COPY_ROWS && model->numberColumns() > COPY_COLS)
+      inDone++;
+  }
+#else
+#define PACK_COPY_ELEMENTS 10000
+  if ((flags_ & 16) != 0 && getNumElements()>PACK_COPY_ELEMENTS) {
+    columnCopy_ = new ClpPackedMatrix3(model, matrix_);
+    flags_ |= 8;
+  } else {
+    columnCopy_ = NULL;
+  }
+#endif
 }
 // Say we don't want special column copy
 void ClpPackedMatrix::releaseSpecialColumnCopy()
@@ -7289,7 +7306,11 @@ ClpPackedMatrix3::ClpPackedMatrix3(const ClpPackedMatrix3 &rhs)
   , plusOnes_(rhs.plusOnes_)
 {
   if (rhs.numberBlocks_) {
+#ifndef OUT_BLOCK_ROWS
+    block_ = CoinCopyOfArray(rhs.block_, numberBlocks_+1);
+#else
     block_ = CoinCopyOfArray(rhs.block_, numberBlocks_);
+#endif
     column_ = CoinCopyOfArray(rhs.column_, 2 * numberColumnsWithGaps_);
     int numberOdd = block_->startIndices_;
     start_ = CoinCopyOfArray(rhs.start_, numberOdd + 1);
@@ -8815,17 +8836,13 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
       double value2 = newValues[j];
       if (fabs(value2) > zeroTolerance) {
         int iSequence = column[j];
-        double alpha;
-        double oldValue;
-        double value;
-        alpha = value2;
-        if (alpha > 0.0) {
-          oldValue = reducedCost[iSequence];
-          value = oldValue - tentativeTheta * alpha;
+        if (value2 > 0.0) {
+          double oldValue = reducedCost[iSequence];
+          double value = oldValue - tentativeTheta * value2;
           if (value < dualT) {
-            value = oldValue - upperTheta * alpha;
-            if (value < dualT && alpha >= acceptablePivot) {
-              upperTheta = (oldValue - dualT) / alpha;
+            value = oldValue - upperTheta * value2;
+            if (value < dualT && value2 >= acceptablePivot) {
+              upperTheta = (oldValue - dualT) / value2;
             }
             // add to list
             spareArray[numberRemaining] = value2;
@@ -8840,17 +8857,13 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
       double value2 = newValues[j];
       if (fabs(value2) > zeroTolerance) {
         int iSequence = column[j];
-        double alpha;
-        double oldValue;
-        double value;
-        alpha = -value2;
-        if (alpha > 0.0) {
-          oldValue = -reducedCost[iSequence];
-          value = oldValue - tentativeTheta * alpha;
+        if (value2 < 0.0) {
+          double oldValue = -reducedCost[iSequence];
+          double value = oldValue + tentativeTheta * value2;
           if (value < dualT) {
-            value = oldValue - upperTheta * alpha;
-            if (value < dualT && alpha >= acceptablePivot) {
-              upperTheta = (oldValue - dualT) / alpha;
+            value = oldValue + upperTheta * value2;
+            if (value < dualT && -value2 >= acceptablePivot) {
+              upperTheta = (dualT - oldValue) / value2;
             }
             // add to list
             spareArray[numberRemaining] = value2;
