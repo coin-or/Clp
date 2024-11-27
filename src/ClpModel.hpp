@@ -1455,7 +1455,7 @@ public:
 };
 
 // Semi experimental options 
-#ifdef CLP_EXPERIMENT_JJF
+#if 1 //def CLP_EXPERIMENT_JJF
 #define CLP_CHECK_SCALING 1 // for badly scaled problems
 #define OSICLP_TUNING 10 // various switches
 #define CLP_MOVEMENT 2 // be more careful on pivot row in primal
