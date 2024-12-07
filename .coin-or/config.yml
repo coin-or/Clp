@@ -35,7 +35,7 @@ Description:
 Dependencies:
   - Description: ThirdParty wrapper for building ASL
     URL: https://github.com/coin-or-tools/ThirdParty-ASL
-    Version: 2.0
+    Version: 2.1
     Required: Optional
   - Description: ThirdParty wrapper for building Mumps
     URL: https://github.com/coin-or-tools/ThirdParty-Mumps
