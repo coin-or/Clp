@@ -7530,11 +7530,13 @@ void OsiClpSolverInterface::crunch()
     small = static_cast< ClpSimplexOther * >(modelPtr_)->crunch(rhs, whichRow, whichColumn,
       nBound, moreBounds, tightenBounds);
 #ifndef NDEBUG
-    int nCopy = 3 * numberRows + 2 * numberColumns;
-    for (int i = 0; i < nCopy; i++) {
-      if (i>=small->getNumRows()&&i<numberRows)
-	continue;  // row was removed so doesn't matter
-      assert(whichRow[i] >= -CoinMax(numberRows, numberColumns) && whichRow[i] < CoinMax(numberRows, numberColumns));
+    if(small) {
+      int nCopy = 3 * numberRows + 2 * numberColumns;
+      for (int i = 0; i < nCopy; i++) {
+	if (i>=small->getNumRows()&&i<numberRows)
+	  continue;  // row was removed so doesn't matter
+	assert(whichRow[i] >= -CoinMax(numberRows, numberColumns) && whichRow[i] < CoinMax(numberRows, numberColumns));
+      }
     }
 #endif
     smallModel_ = small;
