@@ -8985,7 +8985,6 @@ int ClpSimplex::pivot()
   while (roundAgain) {
     roundAgain = false;
     unpack(rowArray_[1]);
-    rowArray_[1]->cleanAndPack(1.0e-12);
     factorization_->updateColumnFT(rowArray_[2], rowArray_[1]);
     alpha_ = 0.0;
     int i;
