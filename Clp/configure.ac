@@ -56,6 +56,8 @@ AC_COIN_INIT_AUTO_TOOLS
 #                              COIN-OR components                           #
 #############################################################################
 
+AC_COIN_CHECK_PACKAGE_BLAS(ClpLib)
+AC_COIN_CHECK_PACKAGE_LAPACK(ClpLib)
 AC_COIN_CHECK_PACKAGE(CoinUtils, [coinutils], [ClpLib])
 if test $coin_has_coinutils != yes ; then
   AC_MSG_ERROR([Required package CoinUtils not available.])

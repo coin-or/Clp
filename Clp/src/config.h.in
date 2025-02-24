@@ -42,6 +42,9 @@
 /* Define to 1 if the Glpk package is available */
 #undef COIN_HAS_GLPK
 
+/* If defined, the LAPACK Library is available. */
+#undef COIN_HAS_LAPACK
+
 /* Define to 1 if the Mumps package is available */
 #undef COIN_HAS_MUMPS
 
