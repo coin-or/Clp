@@ -892,12 +892,17 @@ OsiClpSolverInterfaceUnitTest(const std::string & mpsDir, const std::string & ne
       OSIUNITTEST_ASSERT_ERROR(m.primalPivotResult(colIn,direction,colOut,outStatus,theta,NULL) == 0, {}, "clp", "solve model by hand");
       if (OsiUnitTest::verbosity >= 1)
         printf("out %d, direction %d theta %g\n", colOut,outStatus,theta);
+#if 0
       if (colIn!=colOut) {
         OSIUNITTEST_ASSERT_ERROR(mm->pivot(colIn,colOut,outStatus) >= 0, {}, "clp", "solve model by hand");
       } else {
         // bound flip (so pivot does not make sense)
         OSIUNITTEST_ASSERT_ERROR(mm->primalPivotResult(colIn,direction,colOut,outStatus,theta,NULL) == 0, {}, "clp", "solve model by hand");
       }
+#else
+      // always do primalPivotResult as pivot does not unpack incoming
+      OSIUNITTEST_ASSERT_ERROR(mm->primalPivotResult(colIn,direction,colOut,outStatus,theta,NULL) == 0, {}, "clp", "solve model by hand");
+#endif
       numberIterations++;
     }
     delete mm;
