@@ -4464,12 +4464,12 @@ int ClpSimplexProgress::looping()
   if (matched == (1 << (CLP_PROGRESS - 1)))
     numberMatched = 0;
   if (model_->numberIterations()>20*model_->numberRows()
-      +5*model_->numberColumns()+100) {
+      +5*model_->numberColumns()+100 && (model_->specialOptions()&0x03000000)!=0) {
     // pretty bad
-    // make factorize every iteration
+    // make factorize more often
     if (model_->numberIterations()<25*model_->numberRows()
-	+8*model_->numberColumns()+300) {
-      model_->forceFactorization(1);
+	+8*model_->numberColumns()+300 && numberReallyBadTimes_<100) {
+      model_->forceFactorization(std::min(model_->forceFactorization(),5));
       numberReallyBadTimes_++;
     } else {
       // give up
