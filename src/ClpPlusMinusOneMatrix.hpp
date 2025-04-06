@@ -89,11 +89,6 @@ public:
     int *row, int *start,
     int *rowCount, int *columnCount,
     CoinFactorizationDouble *element);
-  /** Given positive integer weights for each row fills in sum of weights
-         for each column (and slack).
-         Returns weights vector
-     */
-  virtual CoinBigIndex *dubiousWeights(const ClpSimplex *model, int *inputWeights) const;
   /** Returns largest and smallest elements of both signs.
          Largest refers to largest absolute value.
      */

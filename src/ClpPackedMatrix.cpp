@@ -1867,12 +1867,15 @@ int ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double *COIN_RESTRICT pi
         n = n >> 1;
         const int *COIN_RESTRICT rowThis = row + start;
         const double *COIN_RESTRICT elementThis = elementByColumn + start;
-        for (; n; n--) {
+        while (n) {
+	  n--;
           int iRow0 = *rowThis;
+	  double el0 = *elementThis;
           int iRow1 = *(rowThis + 1);
+	  double el1 = *(elementThis+1);
           rowThis += 2;
-          value += pi[iRow0] * (*elementThis);
-          value += pi[iRow1] * (*(elementThis + 1));
+          value += pi[iRow0] * el0;
+          value += pi[iRow1] * el1;
           elementThis += 2;
         }
         if (odd) {
@@ -2610,6 +2613,7 @@ transposeTimes2ScaledBit(clpTempInfo &info)
   info.numberAdded = numberNonZero;
 }
 #endif
+
 /* Updates two arrays for steepest and does devex weights 
    Returns nonzero if updates reduced cost and infeas -
    new infeas in dj1 */
@@ -2617,7 +2621,7 @@ transposeTimes2ScaledBit(clpTempInfo &info)
 int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
   const CoinIndexedVector *pi1, CoinIndexedVector *dj1,
   const CoinIndexedVector *pi2,
-  CoinIndexedVector *spare,
+  CoinIndexedVector *spare, 
   double *COIN_RESTRICT infeas,
   double *COIN_RESTRICT reducedCost,
   double referenceIn, double devex,
@@ -2726,17 +2730,16 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
             if (status == ClpSimplex::basic || status == ClpSimplex::isFixed)
               continue;
             double value = 0.0;
+	    // for other array
+	    double modification = 0.0;
             for (j = start; j < end; j++) {
               int iRow = row[j];
-              value -= pi[iRow] * elementByColumn[j];
+	      double element = elementByColumn[j];
+              value -= pi[iRow] * element;
+	      modification += piWeight[iRow] * element;
             }
             if (fabs(value) > zeroTolerance) {
-              // and do other array
-              double modification = 0.0;
-              for (j = start; j < end; j++) {
-                int iRow = row[j];
-                modification += piWeight[iRow] * elementByColumn[j];
-              }
+              // and look at other array
               double thisWeight = weights[iColumn];
               double oldWeight = thisWeight;
               double pivot = value * scaleFactor;
@@ -2761,17 +2764,8 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
                 reducedCost[iColumn] = value;
                 // simplify status
                 ClpSimplex::Status status = model->getStatus(iColumn);
-
-                switch (status) {
-
-                case ClpSimplex::basic:
-                case ClpSimplex::isFixed:
-                  break;
-                case ClpSimplex::isFree:
-                case ClpSimplex::superBasic:
-                  if (fabs(value) > FREE_ACCEPT * dualTolerance) {
-                    // we are going to bias towards free (but only if reasonable)
-                    value *= FREE_BIAS;
+                if (status == ClpSimplex::atLowerBound) {
+                  if (value < -dualTolerance) {
                     value *= value;
                     // store square in list
                     if (infeas[iColumn]) {
@@ -2780,12 +2774,10 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
                       array[numberNonZero] = value;
                       index[numberNonZero++] = iColumn;
                     }
-                  } else {
-                    array[numberNonZero] = 0.0;
-                    index[numberNonZero++] = iColumn;
+                  } else if (infeas[iColumn]) {
+		    infeas[iColumn] = COIN_DBL_MIN;
                   }
-                  break;
-                case ClpSimplex::atUpperBound:
+                } else if (status == ClpSimplex::atUpperBound) {
                   if (value > dualTolerance) {
                     value *= value;
                     // store square in list
@@ -2799,9 +2791,11 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
                     array[numberNonZero] = 0.0;
                     index[numberNonZero++] = iColumn;
                   }
-                  break;
-                case ClpSimplex::atLowerBound:
-                  if (value < -dualTolerance) {
+                } else if (status == ClpSimplex::isFree
+			   || status == ClpSimplex::superBasic) {
+                  if (fabs(value) > FREE_ACCEPT * dualTolerance) {
+                    // we are going to bias towards free (but only if reasonable)
+                    value *= FREE_BIAS;
                     value *= value;
                     // store square in list
                     if (infeas[iColumn]) {
@@ -2915,17 +2909,17 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
               continue;
             double scale = columnScale[iColumn];
             double value = 0.0;
+	    // for other array
+	    double modification = 0.0;
             for (j = start; j < end; j++) {
               int iRow = row[j];
-              value -= pi[iRow] * elementByColumn[j];
+	      double element = elementByColumn[j];
+              value -= pi[iRow] * element;
+	      modification += piWeight[iRow] * element;
             }
             value *= scale;
             if (fabs(value) > zeroTolerance) {
-              double modification = 0.0;
-              for (j = start; j < end; j++) {
-                int iRow = row[j];
-                modification += piWeight[iRow] * elementByColumn[j];
-              }
+              // and look at other array
               modification *= scale;
               double thisWeight = weights[iColumn];
               double pivot = value * scaleFactor;
@@ -2949,17 +2943,8 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
                 reducedCost[iColumn] = value;
                 // simplify status
                 ClpSimplex::Status status = model->getStatus(iColumn);
-
-                switch (status) {
-
-                case ClpSimplex::basic:
-                case ClpSimplex::isFixed:
-                  break;
-                case ClpSimplex::isFree:
-                case ClpSimplex::superBasic:
-                  if (fabs(value) > FREE_ACCEPT * dualTolerance) {
-                    // we are going to bias towards free (but only if reasonable)
-                    value *= FREE_BIAS;
+                if (status == ClpSimplex::atLowerBound) {
+                  if (value < -dualTolerance) {
                     value *= value;
                     // store square in list
                     if (infeas[iColumn]) {
@@ -2968,12 +2953,10 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
                       array[numberNonZero] = value;
                       index[numberNonZero++] = iColumn;
                     }
-                  } else {
-                    array[numberNonZero] = 0.0;
-                    index[numberNonZero++] = iColumn;
+                  } else if (infeas[iColumn]) {
+		    infeas[iColumn] = COIN_DBL_MIN;
                   }
-                  break;
-                case ClpSimplex::atUpperBound:
+                } else if (status == ClpSimplex::atUpperBound) {
                   if (value > dualTolerance) {
                     value *= value;
                     // store square in list
@@ -2983,13 +2966,14 @@ int ClpPackedMatrix::transposeTimes2(const ClpSimplex *model,
                       array[numberNonZero] = value;
                       index[numberNonZero++] = iColumn;
                     }
-                  } else {
-                    array[numberNonZero] = 0.0;
-                    index[numberNonZero++] = iColumn;
+                  } else if (infeas[iColumn]) {
+		    infeas[iColumn] = COIN_DBL_MIN;
                   }
-                  break;
-                case ClpSimplex::atLowerBound:
-                  if (value < -dualTolerance) {
+                } else if (status == ClpSimplex::isFree
+			   || status == ClpSimplex::superBasic) {
+                  if (fabs(value) > FREE_ACCEPT * dualTolerance) {
+                    // we are going to bias towards free (but only if reasonable)
+                    value *= FREE_BIAS;
                     value *= value;
                     // store square in list
                     if (infeas[iColumn]) {
@@ -5233,36 +5217,6 @@ int ClpPackedMatrix::gutsOfTransposeTimesByRowGE3(const CoinIndexedVector *COIN_
     }
   }
   return numberNonZero;
-}
-/* Given positive integer weights for each row fills in sum of weights
-   for each column (and slack).
-   Returns weights vector
-*/
-CoinBigIndex *
-ClpPackedMatrix::dubiousWeights(const ClpSimplex *model, int *COIN_RESTRICT inputWeights) const
-{
-  int numberRows = model->numberRows();
-  int numberColumns = matrix_->getNumCols();
-  int number = numberRows + numberColumns;
-  CoinBigIndex *weights = new CoinBigIndex[number];
-  // get matrix data pointers
-  const int *row = matrix_->getIndices();
-  const CoinBigIndex *columnStart = matrix_->getVectorStarts();
-  const int *columnLength = matrix_->getVectorLengths();
-  int i;
-  for (i = 0; i < numberColumns; i++) {
-    CoinBigIndex j;
-    CoinBigIndex count = 0;
-    for (j = columnStart[i]; j < columnStart[i] + columnLength[i]; j++) {
-      int iRow = row[j];
-      count += inputWeights[iRow];
-    }
-    weights[i] = count;
-  }
-  for (i = 0; i < numberRows; i++) {
-    weights[i + numberColumns] = inputWeights[i];
-  }
-  return weights;
 }
 /* Returns largest and smallest elements of both signs.
    Largest refers to largest absolute value.

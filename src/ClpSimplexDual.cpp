@@ -999,12 +999,6 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
                                          ((double ) (numberPrimalInfeasibilities_ + 1));
 #endif
 
-  // Get dubious weights
-  CoinBigIndex *dubiousWeights = NULL;
-#ifdef DUBIOUS_WEIGHTS
-  factorization_->getWeights(rowArray_[0]->getIndices());
-  dubiousWeights = matrix_->dubiousWeights(this, rowArray_[0]->getIndices());
-#endif
   // If values pass then get list of candidates
   int *candidateList = NULL;
   int numberCandidates = 0;
@@ -1320,7 +1314,7 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
 #else
           columnArray_[1],
 #endif
-          acceptablePivot, dubiousWeights);
+          acceptablePivot);
         if (sequenceIn_ < 0 && acceptablePivot <= acceptablePivot_) {
           //acceptablePivot_ = -fabs(acceptablePivot_); // stop early exit
 	  if (!factorization_->pivots())
@@ -2327,7 +2321,6 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
     // get rid of any values pass array
     delete[] candidateList;
   }
-  delete[] dubiousWeights;
 #ifdef CLP_REPORT_PROGRESS
   if (ixxxxxx > ixxyyyy - 5) {
     int nTotal = numberColumns_ + numberRows_;
@@ -4040,8 +4033,7 @@ ClpSimplexDual::dualColumn(CoinIndexedVector *rowArray,
   CoinIndexedVector *columnArray,
   CoinIndexedVector *spareArray,
   CoinIndexedVector *spareArray2,
-  double acceptablePivot,
-  CoinBigIndex * /*dubiousWeights*/)
+  double acceptablePivot)
 {
   int numberPossiblySwapped = 0;
   int numberRemaining = 0;
@@ -4378,25 +4370,8 @@ ClpSimplexDual::dualColumn(CoinIndexedVector *rowArray,
               // select if largest pivot
               bool take = false;
               double absAlpha = fabs(alpha);
-#ifdef DUBIOUS_WEIGHTS
-              // User could do anything to break ties here
-              double weight;
-              if (dubiousWeights)
-                weight = dubiousWeights[iSequence];
-              else
-                weight = 1.0;
-              weight += randomNumberGenerator_.randomDouble() * 1.0e-2;
-              if (absAlpha > 2.0 * bestPivot) {
-                take = true;
-              } else if (absAlpha > largestPivot) {
-                // could multiply absAlpha and weight
-                if (weight * bestPivot < bestWeight * absAlpha)
-                  take = true;
-              }
-#else
               if (absAlpha > bestPivot)
                 take = true;
-#endif
 #ifdef MORE_CAREFUL
               if (absAlpha < acceptablePivot && upperTheta < 1.0e20) {
                 if (alpha < 0.0) {
@@ -4435,14 +4410,6 @@ ClpSimplexDual::dualColumn(CoinIndexedVector *rowArray,
                 bestPivot = absAlpha;
                 theta_ = dj_[iSequence] / alpha;
                 largestPivot = std::max(largestPivot, 0.5 * bestPivot);
-#ifdef DUBIOUS_WEIGHTS
-                bestWeight = weight;
-#endif
-                //printf(" taken seq %d alpha %g weight %d\n",
-                //   iSequence,absAlpha,dubiousWeights[iSequence]);
-              } else {
-                //printf(" not taken seq %d alpha %g weight %d\n",
-                //   iSequence,absAlpha,dubiousWeights[iSequence]);
               }
               double range = upper_[iSequence] - lower_[iSequence];
               thruThis += range * fabs(alpha);
@@ -7592,8 +7559,7 @@ int ClpSimplexDual::pivotResultPart1()
 #else
     columnArray_[1],
 #endif
-    acceptablePivot,
-    NULL /*dubiousWeights*/);
+  acceptablePivot);
   dualOut_ *= 1.0e8;
   if (fabs(bestPossiblePivot) < 1.0e-6)
     return -1;

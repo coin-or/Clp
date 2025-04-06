@@ -25,7 +25,6 @@ ClpDualRowSteepest::ClpDualRowSteepest(int mode)
   , infeasible_(NULL)
   , alternateWeights_(NULL)
   , savedWeights_(NULL)
-  , dubiousWeights_(NULL)
 {
   type_ = 2 + 64 * mode;
 }
@@ -65,20 +64,11 @@ ClpDualRowSteepest::ClpDualRowSteepest(const ClpDualRowSteepest &rhs)
     } else {
       savedWeights_ = NULL;
     }
-    if (rhs.dubiousWeights_) {
-      assert(model_);
-      int number = model_->numberRows();
-      dubiousWeights_ = new int[number];
-      ClpDisjointCopyN(rhs.dubiousWeights_, number, dubiousWeights_);
-    } else {
-      dubiousWeights_ = NULL;
-    }
   } else {
     infeasible_ = NULL;
     weights_ = NULL;
     alternateWeights_ = NULL;
     savedWeights_ = NULL;
-    dubiousWeights_ = NULL;
   }
 }
 
@@ -88,7 +78,6 @@ ClpDualRowSteepest::ClpDualRowSteepest(const ClpDualRowSteepest &rhs)
 ClpDualRowSteepest::~ClpDualRowSteepest()
 {
   delete[] weights_;
-  delete[] dubiousWeights_;
   delete infeasible_;
   delete alternateWeights_;
   delete savedWeights_;
@@ -107,7 +96,6 @@ ClpDualRowSteepest::operator=(const ClpDualRowSteepest &rhs)
     persistence_ = rhs.persistence_;
     model_ = rhs.model_;
     delete[] weights_;
-    delete[] dubiousWeights_;
     delete infeasible_;
     delete alternateWeights_;
     delete savedWeights_;
@@ -135,14 +123,6 @@ ClpDualRowSteepest::operator=(const ClpDualRowSteepest &rhs)
       savedWeights_ = new CoinIndexedVector(rhs.savedWeights_);
     } else {
       savedWeights_ = NULL;
-    }
-    if (rhs.dubiousWeights_) {
-      assert(model_);
-      int number = model_->numberRows();
-      dubiousWeights_ = new int[number];
-      ClpDisjointCopyN(rhs.dubiousWeights_, number, dubiousWeights_);
-    } else {
-      dubiousWeights_ = NULL;
     }
   }
   return *this;
@@ -193,16 +173,6 @@ void ClpDualRowSteepest::fill(const ClpDualRowSteepest &rhs)
   } else {
     delete savedWeights_;
     savedWeights_ = NULL;
-  }
-  if (rhs.dubiousWeights_) {
-    assert(model_);
-    int number = model_->numberRows();
-    if (!dubiousWeights_)
-      dubiousWeights_ = new int[number];
-    ClpDisjointCopyN(rhs.dubiousWeights_, number, dubiousWeights_);
-  } else {
-    delete[] dubiousWeights_;
-    dubiousWeights_ = NULL;
   }
 }
 // Returns pivot row, -1 if none
@@ -327,9 +297,6 @@ int ClpDualRowSteepest::pivotRow()
         double weight = std::min(weights_[iRow], 1.0e50);
         //largestWeight = std::max(largestWeight,weight);
         //smallestWeight = std::min(smallestWeight,weight);
-        //double dubious = dubiousWeights_[iRow];
-        //weight *= dubious;
-        //if (value>2.0*largest*weight||(value>0.5*largest*weight&&value*largestWeight>dubious*largest*weight)) {
         if (value > largest * weight) {
           // make last pivot row last resort choice
           if (iRow == lastPivotRow) {
@@ -833,8 +800,6 @@ void ClpDualRowSteepest::saveWeights(ClpSimplex *model, int mode)
         // size has changed - clear everything
         delete[] weights_;
         weights_ = NULL;
-        delete[] dubiousWeights_;
-        dubiousWeights_ = NULL;
         delete infeasible_;
         infeasible_ = NULL;
         delete alternateWeights_;
@@ -990,10 +955,6 @@ void ClpDualRowSteepest::saveWeights(ClpSimplex *model, int mode)
     }
   }
   if (mode >= 2) {
-    // Get dubious weights
-    //if (!dubiousWeights_)
-    //dubiousWeights_=new int[numberRows];
-    //model_->factorization()->getWeights(dubiousWeights_);
     infeasible_->clear();
     int iRow;
     const int *pivotVariable = model_->pivotVariable();
@@ -1095,8 +1056,6 @@ void ClpDualRowSteepest::clearArrays()
   if (persistence_ == normal) {
     delete[] weights_;
     weights_ = NULL;
-    delete[] dubiousWeights_;
-    dubiousWeights_ = NULL;
     delete infeasible_;
     infeasible_ = NULL;
     delete alternateWeights_;

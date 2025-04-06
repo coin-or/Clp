@@ -5141,7 +5141,7 @@ ClpSimplexOther::bestPivot(bool justColumns)
 #else
     columnArray_[1],
 #endif
-    rowArray_[3], acceptablePivot, NULL);
+    rowArray_[3], acceptablePivot);
   return bestPossiblePivot;
 }
 // Computes next theta and says if objective or bounds (0= bounds, 1 objective, -1 none)

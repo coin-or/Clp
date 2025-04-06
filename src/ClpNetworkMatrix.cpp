@@ -817,36 +817,6 @@ void ClpNetworkMatrix::deleteRows(const int numDel, const int *indDel)
   delete[] which;
   numberRows_ = newNumber;
 }
-/* Given positive integer weights for each row fills in sum of weights
-   for each column (and slack).
-   Returns weights vector
-*/
-CoinBigIndex *
-ClpNetworkMatrix::dubiousWeights(const ClpSimplex *model, int *inputWeights) const
-{
-  int numberRows = model->numberRows();
-  int numberColumns = model->numberColumns();
-  int number = numberRows + numberColumns;
-  CoinBigIndex *weights = new CoinBigIndex[number];
-  int i;
-  for (i = 0; i < numberColumns; i++) {
-    CoinBigIndex j = i << 1;
-    CoinBigIndex count = 0;
-    int iRowM = indices_[j];
-    int iRowP = indices_[j + 1];
-    if (iRowM >= 0) {
-      count += inputWeights[iRowM];
-    }
-    if (iRowP >= 0) {
-      count += inputWeights[iRowP];
-    }
-    weights[i] = count;
-  }
-  for (i = 0; i < numberRows; i++) {
-    weights[i + numberColumns] = inputWeights[i];
-  }
-  return weights;
-}
 /* Returns largest and smallest elements of both signs.
    Largest refers to largest absolute value.
 */

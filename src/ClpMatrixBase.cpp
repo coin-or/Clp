@@ -145,21 +145,6 @@ ClpMatrixBase::subsetClone(
   abort();
   return NULL;
 }
-/* Given positive integer weights for each row fills in sum of weights
-   for each column (and slack).
-   Returns weights vector
-   Default returns vector of ones
-*/
-CoinBigIndex *
-ClpMatrixBase::dubiousWeights(const ClpSimplex *model, int * /*inputWeights*/) const
-{
-  int number = model->numberRows() + model->numberColumns();
-  CoinBigIndex *weights = new CoinBigIndex[number];
-  int i;
-  for (i = 0; i < number; i++)
-    weights[i] = 1;
-  return weights;
-}
 #ifndef CLP_NO_VECTOR
 // Append Columns
 void ClpMatrixBase::appendCols(int /*number*/,

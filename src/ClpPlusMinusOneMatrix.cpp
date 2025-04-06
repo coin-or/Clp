@@ -1526,32 +1526,6 @@ void ClpPlusMinusOneMatrix::checkValid(bool detail) const
       printf("Not full range of indices - %d to %d\n", minIndex, maxIndex);
   }
 }
-/* Given positive integer weights for each row fills in sum of weights
-   for each column (and slack).
-   Returns weights vector
-*/
-CoinBigIndex *
-ClpPlusMinusOneMatrix::dubiousWeights(const ClpSimplex *model, int *inputWeights) const
-{
-  int numberRows = model->numberRows();
-  int numberColumns = model->numberColumns();
-  int number = numberRows + numberColumns;
-  CoinBigIndex *weights = new CoinBigIndex[number];
-  int i;
-  for (i = 0; i < numberColumns; i++) {
-    CoinBigIndex j;
-    CoinBigIndex count = 0;
-    for (j = startPositive_[i]; j < startPositive_[i + 1]; j++) {
-      int iRow = indices_[j];
-      count += inputWeights[iRow];
-    }
-    weights[i] = count;
-  }
-  for (i = 0; i < numberRows; i++) {
-    weights[i + numberColumns] = inputWeights[i];
-  }
-  return weights;
-}
 // Append Columns
 void ClpPlusMinusOneMatrix::appendCols(int number, const CoinPackedVectorBase *const *columns)
 {
