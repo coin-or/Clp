@@ -12169,18 +12169,33 @@ int ClpSimplex::fathomMany(void *stuff)
   }
 #endif
   int whichSolution = -1;
+  int *whichRow = NULL;
+  int *whichColumn = NULL;
+  ClpSimplex *small = NULL;
+  int nBound;
+  bool feasible = true;
   if (info->presolveType_) {
     // crunch down
-    bool feasible = true;
     // Use dual region
     double *rhs = dual_;
-    int *whichRow = new int[3 * numberRows_];
-    int *whichColumn = new int[2 * numberColumns_];
-    int nBound;
+    whichRow = new int[3 * numberRows_];
+    whichColumn = new int[2 * numberColumns_];
     numberRows_=-numberRows_;//!! flag to say do more work (if test in crunch)
     bool tightenBounds = ((specialOptions_ & 64) == 0) ? false : true;
-    ClpSimplex *small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
+    small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
       nBound, false, tightenBounds);
+    if (small&&small->numberRows_==0) {
+      // empty problem goes wrong
+      delete [] whichRow;
+      whichRow = NULL;
+      delete [] whichColumn;
+      whichColumn = NULL;
+      delete small;
+      small = NULL;
+      info->presolveType_=0;
+    }
+  }
+  if (info->presolveType_) {
     if (small) {
       info->large_ = this;
       info->whichRow_ = whichRow;
@@ -12507,7 +12522,7 @@ int ClpSimplex::fathomMany(void *stuff)
       // Create node
       ClpNode *node;
       computeDuals(NULL);
-      if (depth > 0) {
+      if (depth > 0) { 
         int way = nodeInfo[useDepth + 1]->way();
         int sequence = nodeInfo[useDepth + 1]->sequence();
 #ifndef NDEBUG
