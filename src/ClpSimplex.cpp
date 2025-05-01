@@ -5565,7 +5565,7 @@ int ClpSimplex::dual(int ifValuesPass, int startFinishOptions)
 }
 int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
 #endif
-{
+{ 
   //double savedPivotTolerance = factorization_->pivotTolerance();
   int saveQuadraticActivated = 0;
   if (objective_) {
@@ -5914,12 +5914,13 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
   // massage infeasibilities
   if (!problemStatus_) {
     if (handler_->logLevel() == 63) {
-      if (numberPrimalInfeasibilities_ || numberDualInfeasibilities_)
+      if (numberPrimalInfeasibilities_ || numberDualInfeasibilities_) {
         printf("minor inaccuracy primal sum %g (%d) error %g, dual %g (%d) %g\n",
           sumPrimalInfeasibilities_, numberPrimalInfeasibilities_,
           largestPrimalError_,
           sumDualInfeasibilities_, numberDualInfeasibilities_,
-          largestDualError_);
+	       largestDualError_);
+      }
     }
     if (numberPrimalInfeasibilities_) {
       numberPrimalInfeasibilities_ = 0;
@@ -5940,7 +5941,7 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
     // see if cutoff reached
     double limit = 0.0;
     getDblParam(ClpDualObjectiveLimit, limit);
-    if (fabs(limit) < 1.0e30 && objectiveValue() * optimizationDirection_ > limit + 1.0e-7 + 1.0e-8 * fabs(limit)) {
+    if (fabs(limit) < 1.0e30 && objectiveValue() * optimizationDirection_ > limit + 1.0e-7 + 1.0e-8 * fabs(limit) && secondaryStatus_ <3 ) {
       // actually infeasible on objective
       problemStatus_ = 1;
       secondaryStatus_ = 1; //printf("inf on obj dual %g limit %g\n",objectiveValue(),limit);
@@ -6219,12 +6220,13 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
   // massage infeasibilities
   if (!problemStatus_) {
     if (handler_->logLevel() == 63) {
-      if (numberPrimalInfeasibilities_ || numberDualInfeasibilities_)
+      if (numberPrimalInfeasibilities_ || numberDualInfeasibilities_) {
         printf("minor inaccuracy primal sum %g (%d) error %g, dual %g (%d) %g\n",
           sumPrimalInfeasibilities_, numberPrimalInfeasibilities_,
           largestPrimalError_,
           sumDualInfeasibilities_, numberDualInfeasibilities_,
           largestDualError_);
+      }
     }
     if (numberPrimalInfeasibilities_) {
       numberPrimalInfeasibilities_ = 0;

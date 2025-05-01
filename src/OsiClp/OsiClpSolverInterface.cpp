@@ -8099,6 +8099,12 @@ void OsiClpSolverInterface::crunch()
     small->moreSpecialOptions_ = modelPtr_->moreSpecialOptions_;
     small->dual(0, 7);
 #endif
+    if (small->problemStatus()==0&&small->secondaryStatus_>2) {
+      totalIterations += small->numberIterations();
+      small->primal(); // had dual infeasibilities
+      //printf("Cleaned small with primal status %d obj %g %d its\n",
+      //     small->problemStatus(),small->objectiveValue(),small->numberIterations());
+    }
     modelPtr_->secondaryStatus_ = 0;
     if (small->secondaryStatus_ == 2)
       modelPtr_->secondaryStatus_ = 2;
