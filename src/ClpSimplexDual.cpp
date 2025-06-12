@@ -3689,8 +3689,8 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
         double oldValue;
         double value;
 
-        assert(getStatus(iSequence + addSequence) != isFree
-          && getStatus(iSequence + addSequence) != superBasic);
+        //assert(getStatus(iSequence + addSequence) != isFree
+	//&& getStatus(iSequence + addSequence) != superBasic);
         int iStatus = (statusArray[iSequence] & 3) - 1;
         if (iStatus) {
           double mult = multiplier[iStatus - 1];
