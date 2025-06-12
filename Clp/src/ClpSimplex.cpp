@@ -8886,6 +8886,9 @@ int ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
   int useFactorization = false;
   if ((startFinishOptions & 2) != 0 && (whatsChanged_ & (2 + 512)) == 2 + 512)
     useFactorization = true; // Keep factorization if possible
+  // but probably re-factorize if in primal from dual and in cbc
+  if ((moreSpecialOptions_&256)!=0&&algorithm_>=0&&(specialOptions_&0x1000000)!=0&&numberIterations_>2)
+    useFactorization = false;
 #if 0
      // seems to be needed if rows deleted later in CbcModel!
      if (!solution_ && scaledMatrix_) {
