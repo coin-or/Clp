@@ -4763,7 +4763,7 @@ int ClpSimplexDual::checkUnbounded(CoinIndexedVector *ray,
     way = 0.0;
     status = -3;
   }
-  double movement = 1.0e10 * way; // some largish number
+  double movement = 1.0e20 * way; // some largish number
   double zeroTolerance = 1.0e-14 * dualBound_;
   for (i = 0; i < number; i++) {
     int iRow = index[i];
