@@ -1,7 +1,7 @@
 Description:
   Slug: Clp
   ShortName: Clp
-  LongName:
+  LongName: COIN-OR LP Solver
   ShortDescription: A simplex solver.
   LongDescription: |2
     Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
