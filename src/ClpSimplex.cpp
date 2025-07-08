@@ -11087,7 +11087,7 @@ int ClpSimplex::cleanPrimalSolution(double exactMultiple)
       nBad++;
   }
   memset(tempRow, 0, numberRows_ * sizeof(double));
-  times(-1.0, tempColumn, tempRow);
+  times(1.0, tempColumn, tempRow);
   for (int i = 0; i < numberRows_; i++) {
     double value = tempRow[i];
     if (value < rowLower_[i] - allowedError || value > rowUpper_[i] + allowedError)
