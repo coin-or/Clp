@@ -29,9 +29,9 @@
 #endif
 #ifdef COIN_HAS_CBC
 // from CoinSolve
-static char coin_prompt[] = "Coin:";
+static const char coin_prompt[] = "Coin:";
 #else
-static char coin_prompt[] = "Clp:";
+static const char coin_prompt[] = "Clp:";
 #endif
 #ifdef CLP_CILK
 #ifndef CBC_THREAD
