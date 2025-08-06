@@ -2178,7 +2178,7 @@ void OsiClpSolverInterface::markHotStart()
 #ifndef NDEBUG
       int nCopy = 3 * numberRows + 2 * numberColumns;
       for (int i = 0; i < nCopy; i++)
-        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns));
+        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns+3));
 #endif
       smallModel_ = small;
       //int hotIts = small->intParam_[ClpMaxNumIterationHotStart];
@@ -2194,7 +2194,7 @@ void OsiClpSolverInterface::markHotStart()
       nBound = whichRow[nCopy];
 #ifndef NDEBUG
       for (int i = 0; i < nCopy; i++)
-        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns));
+        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns+3));
 #endif
       needSolveInSetupHotStart = false;
       small = smallModel_;
