@@ -82,7 +82,8 @@ template < class T >
 inline void
 ClpDisjointCopyN(const T *array, const CoinBigIndex size, T *newArray)
 {
-  memcpy(reinterpret_cast< void * >(newArray), array, size * sizeof(T));
+  if (array)
+    memcpy(reinterpret_cast< void * >(newArray), array, size * sizeof(T));
 }
 /// And set
 template < class T >
