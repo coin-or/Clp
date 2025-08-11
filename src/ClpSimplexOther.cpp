@@ -1225,8 +1225,8 @@ ClpSimplexOther::dualOfModel(double fractionRowRanges, double fractionColumnRang
   } else {
     return NULL;
   }
-  printf("would have %d free columns in primal, %d in dual\n",
-    numberFreeColumnsInPrimal, numberFreeColumnsInDual);
+  //printf("would have %d free columns in primal, %d in dual\n",
+  //  numberFreeColumnsInPrimal, numberFreeColumnsInDual);
   if (4 * (numberFreeColumnsInDual - numberFreeColumnsInPrimal) > numberColumns_ && fractionRowRanges < 1.0)
     return NULL; //dangerous (well anyway in dual)
   if (changed) {

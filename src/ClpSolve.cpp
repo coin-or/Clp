@@ -2238,8 +2238,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         if (doubleIdiot) {
           ClpSimplex *dualModel2 = static_cast< ClpSimplexOther * >(model2)->dualOfModel(1.0, 1.0);
           if (dualModel2) {
-            printf("Dual of model has %d rows and %d columns\n",
-              dualModel2->numberRows(), dualModel2->numberColumns());
+            //printf("Dual of model has %d rows and %d columns\n",
+            //  dualModel2->numberRows(), dualModel2->numberColumns());
             dualModel2->setOptimizationDirection(1.0);
             Idiot infoDual(info);
 	    info.setMinIntervalStatusUpdate(dualModel2->getMinIntervalProgressUpdate());
@@ -2291,11 +2291,11 @@ int ClpSimplex::initialSolve(ClpSolve &options)
                 primalColumn[i],
                 primalRow[i]);
               tempModel[i]->checkSolutionInternal();
-              printf("model %d - dual inf %g primal inf %g\n",
-                i, tempModel[i]->sumDualInfeasibilities(),
-                tempModel[i]->sumPrimalInfeasibilities());
+              //printf("model %d - dual inf %g primal inf %g\n",
+              //  i, tempModel[i]->sumDualInfeasibilities(),
+              //  tempModel[i]->sumPrimalInfeasibilities());
             }
-            printf("What now\n");
+            //printf("What now\n");
           } else {
             doubleIdiot = false;
           }
