@@ -673,7 +673,7 @@ int ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
   // If infeasible but primal errors - try primal
   if (problemStatus_ == 1 && numberPrimalInfeasibilities_) {
     bool inCbcOrOther = (specialOptions_ & 0x03000000) != 0;
-    double factor = (!inCbcOrOther) ? 1.0 : 0.3;
+    double factor = 1.0;// be more cautious(!inCbcOrOther) ? 1.0 : 0.3;
     double averageInfeasibility = sumPrimalInfeasibilities_ / static_cast< double >(numberPrimalInfeasibilities_);
     if (averageInfeasibility < factor * largestPrimalError_)
       problemStatus_ = 10;
