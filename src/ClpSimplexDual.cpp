@@ -2140,6 +2140,13 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
           else if (!useNumberFake && numberPrimalInfeasibilities_
             && !numberPivots)
             problemStatus_ = 1;
+          else if (!useNumberFake && numberPrimalInfeasibilities_) {
+	    progress_.incrementReallyBadTimes();
+	    if (progress_.reallyBadTimes()>5) {
+	      returnCode = -2; // force re-factorization
+	      progress_.clearBadTimes();
+	    }
+	  }
         } else {
           if (iRow < numberRows_) {
 #ifdef COIN_DEVELOP
@@ -3811,7 +3818,6 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
         _mm256_store_pd(reinterpret_cast< double * >(acceptableY), bitsAcceptable);
         _mm256_store_pd(alphaY, newAlpha2);
 #ifndef USE_USE_AVX
-#undef NDEBUG
         for (int i = 0; i < CHECK_CHUNK; i++) {
           assert(newValueX[i] > 0.0 == (goodDj[i]));
           //assert(acceptableX[i]==(acceptableY[i]));
@@ -4887,7 +4893,7 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
   if (type == 3) {
     type = 1;
     dontFactorizePivots = 1;
-  }
+  } 
   if (alphaAccuracy_ < 0.0 || !numberPivots || alphaAccuracy_ > 1.0e4 || numberPivots > 20) {
     if (problemStatus_ > -3 || numberPivots > dontFactorizePivots) {
       // factorize

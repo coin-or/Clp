@@ -1525,7 +1525,8 @@ disaster:
       modelPtr_->computeObjectiveValue();
     }
   }
-  modelPtr_->setSpecialOptions(saveOptions); // restore
+  modelPtr_->setSpecialOptions(saveOptions|
+			       (modelPtr_->specialOptions()&0x02000000)); // restore
   if (modelPtr_->problemStatus_ == 3 && lastAlgorithm_ == 2)
     modelPtr_->computeObjectiveValue();
   if (lastAlgorithm_ < 1 || lastAlgorithm_ > 2)
@@ -2178,7 +2179,7 @@ void OsiClpSolverInterface::markHotStart()
 #ifndef NDEBUG
       int nCopy = 3 * numberRows + 2 * numberColumns;
       for (int i = 0; i < nCopy; i++)
-        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns+3));
+        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns)+2);
 #endif
       smallModel_ = small;
       //int hotIts = small->intParam_[ClpMaxNumIterationHotStart];
@@ -2194,7 +2195,7 @@ void OsiClpSolverInterface::markHotStart()
       nBound = whichRow[nCopy];
 #ifndef NDEBUG
       for (int i = 0; i < nCopy; i++)
-        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns+3));
+        assert(whichRow[i] >= -std::max(numberRows, numberColumns) && whichRow[i] < std::max(numberRows, numberColumns)+3);
 #endif
       needSolveInSetupHotStart = false;
       small = smallModel_;
@@ -8102,6 +8103,9 @@ void OsiClpSolverInterface::crunch()
     if (small->problemStatus()==0&&small->secondaryStatus_>2) {
       totalIterations += small->numberIterations();
       small->primal(); // had dual infeasibilities
+      // say did both
+      if (small->specialOptions_&0x01000000)
+	modelPtr_->specialOptions_ |= 0x02000000;
       //printf("Cleaned small with primal status %d obj %g %d its\n",
       //     small->problemStatus(),small->objectiveValue(),small->numberIterations());
     }

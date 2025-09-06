@@ -2130,6 +2130,87 @@ int ClpSimplex::housekeeping(double objectiveChange)
   // Update hidden stuff e.g. effective RHS and gub
   int invertNow = matrix_->updatePivot(this, oldIn, oldOut);
   objectiveValue_ += objectiveChange / (objectiveScale_ * rhsScale_);
+  //#define CLP_FEASIBILITY_PUMP  
+#ifdef CLP_FEASIBILITY_PUMP
+  // For Feasibility pump!
+  if (trustedUserPointer_ && trustedUserPointer_->typeStruct==2 && (numberIterations_%3)==1) {
+    typedef struct {
+      double * solution;
+      int * sequence;
+      double sumInfeas;
+      double objectiveValue;
+      int numInfeas;
+      int numberIterations;
+      int numberIntegers;
+    } trustedData;
+    trustedData *feasData = reinterpret_cast<trustedData *> (trustedUserPointer_->data);
+    double * savedSolution = feasData->solution;
+    int numberIntegers = feasData->numberIntegers;
+    int * whichInt = feasData->sequence;
+    assert (integerType_);
+    double sumInfeas = 0.0;
+    int numInfeas = 0;
+    if (!columnScale_) {
+      for (int i=0;i<numberIntegers;i++) {
+	int iColumn = whichInt[i];
+	double value = solution_[iColumn];
+	double nearest = floor(value+0.5);
+	if (fabs(value-nearest)>1.0e-6) {
+	  sumInfeas += fabs(value-nearest);
+	  numInfeas++;
+	}
+      }
+    } else {
+      for (int i=0;i<numberIntegers;i++) {
+	int iColumn = whichInt[i];
+	double value = solution_[iColumn]*columnScale_[iColumn];
+	double nearest = floor(value+0.5);
+	if (fabs(value-nearest)>1.0e-5) {
+	  sumInfeas += fabs(value-nearest);
+	  numInfeas++;
+	}
+      }
+    }
+    // probably need to look at sum and x*objvalue
+    if (numberIterations_==1) {
+      if (!columnScale_) {
+	for (int i=0;i<numberColumns_;i++) {
+	  double value = solution_[i];
+	  savedSolution[i] = value;
+	}
+      } else {
+	for (int i=0;i<numberColumns_;i++) {
+	  double value = solution_[i]*columnScale_[i];
+	  savedSolution[i] = value;
+	}
+      }
+      feasData->sumInfeas = sumInfeas;
+      feasData->objectiveValue = objectiveValue();
+      feasData->numInfeas = numInfeas;
+      feasData->numberIterations = numberIterations_;
+    } else if (sumInfeas<feasData->sumInfeas && true /* should use a bit of objvalue?*/) {
+      if (!columnScale_) {
+	for (int i=0;i<numberColumns_;i++) {
+	  double value = solution_[i];
+	  savedSolution[i] = value;
+	}
+      } else {
+	for (int i=0;i<numberColumns_;i++) {
+	  double value = solution_[i]*columnScale_[i];
+	  savedSolution[i] = value;
+	}
+      }
+      feasData->sumInfeas = sumInfeas;
+      feasData->objectiveValue = objectiveValue();
+      feasData->numInfeas = numInfeas;
+      feasData->numberIterations = numberIterations_;
+    }
+    //if (!feasData->numInfeas) {
+    //printf("Returning as integer\n");
+    //intParam_[ClpMaxNumIteration]=-1;
+    //}
+  }
+#endif
   if (handler_->logLevel() > 7) {
     //if (handler_->detail(CLP_SIMPLEX_HOUSE2,messages_)<100) {
     handler_->message(CLP_SIMPLEX_HOUSE2, messages_)
@@ -5568,6 +5649,9 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
 { 
   //double savedPivotTolerance = factorization_->pivotTolerance();
   int saveQuadraticActivated = 0;
+  // If in Cbc may want to know if dual then primal
+  if (specialOptions_&0x01000000)
+    specialOptions_ &= ~0x02000000;
   if (objective_) {
     saveQuadraticActivated = objective_->activated();
     objective_->setActivated(0);
@@ -5731,9 +5815,12 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
     baseIteration_ = numberIterations_;
     // Say second call
     moreSpecialOptions_ |= 256;
-    if ((matrix_->generalExpanded(this, 4, dummy) & 1) != 0)
+    if ((matrix_->generalExpanded(this, 4, dummy) & 1) != 0) {
+      // say did both
+      if (specialOptions_&0x01000000)
+	specialOptions_ |= 0x02000000;
       returnCode = static_cast< ClpSimplexPrimal * >(this)->primal(1, startFinishOptions);
-    else
+    } else
       returnCode = static_cast< ClpSimplexDual * >(this)->dual(0, startFinishOptions);
     // Say not second call
     moreSpecialOptions_ &= ~256;
@@ -5937,6 +6024,23 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
         secondaryStatus_ = 3;
       else if (secondaryStatus_ == 2)
         secondaryStatus_ = 4;
+    }
+    // May be perturbed
+    if (perturbation_ == 101 || numberChanged_) {
+      numberChanged_ = 0; // Number of variables with changed costs
+      perturbation_ = 102; // stop any perturbations
+      //double changeCost;
+      //changeBounds(1,NULL,changeCost);
+      createRim4(false);
+      // make sure duals are current
+      computeDuals(NULL);
+      checkDualSolution();
+      progress_.modifyObjective(-COIN_DBL_MAX);
+      if (numberDualInfeasibilities_) {
+	problemStatus_ = 10; // was -3;
+      } else {
+	computeObjectiveValue(true);
+      }
     }
     // see if cutoff reached
     double limit = 0.0;
@@ -11944,6 +12048,8 @@ int ClpSimplex::fathom(void *stuff)
         double change = bestObjective - nodes[depth - 1]->objectiveValue();
         if (change > 1.0e10)
           change = 10.0 * sumChanges / (1.0 + numberChanges);
+	//else
+	change = std::max(change,std::max(1.0e0,fabs(nodes[depth-1]->objectiveValue()*0.1)));
         info->update(way, sequence, change, false);
       }
     } else if (problemStatus_ != 0) {
