@@ -6025,9 +6025,8 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
       else if (secondaryStatus_ == 2)
         secondaryStatus_ = 4;
     }
-#if 0
     // May be perturbed
-    if (perturbation_ == 101 || numberChanged_) {
+    if (startFinishOptions==7&&(perturbation_ == 101 || numberChanged_)) {
       numberChanged_ = 0; // Number of variables with changed costs
       perturbation_ = 102; // stop any perturbations
       //double changeCost;
@@ -6043,7 +6042,6 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
 	computeObjectiveValue(true);
       }
     }
-#endif
     // see if cutoff reached
     double limit = 0.0;
     getDblParam(ClpDualObjectiveLimit, limit);
