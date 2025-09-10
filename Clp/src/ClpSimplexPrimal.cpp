@@ -216,7 +216,6 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
 
   algorithm_ = +1;
   moreSpecialOptions_ &= ~16; // clear check replaceColumn accuracy
-  int numberInverts=0;int lastInvertIteration=-1;
   // save data
   ClpDataSave data = saveData();
   if (problemStatus_ == 10 && sumPrimalInfeasibilities_ == -123456789.0) {
@@ -361,16 +360,6 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
           //lastSprintIteration=numberIterations_;
           COIN_DETAIL_PRINT(printf("End small model\n"));
         }
-      }
-      if (numberIterations_>lastInvertIteration) {
-	lastInvertIteration=numberIterations_;
-	numberInverts=0;
-      } else {
-	numberInverts++;
-	if (numberInverts>5) {
-	  //printf("WHAT\n");
-	  cleanStatus();
-	}
       }
       // may factorize, checks if problem finished
       statusOfProblemInPrimal(lastCleaned, factorType, &progress_, true, ifValuesPass, saveModel);
