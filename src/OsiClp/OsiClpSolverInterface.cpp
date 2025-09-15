@@ -1469,6 +1469,18 @@ void OsiClpSolverInterface::resolve()
 #ifdef CBC_STATISTICS
       osi_primal++;
 #endif
+      // check free really superbasic
+      const double * columnLower = modelPtr_->columnLower();
+      const double * columnUpper = modelPtr_->columnUpper();
+      int numberColumns = modelPtr_->numberColumns();
+      unsigned char * status = modelPtr_->statusArray(); 
+      for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
+	if ((status[iColumn]&7)==0) {
+	  // check not just superBasic
+	  if (columnLower[iColumn]>-1.0e100||columnUpper[iColumn]<1.0e100) 
+	    status[iColumn] = 4;
+	}
+      }
       modelPtr_->primal(1, startFinishOptions);
       totalIterations += modelPtr_->numberIterations();
       lastAlgorithm_ = 1; // primal
