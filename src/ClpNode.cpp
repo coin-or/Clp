@@ -115,16 +115,9 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
         CoinMemcpyN(model->djRegion(), numberTotal, dualSolution_); //? has duals as well?
         ClpDualRowSteepest *pivot = dynamic_cast< ClpDualRowSteepest * >(model->dualRowPivot());
         if (pivot) {
-          if (weights_) {
-            //if (weights_->numberRows()==pivot->numberRows()) {
-            weights_->fill(*pivot);
-            //} else {
-            //delete weights_;
-            //weights_ = new ClpDualRowSteepest(*pivot);
-            //}
-          } else {
-            weights_ = new ClpDualRowSteepest(*pivot);
-          }
+	  // safer to redo
+	  delete weights_;
+	  weights_ = new ClpDualRowSteepest(*pivot);
         }
         CoinMemcpyN(model->pivotVariable(), numberRows, pivotVariables_);
       } else {
