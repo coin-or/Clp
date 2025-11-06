@@ -7802,7 +7802,7 @@ bool OsiClpSolverInterface::setHintParam(OsiHintParam key, bool yesNo,
         specialOptions_ = 0;
       }
       // set normal
-      specialOptions_ &= (2047 | 7 * 8192 | 15 * 65536 | 2097152 | 4194304);
+      specialOptions_ &= (4095 | 7 * 8192 | 15 * 65536 | 2097152 | 4194304);
       if (otherInformation != NULL) {
         int *array = static_cast< int * >(otherInformation);
         if (array[0] >= 0 && array[0] <= 2)
