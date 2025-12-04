@@ -12030,7 +12030,20 @@ int ClpSimplex::fathom(void *stuff)
         break;
       }
     }
-    if (problemStatus_ == 1 || (problemStatus_ == 0 && objectiveValue() * optimizationDirection_ > bestObjective)) {
+    bool isCutoff = (problemStatus_ == 0 && objectiveValue() * optimizationDirection_ > bestObjective);
+    if (problemStatus_ || isCutoff) {
+      if (problemStatus_ != 1 && !isCutoff) {
+	//writeMps("/tmp/bad.mps",0,2,1);
+	static int yyyyyy=0;
+	if (!yyyyyy) {
+	  int saveLogLevel = handler_->logLevel();
+	  handler_->setLogLevel(1);
+	  handler_->message(CLP_GENERAL_WARNING,messages_) << "Cbc3009W Possible accuracy problems - node assumed infeasible"
+	    << CoinMessageEol;
+	  handler_->setLogLevel(saveLogLevel);
+	  yyyyyy=1;
+	}
+      }
       backtrack = true;
       if (printing)
         printf("infeasible at depth %d\n", depth);
@@ -12052,8 +12065,6 @@ int ClpSimplex::fathom(void *stuff)
 	change = std::max(change,std::max(1.0e0,fabs(nodes[depth-1]->objectiveValue()*0.1)));
         info->update(way, sequence, change, false);
       }
-    } else if (problemStatus_ != 0) {
-      abort();
     } else {
       // Create node
       ClpNode *node = NULL;
@@ -12579,7 +12590,20 @@ int ClpSimplex::fathomMany(void *stuff)
       fastDual2(info);
       forceFactorization_ = save;
     }
-    if (problemStatus_ == 1 || (problemStatus_ == 0 && objectiveValue() * optimizationDirection_ > bestObjective)) {
+    bool isCutoff = (problemStatus_ == 0 && objectiveValue() * optimizationDirection_ > bestObjective);
+    if (problemStatus_ || isCutoff) {
+      if (problemStatus_ != 1 && !isCutoff) {
+	//writeMps("/tmp/bad.mps",0,2,1);
+	static int yyyyyy=0;
+	if (!yyyyyy) {
+	  int saveLogLevel = handler_->logLevel();
+	  handler_->setLogLevel(1);
+	  handler_->message(CLP_GENERAL_WARNING,messages_) << "Cbc3009W Possible accuracy problems - node assumed infeasible"
+	    << CoinMessageEol;
+	  handler_->setLogLevel(saveLogLevel);
+	  yyyyyy=1;
+	}
+      }
       backtrack = true;
       if (printing)
         printf("infeasible at depth %d\n", depth);
@@ -12627,8 +12651,6 @@ int ClpSimplex::fathomMany(void *stuff)
           change = 10.0 * sumChanges / (1.0 + numberChanges);
         info->update(way, sequence, change, false);
       }
-    } else if (problemStatus_ != 0) {
-      abort();
     } else {
       // Create node
       ClpNode *node;
