@@ -2555,7 +2555,7 @@ int ClpSimplexDual::updateDualsInDual(CoinIndexedVector *rowArray,
             assert(iStatus > 0);
             reducedCost[iSequence] = value;
             //printf("xx %d %.18g\n",iSequence,reducedCost[iSequence]);
-            double mult = multiplier[iStatus - 1];
+            double mult = multiplier[iStatus + 1];
             value *= mult;
             // skip if free
             if (value < -tolerance && iStatus > 0) {
@@ -3659,7 +3659,7 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
     // No free or super basic
     // bestPossible will re recomputed if necessary
 #ifndef COIN_AVX2
-    double multiplier[] = { -1.0, 1.0 };
+    double multiplier[] = { 0.0, 0.0, -1.0, 1.0 };
 #else
     double multiplier[4] = { 0.0, 0.0, -1.0, 1.0 };
 #endif
@@ -3700,7 +3700,7 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
 	//&& getStatus(iSequence + addSequence) != superBasic);
         int iStatus = (statusArray[iSequence] & 3) - 1;
         if (iStatus) {
-          double mult = multiplier[iStatus - 1];
+	  double mult = multiplier[iStatus + 1];
           alpha = work[i] * mult;
           if (alpha > 0.0) {
             oldValue = reducedCost[iSequence] * mult;

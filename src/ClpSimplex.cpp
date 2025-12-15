@@ -12916,9 +12916,9 @@ int ClpSimplex::startFastDual2(ClpNodeStuff *info)
   assert((info->solverOptions_ & 65536) == 0);
   info->solverOptions_ |= 65536;
   if ((specialOptions_ & 65536) == 0) {
-    factorization_->setPersistenceFlag(2);
+    factorization_->setPersistenceFlag(3);
   } else {
-    factorization_->setPersistenceFlag(2);
+    factorization_->setPersistenceFlag(3);
     startPermanentArrays();
   }
   //assert (!lower_);
