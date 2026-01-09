@@ -18,7 +18,7 @@ void ClpLsqr::do_lsqr(CoinDenseVector< double > &b,
      */
 
   //     Initialize.
-  static char term_msg[8][80] = {
+  static const char term_msg[8][80] = {
     "The exact solution is x = 0",
     "The residual Ax - b is small enough, given ATOL and BTOL",
     "The least squares error is small enough, given ATOL",
