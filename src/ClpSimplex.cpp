@@ -6026,7 +6026,9 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
         secondaryStatus_ = 4;
     }
     // May be perturbed
-    if (startFinishOptions==7&&(perturbation_ == 101 || numberChanged_)) {
+    // cost_ can be NULL if problem was trivially solved (empty matrix) without
+    // going through createRim, in which case there is nothing to un-perturb.
+    if (startFinishOptions==7 && cost_ && (perturbation_ == 101 || numberChanged_)) {
       numberChanged_ = 0; // Number of variables with changed costs
       perturbation_ = 102; // stop any perturbations
       //double changeCost;
