@@ -51,6 +51,7 @@ ClpSimplex::ClpSimplex(bool emptyMessages)
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(-COIN_DBL_MAX)
   , moreSpecialOptions_(2)
+  , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(0)
   , primalToleranceToGetOptimal_(-1.0)
@@ -174,6 +175,7 @@ ClpSimplex::ClpSimplex(const ClpModel *rhs,
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(-COIN_DBL_MAX)
   , moreSpecialOptions_(2)
+  , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(0)
   , primalToleranceToGetOptimal_(-1.0)
@@ -334,6 +336,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex *rhs,
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(-COIN_DBL_MAX)
   , moreSpecialOptions_(2)
+  , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(rhs->vectorMode_)
   , primalToleranceToGetOptimal_(-1.0)
@@ -2483,6 +2486,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs, int scalingMode)
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(rhs.bestObjectiveValue_)
   , moreSpecialOptions_(2)
+  , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(rhs.vectorMode_)
   , primalToleranceToGetOptimal_(-1.0)
@@ -2592,6 +2596,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode)
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(-COIN_DBL_MAX)
   , moreSpecialOptions_(2)
+  , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(0)
   , primalToleranceToGetOptimal_(-1.0)
@@ -2719,6 +2724,7 @@ void ClpSimplex::gutsOfCopy(const ClpSimplex &rhs)
   dontFactorizePivots_ = rhs.dontFactorizePivots_;
   int numberRows2 = numberRows_ + numberExtraRows_;
   moreSpecialOptions_ = rhs.moreSpecialOptions_;
+  blasNumThreads_ = rhs.blasNumThreads_;
   if ((whatsChanged_ & 1) != 0) {
     int numberTotal = numberColumns_ + numberRows2;
     if ((specialOptions_ & 65536) != 0 && maximumRows_ >= 0) {

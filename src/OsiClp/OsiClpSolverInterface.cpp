@@ -3,6 +3,11 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 #include <cassert>
+#if CLP_USE_OPENBLAS
+extern "C" {
+void openblas_set_num_threads(int num_threads);
+}
+#endif
 #ifdef CBC_STATISTICS
 extern int osi_crunch;
 extern int osi_primal;
@@ -949,6 +954,12 @@ void OsiClpSolverInterface::resolve()
 #if (OSICLP_TUNING&32)
   // reset random
   modelPtr_->randomNumberGenerator()->setSeed(123456789);
+#endif
+#if CLP_USE_OPENBLAS
+  // If a BLAS thread cap is set (e.g. by CbcModel during parallel B&B),
+  // apply it now to prevent N_cbc x M_blas thread explosion.
+  if (modelPtr_->blasNumThreads() >= 0)
+    openblas_set_num_threads(modelPtr_->blasNumThreads());
 #endif
   if ((stuff_.solverOptions_ & 65536) != 0) {
     modelPtr_->fastDual2(&stuff_);
