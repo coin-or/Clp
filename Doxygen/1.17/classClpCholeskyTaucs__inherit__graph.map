@@ -1,0 +1,4 @@
+<map id="ClpCholeskyTaucs" name="ClpCholeskyTaucs">
+<area shape="rect" id="node1" title="Taucs class for Clp Cholesky factorization." alt="" coords="5,80,136,107"/>
+<area shape="rect" id="node2" href="$classClpCholeskyBase.html" title="Base class for Clp Cholesky factorization Will do better factorization." alt="" coords="9,5,133,32"/>
+</map>

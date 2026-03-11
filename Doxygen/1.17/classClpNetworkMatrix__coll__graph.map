@@ -1,0 +1,4 @@
+<map id="ClpNetworkMatrix" name="ClpNetworkMatrix">
+<area shape="rect" id="node1" title="This implements a simple network matrix as derived from ClpMatrixBase." alt="" coords="5,80,131,107"/>
+<area shape="rect" id="node2" href="$classClpMatrixBase.html" title="Abstract base class for Clp Matrices." alt="" coords="15,5,121,32"/>
+</map>

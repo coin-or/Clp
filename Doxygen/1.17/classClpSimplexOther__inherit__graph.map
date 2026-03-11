@@ -1,0 +1,5 @@
+<map id="ClpSimplexOther" name="ClpSimplexOther">
+<area shape="rect" id="node1" title="This is for Simplex stuff which is neither dual nor primal." alt="" coords="5,155,124,181"/>
+<area shape="rect" id="node2" href="$classClpSimplex.html" title="This solves LPs using the simplex method." alt="" coords="21,80,108,107"/>
+<area shape="rect" id="node3" href="$classClpModel.html" title=" " alt="" coords="27,5,103,32"/>
+</map>
