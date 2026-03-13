@@ -4,17 +4,17 @@
 
 #include "ClpConfig.h"
 
-extern "C" {
 #ifndef CLP_HAS_CHOLMOD
 #ifndef CLP_HAS_AMD
 #error "Need to have AMD or CHOLMOD to compile ClpCholeskyUfl."
 #else
+extern "C" {  // for very old AMD versions, as coming with old versions of Glpk
 #include "amd.h"
+}
 #endif
 #else
 #include "cholmod.h"
 #endif
-}
 
 #include "CoinPragma.hpp"
 #include "ClpCholeskyUfl.hpp"
