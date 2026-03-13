@@ -119,6 +119,9 @@ void ClpParameters::setDefaults(int strategy) {
            code < ClpParam::LASTDIRECTORYPARAM; code++) {
          getParam(code)->setDefault(dfltDirectory_);
       }
+   } else {
+     // change name of time limit from seconds to lpseconds
+     parameters_[ClpParam::TIMELIMIT]->setName("lpsec!onds");
    }
 
    parameters_[ClpParam::BASISFILE]->setDefault(std::string("default.bas"));
