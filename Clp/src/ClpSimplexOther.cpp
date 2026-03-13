@@ -2284,7 +2284,7 @@ int ClpSimplexOther::parametrics(const char *dataFile)
 {
   int returnCode = -2;
   FILE *fp = fopen(dataFile, "r");
-  char line[200];
+  char line[260];
   if (!fp) {
     handler_->message(CLP_UNABLE_OPEN, messages_)
       << dataFile << CoinMessageEol;
@@ -2368,7 +2368,7 @@ int ClpSimplexOther::parametrics(const char *dataFile)
   if (intervalTheta >= endTheta)
     intervalTheta = 0.0;
   if (!good) {
-    char line2[300];
+    char line2[330];
     snprintf(line2, sizeof(line2), "Odd first line %s on file %s?", line, dataFile);
     handler_->message(CLP_GENERAL, messages_)
       << line2 << CoinMessageEol;
