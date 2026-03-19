@@ -2551,7 +2551,8 @@ int ClpSimplexDual::updateDualsInDual(CoinIndexedVector *rowArray,
           int iStatus = (statusArray[iSequence] & 3) - 1;
           if (iStatus) {
             double value = reducedCost[iSequence] - theta * alphaI;
-            assert(iStatus > 0);
+            // iStatus can be -1 (free/superBasic) with stale status from fathomMany;
+            // mult=0 for those so no flip will occur - same handling as row section
             reducedCost[iSequence] = value;
             // printf("xx %d %.18g\n",iSequence,reducedCost[iSequence]);
             double mult = multiplier[iStatus + 1];
@@ -3691,6 +3692,10 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
 #ifndef COIN_AVX2
       for (i = 0; i < number; i++) {
         int iSequence = which[i];
+        // Skip the leaving variable: it has stale non-basic status but is basic;
+        // allowing it into the flip-candidate list would corrupt the iteration.
+        if (iSequence + addSequence == sequenceOut_)
+          continue;
         double alpha;
         double oldValue;
         double value;
@@ -3927,11 +3932,16 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
 
       for (i = 0; i < number; i++) {
         int iSequence = which[i];
+        // The leaving variable must not be processed as a pivot candidate or
+        // have its bounds/status modified: its true bounds are in lowerOut_/upperOut_
+        // and it should not be re-selected as entering. Its non-basic status here
+        // is stale state (e.g. from a prior fathomMany node) and must be ignored.
+        if (iSequence + addSequence == sequenceOut_)
+          continue;
         double alpha;
         double oldValue;
         double value;
         bool keep;
-
         switch (getStatus(iSequence + addSequence)) {
 
         case basic:
@@ -3957,15 +3967,15 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
             }
           }
           if (keep) {
+            int jSequence = iSequence + addSequence;
             // free - choose largest
             if (fabs(alpha) > freePivot) {
               freePivot = fabs(alpha);
-              sequenceIn_ = iSequence + addSequence;
+              sequenceIn_ = jSequence;
               theta_ = oldValue / alpha;
               alpha_ = alpha;
             }
             // give fake bounds if possible
-            int jSequence = iSequence + addSequence;
             if (2.0 * fabs(solution_[jSequence]) < dualBound_) {
               FakeBound bound = getFakeBound(jSequence);
               assert(bound == ClpSimplexDual::noFake);
