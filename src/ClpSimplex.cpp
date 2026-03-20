@@ -12466,6 +12466,14 @@ int ClpSimplex::fathomMany(void *stuff)
     }
     status = problemStatus_;
   }
+  if (problemStatus_ == 3) {
+    // fastDual2 hit an iteration/time limit on the root LP - cannot fathom this subtree
+    stopFastDual2(info);
+    info->nNodes_ = 0;
+    info->numberNodesExplored_ = 0;
+    info->numberIterations_ = numberIterations_;
+    return -1;
+  }
   assert(problemStatus_ == 0 || problemStatus_ == 1); //(static_cast<ClpSimplexDual *> this)->dual(0,0);
   if (problemStatus_ == 10) {
     printf("Cleaning up with primal - need coding without createRim!\n");
