@@ -1084,7 +1084,16 @@ void ClpNonLinearCost::checkInfeasibilities(double oldTolerance)
         }
         lower[iSequence] = lowerValue;
         upper[iSequence] = upperValue;
-        assert(lowerValue <= upperValue);
+        if (lowerValue > upperValue) {
+          // Safety net: inverted bounds should have been caught by startupSolve pre-check,
+          // but handle defensively here to avoid assert failure. Clamp and count infeasibility.
+          // Do NOT re-encode as BELOW_LOWER — that loops on every checkInfeasibilities call.
+          double gap = lowerValue - upperValue;
+          sumInfeasibilities_ += gap;
+          numberInfeasibilities_++;
+          largestInfeasibility_ = CoinMax(largestInfeasibility_, gap);
+          upper[iSequence] = lowerValue;
+        }
       }
       // always do as other things may change
       cost[iSequence] = costValue;

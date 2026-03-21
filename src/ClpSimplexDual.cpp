@@ -310,6 +310,17 @@ int ClpSimplexDual::startupSolve(int ifValuesPass, double *saveDuals, int startF
       }
     }
 
+    // Detect inverted column bounds — these arise when CBC creates a B&B node whose
+    // branching constraints are mutually infeasible (lower > upper). The nonLinearCost
+    // encoding assumes lower <= upper; violated bounds corrupt it and cause assertion
+    // failures in checkInfeasibilities. Return infeasible before any simplex work.
+    for (int i = 0; i < numberColumns_; i++) {
+      if (columnLower_[i] > columnUpper_[i] + 1e-10) {
+        problemStatus_ = 1;
+        return 1;
+      }
+    }
+
     double objectiveChange;
     assert(!numberFake_);
     assert(numberChanged_ == 0);
@@ -3227,6 +3238,9 @@ int ClpSimplexDual::changeBounds(int initialize,
               numberFake_++;
             }
           }
+          if (newLowerValue > newUpperValue) {
+            // Inverted fake bounds: skip (startupSolve pre-check should have caught this).
+          }
           lower_[iSequence] = newLowerValue;
           upper_[iSequence] = newUpperValue;
           if (status == atUpperBound)
@@ -3269,6 +3283,8 @@ int ClpSimplexDual::changeBounds(int initialize,
               value *= multiplier;
             }
             upper_[iSequence] = value;
+            if (lower_[iSequence] > upper_[iSequence])
+              upper_[iSequence] = lower_[iSequence]; // clamp (safety net)
             setFakeBound(iSequence, ClpSimplexDual::noFake);
           }
         }
@@ -3293,6 +3309,8 @@ int ClpSimplexDual::changeBounds(int initialize,
           if (getFakeBound(iSequence) != ClpSimplexDual::noFake) {
             lower_[iSequence] = columnLower_[iSequence];
             upper_[iSequence] = columnUpper_[iSequence];
+            if (lower_[iSequence] > upper_[iSequence])
+              upper_[iSequence] = lower_[iSequence]; // clamp (safety net)
             setFakeBound(iSequence, ClpSimplexDual::noFake);
           }
         }
@@ -3300,6 +3318,8 @@ int ClpSimplexDual::changeBounds(int initialize,
           if (getFakeBound(iSequence + numberColumns_) != ClpSimplexDual::noFake) {
             lower_[iSequence + numberColumns_] = rowLower_[iSequence];
             upper_[iSequence + numberColumns_] = rowUpper_[iSequence];
+            if (lower_[iSequence + numberColumns_] > upper_[iSequence + numberColumns_])
+              upper_[iSequence + numberColumns_] = lower_[iSequence + numberColumns_]; // clamp (safety net)
             setFakeBound(iSequence + numberColumns_, ClpSimplexDual::noFake);
           }
         }
@@ -3312,6 +3332,13 @@ int ClpSimplexDual::changeBounds(int initialize,
         double lowerValue = lower_[iSequence];
         double upperValue = upper_[iSequence];
         double value = solution_[iSequence];
+        // Safety net: if inverted bounds somehow reach here despite the startupSolve
+        // pre-check, clamp and signal infeasibility rather than corrupting nonLinearCost.
+        if (lowerValue > upperValue) {
+          upper_[iSequence] = lowerValue;
+          problemStatus_ = 1;
+          continue;
+        }
         if (lowerValue > -largeValue_ || upperValue < largeValue_) {
           if (true || lowerValue - value > -0.5 * dualBound_ || upperValue - value < 0.5 * dualBound_) {
             if (fabs(lowerValue - value) <= fabs(upperValue - value)) {
