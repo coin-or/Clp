@@ -3685,7 +3685,7 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
   if ((moreSpecialOptions_ & 8) != 0) {
     // No free or super basic
     // bestPossible will re recomputed if necessary
-#ifndef COIN_AVX2
+#if !defined(COIN_AVX2) && !defined(COIN_NEON)
     double multiplier[] = { 0.0, 0.0, -1.0, 1.0 };
 #else
     double multiplier[4] = { 0.0, 0.0, -1.0, 1.0 };
@@ -3716,7 +3716,7 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
         addSequence = 0;
         statusArray = status_;
       }
-#ifndef COIN_AVX2
+#if !defined(COIN_AVX2) && !defined(COIN_NEON)
       for (i = 0; i < number; i++) {
         int iSequence = which[i];
         // Skip the leaving variable: it has stale non-basic status but is basic;
@@ -3750,6 +3750,124 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
         }
       }
       //
+#elif defined(COIN_NEON)
+      // ARM NEON path for dualColumn0() — compile with -DCOIN_NEON to activate.
+      //
+      // Architecture notes (Neoverse N1 / Cortex-A76 class):
+      //   - NEON has no hardware gather instruction (SVE/SVE2 required for that).
+      //     The loads `reducedCost[which[i]]` and `statusArray[which[i]]` remain
+      //     scalar, eliminating most of the potential SIMD speedup.
+      //   - The FMA path (vfmaq_f64) uses a single IEEE rounding, whereas the
+      //     scalar path rounds twice (multiply then add).  This can produce
+      //     different pivot selections on borderline candidates and causes
+      //     cumulative B&B search-path divergence on hard instances.
+      //
+      // Empirical results (30-instance MIPLIB 2017, 7200s, Neoverse N1,
+      // scalar vs NEON+threshold fix, March 2026 — see doc/neon_x_scalar.md):
+      //   - 4 instances solved to optimality: Δtime = +0.2% mean (noise),
+      //     identical iteration and node counts.
+      //   - 20 time-limited instances with incumbents: gap and node counts
+      //     essentially identical; FMA drift changed search path on 1 instance
+      //     (nursesched, NEON found better incumbent — non-deterministic).
+      //   - 0 correctness violations.
+      //   Overall verdict: NEON is NEUTRAL on this micro-architecture.
+      //   The gather bottleneck prevents a real speedup.
+      //
+      // The code is retained for evaluation on future ARM cores that support
+      // SVE/SVE2 gather loads or have wider NEON pipelines where the
+      // arithmetic savings outweigh the gather penalty.
+      //
+      // Small-array threshold: for `number < NEON_DUAL_THRESHOLD`, the per-block
+      // overhead (padding, boundary loop, masked stores) exceeds the arithmetic
+      // savings.  Deep B&B node LPs regularly fall below this threshold, which
+      // was the root cause of regressions before the guard was added.
+#define NEON_DUAL_THRESHOLD 16
+      if (number < NEON_DUAL_THRESHOLD) {
+        for (int j = 0; j < number; j++) {
+          int iSequence = which[j];
+          if (iSequence + addSequence == sequenceOut_)
+            continue;
+          int iStatus = (statusArray[iSequence] & 3) - 1;
+          if (iStatus) {
+            double mult = multiplier[iStatus + 1];
+            double alpha = work[j] * mult;
+            if (alpha > 0.0) {
+              double oldValue = reducedCost[iSequence] * mult;
+              double value = oldValue - tentativeTheta * alpha;
+              if (value < dualT) {
+                value = oldValue - upperTheta * alpha;
+                if (value < dualT && alpha >= acceptablePivot)
+                  upperTheta = (oldValue - dualT) / alpha;
+                spare[numberRemaining] = alpha * mult;
+                index[numberRemaining++] = iSequence + addSequence;
+              }
+            }
+          }
+        }
+      } else {
+        // NEON path: process 2 candidates per iteration using ARM NEON
+        // intrinsics.  FMA, multiply, and comparisons use float64x2_t for 2x
+        // throughput on those arithmetic operations.
+#define CHECK_CHUNK 2
+        int *whichX = const_cast< int * >(which);
+        double *workX = const_cast< double * >(work);
+        int nBlocks = (number + CHECK_CHUNK - 1) / CHECK_CHUNK;
+        int n = nBlocks * CHECK_CHUNK + 1;
+        for (int i = number; i < n; i++) {
+          workX[i] = 0.0;
+          whichX[i] = 0; // alpha will be zero so not chosen
+        }
+        double mult2N[CHECK_CHUNK] __attribute__((aligned(16)));
+        CoinInt64 acceptableY[CHECK_CHUNK] __attribute__((aligned(16)));
+        CoinInt64 goodDj[CHECK_CHUNK + 1] __attribute__((aligned(16)));
+        double oldValueY[CHECK_CHUNK] __attribute__((aligned(16)));
+        double alphaY[CHECK_CHUNK + 1] __attribute__((aligned(16)));
+        memset(acceptableY, 0, sizeof(acceptableY));
+        memset(goodDj, 0, sizeof(goodDj));
+        memset(oldValueY, 0, sizeof(oldValueY));
+        memset(alphaY, 0, sizeof(alphaY));
+        float64x2_t tentative2 = vdupq_n_f64(-tentativeTheta);
+        float64x2_t dualT2 = vdupq_n_f64(dualT);
+        float64x2_t acceptable2 = vdupq_n_f64(acceptablePivot);
+        for (int iBlock = 0; iBlock < nBlocks; iBlock++) {
+          bool store = false;
+          // Scalar multiplier lookup (status gather has no NEON equivalent)
+          for (int i = 0; i < CHECK_CHUNK; i++) {
+            int iStatus = (statusArray[which[i]] & 3);
+            mult2N[i] = multiplier[iStatus];
+          }
+          float64x2_t newAlpha2 = vld1q_f64(mult2N);
+          // Emulated gather: load 2 reduced costs by column index
+          float64x2_t oldDj = (float64x2_t){ reducedCost[which[0]], reducedCost[which[1]] };
+          oldDj = vmulq_f64(oldDj, newAlpha2); // oldDj * mult
+          vst1q_f64(oldValueY, oldDj);
+          float64x2_t work2 = vld1q_f64(work);
+          newAlpha2 = vmulq_f64(newAlpha2, work2); // newAlpha = mult * work
+          // FMA: oldDj + newAlpha * (-tentativeTheta)
+          oldDj = vfmaq_f64(oldDj, newAlpha2, tentative2);
+          uint64x2_t bitsDj = vcltq_f64(oldDj, dualT2);
+          uint64x2_t bitsAcceptable = vcgeq_f64(newAlpha2, acceptable2);
+          vst1q_u64(reinterpret_cast< uint64_t * >(goodDj), bitsDj);
+          vst1q_u64(reinterpret_cast< uint64_t * >(acceptableY), bitsAcceptable);
+          vst1q_f64(alphaY, newAlpha2);
+          for (int i = 0; i < CHECK_CHUNK + 1; i++) {
+            bool newStore = goodDj[i] != 0;
+            if (store) {
+              bool acceptable = acceptableY[i - 1];
+              spare[numberRemaining] = work[i - 1];
+              index[numberRemaining++] = which[i - 1] + addSequence;
+              double value = oldValueY[i - 1] - upperTheta * alphaY[i - 1];
+              if (value < dualT && acceptable)
+                upperTheta = (oldValueY[i - 1] - dualT) / alphaY[i - 1];
+            }
+            store = newStore;
+          }
+          which += CHECK_CHUNK;
+          work += CHECK_CHUNK;
+        }
+#undef CHECK_CHUNK
+      }
+#undef NEON_DUAL_THRESHOLD
 #else
       // #define COIN_AVX2 4 // temp
 #if COIN_AVX2 == 1

@@ -849,7 +849,15 @@ int ClpSimplex::initialSolve(ClpSolve &options)
   int saveMaxIterations = maximumIterations();
   int finalStatus = -1;
   int numberIterations = 0;
-  double time1 = CoinCpuTime();
+  // Select timing basis: wall time when a wall-clock limit is active (the
+  // default in CBC), CPU time otherwise.  All interval and summary messages
+  // produced by this function use the same basis so they stay consistent with
+  // whatever limit is being enforced by hitMaximumIterations().
+  const bool clpUseWallTime = (dblParam_[ClpMaxWallSeconds] >= 0.0);
+  auto clpGetTime = [clpUseWallTime]() -> double {
+    return clpUseWallTime ? CoinGetTimeOfDay() : CoinCpuTime();
+  };
+  double time1 = clpGetTime();
   double timeX = time1;
   double time2 = 0.0;
   ClpMatrixBase *saveMatrix = NULL;
@@ -973,7 +981,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 #ifndef CLP_NO_STD
     }
 #endif
-    time2 = CoinCpuTime();
+    time2 = clpGetTime();
     timePresolve = time2 - timeX;
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Presolve" << timePresolve << time2 - time1
@@ -1709,7 +1717,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       model2->solveBenders(&benders, options);
       //move solution
       method = ClpSolve::notImplemented;
-      time2 = CoinCpuTime();
+      time2 = clpGetTime();
       timeCore = time2 - timeX;
       handler_->message(CLP_INTERVAL_TIMING, messages_)
         << "Crossover" << timeCore << time2 - time1
@@ -1833,7 +1841,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 #ifdef COIN_HAS_VOL
         int returnCode = solveWithVolume(model2, nPasses, saveDoIdiot);
         if (!returnCode) {
-          time2 = CoinCpuTime();
+          time2 = clpGetTime();
           timeIdiot = time2 - timeX;
           handler_->message(CLP_INTERVAL_TIMING, messages_)
             << "Idiot Crash" << timeIdiot << time2 - time1
@@ -1967,7 +1975,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       delete[] saveUpper;
       saveUpper = NULL;
     }
-    time2 = CoinCpuTime();
+    time2 = clpGetTime();
     timeCore = time2 - timeX;
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Dual" << timeCore << time2 - time1
@@ -2121,7 +2129,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         int returnCode = solveWithVolume(model2, nPasses, saveDoIdiot);
         nPasses = 0;
         if (!returnCode) {
-          time2 = CoinCpuTime();
+          time2 = clpGetTime();
           timeIdiot = time2 - timeX;
           handler_->message(CLP_INTERVAL_TIMING, messages_)
             << "Idiot Crash" << timeIdiot << time2 - time1
@@ -2308,7 +2316,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 #endif
         model2->scaling(saveScalingFlag);
 #endif
-        time2 = CoinCpuTime();
+        time2 = clpGetTime();
         timeIdiot = time2 - timeX;
         handler_->message(CLP_INTERVAL_TIMING, messages_)
           << "Idiot Crash" << timeIdiot << time2 - time1
@@ -2440,7 +2448,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       }
     }
 #endif
-    time2 = CoinCpuTime();
+    time2 = clpGetTime();
     timeCore = time2 - timeX;
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Primal" << timeCore << time2 - time1
@@ -3115,7 +3123,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       delete model2;
       model2 = originalModel2;
     }
-    time2 = CoinCpuTime();
+    time2 = clpGetTime();
     timeCore = time2 - timeX;
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Sprint" << timeCore << time2 - time1
@@ -3327,7 +3335,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     CoinMemcpyN(model2->dualColumnSolution(),
       numberColumns, barrier.dualColumnSolution());
 #endif
-    time2 = CoinCpuTime();
+    time2 = clpGetTime();
     timeCore = time2 - timeX;
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Barrier" << timeCore << time2 - time1
@@ -3761,7 +3769,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         model2->primal(1);
     }
     model2->setPerturbation(savePerturbation);
-    time2 = CoinCpuTime();
+    time2 = clpGetTime();
     timeCore = time2 - timeX;
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Crossover" << timeCore << time2 - time1
@@ -3799,7 +3807,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     delete pinfo;
     pinfo = NULL;
     factorization_->areaFactor(model2->factorization()->adjustedAreaFactor());
-    time2 = CoinCpuTime();
+    time2 = clpGetTime();
     timePresolve += time2 - timeX;
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Postsolve" << time2 - timeX << time2 - time1
@@ -3920,7 +3928,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       numberIterations += numberIterations_;
       numberIterations_ = numberIterations;
       finalStatus = status();
-      time2 = CoinCpuTime();
+      time2 = clpGetTime();
       handler_->message(CLP_INTERVAL_TIMING, messages_)
         << "Cleanup" << time2 - timeX << time2 - time1
         << CoinMessageEol;
