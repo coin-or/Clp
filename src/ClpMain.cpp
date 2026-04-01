@@ -29,6 +29,17 @@ static void cilkTest();
 
 //#############################################################################
 
+// Call openblas_set_num_threads when OpenBLAS is explicitly linked.
+// When --no-openblas is used, CLP_USE_OPENBLAS is not defined and no
+// reference to openblas_set_num_threads is emitted.
+#if defined(CLP_USE_OPENBLAS)
+extern "C" {
+void openblas_set_num_threads(int num_threads);
+}
+#endif
+
+//#############################################################################
+
 #if COIN_FACTORIZATION_DENSE_CODE == 1
 // using simple lapack interface
 extern "C" {
@@ -246,8 +257,8 @@ main(int argc, const char *argv[])
 #ifdef CILK_TEST
   cilkTest();
 #endif
-#if CLP_USE_OPENBLAS
-  openblas_set_num_threads(CLP_USE_OPENBLAS);
+#if defined(CLP_USE_OPENBLAS)
+  openblas_set_num_threads(1);
 #endif
 #ifdef LAPACK_TEST
   //void openblas_set_num_threads(int num_threads);

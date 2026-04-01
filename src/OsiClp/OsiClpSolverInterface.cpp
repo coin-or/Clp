@@ -3,7 +3,12 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 #include <cassert>
-#if CLP_USE_OPENBLAS
+// Limit OpenBLAS threads unconditionally via a weak symbol: no-op when
+// OpenBLAS is not linked, takes effect whenever it is — independent of
+// whether -DCLP_USE_OPENBLAS was passed at compile time.
+#if defined(__GNUC__) || defined(__clang__)
+extern "C" void openblas_set_num_threads(int num_threads) __attribute__((weak));
+#elif CLP_USE_OPENBLAS
 extern "C" {
 void openblas_set_num_threads(int num_threads);
 }
@@ -955,7 +960,12 @@ void OsiClpSolverInterface::resolve()
   // reset random
   modelPtr_->randomNumberGenerator()->setSeed(123456789);
 #endif
-#if CLP_USE_OPENBLAS
+#if defined(__GNUC__) || defined(__clang__)
+  // Apply the BLAS thread cap if one was set (e.g. by CbcModel during parallel
+  // B&B) to avoid N_cbc x M_blas thread explosion.
+  if (openblas_set_num_threads && modelPtr_->blasNumThreads() >= 0)
+    openblas_set_num_threads(modelPtr_->blasNumThreads());
+#elif CLP_USE_OPENBLAS
   // If a BLAS thread cap is set (e.g. by CbcModel during parallel B&B),
   // apply it now to prevent N_cbc x M_blas thread explosion.
   if (modelPtr_->blasNumThreads() >= 0)
