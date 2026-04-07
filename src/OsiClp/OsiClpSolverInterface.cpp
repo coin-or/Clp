@@ -8,8 +8,8 @@
 // the symbol via dlsym(RTLD_DEFAULT) on first call: the helper is a no-op
 // when the symbol is absent and fires automatically when OpenBLAS is linked
 // directly or transitively — regardless of compiler or -DCLP_USE_OPENBLAS.
-// On MSVC we fall back to the compile-time CLP_USE_OPENBLAS guard.
-#if !defined(_MSC_VER)
+// On Windows (MSVC and MinGW) we fall back to the compile-time guard.
+#if !defined(_WIN32)
 #include <dlfcn.h>
 namespace {
 inline void set_openblas_threads(int n)
@@ -970,7 +970,7 @@ void OsiClpSolverInterface::resolve()
   // reset random
   modelPtr_->randomNumberGenerator()->setSeed(123456789);
 #endif
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
   // Apply the BLAS thread cap if one was set (e.g. by CbcModel during parallel
   // B&B) to avoid N_cbc × M_blas thread explosion.
   if (modelPtr_->blasNumThreads() >= 0)
