@@ -10,6 +10,7 @@
 #include "CoinParam.hpp"
 #include "CoinPragma.hpp"
 
+#include "ClpOutput.hpp"
 #include "ClpSolver.hpp"
 
 //#define CILK_TEST
@@ -282,16 +283,9 @@ main(int argc, const char *argv[])
 #else
   AbcSimplex model;
 #endif
-  std::cout << "Coin LP version " << CLP_VERSION
-            << ", build " << __DATE__ << std::endl;
-  // Print command line
-  if (argc > 1) {
-    printf("command line - ");
-    for (int i = 0; i < argc; i++)
-      printf("%s ", argv[i]);
-    printf("\n");
-  }
   ClpMain0(model);
+  ClpOutput::printSolverHeader(model.messageHandler(), model.logLevel(),
+    argc, argv);
 
   int returnCode;
   std::deque<std::string> inputQueue;

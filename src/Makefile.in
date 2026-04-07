@@ -245,7 +245,7 @@ am_libClp_la_OBJECTS = ClpCholeskyBase.lo ClpCholeskyDense.lo \
 	ClpInterior.lo ClpLinearObjective.lo ClpMatrixBase.lo \
 	ClpMessage.lo ClpModel.lo ClpNetworkBasis.lo \
 	ClpNetworkMatrix.lo ClpNonLinearCost.lo ClpNode.lo \
-	ClpObjective.lo ClpPackedMatrix.lo ClpParamUtils.lo \
+	ClpObjective.lo ClpOutput.lo ClpPackedMatrix.lo ClpParamUtils.lo \
 	ClpParam.lo CbcOrClpParam.lo ClpParameters.lo \
 	ClpPlusMinusOneMatrix.lo ClpPredictorCorrector.lo ClpPdco.lo \
 	ClpPdcoBase.lo ClpLsqr.lo ClpPresolve.lo \
@@ -320,6 +320,7 @@ am__depfiles_remade = ./$(DEPDIR)/AbcDualRowDantzig.Plo \
 	./$(DEPDIR)/ClpNetworkBasis.Plo \
 	./$(DEPDIR)/ClpNetworkMatrix.Plo ./$(DEPDIR)/ClpNode.Plo \
 	./$(DEPDIR)/ClpNonLinearCost.Plo ./$(DEPDIR)/ClpObjective.Plo \
+	./$(DEPDIR)/ClpOutput.Plo \
 	./$(DEPDIR)/ClpPEDualRowDantzig.Plo \
 	./$(DEPDIR)/ClpPEDualRowSteepest.Plo \
 	./$(DEPDIR)/ClpPEPrimalColumnDantzig.Plo \
@@ -418,6 +419,7 @@ am__includecoin_HEADERS_DIST = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpLinearObjective.hpp ClpMatrixBase.hpp ClpMessage.hpp \
 	ClpModel.hpp ClpModelParameters.hpp ClpNetworkMatrix.hpp \
 	ClpNonLinearCost.hpp ClpNode.hpp ClpObjective.hpp \
+	ClpOutput.hpp \
 	ClpPackedMatrix.hpp ClpParamUtils.hpp ClpPdcoBase.hpp \
 	ClpPlusMinusOneMatrix.hpp ClpParameters.hpp ClpPresolve.hpp \
 	ClpPrimalColumnDantzig.hpp ClpPrimalColumnPivot.hpp \
@@ -658,6 +660,7 @@ libClp_la_SOURCES = ClpConfig.h ClpCholeskyBase.cpp \
 	ClpNetworkBasis.hpp ClpNetworkMatrix.cpp ClpNetworkMatrix.hpp \
 	ClpNonLinearCost.cpp ClpNonLinearCost.hpp ClpNode.cpp \
 	ClpNode.hpp ClpObjective.cpp ClpObjective.hpp \
+	ClpOutput.cpp ClpOutput.hpp \
 	ClpPackedMatrix.cpp ClpPackedMatrix.hpp ClpParamUtils.cpp \
 	ClpParamUtils.hpp ClpParam.cpp ClpParam.hpp CbcOrClpParam.cpp \
 	CbcOrClpParam.hpp ClpParameters.cpp ClpParameters.hpp \
@@ -720,6 +723,7 @@ includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpLinearObjective.hpp ClpMatrixBase.hpp ClpMessage.hpp \
 	ClpModel.hpp ClpModelParameters.hpp ClpNetworkMatrix.hpp \
 	ClpNonLinearCost.hpp ClpNode.hpp ClpObjective.hpp \
+	ClpOutput.hpp \
 	ClpPackedMatrix.hpp ClpParamUtils.hpp ClpPdcoBase.hpp \
 	ClpPlusMinusOneMatrix.hpp ClpParameters.hpp ClpPresolve.hpp \
 	ClpPrimalColumnDantzig.hpp ClpPrimalColumnPivot.hpp \
@@ -930,6 +934,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpNode.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpNonLinearCost.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpObjective.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpOutput.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEDualRowDantzig.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEDualRowSteepest.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ClpPEPrimalColumnDantzig.Plo@am__quote@ # am--include-marker

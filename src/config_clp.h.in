@@ -33,4 +33,7 @@
 /* Release version number of project. */
 #undef CLP_VERSION_RELEASE
 
+/* Git hash at configure time */
+#undef CLP_GIT_HASH
+
 #endif
