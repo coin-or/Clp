@@ -499,8 +499,13 @@ ClpSimplex::ClpSimplex(const ClpSimplex *rhs,
     perturbationArray_ = new double[maximumPerturbationSize_];
     for (i = 0; i < numberColumns; i++) {
       int iColumn = whichColumn[i];
-      perturbationArray_[2 * i] = rhs->perturbationArray_[2 * iColumn];
-      perturbationArray_[2 * i + 1] = rhs->perturbationArray_[2 * iColumn + 1];
+      if (2 * iColumn + 1 < rhs->maximumPerturbationSize_) {
+        perturbationArray_[2 * i] = rhs->perturbationArray_[2 * iColumn];
+        perturbationArray_[2 * i + 1] = rhs->perturbationArray_[2 * iColumn + 1];
+      } else {
+        perturbationArray_[2 * i] = 0.0;
+        perturbationArray_[2 * i + 1] = 0.0;
+      }
     }
   }
 }

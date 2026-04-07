@@ -46,6 +46,7 @@ libClp_la_SOURCES = \
 	ClpNonLinearCost.cpp ClpNonLinearCost.hpp \
 	ClpNode.cpp ClpNode.hpp \
 	ClpObjective.cpp ClpObjective.hpp \
+	ClpOutput.cpp ClpOutput.hpp \
 	ClpPackedMatrix.cpp ClpPackedMatrix.hpp \
 	ClpParamUtils.cpp ClpParamUtils.hpp \
 	ClpParam.cpp ClpParam.hpp \

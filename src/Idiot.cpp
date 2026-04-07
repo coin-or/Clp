@@ -2060,7 +2060,7 @@ void Idiot::crossOver(int mode)
           sum, averageInfeasibility, nFixed);
       }
       const CoinMessages *messages = model_->messagesPointer();
-      model_->messageHandler()->message(CLP_GENERAL, *messages)
+      model_->messageHandler()->message(CLP_GENERAL2, *messages)
         << line
         << CoinMessageEol;
       delete[] rhs;

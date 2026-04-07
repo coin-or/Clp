@@ -72,6 +72,7 @@
 #include "ClpSimplexOther.hpp"
 #include "ClpSolve.hpp"
 #include "ClpSolver.hpp"
+#include "ClpOutput.hpp"
 
 #include "ClpModelParameters.hpp"
 #ifdef ABC_INHERIT
@@ -524,7 +525,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
          printGeneralMessage(model_, message);
          continue;
       } else {
-         printGeneralMessage(model_, message);
+         printGeneralMessage(model_, message, CLP_GENERAL2); // param-change info, suppress at default log level
       }
 #if 0 
       if (paramCode == ClpParam::DUALTOLERANCE)
@@ -558,7 +559,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
          printGeneralMessage(model_, message);
          continue;
       } else {
-         printGeneralMessage(model_, message);
+         printGeneralMessage(model_, message, CLP_GENERAL2); // param-change info, suppress at default log level
       }
       if (paramCode == ClpParam::PRESOLVEPASS)
          preSolve = iValue;
@@ -608,6 +609,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
          printGeneralMessage(model_, message);
          continue;
       }
+      // Note: successful setVal for keyword params currently gives no message, but suppress if it does
       int mode = param->modeVal();
       // TODO this should be part of the push method
       switch (paramCode) {
@@ -1110,8 +1112,47 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
             model2->factorization()->setGoSmallThreshold(smallCode);
           model2->factorization()->goDenseOrSmall(model2->numberRows());
 #endif
+          // Install unified LP+Idiot+Sprint progress handlers.
+          // ClpLpMsgHandler intercepts Idiot/Sprint messages (ext 30/34).
+          // ClpLpEventHandler intercepts endOfIteration for LP rows.
+          // Both share ClpLpPhaseState so all rows appear in one table.
+          // We do NOT setLogLevel(0) — Idiot checks the model log level
+          // before constructing messages; setting it to 0 silences Idiot.
+          // Noisy simplex messages are suppressed by raising their detail
+          // level to 2 in ClpMessage.cpp; ClpLpMsgHandler suppresses the rest.
+          const int lpIterFreq = 0;    // rely on time-based frequency
+          const double lpTimeFreq = 5.0;
+          auto lpState = std::make_shared<ClpLpPhaseState>();
+          lpState->fp       = model_.messageHandler()->filePointer();
+          lpState->utf8     = ClpOutput::useUtf8();
+          lpState->compact  = ClpOutput::useCompact();
+          lpState->logLevel = model2->logLevel();
+          lpState->iterFreq = lpIterFreq;
+          lpState->timeFreq = lpTimeFreq;
+          lpState->origRows = model2->numberRows();
+          lpState->origCols = model2->numberColumns();
+          lpState->startTime = CoinWallclockTime();
+          lpState->lastPrintTime = lpState->startTime;
+          lpState->title = "LP solve";
+          ClpLpMsgHandler   lpMsgH(lpState);
+          ClpLpEventHandler lpEvtH(lpState);
+          bool lpMsgOldDefault;
+          CoinMessageHandler *lpSavedMsg =
+            model2->pushMessageHandler(&lpMsgH, lpMsgOldDefault);
+          model2->passInEventHandler(&lpEvtH);
+          ClpLpEventHandler *lpProg =
+            dynamic_cast<ClpLpEventHandler *>(model2->eventHandler());
+
           try {
             status = model2->initialSolve(solveOptions);
+            // Print final LP status and close the table
+            if (lpProg)
+              lpProg->printFinalStatus();
+            // Restore handlers
+            model2->popMessageHandler(lpSavedMsg, lpMsgOldDefault);
+            ClpEventHandler defaultHandler;
+            model2->passInEventHandler(&defaultHandler);
+            lpProg = nullptr;
             if (usingAmpl) {
               double value = model2->getObjValue() * model2->getObjSense();
               char buf[300];
@@ -1298,6 +1339,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
             }
 #endif
           } catch (CoinError e) {
+            // Clean up progress handler on error
+            if (lpProg) {
+              ClpEventHandler defaultHandler;
+              model2->passInEventHandler(&defaultHandler);
+              lpProg = nullptr;
+            }
             e.print();
             status = -1;
           }
@@ -1534,6 +1581,9 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
            goodModel = true;
            // sets to all slack (not necessary?)
            model_.createStatus();
+           // Print compact problem summary (dimensions + coefficient ranges)
+           ClpOutput::printProblemSummary(model_.messageHandler(), model_,
+             model_.logLevel());
            // Go to canned file if just input file
            if (inputQueue.empty()) {
               // only if ends .mps
