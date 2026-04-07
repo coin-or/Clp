@@ -3,20 +3,25 @@
 // This code is licensed under the terms of the Eclipse Public License (EPL).
 
 #include <cassert>
-// Limit OpenBLAS threads unconditionally via a weak symbol: no-op when
-// OpenBLAS is not linked, takes effect whenever it is — independent of
-// whether -DCLP_USE_OPENBLAS was passed at compile time.
-// On macOS (Mach-O) __attribute__((weak)) on a declaration is a weak
-// *definition* marker, not a weak reference; use weak_import instead so
-// the symbol resolves to NULL when OpenBLAS is absent.
-#if defined(__APPLE__)
-extern "C" void openblas_set_num_threads(int num_threads) __attribute__((weak_import));
-#elif defined(__GNUC__) || defined(__clang__)
-extern "C" void openblas_set_num_threads(int num_threads) __attribute__((weak));
-#elif defined(CLP_USE_OPENBLAS)
-extern "C" {
-void openblas_set_num_threads(int num_threads);
+// Limit OpenBLAS threads whenever OpenBLAS is present, without requiring a
+// link-time dependency on it.  On POSIX systems (Linux, macOS) we look up
+// the symbol via dlsym(RTLD_DEFAULT) on first call: the helper is a no-op
+// when the symbol is absent and fires automatically when OpenBLAS is linked
+// directly or transitively — regardless of compiler or -DCLP_USE_OPENBLAS.
+// On MSVC we fall back to the compile-time CLP_USE_OPENBLAS guard.
+#if !defined(_MSC_VER)
+#include <dlfcn.h>
+namespace {
+inline void set_openblas_threads(int n)
+{
+  typedef void (*fn_t)(int);
+  static fn_t fn = reinterpret_cast<fn_t>(dlsym(RTLD_DEFAULT, "openblas_set_num_threads"));
+  if (fn)
+    fn(n);
 }
+} // namespace
+#elif defined(CLP_USE_OPENBLAS)
+extern "C" void openblas_set_num_threads(int num_threads);
 #endif
 #ifdef CBC_STATISTICS
 extern int osi_crunch;
@@ -965,12 +970,12 @@ void OsiClpSolverInterface::resolve()
   // reset random
   modelPtr_->randomNumberGenerator()->setSeed(123456789);
 #endif
-#if defined(__GNUC__) || defined(__clang__)
+#if !defined(_MSC_VER)
   // Apply the BLAS thread cap if one was set (e.g. by CbcModel during parallel
-  // B&B) to avoid N_cbc x M_blas thread explosion.
-  if (openblas_set_num_threads && modelPtr_->blasNumThreads() >= 0)
-    openblas_set_num_threads(modelPtr_->blasNumThreads());
-#elif CLP_USE_OPENBLAS
+  // B&B) to avoid N_cbc × M_blas thread explosion.
+  if (modelPtr_->blasNumThreads() >= 0)
+    set_openblas_threads(modelPtr_->blasNumThreads());
+#elif defined(CLP_USE_OPENBLAS)
   // If a BLAS thread cap is set (e.g. by CbcModel during parallel B&B),
   // apply it now to prevent N_cbc x M_blas thread explosion.
   if (modelPtr_->blasNumThreads() >= 0)
