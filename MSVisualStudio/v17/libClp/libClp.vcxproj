@@ -203,6 +203,7 @@
     <ClCompile Include="..\..\..\src\ClpNode.cpp" />
     <ClCompile Include="..\..\..\src\ClpNonLinearCost.cpp" />
     <ClCompile Include="..\..\..\src\ClpObjective.cpp" />
+    <ClCompile Include="..\..\..\src\ClpOutput.cpp" />
     <ClCompile Include="..\..\..\src\ClpPackedMatrix.cpp" />
     <ClCompile Include="..\..\..\src\ClpPdco.cpp" />
     <ClCompile Include="..\..\..\src\ClpPdcoBase.cpp" />
@@ -262,6 +263,7 @@
     <ClInclude Include="..\..\..\src\ClpNode.hpp" />
     <ClInclude Include="..\..\..\src\ClpNonLinearCost.hpp" />
     <ClInclude Include="..\..\..\src\ClpObjective.hpp" />
+    <ClInclude Include="..\..\..\src\ClpOutput.hpp" />
     <ClInclude Include="..\..\..\src\ClpPackedMatrix.hpp" />
     <ClInclude Include="..\..\..\src\ClpParam.hpp" />
     <ClInclude Include="..\..\..\src\ClpParameters.hpp" />
