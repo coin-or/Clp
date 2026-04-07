@@ -6,9 +6,14 @@
 // Limit OpenBLAS threads unconditionally via a weak symbol: no-op when
 // OpenBLAS is not linked, takes effect whenever it is — independent of
 // whether -DCLP_USE_OPENBLAS was passed at compile time.
-#if defined(__GNUC__) || defined(__clang__)
+// On macOS (Mach-O) __attribute__((weak)) on a declaration is a weak
+// *definition* marker, not a weak reference; use weak_import instead so
+// the symbol resolves to NULL when OpenBLAS is absent.
+#if defined(__APPLE__)
+extern "C" void openblas_set_num_threads(int num_threads) __attribute__((weak_import));
+#elif defined(__GNUC__) || defined(__clang__)
 extern "C" void openblas_set_num_threads(int num_threads) __attribute__((weak));
-#elif CLP_USE_OPENBLAS
+#elif defined(CLP_USE_OPENBLAS)
 extern "C" {
 void openblas_set_num_threads(int num_threads);
 }
