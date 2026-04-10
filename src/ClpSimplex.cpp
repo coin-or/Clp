@@ -12479,10 +12479,16 @@ int ClpSimplex::fathomMany(void *stuff)
     info->numberIterations_ = numberIterations_;
     return -1;
   }
-  assert(problemStatus_ == 0 || problemStatus_ == 1); //(static_cast<ClpSimplexDual *> this)->dual(0,0);
-  if (problemStatus_ == 10) {
-    printf("Cleaning up with primal - need coding without createRim!\n");
-    abort();
+  if (problemStatus_ != 0 && problemStatus_ != 1) {
+    // unexpected status (e.g. numerical difficulties, status 4, -1, etc.) - cannot fathom
+#ifdef COIN_DEVELOP
+    printf("bad status %d on initial fast dual in fathomMany\n", problemStatus_);
+#endif
+    stopFastDual2(info);
+    info->nNodes_ = 0;
+    info->numberNodesExplored_ = 0;
+    info->numberIterations_ = numberIterations_;
+    return -1;
   }
   int numberNodes = 0;
   int numberIterations = numberIterations_;
