@@ -1198,6 +1198,7 @@ public:
          0x02000000 is in a different branch and bound (or clp dual then primal)
 	 0x04000000 - zero costs!
 	 0x08000000 - get correct duals  on max iterations
+	 0x010000000 - do not check on time
      */
   inline unsigned int specialOptions() const
   {

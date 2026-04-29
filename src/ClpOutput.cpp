@@ -336,7 +336,7 @@ int ClpLpEventHandler::event(Event whichEvent)
 {
   if (whichEvent != endOfIteration || !model_)
     return -1;
-  if (s_->logLevel <= 0 || !s_->fp)
+  if (model_->messageHandler()->logLevel()==0 || s_->logLevel <= 0 || !s_->fp)
     return -1;
 
   const int iter = model_->numberIterations();
