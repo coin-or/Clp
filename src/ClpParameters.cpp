@@ -105,6 +105,118 @@ void ClpParameters::addClpParams() {
      getParam(code)->setParamCode(code);
   }
 
+  // --- Assign semantic topics to every Clp parameter ---
+
+  // Bulk-set: file params → I/O
+  for (int i = ClpParam::FIRSTFILEPARAM + 1; i < ClpParam::LASTFILEPARAM; i++)
+    parameters_[i]->setTopic("I/O");
+
+  // Bulk-set: directory params → I/O
+  for (int i = ClpParam::FIRSTDIRECTORYPARAM + 1; i < ClpParam::LASTDIRECTORYPARAM; i++)
+    parameters_[i]->setTopic("I/O");
+
+  // Action params — Solving
+  for (int code : {ClpParam::DUALSIMPLEX, ClpParam::PRIMALSIMPLEX,
+                    ClpParam::EITHERSIMPLEX, ClpParam::BARRIER,
+                    ClpParam::SOLVE, ClpParam::PARAMETRICS,
+                    ClpParam::NETWORK, ClpParam::PLUSMINUS,
+                    ClpParam::ALLSLACK, ClpParam::TIGHTEN,
+                    ClpParam::REALLY_SCALE, ClpParam::GUESS})
+    parameters_[code]->setTopic("Solving");
+
+  // Action params — I/O
+  for (int code : {ClpParam::IMPORT, ClpParam::EXPORT,
+                    ClpParam::BASISIN, ClpParam::BASISOUT,
+                    ClpParam::READMODEL, ClpParam::READMODEL_OLD,
+                    ClpParam::WRITEMODEL, ClpParam::WRITEMODEL_OLD,
+                    ClpParam::PRINTSOL, ClpParam::WRITESOL,
+                    ClpParam::WRITESOL_OLD, ClpParam::WRITESOLBINARY,
+                    ClpParam::WRITESOLBINARY_OLD,
+                    ClpParam::WRITEGMPLSOL, ClpParam::WRITEGMPLSOL_OLD})
+    parameters_[code]->setTopic("I/O");
+
+  // Action params — other
+  parameters_[ClpParam::STATISTICS]->setTopic("Output");
+  parameters_[ClpParam::REVERSE]->setTopic("Solving");
+  parameters_[ClpParam::MINIMIZE]->setTopic("Solving");
+  parameters_[ClpParam::MAXIMIZE]->setTopic("Solving");
+  parameters_[ClpParam::OUTDUPROWS]->setTopic("Preprocessing");
+
+  // Keyword params — Simplex
+  for (int code : {ClpParam::DUALPIVOT, ClpParam::PRIMALPIVOT,
+                    ClpParam::CRASH, ClpParam::FACTORIZATION})
+    parameters_[code]->setTopic("Simplex");
+
+  // Keyword params — Barrier
+  for (int code : {ClpParam::CHOLESKY, ClpParam::GAMMA,
+                    ClpParam::BARRIERSCALE, ClpParam::CROSSOVER})
+    parameters_[code]->setTopic("Barrier");
+
+  // Keyword params — other
+  parameters_[ClpParam::SCALING]->setTopic("Scaling");
+  parameters_[ClpParam::PRESOLVE]->setTopic("Preprocessing");
+  parameters_[ClpParam::BIASLU]->setTopic("Simplex");
+  parameters_[ClpParam::DIRECTION]->setTopic("Solving");
+  parameters_[ClpParam::INTPRINT]->setTopic("Output");
+  parameters_[ClpParam::COMMANDPRINTLEVEL]->setTopic("Output");
+  parameters_[ClpParam::VECTOR]->setTopic("Solving");
+
+  // Double params — Tolerances
+  for (int code : {ClpParam::DUALTOLERANCE, ClpParam::PRIMALTOLERANCE,
+                    ClpParam::PRESOLVETOLERANCE, ClpParam::ZEROTOLERANCE})
+    parameters_[code]->setTopic("Tolerances");
+
+  // Double params — Simplex
+  for (int code : {ClpParam::DUALBOUND, ClpParam::PRIMALWEIGHT,
+                    ClpParam::PSI})
+    parameters_[code]->setTopic("Simplex");
+
+  // Double params — Scaling
+  for (int code : {ClpParam::OBJSCALE, ClpParam::OBJSCALE2,
+                    ClpParam::RHSSCALE})
+    parameters_[code]->setTopic("Scaling");
+
+  // Double params — other
+  parameters_[ClpParam::TIMELIMIT]->setTopic("Stopping");
+  parameters_[ClpParam::PROGRESS]->setTopic("Output");
+  parameters_[ClpParam::FAKEBOUND]->setTopic("Strategy");
+
+  // Integer params — Simplex
+  for (int code : {ClpParam::MAXFACTOR, ClpParam::MAXITERATION,
+                    ClpParam::SPRINT, ClpParam::IDIOT,
+                    ClpParam::SLPVALUE, ClpParam::PERTVALUE,
+                    ClpParam::SPECIALOPTIONS, ClpParam::MORESPECIALOPTIONS,
+                    ClpParam::SUBSTITUTION, ClpParam::DENSE,
+                    ClpParam::SMALLFACT})
+    parameters_[code]->setTopic("Simplex");
+
+  // Integer params — Preprocessing
+  for (int code : {ClpParam::PRESOLVEPASS, ClpParam::DUALIZE,
+                    ClpParam::DECOMPOSE_BLOCKS, ClpParam::CPP})
+    parameters_[code]->setTopic("Preprocessing");
+
+  // Integer params — Output
+  for (int code : {ClpParam::LOGLEVEL, ClpParam::OUTPUTFORMAT,
+                    ClpParam::PRINTOPTIONS, ClpParam::VERBOSE})
+    parameters_[code]->setTopic("Output");
+
+  // Integer params — other
+  parameters_[ClpParam::RANDOMSEED]->setTopic("Solving");
+  parameters_[ClpParam::THREADS]->setTopic("Parallelism");
+
+  // Bool params
+  for (int code : {ClpParam::AUTOSCALE, ClpParam::SPARSEFACTOR,
+                    ClpParam::PFI, ClpParam::KKT})
+    parameters_[code]->setTopic("Simplex");
+  parameters_[ClpParam::PERTURBATION]->setTopic("Simplex");
+  parameters_[ClpParam::KEEPNAMES]->setTopic("I/O");
+  parameters_[ClpParam::ERRORSALLOWED]->setTopic("I/O");
+  parameters_[ClpParam::MESSAGES]->setTopic("Output");
+  parameters_[ClpParam::BUFFER_MODE]->setTopic("Output");
+
+  // String params
+  parameters_[ClpParam::PRINTMASK]->setTopic("Output");
+
   return;
 }
 
