@@ -1,0 +1,45 @@
+# ref: https://github.com/docker-library/official-images
+name: amd64 Docker
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  docker:
+    strategy:
+      matrix:
+        distro: [
+          almalinux,
+          alpine,
+          archlinux,
+          debian,
+          fedora,
+          opensuse,
+          rockylinux,
+          ubuntu
+        ]
+      fail-fast: false
+    name: amd64 • ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check docker
+      run: |
+        docker info
+        docker buildx ls
+    - name: Build env image
+      run: make --directory=ci amd64_${{ matrix.distro }}_env
+    - name: Build devel project
+      run: make --directory=ci amd64_${{ matrix.distro }}_devel
+    - name: Build project
+      run: make --directory=ci amd64_${{ matrix.distro }}_build
+    - name: Test project
+      run: make --directory=ci amd64_${{ matrix.distro }}_test
+
+    - name: Build install env image
+      run: make --directory=ci amd64_${{ matrix.distro }}_install_env
+    - name: Build install devel project
+      run: make --directory=ci amd64_${{ matrix.distro }}_install_devel
+    - name: Build install project
+      run: make --directory=ci amd64_${{ matrix.distro }}_install_build
+    - name: Test install project
+      run: make --directory=ci amd64_${{ matrix.distro }}_install_test
