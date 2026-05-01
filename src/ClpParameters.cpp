@@ -140,7 +140,7 @@ void ClpParameters::addClpParams() {
   parameters_[ClpParam::REVERSE]->setTopic("Solving");
   parameters_[ClpParam::MINIMIZE]->setTopic("Solving");
   parameters_[ClpParam::MAXIMIZE]->setTopic("Solving");
-  parameters_[ClpParam::OUTDUPROWS]->setTopic("Preprocessing");
+  parameters_[ClpParam::OUTDUPROWS]->setTopic("LP Presolve");
 
   // Keyword params — Simplex
   for (int code : {ClpParam::DUALPIVOT, ClpParam::PRIMALPIVOT,
@@ -154,7 +154,7 @@ void ClpParameters::addClpParams() {
 
   // Keyword params — other
   parameters_[ClpParam::SCALING]->setTopic("Scaling");
-  parameters_[ClpParam::PRESOLVE]->setTopic("Preprocessing");
+  parameters_[ClpParam::PRESOLVE]->setTopic("LP Presolve");
   parameters_[ClpParam::BIASLU]->setTopic("Simplex");
   parameters_[ClpParam::DIRECTION]->setTopic("Solving");
   parameters_[ClpParam::INTPRINT]->setTopic("Output");
@@ -163,8 +163,9 @@ void ClpParameters::addClpParams() {
 
   // Double params — Tolerances
   for (int code : {ClpParam::DUALTOLERANCE, ClpParam::PRIMALTOLERANCE,
-                    ClpParam::PRESOLVETOLERANCE, ClpParam::ZEROTOLERANCE})
+                    ClpParam::ZEROTOLERANCE})
     parameters_[code]->setTopic("Tolerances");
+  parameters_[ClpParam::PRESOLVETOLERANCE]->setTopic("LP Presolve");
 
   // Double params — Simplex
   for (int code : {ClpParam::DUALBOUND, ClpParam::PRIMALWEIGHT,
@@ -186,14 +187,18 @@ void ClpParameters::addClpParams() {
                     ClpParam::SPRINT, ClpParam::IDIOT,
                     ClpParam::SLPVALUE, ClpParam::PERTVALUE,
                     ClpParam::SPECIALOPTIONS, ClpParam::MORESPECIALOPTIONS,
-                    ClpParam::SUBSTITUTION, ClpParam::DENSE,
+                    ClpParam::DENSE,
                     ClpParam::SMALLFACT})
     parameters_[code]->setTopic("Simplex");
+  parameters_[ClpParam::SUBSTITUTION]->setTopic("LP Presolve");
 
-  // Integer params — Preprocessing
-  for (int code : {ClpParam::PRESOLVEPASS, ClpParam::DUALIZE,
-                    ClpParam::DECOMPOSE_BLOCKS, ClpParam::CPP})
-    parameters_[code]->setTopic("Preprocessing");
+  // Integer params — LP Presolve
+  parameters_[ClpParam::PRESOLVEPASS]->setTopic("LP Presolve");
+
+  // Integer params — Solving (model transformations)
+  for (int code : {ClpParam::DUALIZE, ClpParam::DECOMPOSE_BLOCKS})
+    parameters_[code]->setTopic("Solving");
+  parameters_[ClpParam::CPP]->setTopic("Output");
 
   // Integer params — Output
   for (int code : {ClpParam::LOGLEVEL, ClpParam::OUTPUTFORMAT,
