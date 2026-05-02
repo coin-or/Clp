@@ -391,18 +391,64 @@ void ClpLpEventHandler::printFinalStatus(int numInts, int numFrac)
   if (s_->logLevel <= 0 || !s_->fp)
     return;
 
-  // Flush any unshown last Idiot/Sprint row that didn't get a chance to print
-  // (e.g. Idiot-only run where no LP iterations fired).
+  const bool u8 = s_->utf8;
+  const double elapsed = CoinWallclockTime() - s_->startTime;
+  const std::string tStr = fmtTime(elapsed);
+
+  // If no intermediate output was ever produced (e.g., LP solved entirely by
+  // presolve with 0 simplex iterations), print a compact single-line summary
+  // without opening the full iteration table.
+  if (!s_->headerPrinted) {
+    flushPendingIdiotSprint();
+    if (!model_)
+      return;
+    const char *baseStatus = "Unknown";
+    const int st = model_->status();
+    const int ss = model_->secondaryStatus();
+    if (st == 0)
+      baseStatus = "Optimal";
+    else if (st == 1) {
+      if (ss == 4)
+        baseStatus = "Iteration limit";
+      else if (ss == 9)
+        baseStatus = "Time limit";
+      else
+        baseStatus = "Infeasible";
+    } else if (st == 2)
+      baseStatus = "Unbounded";
+    else if (st == 3)
+      baseStatus = "Stopped";
+    else if (st == 4)
+      baseStatus = "Numerical difficulties";
+    else if (st == 5)
+      baseStatus = "Stopped by event";
+    const std::string statusStr = (numInts > 0 ? "LP " : "") + std::string(baseStatus);
+    char summary[512];
+    if (numInts > 0 && numFrac >= 0) {
+      const double pct = (numInts > 0) ? 100.0 * numFrac / numInts : 0.0;
+      std::snprintf(summary, sizeof(summary),
+        "%s%sFrac: %d/%d (%.1f%%)   Obj: %g   Iters: 0   Time: %ss",
+        statusStr.c_str(), CoinTable::dashSep(u8),
+        numFrac, numInts, pct, model_->objectiveValue(), tStr.c_str());
+    } else {
+      std::snprintf(summary, sizeof(summary),
+        "%s%sObj: %g   Iters: 0   Time: %ss",
+        statusStr.c_str(), CoinTable::dashSep(u8),
+        model_->objectiveValue(), tStr.c_str());
+    }
+    if (!s_->title.empty())
+      fprintf(s_->fp, "\n%s\n", CoinTable::phaseStart(s_->title, u8).c_str());
+    fprintf(s_->fp, "%s\n", CoinTable::phaseEnd(summary, u8).c_str());
+    fflush(s_->fp);
+    return;
+  }
+
+  // Intermediate output was printed — flush any unshown Idiot/Sprint row,
+  // print the final LP row if it was skipped, then close the table.
   flushPendingIdiotSprint();
 
-  if (!s_->headerPrinted)
-    return; // nothing was printed at all
-
-  const bool u8 = s_->utf8;
   const CoinTable tbl = makeLpTable(u8, s_->compact);
-  const double elapsed = CoinWallclockTime() - s_->startTime;
 
-  // If LP ran, force-print the final LP row if the last one was skipped.
   if (s_->lpStarted && model_) {
     const int iters = std::max(model_->numberIterations(), s_->maxIterSeen);
     if (s_->lastPrintIter < iters) {
@@ -448,7 +494,6 @@ void ClpLpEventHandler::printFinalStatus(int numInts, int numFrac)
   const int iters = s_->lpStarted
     ? std::max(model_->numberIterations(), s_->maxIterSeen)
     : 0;
-  const std::string tStr = fmtTime(elapsed);
 
   char summary[512];
   if (numInts > 0 && numFrac >= 0) {
