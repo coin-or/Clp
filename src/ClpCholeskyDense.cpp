@@ -97,6 +97,24 @@ ClpCholeskyBase *ClpCholeskyDense::clone() const
 int ClpCholeskyDense::reserveSpace(const ClpCholeskyBase *factor, int numberRows)
 {
   numberRows_ = numberRows;
+  /* Use double arithmetic to detect overflow before converting to int. */
+  double numberBlocksD = static_cast<double>((numberRows_ + BLOCK - 1) >> BLOCKSHIFT);
+  numberBlocksD = numberBlocksD + (numberBlocksD * (numberBlocksD + 1.0)) / 2.0;
+  double sizeFactorD = numberBlocksD * BLOCKSQ;
+#ifdef CHOL_COMPARE
+  sizeFactorD += 95000;
+#endif
+  /* Limit factor size to avoid int overflow and excessively large allocations.
+     Use double arithmetic to compute the size without truncation, then compare
+     against both INT_MAX (integer overflow guard) and a practical memory cap
+     (4 GB for the dense factor array).  Either condition falls back to simplex. */
+  static const double kMaxElements = static_cast<double>(COIN_INT_MAX);
+  static const double kMemCapElements
+    = 4.0 * 1024.0 * 1024.0 * 1024.0 / static_cast<double>(sizeof(longDouble));
+  if (sizeFactorD >= kMaxElements || sizeFactorD >= kMemCapElements) {
+    /* Factor size overflows int or exceeds memory cap — too large for dense Cholesky. */
+    return -1;
+  }
   int numberBlocks = (numberRows_ + BLOCK - 1) >> BLOCKSHIFT;
   /* allow one stripe extra*/
   numberBlocks = numberBlocks + ((numberBlocks * (numberBlocks + 1)) / 2);
@@ -106,7 +124,14 @@ int ClpCholeskyDense::reserveSpace(const ClpCholeskyBase *factor, int numberRows
   sizeFactor_ += 95000;
 #endif
   if (!factor) {
-    sparseFactor_ = new longDouble[sizeFactor_];
+    bool noMemory = false;
+    try {
+      sparseFactor_ = new longDouble[sizeFactor_];
+    } catch (...) {
+      noMemory = true;
+    }
+    if (noMemory)
+      return -1;
     rowsDropped_ = new char[numberRows_];
     memset(rowsDropped_, 0, numberRows_);
     workDouble_ = new longDouble[numberRows_];
@@ -149,7 +174,9 @@ int ClpCholeskyDense::order(ClpInterior *model)
   } else {
     numberRows = 2 * numberRowsModel + numberColumns;
   }
-  reserveSpace(NULL, numberRows);
+  int rc = reserveSpace(NULL, numberRows);
+  if (rc)
+    return rc;
   rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
   return 0;
 }

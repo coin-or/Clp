@@ -413,6 +413,14 @@ int ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool d
         used[which[j]] = 0;
     }
     delete[] which;
+    // Detect int overflow: sizeFactor_ < 0 means the running sum wrapped past INT_MAX.
+    // Also cap at 4 GB to avoid Linux overcommit OOM SIGSEGV on the allocation below.
+    static const double kMaxElements = static_cast< double >(4LL * 1024 * 1024 * 1024) / sizeof(CoinBigIndex);
+    if (sizeFactor_ < 0 || static_cast< double >(sizeFactor_) >= kMaxElements) {
+      delete[] choleskyStart_;
+      choleskyStart_ = NULL;
+      return -1;
+    }
     // Now we have size - create arrays and fill in
     try {
       choleskyRow_ = new CoinBigIndex[sizeFactor_];
@@ -1864,8 +1872,18 @@ int ClpCholeskyBase::orderAMD()
   permute_ = new CoinBigIndex[numberRows_];
   // Do ordering
   int returnCode = 0;
-  // get full matrix
-  int space = 2 * sizeFactor_ + 10000 + 4 * numberRows_;
+  // get full matrix — compute space safely to avoid int overflow
+  double spaceD = 2.0 * sizeFactor_ + 10000.0 + 4.0 * numberRows_;
+  static const double kMaxSpace = static_cast< double >(COIN_INT_MAX);
+  if (spaceD >= kMaxSpace) {
+    // Too large to allocate — caller (order()) will propagate failure
+    delete[] permuteInverse_;
+    permuteInverse_ = NULL;
+    delete[] permute_;
+    permute_ = NULL;
+    return -1;
+  }
+  int space = static_cast< int >(spaceD);
   CoinBigIndex *temp = new CoinBigIndex[space];
   int *count = new int[numberRows_];
   CoinBigIndex *tempStart = new CoinBigIndex[numberRows_ + 1];
@@ -2202,16 +2220,21 @@ int ClpCholeskyBase::symbolic()
   }
   Astart[numberRows_] = sizeFactor_;
   firstDense_ = numberRows_;
-  symbolic1(Astart, Arow);
-  // Now fill in indices
-  try {
-    // too big
-    choleskyRow_ = new CoinBigIndex[sizeFactor_];
-  } catch (...) {
-    // no memory
+  if (symbolic1(Astart, Arow) < 0) {
+    // fill count overflowed int — treat as out-of-memory
     noMemory = true;
   }
-  double sizeFactor = sizeFactor_;
+  // Now fill in indices
+  if (!noMemory) {
+    try {
+      // too big
+      choleskyRow_ = new CoinBigIndex[sizeFactor_];
+    } catch (...) {
+      // no memory
+      noMemory = true;
+    }
+  }
+  double sizeFactor = (noMemory) ? -1.0 : (double)sizeFactor_;
   if (!noMemory) {
     // Do lower triangular
     sizeFactor_ = 0;
@@ -2427,18 +2450,26 @@ int ClpCholeskyBase::symbolic()
   }
   if (model_->messageHandler()->logLevel() > 0)
     std::cout << sizeFactor << " elements in sparse Cholesky, flop count " << flops << std::endl;
-  try {
-    sparseFactor_ = new longDouble[sizeFactor_];
-#if CLP_LONG_CHOLESKY != 1
-    workDouble_ = new longDouble[numberRows_];
-#else
-    // actually long double
-    workDouble_ = reinterpret_cast< double * >(new CoinWorkDouble[numberRows_]);
-#endif
-    diagonal_ = new longDouble[numberRows_];
-  } catch (...) {
-    // no memory
+  // Guard against Linux overcommit: new[] for a huge array can "succeed" (virtual pages
+  // reserved) but then crash on first access via OOM SIGSEGV that bypasses try/catch.
+  // Cap at 4 GB of longDouble storage (same guard as ClpCholeskyDense::reserveSpace).
+  static const double kMaxSparseElements = static_cast< double >(4LL * 1024 * 1024 * 1024) / sizeof(longDouble);
+  if (!noMemory && static_cast< double >(sizeFactor_) >= kMaxSparseElements)
     noMemory = true;
+  if (!noMemory) {
+    try {
+      sparseFactor_ = new longDouble[sizeFactor_];
+#if CLP_LONG_CHOLESKY != 1
+      workDouble_ = new longDouble[numberRows_];
+#else
+      // actually long double
+      workDouble_ = reinterpret_cast< double * >(new CoinWorkDouble[numberRows_]);
+#endif
+      diagonal_ = new longDouble[numberRows_];
+    } catch (...) {
+      // no memory
+      noMemory = true;
+    }
   }
   if (noMemory) {
     if (model_->messageHandler()->logLevel() > 0)
@@ -2495,9 +2526,17 @@ int ClpCholeskyBase::symbolic1(const int *Astart, const int *Arow)
     }
   }
   sizeFactor_ = 0;
+  double sizeFactorD = 0.0;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int number = choleskyStart_[iRow];
     choleskyStart_[iRow] = sizeFactor_;
+    sizeFactorD += number;
+    if (sizeFactorD > static_cast< double >(COIN_INT_MAX)) {
+      // fill count would overflow int — signal failure
+      sizeFactor_ = -1;
+      choleskyStart_[numberRows_] = -1;
+      return -1;
+    }
     sizeFactor_ += number;
   }
   choleskyStart_[numberRows_] = sizeFactor_;
