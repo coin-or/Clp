@@ -129,6 +129,11 @@ public:
    *  numFrac: fractional integer variables in LP optimal (0 for pure LP). */
   void printFinalStatus(int numInts = 0, int numFrac = 0);
 
+  /// Whether the progress table has already been opened (Idiot/Sprint started)
+  bool tableStarted() const { return s_ && (s_->idiotSeen || s_->sprintSeen || s_->lpStarted); }
+  /// File pointer for output
+  FILE *fp() const { return s_ ? s_->fp : nullptr; }
+
 private:
   std::shared_ptr<ClpLpPhaseState> s_;
 
