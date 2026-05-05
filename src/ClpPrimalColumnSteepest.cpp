@@ -3208,6 +3208,10 @@ void ClpPrimalColumnSteepest::saveWeights(ClpSimplex *model, int mode)
         } else {
           pivotSequence_ = -1;
         }
+        // indices_ now holds pivot variable sequence numbers (not sparse element
+        // indices), so nElements_ must be 0.  mode=2 reads indices_ directly and
+        // does not rely on nElements_, so this is safe.
+        alternateWeights_->setNumElements(0);
         state_ = 1;
       } else {
         // size has changed - clear everything
