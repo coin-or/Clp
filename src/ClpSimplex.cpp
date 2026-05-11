@@ -4267,6 +4267,17 @@ bool ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
   }
   // we need to treat matrix as if each element by rowScaleIn and columnScaleout??
   // maybe we need to move scales to SimplexModel for factorization?
+  // Safety: if rows were added since the last factorization, pivotVariable_ is
+  // too small for the current row count.  Force reallocation so all subsequent
+  // loops (which run up to numberRows2) stay in bounds.
+  if (what == 63 && pivotVariable_ && factorization_
+    && factorization_->numberRows() < numberRows2) {
+    delete[] pivotVariable_;
+    pivotVariable_ = new int[numberRows2 + 1];
+    for (int i = 0; i < numberRows2 + 1; i++)
+      pivotVariable_[i] = -1;
+    keepPivots = false;
+  }
   if ((what == 63 && !pivotVariable_) || (newArrays && !keepPivots)) {
     delete[] pivotVariable_;
     pivotVariable_ = new int[numberRows2 + 1];
