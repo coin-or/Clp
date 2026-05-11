@@ -247,6 +247,7 @@
     <ClInclude Include="..\..\..\src\ClpDynamicExampleMatrix.hpp" />
     <ClInclude Include="..\..\..\src\ClpDynamicMatrix.hpp" />
     <ClInclude Include="..\..\..\src\ClpEventHandler.hpp" />
+    <ClInclude Include="..\..\..\src\ClpAbortHandler.hpp" />
     <ClInclude Include="..\..\..\src\ClpFactorization.hpp" />
     <ClInclude Include="..\..\..\src\ClpGubDynamicMatrix.hpp" />
     <ClInclude Include="..\..\..\src\ClpGubMatrix.hpp" />

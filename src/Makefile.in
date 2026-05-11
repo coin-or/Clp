@@ -413,7 +413,7 @@ am__includecoin_HEADERS_DIST = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpConstraintQuadratic.hpp ClpDualRowDantzig.hpp \
 	ClpDualRowPivot.hpp ClpDualRowSteepest.hpp ClpDummyMatrix.hpp \
 	ClpDynamicExampleMatrix.hpp ClpDynamicMatrix.hpp \
-	ClpEventHandler.hpp ClpFactorization.hpp \
+	ClpEventHandler.hpp ClpAbortHandler.hpp ClpFactorization.hpp \
 	ClpGubDynamicMatrix.hpp ClpGubMatrix.hpp ClpInterior.hpp \
 	ClpLinearObjective.hpp ClpMatrixBase.hpp ClpMessage.hpp \
 	ClpModel.hpp ClpModelParameters.hpp ClpNetworkMatrix.hpp \
@@ -717,7 +717,7 @@ includecoin_HEADERS = Clp_C_Interface.h ClpCholeskyBase.hpp \
 	ClpConstraintQuadratic.hpp ClpDualRowDantzig.hpp \
 	ClpDualRowPivot.hpp ClpDualRowSteepest.hpp ClpDummyMatrix.hpp \
 	ClpDynamicExampleMatrix.hpp ClpDynamicMatrix.hpp \
-	ClpEventHandler.hpp ClpFactorization.hpp \
+	ClpEventHandler.hpp ClpAbortHandler.hpp ClpFactorization.hpp \
 	ClpGubDynamicMatrix.hpp ClpGubMatrix.hpp ClpInterior.hpp \
 	ClpLinearObjective.hpp ClpMatrixBase.hpp ClpMessage.hpp \
 	ClpModel.hpp ClpModelParameters.hpp ClpNetworkMatrix.hpp \

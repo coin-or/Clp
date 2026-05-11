@@ -3,6 +3,9 @@
 /* Library Visibility Attribute */
 #undef CLPLIB_EXPORT
 
+/* Git hash at configure time */
+#undef CLP_GIT_HASH
+
 /* Define to 1, 2, 3, or 4 if Aboca should be built. */
 #undef CLP_HAS_ABC
 
@@ -50,9 +53,6 @@
 
 /* Release version number of project. */
 #undef CLP_VERSION_RELEASE
-
-/* Git hash at configure time */
-#undef CLP_GIT_HASH
 
 /* Define to 1 if your C++ compiler doesn't accept -c and -o together. */
 #undef CXX_NO_MINUS_C_MINUS_O
