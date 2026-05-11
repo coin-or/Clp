@@ -59,6 +59,7 @@ libClp_la_SOURCES = \
 	ClpPdcoBase.cpp ClpPdcoBase.hpp \
 	ClpLsqr.cpp ClpLsqr.hpp \
 	ClpPresolve.cpp ClpPresolve.hpp \
+	ClpRacingSolver.cpp ClpRacingSolver.hpp \
 	ClpPrimalColumnDantzig.cpp ClpPrimalColumnDantzig.hpp \
 	ClpPrimalColumnPivot.cpp ClpPrimalColumnPivot.hpp \
 	ClpPrimalColumnSteepest.cpp ClpPrimalColumnSteepest.hpp \
@@ -214,6 +215,7 @@ includecoin_HEADERS = \
 	ClpPlusMinusOneMatrix.hpp \
 	ClpParameters.hpp \
 	ClpPresolve.hpp \
+	ClpRacingSolver.hpp \
 	ClpPrimalColumnDantzig.hpp \
 	ClpPrimalColumnPivot.hpp \
 	ClpPrimalColumnSteepest.hpp \

@@ -54,6 +54,7 @@ extern int osi_hot;
 #include "OsiRowCut.hpp"
 #include "OsiColCut.hpp"
 #include "ClpPresolve.hpp"
+#include "ClpRacingSolver.hpp"
 #include "CoinLpIO.hpp"
 //#define PRINT_TIME
 #ifdef PRINT_TIME
@@ -70,6 +71,29 @@ static int hiResolveTry = 9999999;
 //#############################################################################
 void OsiClpSolverInterface::initialSolve()
 {
+  // Opportunistic parallel LP racing (root LP only — disables itself after use)
+  if (racingLPThreads_ > 0) {
+    int numThreads = racingLPThreads_;
+    racingLPThreads_ = 0; // disable for subsequent solves
+    ClpSimplex *clp = getModelPtr();
+    // Race on the original model — each config does its own presolve internally
+    ClpRacingSolver racer(clp, numThreads);
+    int winner = racer.solve();
+    if (winner >= 0) {
+      if (clp->logLevel() > 0) {
+        const char *names[] = {"dual", "primal+idiot", "primal+sprint"};
+        char msg[200];
+        snprintf(msg, sizeof(msg),
+          "LP racing: winner=%s time=%.2fs iters=%d",
+          (winner < 3 ? names[winner] : "unknown"),
+          racer.winnerTime(), racer.winnerIterations());
+        clp->messageHandler()->message(0, "", msg, ' ') << CoinMessageEol;
+      }
+      basis_ = getBasis(clp);
+      return;
+    }
+    // All racers failed — fall through to normal initialSolve
+  }
   //#define OSICLP_TUNING 10
   /*
     1 - always resolve not initialSolve
@@ -5234,6 +5258,7 @@ OsiClpSolverInterface::OsiClpSolverInterface(
   }
   saveData_ = rhs.saveData_;
   solveOptions_ = rhs.solveOptions_;
+  racingLPThreads_ = rhs.racingLPThreads_;
   cleanupScaling_ = rhs.cleanupScaling_;
   specialOptions_ = rhs.specialOptions_;
   lastNumberRows_ = rhs.lastNumberRows_;
@@ -5385,6 +5410,7 @@ OsiClpSolverInterface::operator=(const OsiClpSolverInterface &rhs)
     linearObjective_ = modelPtr_->objective();
     saveData_ = rhs.saveData_;
     solveOptions_ = rhs.solveOptions_;
+    racingLPThreads_ = rhs.racingLPThreads_;
     cleanupScaling_ = rhs.cleanupScaling_;
     specialOptions_ = rhs.specialOptions_;
     lastNumberRows_ = rhs.lastNumberRows_;

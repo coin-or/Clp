@@ -424,17 +424,30 @@ void ClpLpEventHandler::printFinalStatus(int numInts, int numFrac)
       baseStatus = "Stopped by event";
     const std::string statusStr = (numInts > 0 ? "LP " : "") + std::string(baseStatus);
     char summary[512];
+    const int iters = model_->numberIterations();
     if (numInts > 0 && numFrac >= 0) {
       const double pct = (numInts > 0) ? 100.0 * numFrac / numInts : 0.0;
-      std::snprintf(summary, sizeof(summary),
-        "%s%sFrac: %d/%d (%.1f%%)   Obj: %g   Iters: 0   Time: %ss",
-        statusStr.c_str(), CoinTable::dashSep(u8),
-        numFrac, numInts, pct, model_->objectiveValue(), tStr.c_str());
+      if (iters > 0)
+        std::snprintf(summary, sizeof(summary),
+          "%s%sFrac: %d/%d (%.1f%%)   Obj: %g   Iters: %d   Time: %ss",
+          statusStr.c_str(), CoinTable::dashSep(u8),
+          numFrac, numInts, pct, model_->objectiveValue(), iters, tStr.c_str());
+      else
+        std::snprintf(summary, sizeof(summary),
+          "%s%sFrac: %d/%d (%.1f%%)   Obj: %g   Time: %ss",
+          statusStr.c_str(), CoinTable::dashSep(u8),
+          numFrac, numInts, pct, model_->objectiveValue(), tStr.c_str());
     } else {
-      std::snprintf(summary, sizeof(summary),
-        "%s%sObj: %g   Iters: 0   Time: %ss",
-        statusStr.c_str(), CoinTable::dashSep(u8),
-        model_->objectiveValue(), tStr.c_str());
+      if (iters > 0)
+        std::snprintf(summary, sizeof(summary),
+          "%s%sObj: %g   Iters: %d   Time: %ss",
+          statusStr.c_str(), CoinTable::dashSep(u8),
+          model_->objectiveValue(), iters, tStr.c_str());
+      else
+        std::snprintf(summary, sizeof(summary),
+          "%s%sObj: %g   Time: %ss",
+          statusStr.c_str(), CoinTable::dashSep(u8),
+          model_->objectiveValue(), tStr.c_str());
     }
     if (!s_->title.empty())
       fprintf(s_->fp, "\n%s\n", CoinTable::phaseStart(s_->title, u8).c_str());

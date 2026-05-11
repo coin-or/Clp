@@ -1162,6 +1162,16 @@ public:
   {
     solveOptions_ = options;
   }
+  /// Enable/disable LP racing for initialSolve (races dual vs primal variants)
+  inline void setRacingLP(int numThreads)
+  {
+    racingLPThreads_ = numThreads;
+  }
+  /// Get racing LP thread count (0 = disabled)
+  inline int racingLP() const
+  {
+    return racingLPThreads_;
+  }
   /** Tighten bounds - lightweight or very lightweight
       0 - normal, 1 lightweight but just integers, 2 lightweight and all
   */
@@ -1484,6 +1494,8 @@ protected:
   mutable ClpDataSave saveData_;
   /// Options for initialSolve
   ClpSolve solveOptions_;
+  /// Number of threads for LP racing (0 = disabled)
+  int racingLPThreads_ = 0;
   /** Scaling option
       When scaling is on it is possible that the scaled problem
       is feasible but the unscaled is not.  Clp returns a secondary

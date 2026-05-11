@@ -126,6 +126,10 @@ AM_CONDITIONAL([COIN_HAS_WSMP],[test $have_wsmp = yes])
 
 AC_COIN_CHK_GNU_READLINE([ClpLib])
 
+# ClpRacingSolver uses std::thread which requires -pthread on Linux
+AC_CHECK_LIB([pthread],[pthread_create],
+  [CLPLIB_LFLAGS="-lpthread $CLPLIB_LFLAGS"])
+
 ##############################################################################
 #                   VPATH links for example input files                      #
 ##############################################################################
