@@ -206,6 +206,7 @@ includecoin_HEADERS = \
 	ClpNonLinearCost.hpp \
 	ClpNode.hpp \
 	ClpObjective.hpp \
+	ClpOutput.hpp \
 	ClpPackedMatrix.hpp \
 	ClpParamUtils.hpp \
 	ClpPdcoBase.hpp \
