@@ -4,25 +4,40 @@
 #
 # Author:  Andreas Waechter           IBM    2006-04-13
 
+noinst_PROGRAMS =
+
+AM_LDFLAGS = $(LT_LDFLAGS)
+
 ########################################################################
 #                         unitTest for OsiClp                          #
 ########################################################################
 
 if COIN_HAS_OSITESTS
 
-noinst_PROGRAMS = osiUnitTest
+noinst_PROGRAMS += osiUnitTest
 
 osiUnitTest_SOURCES = osiUnitTest.cpp OsiClpSolverInterfaceTest.cpp
 
 osiUnitTest_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
 	$(CLPLIB_LFLAGS) $(OSICLPLIB_LFLAGS) $(OSICLPUNITTEST_LFLAGS)
 
-AM_LDFLAGS = $(LT_LDFLAGS)
-
-AM_CPPFLAGS = -I$(srcdir)/../src -I$(srcdir)/../src/OsiClp $(OSICLPUNITTEST_CFLAGS)
+osiUnitTest_CPPFLAGS = -I$(srcdir)/../src -I$(srcdir)/../src/OsiClp $(OSICLPUNITTEST_CFLAGS)
 
 testdepend = osiUnitTest$(EXEEXT)
 endif
+
+########################################################################
+#                      LP Racing unit test                             #
+########################################################################
+
+noinst_PROGRAMS += testRacingLP
+
+testRacingLP_SOURCES = test_racing_lp.cpp
+
+testRacingLP_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
+	$(CLPLIB_LFLAGS) $(OSICLPLIB_LFLAGS)
+
+testRacingLP_CPPFLAGS = -I$(srcdir)/../src -I$(srcdir)/../src/OsiClp $(OSICLPLIB_CFLAGS)
 
 ########################################################################
 #                         unitTest for Clp                             #
@@ -41,11 +56,12 @@ if COIN_HAS_NETLIB
 endif
 
 # We are using the CLP solver executable to do the unit test
-test: ../src/clp$(EXEEXT) $(testdepend)
+test: ../src/clp$(EXEEXT) $(testdepend) testRacingLP$(EXEEXT)
 	../src/clp$(EXEEXT) $(unittestflags) || exit 1
 	if test -e osiUnitTest$(EXEEXT) ; then \
 	  ./osiUnitTest$(EXEEXT) $(osiunittestflags) || exit 1 ; \
 	fi
+	./testRacingLP$(EXEEXT) || exit 1
 
 .PHONY: test
 
