@@ -22734,6 +22734,16 @@ if test $coin_has_osi = yes ; then
 
 fi
 
+# Capture git revision for display in solver header
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking git revision" >&5
+printf %s "checking git revision... " >&6; }
+CLP_GIT_HASH=`cd $srcdir && (git describe --always --dirty 2>/dev/null || echo "unknown")`
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $CLP_GIT_HASH" >&5
+printf "%s\n" "$CLP_GIT_HASH" >&6; }
+
+printf "%s\n" "#define CLP_GIT_HASH \"$CLP_GIT_HASH\"" >>confdefs.h
+
+
 # Finally, we let configure write all the output...
 
   cat >confcache <<\_ACEOF

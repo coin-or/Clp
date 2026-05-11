@@ -193,6 +193,7 @@ includecoin_HEADERS = \
 	ClpDynamicExampleMatrix.hpp \
 	ClpDynamicMatrix.hpp \
 	ClpEventHandler.hpp \
+	ClpAbortHandler.hpp \
 	ClpFactorization.hpp \
 	ClpGubDynamicMatrix.hpp \
 	ClpGubMatrix.hpp \
