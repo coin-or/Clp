@@ -2812,10 +2812,14 @@ bool ClpModel::hitMaximumIterations() const
   bool hitMax = (numberIterations_ >= intParam_[ClpMaxNumIteration]);
   if ((specialOptions_&0x10000000)!=0)
     return hitMax;
-  if (dblParam_[ClpMaxSeconds] >= 0.0 && !hitMax) {
+  if ((dblParam_[ClpMaxSeconds] >= 0.0 &&
+       dblParam_[ClpMaxSeconds]<4.0e7) &&
+      !hitMax) {
     hitMax = (CoinCpuTime() >= dblParam_[ClpMaxSeconds]);
   }
-  if (dblParam_[ClpMaxWallSeconds] >= 0.0 && !hitMax) {
+  if ((dblParam_[ClpMaxWallSeconds] >= 0.0 &&
+       dblParam_[ClpMaxWallSeconds]<4.0e7) &&
+      !hitMax) {
     hitMax = (CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds]);
   }
   return hitMax;
