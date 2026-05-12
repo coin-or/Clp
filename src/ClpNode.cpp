@@ -156,7 +156,14 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
         CoinMemcpyN(model->dualRowSolution(), numberRows, dualSolution_ + numberColumns);
       }
       pivotVariables_ = new int[maximumRows_];
-      if (model->pivotVariable() && model->numberRows() == numberRows) 
+      // Only copy pivotVariables_ when arraysExist==1 (small model with a
+      // freshly-allocated pivotVariable_ from startFastDual2/createRim).
+      // For arraysExist==2 the model passed is info->large_, whose
+      // pivotVariable_ may be stale (rows were added via cuts since it was
+      // last solved), causing a heap-buffer-overflow.  Those nodes are
+      // restored with applyNode(..., 3) which never reads pivotVariables_,
+      // so filling with -1 is safe.
+      if (arraysExist == 1 && model->pivotVariable())
 	CoinMemcpyN(model->pivotVariable(), numberRows, pivotVariables_);
       else
         CoinFillN(pivotVariables_, numberRows, -1);
