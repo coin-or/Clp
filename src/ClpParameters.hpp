@@ -42,6 +42,9 @@ public:
   /*! \brief Destructor */
   ~ClpParameters();
 
+  /*! \brief Assignment operator (deep-copies parameter vector) */
+  ClpParameters &operator=(const ClpParameters &rhs);
+
   /*! \name Enumeration types used for Clp keyword parameters */
   //@{
 

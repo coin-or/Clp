@@ -65,6 +65,24 @@ ClpParameters::~ClpParameters() {
 //###########################################################################
 //###########################################################################
 
+ClpParameters &ClpParameters::operator=(const ClpParameters &rhs)
+{
+  if (this == &rhs)
+    return *this;
+  for (int i = 0; i < (int)parameters_.size(); i++)
+    delete parameters_[i];
+  parameters_.resize(rhs.parameters_.size());
+  for (int i = 0; i < (int)rhs.parameters_.size(); i++)
+    parameters_[i] = rhs.parameters_[i] ? rhs.parameters_[i]->clone() : nullptr;
+  dfltDirectory_ = rhs.dfltDirectory_;
+  model_ = rhs.model_;
+  cbcMode_ = rhs.cbcMode_;
+  return *this;
+}
+
+//###########################################################################
+//###########################################################################
+
 int ClpParameters::matches(std::string field, int &numberMatches) {
   int firstMatch = -1;
   for (int iParam = 0; iParam < (int)parameters_.size(); iParam++) {
