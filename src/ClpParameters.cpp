@@ -62,8 +62,14 @@ ClpParameters::~ClpParameters() {
   }
 }
 
-//###########################################################################
-//###########################################################################
+ClpParameters::ClpParameters(const ClpParameters &rhs)
+  : parameters_(rhs.parameters_.size()), model_(rhs.model_)
+{
+  cbcMode_ = rhs.cbcMode_;
+  for (int i = 0; i < (int)rhs.parameters_.size(); i++)
+    parameters_[i] = rhs.parameters_[i] ? rhs.parameters_[i]->clone() : nullptr;
+  dfltDirectory_ = rhs.dfltDirectory_;
+}
 
 ClpParameters &ClpParameters::operator=(const ClpParameters &rhs)
 {
