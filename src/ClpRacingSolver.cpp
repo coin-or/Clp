@@ -9,15 +9,19 @@
 #include <memory>
 #include <vector>
 
-// Use POSIX threads directly to avoid pulling GCC's std::thread/std::mutex
-// weak symbols (_M_thread_deps_never_run, _State_impl vtable) into static
-// builds, which can cause at-exit crashes on some glibc/libstdc++ versions.
-#if !defined(_WIN32)
-#include <pthread.h>
-#include <dlfcn.h>
+// On Windows (MSVC) we use std::thread/std::mutex, which is safe there.
+// On Linux/Unix we use POSIX pthreads directly to avoid embedding GCC's
+// std::thread weak symbols (_M_thread_deps_never_run, _State_impl vtable)
+// into static binaries, which can cause at-exit crashes on certain
+// glibc/libstdc++ versions.
+#ifdef _WIN32
+#include <mutex>
+#include <thread>
+#define CLP_RACING_USE_STD_THREAD 1
 #else
-// Windows: pthreads via pthreads-win32 or similar
+#include <dlfcn.h>
 #include <pthread.h>
+#define CLP_RACING_USE_STD_THREAD 0
 #endif
 
 // Restrict OpenBLAS to 1 thread per racing thread to avoid thread explosion.
@@ -48,7 +52,11 @@ inline void racing_set_openblas_threads(int) {}
 namespace {
 
 struct RacingProgressState {
+#if CLP_RACING_USE_STD_THREAD
+  std::mutex mu;
+#else
   pthread_mutex_t mu;
+#endif
   FILE *fp = nullptr;
   double startTime = 0.0;
   double lastPrintTime = 0.0;
@@ -90,12 +98,17 @@ public:
       return -1;
 
     const double now = CoinWallclockTime();
+#if CLP_RACING_USE_STD_THREAD
+    std::lock_guard<std::mutex> lock(state_->mu);
+    if (now - state_->lastPrintTime < state_->timeFreq)
+      return -1;
+#else
     pthread_mutex_lock(&state_->mu);
-
     if (now - state_->lastPrintTime < state_->timeFreq) {
       pthread_mutex_unlock(&state_->mu);
       return -1;
     }
+#endif
 
     if (!state_->headerPrinted) {
       fprintf(state_->fp, "  %-12s %10s %16s %12s %8s\n",
@@ -112,7 +125,9 @@ public:
       elapsed);
     fflush(state_->fp);
     state_->lastPrintTime = now;
+#if !CLP_RACING_USE_STD_THREAD
     pthread_mutex_unlock(&state_->mu);
+#endif
     return -1;
   }
 
@@ -202,7 +217,9 @@ int ClpRacingSolver::solve()
   std::shared_ptr<RacingProgressState> progressState;
   if (model_->logLevel() > 0) {
     progressState = std::make_shared<RacingProgressState>();
+#if !CLP_RACING_USE_STD_THREAD
     pthread_mutex_init(&progressState->mu, nullptr);
+#endif
     progressState->fp = model_->messageHandler()
       ? model_->messageHandler()->filePointer() : stdout;
     progressState->startTime = CoinGetTimeOfDay();
@@ -212,6 +229,29 @@ int ClpRacingSolver::solve()
 
   double startTime = CoinGetTimeOfDay();
 
+#if CLP_RACING_USE_STD_THREAD
+  std::vector<std::thread> threads;
+  threads.reserve(nThreads);
+  for (int i = 0; i < nThreads; i++) {
+    threads.emplace_back([i, &clones, &abortFlag, &winner, &progressState, this, &configLabels]() {
+      ClpSimplex *clone = clones[i];
+      clone->setLogLevel(0);
+      racing_set_openblas_threads(1);
+      const char *label = (i < 3) ? configLabels[i] : "Config";
+      RacingEventHandler handler(progressState, &abortFlag, label);
+      clone->passInEventHandler(&handler);
+      clone->initialSolve(configs_[i]);
+      int st = clone->status();
+      if (st == 0 || st == 1 || st == 2) {
+        int expected = -1;
+        if (winner.compare_exchange_strong(expected, i))
+          abortFlag.store(true, std::memory_order_relaxed);
+      }
+    });
+  }
+  for (auto &t : threads)
+    t.join();
+#else
   // Per-thread argument struct (passed to the pthread callback)
   struct ThreadArg {
     ClpSimplex *clone;
@@ -239,17 +279,10 @@ int ClpRacingSolver::solve()
       ThreadArg *a = static_cast<ThreadArg *>(arg);
       ClpSimplex *clone = a->clone;
       clone->setLogLevel(0);
-
-      // Restrict OpenBLAS to 1 thread to avoid N_racing × M_blas explosion
       racing_set_openblas_threads(1);
-
-      // Install combined abort + progress handler
       RacingEventHandler handler(*a->progressState, a->abortFlag, a->label);
       clone->passInEventHandler(&handler);
-
       clone->initialSolve(*a->config);
-
-      // Definitive result (optimal, infeasible, or unbounded) — stop the race
       int st = clone->status();
       if (st == 0 || st == 1 || st == 2) {
         int expected = -1;
@@ -265,6 +298,7 @@ int ClpRacingSolver::solve()
 
   if (progressState)
     pthread_mutex_destroy(&progressState->mu);
+#endif
 
   double endTime = CoinGetTimeOfDay();
   winnerIndex_ = winner.load();
