@@ -12760,6 +12760,12 @@ int ClpSimplex::fathomMany(void *stuff)
         }
       }
 #endif
+      // Track whether the solution was already saved into nodeInfo[goodNodes]
+      // (Path B). In that case we must NOT call gutsOfConstructor a second
+      // time after doubleCheck(), because doubleCheck() re-solves the LP and
+      // the updated column solution may have marginally fractional integer
+      // values, causing the assert below to fire.
+      bool savedToGoodNodesSlot = false;
       if (depth < info->nDepth_ && !stopAtOnce) {
         node = nodeInfo[useDepth];
         if (node) {
@@ -12778,6 +12784,7 @@ int ClpSimplex::fathomMany(void *stuff)
         if (!node->oddArraysExist())
           node->createArrays(this);
         node->gutsOfConstructor(this, info, 2, depth);
+        savedToGoodNodesSlot = true;
       }
       if (node->sequence() < 0) {
         // solution
@@ -12808,7 +12815,11 @@ int ClpSimplex::fathomMany(void *stuff)
             if (!node->oddArraysExist())
               node->createArrays(info->large_);
             node->gutsOfConstructor(info->large_, info, 2, depth);
-          } else {
+          } else if (!savedToGoodNodesSlot) {
+            // Path A: need to copy the integer solution into the goodNodes slot.
+            // Skip when savedToGoodNodesSlot (Path B): the node was already
+            // saved before doubleCheck(), and re-saving after doubleCheck()
+            // may produce sequence()>=0 due to the LP state having changed.
             if (!node->oddArraysExist())
               node->createArrays(this);
             node->gutsOfConstructor(this, info, 2, depth);
