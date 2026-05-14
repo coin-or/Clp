@@ -233,7 +233,7 @@ int ClpRacingSolver::solve()
   std::vector<std::thread> threads;
   threads.reserve(nThreads);
   for (int i = 0; i < nThreads; i++) {
-    threads.emplace_back([i, &clones, &abortFlag, &winner, &progressState, this, &configLabels]() {
+    threads.emplace_back([i, &clones, &abortFlag, &winner, &progressState, this]() {
       ClpSimplex *clone = clones[i];
       clone->setLogLevel(0);
       racing_set_openblas_threads(1);
