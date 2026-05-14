@@ -7,13 +7,21 @@
 #include "CoinTime.hpp"
 #include <atomic>
 #include <memory>
-#include <mutex>
-#include <thread>
 #include <vector>
+
+// Use POSIX threads directly to avoid pulling GCC's std::thread/std::mutex
+// weak symbols (_M_thread_deps_never_run, _State_impl vtable) into static
+// builds, which can cause at-exit crashes on some glibc/libstdc++ versions.
+#if !defined(_WIN32)
+#include <pthread.h>
+#include <dlfcn.h>
+#else
+// Windows: pthreads via pthreads-win32 or similar
+#include <pthread.h>
+#endif
 
 // Restrict OpenBLAS to 1 thread per racing thread to avoid thread explosion.
 #if !defined(_WIN32)
-#include <dlfcn.h>
 namespace {
 inline void racing_set_openblas_threads(int n)
 {
@@ -40,7 +48,7 @@ inline void racing_set_openblas_threads(int) {}
 namespace {
 
 struct RacingProgressState {
-  std::mutex mu;
+  pthread_mutex_t mu;
   FILE *fp = nullptr;
   double startTime = 0.0;
   double lastPrintTime = 0.0;
@@ -82,10 +90,12 @@ public:
       return -1;
 
     const double now = CoinWallclockTime();
-    std::lock_guard<std::mutex> lock(state_->mu);
+    pthread_mutex_lock(&state_->mu);
 
-    if (now - state_->lastPrintTime < state_->timeFreq)
+    if (now - state_->lastPrintTime < state_->timeFreq) {
+      pthread_mutex_unlock(&state_->mu);
       return -1;
+    }
 
     if (!state_->headerPrinted) {
       fprintf(state_->fp, "  %-12s %10s %16s %12s %8s\n",
@@ -102,6 +112,7 @@ public:
       elapsed);
     fflush(state_->fp);
     state_->lastPrintTime = now;
+    pthread_mutex_unlock(&state_->mu);
     return -1;
   }
 
@@ -191,6 +202,7 @@ int ClpRacingSolver::solve()
   std::shared_ptr<RacingProgressState> progressState;
   if (model_->logLevel() > 0) {
     progressState = std::make_shared<RacingProgressState>();
+    pthread_mutex_init(&progressState->mu, nullptr);
     progressState->fp = model_->messageHandler()
       ? model_->messageHandler()->filePointer() : stdout;
     progressState->startTime = CoinGetTimeOfDay();
@@ -200,37 +212,59 @@ int ClpRacingSolver::solve()
 
   double startTime = CoinGetTimeOfDay();
 
-  std::vector<std::thread> threads;
-  threads.reserve(nThreads);
+  // Per-thread argument struct (passed to the pthread callback)
+  struct ThreadArg {
+    ClpSimplex *clone;
+    ClpSolve *config;
+    std::atomic<bool> *abortFlag;
+    std::atomic<int> *winner;
+    std::shared_ptr<RacingProgressState> *progressState;
+    const char *label;
+    int index;
+  };
+
+  std::vector<ThreadArg> args(nThreads);
+  std::vector<pthread_t> threads(nThreads);
 
   for (int i = 0; i < nThreads; i++) {
-    threads.emplace_back([i, &clones, &abortFlag, &winner, &progressState, this]() {
-      ClpSimplex *clone = clones[i];
+    args[i].clone = clones[i];
+    args[i].config = &configs_[i];
+    args[i].abortFlag = &abortFlag;
+    args[i].winner = &winner;
+    args[i].progressState = &progressState;
+    args[i].label = (i < 3) ? configLabels[i] : "Config";
+    args[i].index = i;
+
+    pthread_create(&threads[i], nullptr, [](void *arg) -> void * {
+      ThreadArg *a = static_cast<ThreadArg *>(arg);
+      ClpSimplex *clone = a->clone;
       clone->setLogLevel(0);
 
       // Restrict OpenBLAS to 1 thread to avoid N_racing × M_blas explosion
       racing_set_openblas_threads(1);
 
       // Install combined abort + progress handler
-      const char *label = (i < 3) ? configLabels[i] : "Config";
-      RacingEventHandler handler(progressState, &abortFlag, label);
+      RacingEventHandler handler(*a->progressState, a->abortFlag, a->label);
       clone->passInEventHandler(&handler);
 
-      clone->initialSolve(configs_[i]);
+      clone->initialSolve(*a->config);
 
       // Definitive result (optimal, infeasible, or unbounded) — stop the race
       int st = clone->status();
       if (st == 0 || st == 1 || st == 2) {
         int expected = -1;
-        if (winner.compare_exchange_strong(expected, i))
-          abortFlag.store(true, std::memory_order_relaxed);
+        if (a->winner->compare_exchange_strong(expected, a->index))
+          a->abortFlag->store(true, std::memory_order_relaxed);
       }
-    });
+      return nullptr;
+    }, &args[i]);
   }
 
-  // Wait for all threads to finish
-  for (auto &t : threads)
-    t.join();
+  for (int i = 0; i < nThreads; i++)
+    pthread_join(threads[i], nullptr);
+
+  if (progressState)
+    pthread_mutex_destroy(&progressState->mu);
 
   double endTime = CoinGetTimeOfDay();
   winnerIndex_ = winner.load();
