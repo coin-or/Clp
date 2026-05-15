@@ -12,13 +12,13 @@ typedef struct {
   const char *message;
 } Clp_message;
 static Clp_message clp_us_english[] = {
-  { CLP_SIMPLEX_FINISHED, 0, 2, "Optimal - objective value %g" },
-  { CLP_SIMPLEX_INFEASIBLE, 1, 2, "Primal infeasible - objective value %g" },
-  { CLP_SIMPLEX_UNBOUNDED, 2, 2, "Dual infeasible - objective value %g" },
-  { CLP_SIMPLEX_STOPPED, 3, 2, "Stopped - objective value %g" },
-  { CLP_SIMPLEX_ERROR, 4, 2, "Stopped due to errors - objective value %g" },
-  { CLP_SIMPLEX_INTERRUPT, 5, 2, "Stopped by event handler - objective value %g" },
-  { CLP_SIMPLEX_STATUS, 6, 2, "%d  Obj %g%? Primal inf %g (%d)%? Dual inf %g (%d)%? w.o. free dual inf (%d)" },
+  { CLP_SIMPLEX_FINISHED, 0, 1, "Optimal - objective value %g" },
+  { CLP_SIMPLEX_INFEASIBLE, 1, 1, "Primal infeasible - objective value %g" },
+  { CLP_SIMPLEX_UNBOUNDED, 2, 1, "Dual infeasible - objective value %g" },
+  { CLP_SIMPLEX_STOPPED, 3, 1, "Stopped - objective value %g" },
+  { CLP_SIMPLEX_ERROR, 4, 1, "Stopped due to errors - objective value %g" },
+  { CLP_SIMPLEX_INTERRUPT, 5, 1, "Stopped by event handler - objective value %g" },
+  { CLP_SIMPLEX_STATUS, 6, 1, "%d  Obj %g%? Primal inf %g (%d)%? Dual inf %g (%d)%? w.o. free dual inf (%d)" },
   { CLP_DUAL_BOUNDS, 25, 3, "Looking optimal checking bounds with %g" },
 #if ABC_NORMAL_DEBUG > 1
   { CLP_SIMPLEX_ACCURACY, 60, 1, "Primal error %g, dual error %g" },
@@ -70,9 +70,9 @@ static Clp_message clp_us_english[] = {
   { CLP_IDIOT_ITERATION, 30, 2, "%d infeas %g, obj %g - mu %g, its %d, %d interior" },
   { CLP_INFEASIBLE, 3003, 1, "Analysis indicates model infeasible or unbounded" },
   { CLP_MATRIX_CHANGE, 31, 2, "Matrix can not be converted into %s" },
-  { CLP_TIMING, 32, 2, "%s objective %.10g - %d iterations time %.2f2%?, Presolve %.2f%?, Idiot %.2f%?" },
+  { CLP_TIMING, 32, 1, "%s objective %.10g - %d iterations time %.2f2%?, Presolve %.2f%?, Idiot %.2f%?" },
   { CLP_INTERVAL_TIMING, 33, 2, "%s took %.2f seconds (total %.2f)" },
-  { CLP_SPRINT, 34, 1, "Pass %d took %d iterations, objective %g, dual infeasibilities %g( %d) - sum artificials %g - %d columns" },
+  { CLP_SPRINT, 34, 2, "Pass %d took %d iterations, objective %g, dual infeasibilities %g( %d) - sum artificials %g - %d columns" },
   { CLP_BARRIER_ITERATION, 35, 1, "%d Primal %g Dual %g Complementarity %g - %d fixed, rank %d" },
   { CLP_BARRIER_OBJECTIVE_GAP, 36, 3, "Feasible - objective gap %g" },
   { CLP_BARRIER_GONE_INFEASIBLE, 37, 2, "Infeasible" },

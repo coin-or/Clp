@@ -631,7 +631,9 @@ int ClpLpMsgHandler::print()
     return 0; // suppress raw output
   }
 
-  // Forward detail-0 critical errors; suppress everything else
+  // Forward detail-0 critical errors; suppress everything else.
+  // Messages with ext 0-6 (simplex status/progress) and ext 32 (timing)
+  // are replaced by the structured LP progress table.
   if (currentMessage().detail() == 0)
     return CoinMessageHandler::print();
   return 0;
