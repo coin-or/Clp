@@ -258,6 +258,8 @@ static void lpPhaseOpenTable(ClpLpPhaseState &s)
   const bool u8 = s.utf8;
   if (!s.title.empty())
     fprintf(s.fp, "\n%s\n\n", CoinTable::phaseStart(s.title, u8).c_str());
+  else
+    fprintf(s.fp, "\n");
   const CoinTable tbl = makeLpTable(s.utf8, s.compact);
   fprintf(s.fp, "%s\n", tbl.sepLine(CoinTable::Top).c_str());
   fprintf(s.fp, "%s\n", tbl.headerLine().c_str());
