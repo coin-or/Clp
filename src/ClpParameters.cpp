@@ -349,6 +349,7 @@ void ClpParameters::setDefaults(int strategy) {
          parameters_[ClpParam::LOGLEVEL]->setDefault(1);
          parameters_[ClpParam::OUTPUTFORMAT]->setDefault(0);
          parameters_[ClpParam::PRINTOPTIONS]->setDefault(0);
+         parameters_[ClpParam::PROGRESSITER]->setDefault(0);
          parameters_[ClpParam::VERBOSE]->setDefault(0);
       }
       break;
@@ -1589,6 +1590,13 @@ void ClpParameters::addClpIntParams() {
       "If this is > 0 then presolve will give more information and branch and "
       "cut will give statistics",
       CoinParam::displayPriorityLow);
+
+  parameters_[ClpParam::PROGRESSITER]->setup(
+      "progressIter!ations",
+      "Print progress every N iterations (0 = time-based only)", 0, COIN_INT_MAX,
+      "When set to a positive value, prints a progress row every N iterations "
+      "instead of (or in addition to) time-based printing. "
+      "Useful for deterministic output that does not depend on machine speed.");
 
   parameters_[ClpParam::VERBOSE]->setup(
       "verbose", "Switches on longer help on single ?", 0, 31,

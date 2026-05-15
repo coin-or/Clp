@@ -192,6 +192,7 @@ public:
       LOGLEVEL,
       OUTPUTFORMAT,
       PRINTOPTIONS,
+      PROGRESSITER,
       VERBOSE,
       LASTINTPARAM,
       

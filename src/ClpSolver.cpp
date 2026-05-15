@@ -1120,8 +1120,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           // before constructing messages; setting it to 0 silences Idiot.
           // Noisy simplex messages are suppressed by raising their detail
           // level to 2 in ClpMessage.cpp; ClpLpMsgHandler suppresses the rest.
-          const int lpIterFreq = 0;    // rely on time-based frequency
-          const double lpTimeFreq = 5.0;
+          const int lpIterFreq = parameters[ClpParam::PROGRESSITER]->intVal();
+          const double lpTimeFreq = model2->getMinIntervalProgressUpdate();
           auto lpState = std::make_shared<ClpLpPhaseState>();
           lpState->fp       = model_.messageHandler()->filePointer();
           lpState->utf8     = ClpOutput::useUtf8();
