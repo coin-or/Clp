@@ -2021,6 +2021,21 @@ protected:
 
   /// last time when status was updated
   double lastStatusUpdate_;
+
+public:
+  /// @name Presolve statistics (populated by initialSolve with ClpSolve)
+  //@{
+  /// Time spent in CLP presolve (seconds), or 0 if presolve was off.
+  double presolveTime() const { return presolveTime_; }
+  /// Number of rows after presolve (-1 if presolve was off).
+  int presolveRows() const { return presolveRows_; }
+  /// Number of columns after presolve (-1 if presolve was off).
+  int presolveCols() const { return presolveCols_; }
+  //@}
+protected:
+  double presolveTime_ = 0.0;
+  int presolveRows_ = -1;
+  int presolveCols_ = -1;
 };
 //#############################################################################
 /** A function that tests the methods in the ClpSimplex class. The

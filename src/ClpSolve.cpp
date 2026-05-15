@@ -843,6 +843,9 @@ ClpSimplex::dealWithAbc(int solveType, int startUp,
  */
 int ClpSimplex::initialSolve(ClpSolve &options)
 {
+  presolveTime_ = 0.0;
+  presolveRows_ = -1;
+  presolveCols_ = -1;
   ClpSolve::SolveType method = options.getSolveType();
   //ClpSolve::SolveType originalMethod=method;
   ClpSolve::PresolveType presolve = options.getPresolveType();
@@ -983,6 +986,11 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 #endif
     time2 = clpGetTime();
     timePresolve = time2 - timeX;
+    presolveTime_ = timePresolve;
+    if (model2 && model2 != this) {
+      presolveRows_ = model2->numberRows();
+      presolveCols_ = model2->numberColumns();
+    }
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Presolve" << timePresolve << time2 - time1
       << CoinMessageEol;
