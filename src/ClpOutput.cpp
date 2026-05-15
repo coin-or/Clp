@@ -212,8 +212,9 @@ int ClpProgressEventHandler::event(Event whichEvent)
     if (fp) {
       const bool u8 = ClpOutput::useUtf8();
       const CoinTable tbl = makeLpTable(u8, ClpOutput::useCompact());
-      const std::string label = u8 ? "\xe2\x94\x80\xe2\x94\x80 restart " : "-- restart ";
-      fprintf(fp, "%s\n", tbl.markerRow(label, 2).c_str());
+      const int w = tbl.totalWidth();
+      const std::string rule = CoinTable::sectionRule("restart", u8, w, w / 3);
+      fprintf(fp, "  %s\n", rule.c_str());
       fflush(fp);
     }
     shared_->lastPrintIter = -1; // force immediate row print
@@ -364,8 +365,9 @@ int ClpLpEventHandler::event(Event whichEvent)
   const bool isRestart = (s_->lastPrintIter > 0 && iter < s_->lastPrintIter - 50);
   if (isRestart) {
     const CoinTable tbl = makeLpTable(s_->utf8, s_->compact);
-    const std::string label = s_->utf8 ? "\xe2\x94\x80\xe2\x94\x80 restart " : "-- restart ";
-    fprintf(s_->fp, "%s\n", tbl.markerRow(label, 2).c_str());
+    const int w = tbl.totalWidth();
+    const std::string rule = CoinTable::sectionRule("restart", s_->utf8, w, w / 3);
+    fprintf(s_->fp, "  %s\n", rule.c_str());
     fflush(s_->fp);
     s_->lastPrintIter = -1;
     s_->lastPrintTime = now;
