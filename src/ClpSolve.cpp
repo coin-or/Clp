@@ -990,6 +990,12 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     if (model2 && model2 != this) {
       presolveRows_ = model2->numberRows();
       presolveCols_ = model2->numberColumns();
+      // Store on model2 so event handler can report presolve reduction.
+      // presolveRows_/Cols_ on model2 stores the presolved dimensions;
+      // the event handler compares with origRows/origCols from state.
+      model2->presolveTime_ = timePresolve;
+      model2->presolveRows_ = model2->numberRows();
+      model2->presolveCols_ = model2->numberColumns();
     }
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Presolve" << timePresolve << time2 - time1

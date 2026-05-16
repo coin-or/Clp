@@ -190,12 +190,13 @@ int ClpProgressEventHandler::event(Event whichEvent)
   if (!shared_->headerPrinted) {
     printHeader();
     shared_->headerPrinted = true;
+    const int iter = model_->numberIterations();
     const double elapsed = CoinWallclockTime() - shared_->startTime;
-    printRow(0, model_->objectiveValue(),
+    printRow(iter, model_->objectiveValue(),
       model_->sumPrimalInfeasibilities(),
       model_->sumDualInfeasibilities(), elapsed, model_->algorithm());
     shared_->lastPrintTime = elapsed;
-    shared_->lastPrintIter = 0;
+    shared_->lastPrintIter = iter;
     return -1;
   }
 
@@ -347,16 +348,25 @@ int ClpLpEventHandler::event(Event whichEvent)
   const double elapsed = now - s_->startTime;
 
   if (!s_->lpStarted) {
-    // First LP iteration: flush any unshown last Idiot/Sprint row first,
-    // open the table if it wasn't already opened by Idiot/Sprint, print iter-0 row.
+    // First LP endOfIteration event: flush any unshown last Idiot/Sprint row,
+    // open the table if it wasn't already opened by Idiot/Sprint.
     s_->lpStarted = true;
     flushPendingIdiotSprint();
+    // Print presolve stats before the table (available from model)
+    if (model_->presolveRows() >= 0 && s_->origRows > 0) {
+      fprintf(s_->fp, "  CLP presolve: %d rows, %d cols → %d rows, %d cols (%.2fs)\n",
+        s_->origRows, s_->origCols,
+        model_->presolveRows(), model_->presolveCols(),
+        model_->presolveTime());
+    }
     openTable();
-    printLpRow(0, model_->objectiveValue(),
+    // Print the first row with actual iteration count (not fake 0,
+    // since this event fires after the first iteration has completed).
+    printLpRow(iter, model_->objectiveValue(),
       model_->sumPrimalInfeasibilities(),
       model_->sumDualInfeasibilities(), elapsed);
     s_->lastPrintTime = now;
-    s_->lastPrintIter = 0;
+    s_->lastPrintIter = iter;
     return -1;
   }
 
