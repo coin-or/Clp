@@ -574,6 +574,16 @@ int ClpLpMsgHandler::print()
 
   const int ext = currentMessage().externalNumber();
 
+  // CLP_SIMPLEX_PERTURB (ext 14): one-time diagnostic, print before table
+  if (ext == 14) {
+    // Parse: "Perturbing problem by X% of Y - largest nonzero change Z (W%) - largest zero change V"
+    double pct = 0.0, base = 0.0;
+    if (sscanf(messageBuffer(), "%*s Perturbing problem by %lf%% of %lf", &pct, &base) >= 2) {
+      fprintf(s_->fp, "  Perturbation: %.4g%% of %.6g\n", pct, base);
+    }
+    return 0;
+  }
+
   // CLP_IDIOT_ITERATION (ext 30):
   //   format: "%d infeas %g, obj %g - mu %g, its %d, %d interior"
   if (ext == 30) {
