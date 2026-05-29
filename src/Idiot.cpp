@@ -923,9 +923,15 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
           iteration, result.infeas, result.objval, mu, result.iteration, n);
 #ifndef OSI_IDIOT
       } else {
+	// I don't understand what has been done to log levels
+	// So Cheat
+	int level = handler->logLevel();
+	if (level==1)
+	  handler->setLogLevel(2);
         handler->message(CLP_IDIOT_ITERATION, *messages)
           << iteration << result.infeas << result.objval << mu << result.iteration << n
           << CoinMessageEol;
+	handler->setLogLevel(level);
       }
 #endif
       lastStatusUpdate_ = CoinWallclockTime();

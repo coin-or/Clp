@@ -117,6 +117,16 @@ public:
   {
     return model_;
   }
+  /** set message option. */
+  inline void setModifyMsg(int value)
+  {
+    modifyMsg_ = value;
+  }
+  /// Get message option
+  inline int msgOption() const
+  {
+    return modifyMsg_;
+  }
   //@}
 
 protected:
@@ -125,7 +135,14 @@ protected:
   //@{
   /// Pointer to simplex
   ClpSimplex *model_;
-  //@}
+   /*
+    0 - leave as is (but only print at factorization as output wrong)
+    1 etc for later use
+     (This can be changed after initialization to 0)
+   */
+  int modifyMsg_;
+  int modifyBehaviour_;
+ //@}
 };
 /** Base class for Clp disaster handling
 

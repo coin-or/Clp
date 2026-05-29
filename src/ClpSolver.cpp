@@ -1121,6 +1121,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           // Noisy simplex messages are suppressed by raising their detail
           // level to 2 in ClpMessage.cpp; ClpLpMsgHandler suppresses the rest.
           const int lpIterFreq = parameters[ClpParam::PROGRESSITER]->intVal();
+	  // If user has not changed progress checking do every factorization
+	  if (model2->getMinIntervalProgressUpdate()==0.7||
+	      model2->getMinIntervalProgressUpdate()==-1)
+	    model2->setMinIntervalProgressUpdate(1.0e-9);
           const double lpTimeFreq = model2->getMinIntervalProgressUpdate();
           auto lpState = std::make_shared<ClpLpPhaseState>();
           lpState->fp       = model_.messageHandler()->filePointer();
@@ -1136,6 +1140,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           lpState->title = "LP solve";
           ClpLpMsgHandler   lpMsgH(lpState);
           ClpLpEventHandler lpEvtH(lpState);
+	  // modify later
+	  lpEvtH.setModifyMsg(1);
           bool lpMsgOldDefault;
           CoinMessageHandler *lpSavedMsg =
             model2->pushMessageHandler(&lpMsgH, lpMsgOldDefault);

@@ -352,13 +352,6 @@ int ClpLpEventHandler::event(Event whichEvent)
     // open the table if it wasn't already opened by Idiot/Sprint.
     s_->lpStarted = true;
     flushPendingIdiotSprint();
-    // Print presolve stats before the table (available from model)
-    if (model_->presolveRows() >= 0 && s_->origRows > 0) {
-      fprintf(s_->fp, "  CLP presolve: %d rows, %d cols → %d rows, %d cols (%.2fs)\n",
-        s_->origRows, s_->origCols,
-        model_->presolveRows(), model_->presolveCols(),
-        model_->presolveTime());
-    }
     openTable();
     // Print the first row with actual iteration count (not fake 0,
     // since this event fires after the first iteration has completed).
@@ -388,7 +381,7 @@ int ClpLpEventHandler::event(Event whichEvent)
   const bool doIter = (s_->iterFreq > 0 && iter - s_->lastPrintIter >= s_->iterFreq);
   const bool doTime = (s_->timeFreq > 0.0 && now - s_->lastPrintTime >= s_->timeFreq);
   const bool doForce = (s_->lastPrintIter < 0);
-
+  
   if (doIter || doTime || doForce) {
     printLpRow(iter, model_->objectiveValue(),
       model_->sumPrimalInfeasibilities(),
@@ -545,7 +538,8 @@ ClpLpMsgHandler::ClpLpMsgHandler(std::shared_ptr<ClpLpPhaseState> state)
   : CoinMessageHandler()
   , s_(std::move(state))
 {
-  setLogLevel(2); // Idiot maps handler logLevel 0<lv<3 → internal logLevel_=1 (bit-0 set → sends messages)
+  // Leave at 1 setting to 2 causes all sorts of problems
+  //setLogLevel(2); // Idiot maps handler logLevel 0<lv<3 → internal logLevel_=1 (bit-0 set → sends messages)
                   // detail-2 Idiot/Sprint messages reach print() because 2 >= 2
   if (s_->fp)
     setFilePointer(s_->fp);
@@ -649,6 +643,22 @@ int ClpLpMsgHandler::print()
       }
     }
     return 0; // suppress raw output
+  }
+
+  // CLP_BARRIER_ITERATION (ext 35):
+  // format:"%d Primal %g Dual %g Complementarity %g - %d fixed, rank %d"
+  // do others as well
+  if (ext >= 35 && ext <= 59) {
+    // Much later do pretty table - for now just out
+    //return CoinMessageHandler::print();
+    if (s_->fp) {
+      char temp[100];
+      sprintf(temp,"%s\n",messageBuffer()+8);
+      fprintf(s_->fp,temp,"\n%s\n");
+      fflush(s_->fp);
+      //printf(temp,"%s\n");
+    }
+    return 0;
   }
 
   // Forward detail-0 critical errors; suppress everything else.
@@ -862,4 +872,15 @@ void ClpOutput::printProblemSummary(CoinMessageHandler *handler,
   }
 
   sendBlank(handler);
+}
+// Print presolve stats
+void ClpLpEventHandler::printPresolveStats()
+{
+  // Print presolve stats
+  if (model_ && model_->presolveRows() >= 0 && s_->origRows > 0) {
+    fprintf(s_->fp, "  CLP presolve: %d rows, %d cols → %d rows, %d cols (%.2fs)\n",
+	    s_->origRows, s_->origCols,
+	    model_->presolveRows(), model_->presolveCols(),
+	    model_->presolveTime());
+  }
 }

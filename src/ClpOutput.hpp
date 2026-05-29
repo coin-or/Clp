@@ -91,6 +91,13 @@ struct ClpLpPhaseState {
   int iterFreq = 0;
   double timeFreq = 5.0;
   int logLevel = 1;
+  /*
+    0 - leave as is (but only at factorization as output wrong)
+    1 - every factorization
+    2 - add in more detail (like old logLevel 2)
+     (This can be changed after initialization to 0)
+   */
+  int modifyMsg = 0; 
   int origRows = 0, origCols = 0;
   std::string title = "LP solve";
 };
@@ -123,6 +130,8 @@ public:
   virtual int event(Event whichEvent) override;
   virtual ClpEventHandler *clone() const override;
 
+  /// Print presolve stats
+  void printPresolveStats();
   /** Print final status line + close the table.
    *  Call once after initialSolve() on the clone returned by eventHandler().
    *  numInts: total MIP integer variables (0 for pure LP).
@@ -133,7 +142,14 @@ public:
   bool tableStarted() const { return s_ && (s_->idiotSeen || s_->sprintSeen || s_->lpStarted); }
   /// File pointer for output
   FILE *fp() const { return s_ ? s_->fp : nullptr; }
-
+  inline void setModifyMsg(int value)
+  {
+    s_->modifyMsg = value;
+  }
+  inline void setTimeFreq(double value)
+  {
+    s_->timeFreq = value;
+  }
 private:
   std::shared_ptr<ClpLpPhaseState> s_;
 

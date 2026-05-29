@@ -16,6 +16,8 @@
 //-------------------------------------------------------------------
 ClpEventHandler::ClpEventHandler(ClpSimplex *model)
   : model_(model)
+  , modifyMsg_(0)
+  , modifyBehaviour_(0)
 {
 }
 
@@ -24,6 +26,8 @@ ClpEventHandler::ClpEventHandler(ClpSimplex *model)
 //-------------------------------------------------------------------
 ClpEventHandler::ClpEventHandler(const ClpEventHandler &rhs)
   : model_(rhs.model_)
+  , modifyMsg_(rhs.modifyMsg_)
+  , modifyBehaviour_(rhs.modifyBehaviour_)
 {
 }
 
@@ -42,6 +46,8 @@ ClpEventHandler::operator=(const ClpEventHandler &rhs)
 {
   if (this != &rhs) {
     model_ = rhs.model_;
+    modifyMsg_ = rhs.modifyMsg_;
+    modifyBehaviour_ =rhs.modifyBehaviour_;
   }
   return *this;
 }

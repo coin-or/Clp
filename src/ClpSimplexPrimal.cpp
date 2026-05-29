@@ -1168,6 +1168,9 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   //problemStatus_=-1;;
   progressFlag_ = 0; //reset progress flag
 
+  // Deal with printing (unless finishing)
+  if (numberDualInfeasibilities_||numberPrimalInfeasibilities_)
+    eventHandler_->event(ClpEventHandler::endOfIteration);
   if (handler_->logLevel()>0&& (CoinWallclockTime() - lastStatusUpdate_ > minIntervalProgressUpdate_)) {
     handler_->message(CLP_SIMPLEX_STATUS, messages_)
       << numberIterations_ << nonLinearCost_->feasibleReportCost();
@@ -3774,11 +3777,13 @@ int ClpSimplexPrimal::pivotResult(int ifValuesPass)
     }
     // Check event
     {
-      int status = eventHandler_->event(ClpEventHandler::endOfIteration);
-      if (status >= 0) {
-        problemStatus_ = 5;
-        secondaryStatus_ = ClpEventHandler::endOfIteration;
-        returnCode = 3;
+      if (/*handler_->logLevel()>1||*/inCbcBranchAndBound()) {
+	int status = eventHandler_->event(ClpEventHandler::endOfIteration);
+	if (status >= 0) {
+	  problemStatus_ = 5;
+	  secondaryStatus_ = ClpEventHandler::endOfIteration;
+	  returnCode = 3;
+	}
       }
 #if CLP_USER_DRIVEN
       int in = sequenceIn_;

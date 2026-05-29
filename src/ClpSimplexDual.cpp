@@ -1857,7 +1857,7 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
           break;
         }
         // Check event
-        {
+	if (/*handler_->logLevel()>1||*/inCbcBranchAndBound()) {
           int status = eventHandler_->event(ClpEventHandler::endOfIteration);
           if (status >= 0) {
             problemStatus_ = 5;
@@ -5552,6 +5552,8 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
   // mark as having gone optimal if looks like it
   if (!numberPrimalInfeasibilities_ && !numberDualInfeasibilities_)
     progressFlag_ |= 8;
+  else
+    eventHandler_->event(ClpEventHandler::endOfIteration);
   if (handler_->logLevel() > 0 && handler_->detail(CLP_SIMPLEX_STATUS, messages_) < 100 && (CoinWallclockTime() - lastStatusUpdate_ > minIntervalProgressUpdate_)) {
     handler_->message(CLP_SIMPLEX_STATUS, messages_)
       << numberIterations_ << objectiveValue();

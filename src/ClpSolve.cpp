@@ -31,6 +31,7 @@
 #include "ClpEventHandler.hpp"
 #include "ClpLinearObjective.hpp"
 #include "ClpSolve.hpp"
+#include "ClpOutput.hpp"
 #include "ClpPackedMatrix.hpp"
 #include "ClpMessage.hpp"
 #include "CoinTime.hpp"
@@ -996,6 +997,10 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       model2->presolveTime_ = timePresolve;
       model2->presolveRows_ = model2->numberRows();
       model2->presolveCols_ = model2->numberColumns();
+      ClpLpEventHandler *lpProg =
+	dynamic_cast<ClpLpEventHandler *>(model2->eventHandler());
+      if (lpProg)
+	lpProg->printPresolveStats();
     }
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Presolve" << timePresolve << time2 - time1
@@ -1764,6 +1769,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       method = ClpSolve::usePrimal; // switch off sprint
     }
   }
+  // save interval time
+  double interval = model2->getMinIntervalProgressUpdate();
   if (method == ClpSolve::useDual) {
 #ifdef CLP_USEFUL_PRINTOUT
     debugInt[6] = 1;
@@ -2003,7 +2010,15 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     if (doIdiot) {
       int nPasses = 0;
       Idiot info(*model2);
-      info.setMinIntervalStatusUpdate(model2->getMinIntervalProgressUpdate());
+      // For idiot use time
+      info.setMinIntervalStatusUpdate(interval);
+      if (interval==1.0e-9) {
+	info.setMinIntervalStatusUpdate(0.7);
+	model2->setMinIntervalProgressUpdate(0.7);
+	ClpLpEventHandler *lpProg =
+	  dynamic_cast<ClpLpEventHandler *>(model2->eventHandler());
+	lpProg->setTimeFreq(0.7);
+      }
       info.setStrategy(idiotOptions | info.getStrategy());
       // Get average number of elements per column
       double ratio = static_cast< double >(numberElements) / static_cast< double >(numberColumns);
@@ -3132,6 +3147,11 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     model2->primal(1);
 #endif
     model2->setPerturbation(savePerturbation);
+    // in case changed
+    model2->setMinIntervalProgressUpdate(interval);
+    ClpLpEventHandler *lpProg =
+      dynamic_cast<ClpLpEventHandler *>(model2->eventHandler());
+    lpProg->setTimeFreq(interval);
     if (model2 != originalModel2) {
       originalModel2->moveInfo(*model2);
       delete model2;
