@@ -3151,7 +3151,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     model2->setMinIntervalProgressUpdate(interval);
     ClpLpEventHandler *lpProg =
       dynamic_cast<ClpLpEventHandler *>(model2->eventHandler());
-    lpProg->setTimeFreq(interval);
+    if (lpProg)
+      lpProg->setTimeFreq(interval);
     if (model2 != originalModel2) {
       originalModel2->moveInfo(*model2);
       delete model2;
