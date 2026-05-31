@@ -1122,8 +1122,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           // level to 2 in ClpMessage.cpp; ClpLpMsgHandler suppresses the rest.
           const int lpIterFreq = parameters[ClpParam::PROGRESSITER]->intVal();
 	  // If user has not changed progress checking do every factorization
-	  if (model2->getMinIntervalProgressUpdate()==0.7||
-	      model2->getMinIntervalProgressUpdate()==-1)
+	  if (model2->getMinIntervalProgressUpdate()==0.7)
 	    model2->setMinIntervalProgressUpdate(1.0e-9);
           const double lpTimeFreq = model2->getMinIntervalProgressUpdate();
           auto lpState = std::make_shared<ClpLpPhaseState>();
@@ -1141,7 +1140,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           ClpLpMsgHandler   lpMsgH(lpState);
           ClpLpEventHandler lpEvtH(lpState);
 	  // modify later
-	  lpEvtH.setModifyMsg(1);
+	  lpEvtH.setModifyMsg(0);
           bool lpMsgOldDefault;
           CoinMessageHandler *lpSavedMsg =
             model2->pushMessageHandler(&lpMsgH, lpMsgOldDefault);

@@ -92,10 +92,8 @@ struct ClpLpPhaseState {
   double timeFreq = 5.0;
   int logLevel = 1;
   /*
-    0 - leave as is (but only at factorization as output wrong)
-    1 - every factorization
-    2 - add in more detail (like old logLevel 2)
-     (This can be changed after initialization to 0)
+    Modify this as needed
+    at present says if primal or dual
    */
   int modifyMsg = 0; 
   int origRows = 0, origCols = 0;

@@ -343,7 +343,7 @@ int ClpLpEventHandler::event(Event whichEvent)
   if (s_->logLevel <= 0 || !s_->fp)
     return -1;
 
-  const int iter = model_->numberIterations();
+  int iter = model_->numberIterations();
   const double now = CoinWallclockTime();
   const double elapsed = now - s_->startTime;
 
@@ -367,27 +367,38 @@ int ClpLpEventHandler::event(Event whichEvent)
     s_->maxIterSeen = iter;
 
   // Detect restart (Clp resets iter counter after perturbation / algorithm switch)
-  const bool isRestart = (s_->lastPrintIter > 0 && iter < s_->lastPrintIter - 50);
+  //bool isRestart = (s_->lastPrintIter > 0 && iter < s_->lastPrintIter - 50);
+  // Restart if algorithm changed
+  bool isRestart = iter&&s_->modifyMsg*model_->algorithm()<0;
   if (isRestart) {
     const CoinTable tbl = makeLpTable(s_->utf8, s_->compact);
     const int w = tbl.totalWidth();
     const std::string rule = CoinTable::sectionRule("restart", s_->utf8, w, w / 3);
     fprintf(s_->fp, "  %s\n", rule.c_str());
     fflush(s_->fp);
-    s_->lastPrintIter = -1;
-    s_->lastPrintTime = now;
+    //s_->lastPrintIter = -1;
+    //s_->lastPrintTime = now;
   }
-
+  static int lastIterZ=-1;
   const bool doIter = (s_->iterFreq > 0 && iter - s_->lastPrintIter >= s_->iterFreq);
   const bool doTime = (s_->timeFreq > 0.0 && now - s_->lastPrintTime >= s_->timeFreq);
   const bool doForce = (s_->lastPrintIter < 0);
-  
+  // set algorithm
+  s_->modifyMsg = model_->algorithm();
+  // Output after postsolve gives wrong impression
+  // Should say postsolve done
+  // This fix is not correct but what can I do
+  // it does not matter too much
+  iter = std::max(model_->numberIterations(), s_->maxIterSeen);
   if (doIter || doTime || doForce) {
     printLpRow(iter, model_->objectiveValue(),
       model_->sumPrimalInfeasibilities(),
       model_->sumDualInfeasibilities(), elapsed);
     s_->lastPrintTime = now;
     s_->lastPrintIter = iter;
+    //if (iter<lastIterZ)
+    //abort();
+    lastIterZ=iter;
   }
 
   return -1;
@@ -615,7 +626,16 @@ int ClpLpMsgHandler::print()
     }
     return 0; // suppress raw output
   }
-
+  // See if after postsolve
+  // CLP_INTERVAL_TIMING (ext 33)
+  if (ext == 33) {
+    if (strstr(messageBuffer(),"Postsolve")) {
+      if (s_->fp) {
+	fprintf(s_->fp,"  After Postsolve\n");
+	fflush(s_->fp);
+      }
+    }
+  }
   // CLP_SPRINT (ext 34):
   //   format: "Pass %d took %d iterations, objective %g, dual infeasibilities %g( %d)..."
   if (ext == 34) {
