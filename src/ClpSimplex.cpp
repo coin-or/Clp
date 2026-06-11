@@ -2028,6 +2028,11 @@ int ClpSimplex::internalFactorize(int solveType)
     printf("Basis singular - pivot tolerance %g\n",
       factorization_->pivotTolerance());
 #endif
+    // better to re-initialize weights
+    if (dynamic_cast<ClpDualRowSteepest *>(dualRowPivot_))
+	dynamic_cast<ClpDualRowSteepest *>(dualRowPivot_)->setState(-1);
+    if (dynamic_cast<ClpPrimalColumnSteepest *>(primalColumnPivot_))
+	dynamic_cast<ClpPrimalColumnSteepest *>(primalColumnPivot_)->setState(-1);
     return -1;
   } else if (!solveType) {
     // Initial basis - return number of singularities
@@ -6077,6 +6082,63 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
   }
   // clear serious error flags
   moreSpecialOptions_ &= ~(1073741824|536870912);
+#if 0
+  if (!problemStatus_&&(specialOptions_&0x01000000)!=0) {
+    // think hard
+    // may need to know about depth - if fathoming - success rate
+    // see if any integer variables are infeasible with no iterations
+    if (maximumIterations()==8121943&&integerType_) {
+      int * which = new int [3*numberRows_];
+      double * valueIncrease = new double[2*numberRows_];
+      int numberCheck = 0;
+      for (int i=0;i<numberRows_;i++) {
+	int iSeq = pivotVariable_[i];
+	// for now just 1 gap
+	if (iSeq<numberColumns_&&integerType_[iSeq] && columnUpper_[iSeq]==columnLower_[iSeq]+1.0) {
+	  double value = columnActivity_[iSeq];
+	  if (fabs(value-floor(value+0.5))>primalTolerance_) {
+	    which[numberCheck++] = iSeq;
+	  }
+	}
+      }
+      int *sequenceIncrease = which+numberCheck;
+      int *sequenceDecrease = sequenceIncrease+numberCheck;
+      double *valueDecrease = valueIncrease+numberCheck;
+      primalRanging(numberCheck,which,valueIncrease,sequenceIncrease,
+		    valueDecrease,sequenceDecrease);
+      double limit = 0.0;
+      getDblParam(ClpDualObjectiveLimit, limit);
+      double gap = limit-objectiveValue()+1.0e-3;
+      gap = std::min(gap,1.0e30);
+      int nFixed = 0;
+      for (int i=0;i<numberCheck;i++) {
+	int fix = 0;
+	if (valueIncrease[i]>gap)
+	  fix = 1;
+	if (valueDecrease[i]>gap)
+	  fix |= 2;
+	if (fix) {
+	  printf("fix %d for %d\n",fix,which[i]);
+	  nFixed++;
+	  int iSeq = which[i];
+	  // fix here - does that stay fixed
+	  if (fix==1) {
+	    columnUpper_[iSeq] = columnUpper_[iSeq]-1.0;
+	  } else if (fix==2) {
+	    columnLower_[iSeq] = columnLower_[iSeq]+1.0;
+	  } else {
+	    printf("problem infeasible?????\n");
+	    nFixed = 8121943;
+	    break;
+	  }
+	}
+      }
+      setMaximumIterations(8121943-nFixed);
+      delete [] which;
+      delete [] valueIncrease;
+    }
+  }
+#endif
   return returnCode;
 }
 // primal

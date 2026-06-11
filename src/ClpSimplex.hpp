@@ -86,6 +86,9 @@ class AbcSimplex;
 #define LONG_REGION_2 1
 #define SHORT_REGION 1
 #endif
+#ifndef CLP_START_FINISH
+#define CLP_START_FINISH 0
+#endif
 /** This solves LPs using the simplex method
 
     It inherits from ClpModel and all its arrays are created at

@@ -123,6 +123,15 @@ public:
   {
     return persistence_;
   }
+  /** Status
+      0) Normal
+      -1) Needs initialization
+      1) Weights are stored by sequence number
+  */
+  inline void setState(int value)
+  {
+    state_ = value;
+  }
   //@}
 
   //---------------------------------------------------------------------------
