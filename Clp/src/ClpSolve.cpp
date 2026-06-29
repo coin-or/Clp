@@ -997,6 +997,14 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         return -1;
       }
       presolve = ClpSolve::presolveOff;
+      // Barrier no good at infeasible problems
+      if (method == ClpSolve::useBarrier ||
+	  method == ClpSolve::useBarrierNoCross) {
+	method = ClpSolve::usePrimal;
+	handler_->message(CLP_GENERAL, messages_)
+	  << "Looks infeasible - using Simplex rather than barrier"
+	  << CoinMessageEol;
+      }
     } else {
 #if 0 //def ABC_INHERIT
 	    {
