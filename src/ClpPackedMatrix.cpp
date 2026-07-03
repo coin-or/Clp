@@ -4543,7 +4543,8 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
     // printf("scaling %d\n",model->scalingFlag());
     if (model->scalingFlag() != 5) {
       for (iColumn = 0; iColumn < numberColumns; iColumn++) {
-        if (columnUpper[iColumn] > columnLower[iColumn] + 1.0e-12) {
+        if (columnUpper[iColumn] > columnLower[iColumn] + 1.0e-12 &&
+	    columnLength[iColumn]) {
           // if (usefulColumn[iColumn]) {
           CoinBigIndex j;
           largest = 1.0e-20;
