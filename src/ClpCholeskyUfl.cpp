@@ -8,9 +8,14 @@
 #ifndef CLP_HAS_AMD
 #error "Need to have AMD or CHOLMOD to compile ClpCholeskyUfl."
 #else
-extern "C" {  // for very old AMD versions, as coming with old versions of Glpk
+// Do NOT wrap this include in our own extern "C" block: amd.h (and the
+// SuiteSparse_config.h it pulls in) already guards its own declarations with
+// `#ifdef __cplusplus extern "C" { ... }`. Modern SuiteSparse versions'
+// SuiteSparse_config.h also does `#include <complex>` under __cplusplus
+// (for BLAS/LAPACK complex types) — if that happens while already inside an
+// extra outer extern "C" opened here, the compiler correctly rejects the
+// C++ templates pulled in by <complex> as having invalid C linkage.
 #include "amd.h"
-}
 #endif
 #else
 #include "cholmod.h"
