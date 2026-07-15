@@ -856,7 +856,8 @@ void ClpDualRowSteepest::saveWeights(ClpSimplex *model, int mode)
         delete temp;
       }
       // create saved weights (not really indexedvector)
-      savedWeights_ = new CoinIndexedVector();
+      if (!savedWeights_)
+	savedWeights_ = new CoinIndexedVector();
       savedWeights_->reserve(numberRows);
       for (int i = 0; i < model_->numberRows(); i++)
         savedWeights_->denseVector()[i] = 1.0;
