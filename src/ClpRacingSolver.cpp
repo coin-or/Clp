@@ -145,49 +145,79 @@ ClpRacingSolver::ClpRacingSolver(ClpSimplex *model, int numThreads)
 {
 }
 
-void ClpRacingSolver::addConfig(const ClpSolve &config)
+void ClpRacingSolver::addConfig(const ClpSolve &config, ConfigSetupFn setupFn)
 {
   configs_.push_back(config);
+  setupFns_.push_back(std::move(setupFn));
 }
 
-void ClpRacingSolver::addDefaultConfigs()
+void ClpRacingSolver::addDefaultConfigs(int portfolioSize)
 {
   configs_.clear();
+  setupFns_.clear();
 
-  // Config 0: Dual simplex with presolve (default)
-  {
+  int k = portfolioSize > 0 ? portfolioSize : numThreads_;
+
+  // ── Shared config builder helpers ─────────────────────────────────────────
+
+  // dual_pertv72: plain dual simplex + perturbation value 72.
+  // Mirrors "-pertValue 72 -lpMethod dual" (no PE steepest pivot).
+  // Selected as optimal dual component via exhaustive k-fold search over 12
+  // cluster reps (C(12,2)=66 pairs, C(12,3)=220 triples, 10-fold CV).
+  auto makeDualPertv72 = []() -> std::pair<ClpSolve, ConfigSetupFn> {
     ClpSolve opts;
     opts.setSolveType(ClpSolve::useDual);
     opts.setPresolveType(ClpSolve::presolveOn);
-    opts.setSpecialOption(2, 1); // no signal handler (thread-safe)
-    configs_.push_back(opts);
-  }
+    opts.setSpecialOption(2, 1);
+    ConfigSetupFn fn = [](ClpSimplex *m) {
+      m->setPerturbation(72);
+    };
+    return {opts, fn};
+  };
 
-  // Config 1: Primal + Idiot crash (60 passes) with presolve
-  {
+  // primal_idiot50: primal simplex with 50 idiot-crash passes
+  auto makePrimalIdiot50 = []() -> std::pair<ClpSolve, ConfigSetupFn> {
     ClpSolve opts;
     opts.setSolveType(ClpSolve::usePrimal);
     opts.setPresolveType(ClpSolve::presolveOn);
-    opts.setSpecialOption(1, 2, 60); // idiot with 60 passes
+    opts.setSpecialOption(1, 2, 50); // idiot, 50 passes
     opts.setSpecialOption(2, 1);
-    configs_.push_back(opts);
-  }
+    return {opts, nullptr};
+  };
 
-  // Config 2: Primal + Sprint with presolve
-  {
+  // primal_sprint: primal simplex with sprint
+  auto makePrimalSprint = []() -> std::pair<ClpSolve, ConfigSetupFn> {
     ClpSolve opts;
     opts.setSolveType(ClpSolve::usePrimalorSprint);
     opts.setPresolveType(ClpSolve::presolveOn);
-    opts.setSpecialOption(1, 3); // sprint
+    opts.setSpecialOption(1, 3);
     opts.setSpecialOption(2, 1);
-    configs_.push_back(opts);
+    return {opts, nullptr};
+  };
+
+  if (k == 2) {
+    // K=2 optimal portfolio (exhaustive k-fold search, 1.47x speedup vs baseline):
+    //   dual_pertv72 + primal_idiot50
+    auto [o0, f0] = makeDualPertv72();
+    auto [o1, f1] = makePrimalIdiot50();
+    addConfig(o0, f0);
+    addConfig(o1, f1);
+  } else {
+    // K=3 optimal portfolio (exhaustive k-fold search, 1.59x speedup vs baseline):
+    //   dual_pertv72 + primal_idiot50 + primal_sprint
+    auto [o0, f0] = makeDualPertv72();
+    auto [o1, f1] = makePrimalIdiot50();
+    auto [o2, f2] = makePrimalSprint();
+    addConfig(o0, f0);
+    addConfig(o1, f1);
+    addConfig(o2, f2);
   }
 }
 
 int ClpRacingSolver::solve()
 {
   if (configs_.empty())
-    addDefaultConfigs();
+    addDefaultConfigs(numThreads_);
 
   int nConfigs = static_cast<int>(configs_.size());
   int nThreads = numThreads_ > 0 ? numThreads_ : nConfigs;
@@ -207,10 +237,13 @@ int ClpRacingSolver::solve()
   std::atomic<bool> abortFlag{false};
   std::atomic<int> winner{-1};
 
-  // Clone models for each racing thread
+  // Clone models for each racing thread; apply per-config setup functions.
   std::vector<ClpSimplex *> clones(nThreads, nullptr);
-  for (int i = 0; i < nThreads; i++)
+  for (int i = 0; i < nThreads; i++) {
     clones[i] = new ClpSimplex(*model_);
+    if (i < static_cast<int>(setupFns_.size()) && setupFns_[i])
+      setupFns_[i](clones[i]);
+  }
 
   // Set up shared progress reporting
   static const char *configLabels[] = {"Dual", "Primal+Idiot", "Sprint"};
