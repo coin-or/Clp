@@ -883,6 +883,12 @@ void OsiClpSolverInterface::initialSolve()
   }
   solver->messageHandler()->setLogLevel(saveMessageLevel);
 disaster:
+  // Always clear the disaster handler on modelPtr_ before cleanup.
+  // When solver == modelPtr_ (deleteSolver == false), goto disaster may have
+  // skipped the normal setDisasterHandler(NULL) call, leaving disasterArea_ set.
+  // When solver != modelPtr_ (deleteSolver == true), returnModel() below also
+  // clears it — this explicit clear is a cheap defensive belt-and-suspenders guard.
+  modelPtr_->setDisasterHandler(NULL);
   if (deleteSolver) {
     solver->returnModel(*modelPtr_);
     //#define DEBUG_BORROW
@@ -1559,6 +1565,9 @@ void OsiClpSolverInterface::resolve()
 disaster:
   //printf("basis after dual\n");
   //basis_.print();
+  // Clear disaster handler — a goto disaster from within resolve() may have
+  // skipped the normal setDisasterHandler(NULL) call after the LP solve.
+  modelPtr_->setDisasterHandler(NULL);
   if (!defaultHandler_)
     modelPtr_->popMessageHandler(saveHandler, oldDefault);
   modelPtr_->messageHandler()->setLogLevel(saveMessageLevel);
@@ -2548,6 +2557,23 @@ void OsiClpSolverInterface::solveFromHotStart()
     int saveNumberFake = (static_cast< ClpSimplexDual * >(modelPtr_))->numberFake_;
     int status = (static_cast< ClpSimplexDual * >(modelPtr_))->fastDual(alwaysFinish);
     (static_cast< ClpSimplexDual * >(modelPtr_))->numberFake_ = saveNumberFake;
+
+    // When LP is optimal, recompute objective accurately from external activities.
+    // The running sum in objectiveValue_ can accumulate FP errors from non-power-of-2
+    // scale factors (geometric mean scaling), especially on platforms with FMA instructions.
+    // This mirrors what fastDual2 does ("be on safe side").
+    if (!modelPtr_->problemStatus()) {
+      double *sol = modelPtr_->primalColumnSolution();
+      const double *solI = modelPtr_->solutionRegion();
+      if (!columnScale) {
+        for (iColumn = 0; iColumn < numberColumns; iColumn++)
+          sol[iColumn] = solI[iColumn];
+      } else {
+        for (iColumn = 0; iColumn < numberColumns; iColumn++)
+          sol[iColumn] = solI[iColumn] * columnScale[iColumn];
+      }
+      modelPtr_->computeObjectiveValue();
+    }
 
     int problemStatus = modelPtr_->problemStatus();
     double objectiveValue = modelPtr_->objectiveValue() * modelPtr_->optimizationDirection();
@@ -10613,6 +10639,12 @@ void OsiClpSolverInterface::passInMessageHandler(CoinMessageHandler *handler)
   handler_ = handler;
   if (modelPtr_)
     modelPtr_->passInMessageHandler(handler);
+  // Also update the cached small model used by crunch(), which copies its
+  // handler pointer from modelPtr_ at creation time.  Without this, restoring
+  // the handler after B&B leaves smallModel_ with a dangling pointer that
+  // triggers a use-after-free when resolve() reuses the cached model.
+  if (smallModel_)
+    smallModel_->passInMessageHandler(handler);
 }
 // Set log level (will also set underlying solver's log level)
 void OsiClpSolverInterface::setLogLevel(int value)
