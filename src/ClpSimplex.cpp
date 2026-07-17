@@ -13,6 +13,7 @@
 #endif
 #include "CoinHelperFunctions.hpp"
 #include "CoinFloatEqual.hpp"
+#include "CoinTime.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpFactorization.hpp"
 #include "ClpPackedMatrix.hpp"
@@ -1569,6 +1570,18 @@ int ClpSimplex::internalFactorize(int solveType)
   int totalSlacks = numberRows_;
   if (!status_)
     createStatus();
+  // If the wall-clock deadline has already passed, don't even attempt a
+  // (potentially very expensive) factorization. This matters because
+  // several callers (ClpSimplexPrimal/Dual "singular basis" recovery
+  // blocks) blindly retry internalFactorize() again after any nonzero
+  // return, without checking problemStatus_ first — without this guard
+  // such a retry would repeat the same slow factorization instead of
+  // returning promptly.
+  if (dblParam_[ClpMaxWallSeconds] >= 0.0 && dblParam_[ClpMaxWallSeconds] < 4.0e7
+    && CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds]) {
+    problemStatus_ = 3;
+    return -1;
+  }
 
   bool valuesPass = false;
   if (solveType >= 10) {
@@ -2020,6 +2033,17 @@ int ClpSimplex::internalFactorize(int solveType)
 	   numberInside,sumInside,numberInsideLarge);
 #endif
   int status = factorization_->factorize(this, solveType, valuesPass);
+  if (status == -100) {
+    // Factorization aborted on its own wall-clock deadline (periodic check
+    // inside CoinFactorization's pivot loop - see CoinFactorization2.cpp).
+    // Treat exactly like any other "stopped on time" condition (same
+    // problemStatus_ convention used by hitMaximumIterations()) rather than
+    // falling through to the generic "basis singular" handling below, so
+    // callers recognise this cleanly as a time limit, not a numerical
+    // failure, and existing retry loops built for -99/-1 are bypassed.
+    problemStatus_ = 3;
+    return -1;
+  }
   if (status) {
     handler_->message(CLP_SIMPLEX_BADFACTOR, messages_)
       << status

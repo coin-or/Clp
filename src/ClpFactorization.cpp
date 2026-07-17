@@ -13,6 +13,7 @@
 #endif
 #include "CoinHelperFunctions.hpp"
 #include "CoinIndexedVector.hpp"
+#include "CoinTime.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpSimplexDual.hpp"
 #include "ClpMatrixBase.hpp"
@@ -2032,11 +2033,31 @@ scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
   if (!networkBasis_ || doCheck) {
 #endif
     coinFactorizationA_->setStatus(-99);
+    // Propagate the model's remaining wall-clock budget into the
+    // low-level factorization so a slow/degenerate pivot sequence can be
+    // aborted cleanly (status -100) instead of stalling silently past
+    // the caller's time limit (see periodic check in
+    // CoinFactorization2.cpp factorSparseSmall()/factorSparseLarge()).
+    double maxWallSeconds = -1.0;
+    model->getDblParam(ClpMaxWallSeconds, maxWallSeconds);
+    bool hasWallDeadline = (maxWallSeconds >= 0.0 && maxWallSeconds < 4.0e7);
+    coinFactorizationA_->setTimeLimit(hasWallDeadline ? maxWallSeconds : -1.0);
     int *COIN_RESTRICT pivotVariable = model->pivotVariable();
     int nTimesRound = 0;
     //returns 0 -okay, -1 singular, -2 too many in basis, -99 memory */
     while (coinFactorizationA_->status() < -98) {
       nTimesRound++;
+      // A persistently failing (out-of-memory/singular) factorization can
+      // spin this retry loop many times, each iteration doing real (if
+      // individually cheap) O(numberRows) setup work below. Since each
+      // attempt may finish well before the periodic in-pivot-loop deadline
+      // check in CoinFactorization2.cpp ever fires (e.g. failing early,
+      // before 64 pivots), that check alone cannot bound this loop's total
+      // wall-clock cost. Check the deadline directly here too.
+      if (hasWallDeadline && CoinWallclockTime() >= maxWallSeconds) {
+        coinFactorizationA_->setStatus(-100);
+        break;
+      }
 
       int i;
       int numberBasic = 0;
@@ -2198,6 +2219,10 @@ scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
 #endif
       //printf("L, U, R %d %d %d\n",numberElementsL(),numberElementsU(),numberElementsR());
       while (coinFactorizationA_->status() == -99) {
+        if (hasWallDeadline && CoinWallclockTime() >= maxWallSeconds) {
+          coinFactorizationA_->setStatus(-100);
+          break;
+        }
         // maybe for speed will be better to leave as many regions as possible
         coinFactorizationA_->gutsOfDestructor();
         coinFactorizationA_->gutsOfInitialize(2);

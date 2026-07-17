@@ -877,7 +877,7 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   if (numberIterations_)
     lastSumInfeasibility = nonLinearCost_->sumInfeasibilities();
   int nPass = 0;
-  while (numberThrownOut) {
+  while (numberThrownOut && problemStatus_ != 3) {
     int nSlackBasic = 0;
     if (nPass) {
       for (int i = 0; i < numberRows_; i++) {
@@ -898,6 +898,15 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       if ((type && doFactorization) || nSlackBasic == numberRows_) {
         // is factorization okay?
         int factorStatus = internalFactorize(1);
+        if (problemStatus_ == 3) {
+          // Time limit hit inside internalFactorize(). Stop immediately -
+          // do not enter the singular-basis recovery logic below (which
+          // would waste more time retrying) and do not let the
+          // unconditional "problemStatus_ = -3;" a few lines down silently
+          // erase this time-limit signal, which would otherwise make the
+          // outer while loop spin forever ignoring the deadline.
+          return;
+        }
         if (factorStatus) {
           if (solveType_ == 2 + 8) {
             // say odd
@@ -955,6 +964,8 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
           changeMade_++; // say change made
         }
       }
+      if (problemStatus_ == 3)
+        return; // time limit hit during retry factorization above
       if (problemStatus_ != -4)
         problemStatus_ = -3;
     }
@@ -1096,6 +1107,8 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
         if (internalFactorize(2) != 0) {
           largestPrimalError_ = 1.0e4; // force other type
         }
+        if (problemStatus_ == 3)
+          return; // time limit hit during retry factorization above
         numberPivots = 0;
         numberThrownOut = gutsOfSolution(NULL, NULL, (firstFree_ >= 0));
         //assert (!numberThrownOut);
