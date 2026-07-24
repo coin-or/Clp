@@ -5107,6 +5107,12 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
             matrix_->generalExpanded(this, 6, dummy);
             // debug
             int returnCode = internalFactorize(1);
+            if (problemStatus_ == 3)
+              return; // time limit hit inside internalFactorize(); stop the
+                       // singular-basis recovery retry loop immediately -
+                       // internalFactorize() will keep returning nonzero
+                       // once the deadline has passed, so looping below
+                       // would spin forever without making progress.
             while (returnCode) {
               // ouch
               // switch off dense
@@ -5118,6 +5124,9 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
               pivotVariable_[0] = -1;
               returnCode = internalFactorize(2);
               factorization_->setDenseThreshold(saveDense);
+              if (problemStatus_ == 3)
+                return; // ditto - bail out mid-loop if the deadline is hit
+                         // during a retry rather than spinning further
             }
             // get correct bounds on all variables
             resetFakeBounds(1);
@@ -5297,6 +5306,12 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
       matrix_->generalExpanded(this, 6, dummy);
       // debug
       int returnCode = internalFactorize(1);
+      if (problemStatus_ == 3)
+        return; // time limit hit inside internalFactorize(); stop the
+                 // singular-basis recovery retry loop immediately -
+                 // internalFactorize() will keep returning nonzero once
+                 // the deadline has passed, so looping below would spin
+                 // forever without making progress.
       while (returnCode) {
         // ouch
         // switch off dense
@@ -5308,6 +5323,9 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
         pivotVariable_[0] = -1;
         returnCode = internalFactorize(2);
         factorization_->setDenseThreshold(saveDense);
+        if (problemStatus_ == 3)
+          return; // ditto - bail out mid-loop if the deadline is hit
+                   // during a retry rather than spinning further
       }
       // get correct bounds on all variables
       resetFakeBounds(1);
@@ -5436,6 +5454,13 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
                 matrix_->generalExpanded(this, 6, dummy);
                 // debug
                 int returnCode = internalFactorize(1);
+                if (problemStatus_ == 3)
+                  return; // time limit hit inside internalFactorize(); stop
+                           // the singular-basis recovery retry loop
+                           // immediately - internalFactorize() will keep
+                           // returning nonzero once the deadline has
+                           // passed, so looping below would spin forever
+                           // without making progress.
                 while (returnCode) {
                   // ouch
                   // switch off dense
@@ -5447,6 +5472,10 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
                   pivotVariable_[0] = -1;
                   returnCode = internalFactorize(2);
                   factorization_->setDenseThreshold(saveDense);
+                  if (problemStatus_ == 3)
+                    return; // ditto - bail out mid-loop if the deadline is
+                             // hit during a retry rather than spinning
+                             // further
                 }
               }
               resetFakeBounds(0);
