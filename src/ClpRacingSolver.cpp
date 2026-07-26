@@ -60,7 +60,7 @@ struct RacingProgressState {
   FILE *fp = nullptr;
   double startTime = 0.0;
   double lastPrintTime = 0.0;
-  double timeFreq = 5.0;
+  double timeFreq = 2.0;
   bool headerPrinted = false;
 };
 
@@ -255,9 +255,15 @@ int ClpRacingSolver::solve()
 #endif
     progressState->fp = model_->messageHandler()
       ? model_->messageHandler()->filePointer() : stdout;
-    progressState->startTime = CoinGetTimeOfDay();
+    // Shift the local wall-clock reference back by however much overall
+    // search time had already elapsed before racing began, so every
+    // "now - startTime" computation in RacingEventHandler::event() yields
+    // time elapsed since the *overall search* began, not just since this
+    // LP race started (matches the same fix applied to the sequential
+    // root LP relaxation table in CbcSolver::solveInitialLp()).
+    progressState->startTime = CoinGetTimeOfDay() - searchElapsedAtStart_;
     progressState->lastPrintTime = progressState->startTime;
-    progressState->timeFreq = 5.0;
+    progressState->timeFreq = 2.0;
   }
 
   double startTime = CoinGetTimeOfDay();

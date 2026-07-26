@@ -46,6 +46,15 @@ public:
    *  portfolioSize=0 uses numThreads_ passed at construction. */
   void addDefaultConfigs(int portfolioSize = 0);
 
+  /** Set how many seconds of the *overall* search had already elapsed
+   *  (per the caller's own getCurrentSeconds()-style clock) when this LP
+   *  race is about to begin. Used only so that the interleaved progress
+   *  rows printed during the race show elapsed time since the overall
+   *  search began, not since the race itself started. Defaults to 0.0
+   *  (race start == overall search start), correct for a standalone/
+   *  isolated LP solve. */
+  void setSearchElapsedAtStart(double t) { searchElapsedAtStart_ = t; }
+
   /** Run the race.  Returns index of winning config (0-based), or -1 if
    *  all configs failed.  On success the model's solution, basis, and
    *  status are updated to the winner's result. */
@@ -65,6 +74,7 @@ private:
   std::vector<ClpSolve> configs_;
   std::vector<ConfigSetupFn> setupFns_;
   int numThreads_;
+  double searchElapsedAtStart_ = 0.0;
   int winnerIndex_ = -1;
   double winnerTime_ = 0.0;
   int winnerIterations_ = 0;
