@@ -2812,19 +2812,27 @@ bool ClpModel::hitMaximumIterations() const
   bool hitMax = (numberIterations_ >= intParam_[ClpMaxNumIteration]);
   if ((specialOptions_&0x10000000)!=0)
     return hitMax;
-  if ((dblParam_[ClpMaxSeconds] >= 0.0 &&
-       dblParam_[ClpMaxSeconds]<4.0e7) &&
-      !hitMax) {
-    // only check every 10 iterations
-    if ((numberIterations_%10)==0)
-      hitMax = (CoinCpuTime() >= dblParam_[ClpMaxSeconds]);
+  // Check the wall-clock/CPU-time deadline on every single iteration rather
+  // than only every 10th. This used to be throttled to amortize the cost of
+  // reading the clock, but CoinWallclockTime()/CoinCpuTime() are cheap
+  // relative to the pricing/pivot work done per iteration, and throttling
+  // this check is exactly what let a single simplex solve run many seconds
+  // (or, under a slow debug/sanitizer build with expensive per-iteration
+  // work, tens of seconds) past its deadline before the overrun was ever
+  // even sampled -- multiplying by 10 whatever granularity a single
+  // iteration takes. Checking every iteration keeps the enforced deadline
+  // tight regardless of how expensive an individual iteration happens to be.
+  if (!hitMax && dblParam_[ClpMaxSeconds] >= 0.0 &&
+       dblParam_[ClpMaxSeconds]<4.0e7) {
+    hitMax = (CoinCpuTime() >= dblParam_[ClpMaxSeconds]);
   }
-  if ((dblParam_[ClpMaxWallSeconds] >= 0.0 &&
-       dblParam_[ClpMaxWallSeconds]<4.0e7) &&
-      !hitMax) {
-    // only check every 10 iterations
-    if ((numberIterations_%10)==0)
-      hitMax = (CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds]);
+  // Note: unlike ClpMaxSeconds (CPU time, still a small relative value),
+  // ClpMaxWallSeconds holds an *absolute* epoch deadline (CoinWallclockTime()
+  // now returns absolute epoch time, not "seconds since first call"), so it
+  // is always >= 4.0e7 in practice -- an upper-bound sanity check here would
+  // permanently disable this branch. -1.0 is the sole "disabled" sentinel.
+  if (!hitMax && dblParam_[ClpMaxWallSeconds] >= 0.0) {
+    hitMax = (CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds]);
   }
   return hitMax;
 }

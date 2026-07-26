@@ -1577,7 +1577,11 @@ int ClpSimplex::internalFactorize(int solveType)
   // return, without checking problemStatus_ first — without this guard
   // such a retry would repeat the same slow factorization instead of
   // returning promptly.
-  if (dblParam_[ClpMaxWallSeconds] >= 0.0 && dblParam_[ClpMaxWallSeconds] < 4.0e7
+  // ClpMaxWallSeconds holds an *absolute* epoch deadline (CoinWallclockTime()
+  // returns absolute epoch time, not "seconds since first call"), so an
+  // upper-bound sanity check here would permanently disable this guard;
+  // -1.0 is the sole "disabled" sentinel.
+  if (dblParam_[ClpMaxWallSeconds] >= 0.0
     && CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds]) {
     problemStatus_ = 3;
     return -1;

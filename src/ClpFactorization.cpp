@@ -2040,7 +2040,11 @@ scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
     // CoinFactorization2.cpp factorSparseSmall()/factorSparseLarge()).
     double maxWallSeconds = -1.0;
     model->getDblParam(ClpMaxWallSeconds, maxWallSeconds);
-    bool hasWallDeadline = (maxWallSeconds >= 0.0 && maxWallSeconds < 4.0e7);
+    // ClpMaxWallSeconds holds an *absolute* epoch deadline (CoinWallclockTime()
+    // returns absolute epoch time, not "seconds since first call"), so it is
+    // always well above any small-value sanity bound; -1.0 is the sole
+    // "disabled" sentinel.
+    bool hasWallDeadline = (maxWallSeconds >= 0.0);
     coinFactorizationA_->setTimeLimit(hasWallDeadline ? maxWallSeconds : -1.0);
     int *COIN_RESTRICT pivotVariable = model->pivotVariable();
     int nTimesRound = 0;
