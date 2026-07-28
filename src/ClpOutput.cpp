@@ -318,22 +318,27 @@ void ClpLpEventHandler::printLpRow(int iter, double obj, double pInf,
   lpPhaseRow(*s_, phase, iter, obj, pInf, dInf, elapsed);
 }
 
+static void flushPendingIdiotSprintState(ClpLpPhaseState &s)
+{
+  if (!s.fp)
+    return;
+  if (s.idiotPending) {
+    lpPhaseRow(s, "Idiot", s.lastIdiotIter,
+      s.lastIdiotObj, s.lastIdiotInfeas, 0.0, s.lastIdiotTime);
+    s.idiotPending = false;
+    s.lastPrintTime = CoinWallclockTime();
+  }
+  if (s.sprintPending) {
+    lpPhaseRow(s, "Sprint", s.lastSprintCumIters,
+      s.lastSprintObj, 0.0, s.lastSprintDInf, s.lastSprintTime);
+    s.sprintPending = false;
+    s.lastPrintTime = CoinWallclockTime();
+  }
+}
+
 void ClpLpEventHandler::flushPendingIdiotSprint()
 {
-  if (!s_->fp)
-    return;
-  if (s_->idiotPending) {
-    lpPhaseRow(*s_, "Idiot", s_->lastIdiotIter,
-      s_->lastIdiotObj, s_->lastIdiotInfeas, 0.0, s_->lastIdiotTime);
-    s_->idiotPending = false;
-    s_->lastPrintTime = CoinWallclockTime();
-  }
-  if (s_->sprintPending) {
-    lpPhaseRow(*s_, "Sprint", s_->lastSprintCumIters,
-      s_->lastSprintObj, 0.0, s_->lastSprintDInf, s_->lastSprintTime);
-    s_->sprintPending = false;
-    s_->lastPrintTime = CoinWallclockTime();
-  }
+  flushPendingIdiotSprintState(*s_);
 }
 
 int ClpLpEventHandler::event(Event whichEvent)
@@ -404,25 +409,50 @@ int ClpLpEventHandler::event(Event whichEvent)
   return -1;
 }
 
+// Appends "<dashSep>winner: <name>" to a summary buffer when a racing
+// winner is recorded, so the closing status line reports which racing
+// config won -- instead of relying on a separate, unformatted "LP racing:
+// winner=..." print that would otherwise interleave with (and visually
+// break) the progress table.
+static void appendRacingWinner(char *summary, size_t bufSize,
+  const ClpLpPhaseState &s, bool utf8)
+{
+  if (s.racingWinner.empty())
+    return;
+  const size_t len = std::strlen(summary);
+  if (len >= bufSize)
+    return;
+  std::snprintf(summary + len, bufSize - len,
+    "%swinner: %s", CoinTable::dashSep(utf8), s.racingWinner.c_str());
+}
+
 void ClpLpEventHandler::printFinalStatus(int numInts, int numFrac)
 {
-  if (s_->logLevel <= 0 || !s_->fp)
+  ClpLpTable::printFinalStatus(*s_, model_, numInts, numFrac);
+}
+
+namespace ClpLpTable {
+
+void printFinalStatus(ClpLpPhaseState &s, ClpSimplex *model,
+  int numInts, int numFrac)
+{
+  if (s.logLevel <= 0 || !s.fp)
     return;
 
-  const bool u8 = s_->utf8;
-  const double elapsed = CoinWallclockTime() - s_->startTime;
+  const bool u8 = s.utf8;
+  const double elapsed = CoinWallclockTime() - s.startTime;
   const std::string tStr = fmtTime(elapsed);
 
   // If no intermediate output was ever produced (e.g., LP solved entirely by
   // presolve with 0 simplex iterations), print a compact single-line summary
   // without opening the full iteration table.
-  if (!s_->headerPrinted) {
-    flushPendingIdiotSprint();
-    if (!model_)
+  if (!s.headerPrinted) {
+    flushPendingIdiotSprintState(s);
+    if (!model)
       return;
     const char *baseStatus = "Unknown";
-    const int st = model_->status();
-    const int ss = model_->secondaryStatus();
+    const int st = model->status();
+    const int ss = model->secondaryStatus();
     if (st == 0)
       baseStatus = "Optimal";
     else if (st == 1) {
@@ -442,67 +472,76 @@ void ClpLpEventHandler::printFinalStatus(int numInts, int numFrac)
       baseStatus = "Stopped by event";
     const std::string statusStr = (numInts > 0 ? "LP " : "") + std::string(baseStatus);
     char summary[512];
-    const int iters = model_->numberIterations();
+    const int iters = model->numberIterations();
     if (numInts > 0 && numFrac >= 0) {
       const double pct = (numInts > 0) ? 100.0 * numFrac / numInts : 0.0;
       if (iters > 0)
         std::snprintf(summary, sizeof(summary),
           "%s%sFrac: %d/%d (%.1f%%)   Obj: %g   Iters: %d   Time: %ss",
           statusStr.c_str(), CoinTable::dashSep(u8),
-          numFrac, numInts, pct, model_->objectiveValue(), iters, tStr.c_str());
+          numFrac, numInts, pct, model->objectiveValue(), iters, tStr.c_str());
       else
         std::snprintf(summary, sizeof(summary),
           "%s%sFrac: %d/%d (%.1f%%)   Obj: %g   Time: %ss",
           statusStr.c_str(), CoinTable::dashSep(u8),
-          numFrac, numInts, pct, model_->objectiveValue(), tStr.c_str());
+          numFrac, numInts, pct, model->objectiveValue(), tStr.c_str());
     } else {
       if (iters > 0)
         std::snprintf(summary, sizeof(summary),
           "%s%sObj: %g   Iters: %d   Time: %ss",
           statusStr.c_str(), CoinTable::dashSep(u8),
-          model_->objectiveValue(), iters, tStr.c_str());
+          model->objectiveValue(), iters, tStr.c_str());
       else
         std::snprintf(summary, sizeof(summary),
           "%s%sObj: %g   Time: %ss",
           statusStr.c_str(), CoinTable::dashSep(u8),
-          model_->objectiveValue(), tStr.c_str());
+          model->objectiveValue(), tStr.c_str());
     }
-    if (!s_->title.empty())
-      fprintf(s_->fp, "\n%s\n", CoinTable::phaseStart(s_->title, u8).c_str());
-    fprintf(s_->fp, "%s\n", CoinTable::phaseEnd(summary, u8).c_str());
-    fflush(s_->fp);
+    if (!s.title.empty())
+      fprintf(s.fp, "\n%s\n", CoinTable::phaseStart(s.title, u8).c_str());
+    appendRacingWinner(summary, sizeof(summary), s, u8);
+    fprintf(s.fp, "%s\n", CoinTable::phaseEnd(summary, u8).c_str());
+    fflush(s.fp);
     return;
   }
 
   // Intermediate output was printed — flush any unshown Idiot/Sprint row,
   // print the final LP row if it was skipped, then close the table.
-  flushPendingIdiotSprint();
+  flushPendingIdiotSprintState(s);
 
-  const CoinTable tbl = makeLpTable(u8, s_->compact);
+  const CoinTable tbl = makeLpTable(u8, s.compact);
 
-  if (s_->lpStarted && model_) {
-    const int iters = std::max(model_->numberIterations(), s_->maxIterSeen);
-    if (s_->lastPrintIter < iters) {
+  if (s.lpStarted && model) {
+    const int iters = std::max(model->numberIterations(), s.maxIterSeen);
+    if (s.lastPrintIter < iters) {
+      const int algo = model->algorithm();
+      const char *phase;
+      switch (algo) {
+      case -1: phase = "Dual";    break;
+      case  1: phase = "Primal";  break;
+      case  2: phase = "Barrier"; break;
+      default: phase = "LP";      break;
+      }
       const double now = CoinWallclockTime();
-      printLpRow(iters, model_->objectiveValue(),
-        model_->sumPrimalInfeasibilities(),
-        model_->sumDualInfeasibilities(), now - s_->startTime);
+      lpPhaseRow(s, phase, iters, model->objectiveValue(),
+        model->sumPrimalInfeasibilities(),
+        model->sumDualInfeasibilities(), now - s.startTime);
     }
   }
 
-  fprintf(s_->fp, "%s\n", tbl.sepLine(CoinTable::Bottom).c_str());
+  fprintf(s.fp, "%s\n", tbl.sepLine(CoinTable::Bottom).c_str());
 
-  if (!model_) {
-    fprintf(s_->fp, "\n%s\n",
+  if (!model) {
+    fprintf(s.fp, "\n%s\n",
       CoinTable::phaseEnd("LP complete", u8).c_str());
-    fflush(s_->fp);
+    fflush(s.fp);
     return;
   }
 
   // Build status string
   const char *baseStatus = "Unknown";
-  const int st = model_->status();
-  const int ss = model_->secondaryStatus();
+  const int st = model->status();
+  const int ss = model->secondaryStatus();
   if (st == 0)
     baseStatus = "Optimal";
   else if (st == 1) {
@@ -522,8 +561,8 @@ void ClpLpEventHandler::printFinalStatus(int numInts, int numFrac)
     baseStatus = "Stopped by event";
 
   const std::string statusStr = (numInts > 0 ? "LP " : "") + std::string(baseStatus);
-  const int iters = s_->lpStarted
-    ? std::max(model_->numberIterations(), s_->maxIterSeen)
+  const int iters = s.lpStarted
+    ? std::max(model->numberIterations(), s.maxIterSeen)
     : 0;
 
   char summary[512];
@@ -532,16 +571,53 @@ void ClpLpEventHandler::printFinalStatus(int numInts, int numFrac)
     std::snprintf(summary, sizeof(summary),
       "%s%sFrac: %d/%d (%.1f%%)   Obj: %g   Iters: %d   Time: %ss",
       statusStr.c_str(), CoinTable::dashSep(u8),
-      numFrac, numInts, pct, model_->objectiveValue(), iters, tStr.c_str());
+      numFrac, numInts, pct, model->objectiveValue(), iters, tStr.c_str());
   } else {
     std::snprintf(summary, sizeof(summary),
       "%s%sObj: %g   Iters: %d   Time: %ss",
       statusStr.c_str(), CoinTable::dashSep(u8),
-      model_->objectiveValue(), iters, tStr.c_str());
+      model->objectiveValue(), iters, tStr.c_str());
   }
-  fprintf(s_->fp, "\n%s\n", CoinTable::phaseEnd(summary, u8).c_str());
-  fflush(s_->fp);
+  appendRacingWinner(summary, sizeof(summary), s, u8);
+  fprintf(s.fp, "\n%s\n", CoinTable::phaseEnd(summary, u8).c_str());
+  fflush(s.fp);
 }
+
+void printRow(ClpLpPhaseState &s, const char *phaseLabel, int iter,
+  double obj, double pInf, double dInf)
+{
+  std::lock_guard<std::mutex> lock(s.mu);
+  if (s.logLevel <= 0 || !s.fp)
+    return;
+
+  const double now = CoinWallclockTime();
+  const double elapsed = now - s.startTime;
+
+  if (!s.lpStarted) {
+    // First row from any racing config: open the table (mirrors the
+    // sequential path always showing the first LP row) and print it
+    // unconditionally, regardless of timeFreq.
+    s.lpStarted = true;
+    lpPhaseOpenTable(s);
+    lpPhaseRow(s, phaseLabel, iter, obj, pInf, dInf, elapsed);
+    s.lastPrintTime = now;
+    s.lastPrintIter = iter;
+    return;
+  }
+
+  // Rate-limited by timeFreq *across all racing configs combined* -- only
+  // whichever config happens to report once the interval has elapsed gets
+  // to print, so the table stays as compact as the sequential one instead
+  // of every thread printing independently.
+  const bool doTime = (s.timeFreq > 0.0 && now - s.lastPrintTime >= s.timeFreq);
+  if (doTime) {
+    lpPhaseRow(s, phaseLabel, iter, obj, pInf, dInf, elapsed);
+    s.lastPrintTime = now;
+    s.lastPrintIter = iter;
+  }
+}
+
+} // namespace ClpLpTable
 
 // ─── ClpLpMsgHandler ──────────────────────────────────────────────────────────
 

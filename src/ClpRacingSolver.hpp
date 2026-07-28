@@ -63,6 +63,11 @@ public:
   /// Index of the winning configuration after solve(), -1 if none.
   int winnerIndex() const { return winnerIndex_; }
 
+  /// Descriptive name of the winning configuration ("dual", "primal+idiot",
+  /// "primal+sprint", or "unknown"), for callers that want to report it
+  /// themselves. Empty string if solve() hasn't found a winner.
+  const char *winnerName() const;
+
   /// Wall-clock seconds taken by the winner.
   double winnerTime() const { return winnerTime_; }
 

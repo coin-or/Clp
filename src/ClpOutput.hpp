@@ -11,6 +11,7 @@
 #include "CoinTime.hpp"
 
 #include <memory>
+#include <mutex>
 #include <string>
 
 // ─── ClpProgressEventHandler ──────────────────────────────────────────────────
@@ -98,7 +99,43 @@ struct ClpLpPhaseState {
   int modifyMsg = 0; 
   int origRows = 0, origCols = 0;
   std::string title = "LP solve";
+  std::string racingWinner; // e.g. "primal+idiot", set by ClpRacingSolver on
+                             // success so the closing summary line can report
+                             // which config won (empty for a non-racing solve).
+
+  // Serializes access when the state is fed from multiple threads (e.g. LP
+  // racing configs reporting progress concurrently via ClpLpTable::printRow()
+  // below). Single-threaded callers (the normal ClpLpEventHandler/
+  // ClpLpMsgHandler event/print() methods) pay only the (uncontended) lock
+  // cost, which is negligible next to an LP iteration.
+  mutable std::mutex mu;
 };
+
+// ─── ClpLpTable ────────────────────────────────────────────────────────────────
+// Free functions that let an external, possibly-multi-threaded progress
+// source (currently: ClpRacingSolver) feed rows into the exact same unified
+// Phase/Iter/Objective/Primal inf/Dual inf/Time table used by a normal
+// (non-racing) LP solve, instead of maintaining a separate ad hoc table.
+// ──────────────────────────────────────────────────────────────────────────────
+namespace ClpLpTable {
+
+/** Thread-safe: print (or, per the state's timeFreq, rate-limit) a progress
+ *  row labelled `phaseLabel` (e.g. a racing config's name such as "Dual" or
+ *  "P+Idiot"). Opens the table on the first call from any thread. Only one
+ *  row is printed per timeFreq interval *across all callers combined*,
+ *  which naturally keeps racing's output as compact as the sequential
+ *  table (only the "current leader" reports, one row at a time). */
+CLPLIB_EXPORT void printRow(ClpLpPhaseState &state, const char *phaseLabel,
+  int iter, double obj, double pInf, double dInf);
+
+/** Print the final status line (and close the table if one was opened).
+ *  Shared implementation used by both ClpLpEventHandler::printFinalStatus()
+ *  and callers (e.g. ClpRacingSolver) that drive their own ClpLpPhaseState
+ *  without an installed ClpLpEventHandler. */
+CLPLIB_EXPORT void printFinalStatus(ClpLpPhaseState &state, ClpSimplex *model,
+  int numInts = 0, int numFrac = 0);
+
+} // namespace ClpLpTable
 
 // ─── ClpLpEventHandler ────────────────────────────────────────────────────────
 // ClpEventHandler that drives a unified LP+Idiot+Sprint progress table.
@@ -140,6 +177,10 @@ public:
   bool tableStarted() const { return s_ && (s_->idiotSeen || s_->sprintSeen || s_->lpStarted); }
   /// File pointer for output
   FILE *fp() const { return s_ ? s_->fp : nullptr; }
+  /** Shared table state, so an external progress source (ClpRacingSolver)
+   *  can feed rows into the exact same table via ClpLpTable::printRow()
+   *  instead of maintaining a separate one. */
+  std::shared_ptr<ClpLpPhaseState> sharedState() const { return s_; }
   inline void setModifyMsg(int value)
   {
     s_->modifyMsg = value;
