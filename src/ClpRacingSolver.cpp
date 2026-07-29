@@ -212,6 +212,18 @@ int ClpRacingSolver::solve()
   std::vector<ClpSimplex *> clones(nThreads, nullptr);
   for (int i = 0; i < nThreads; i++) {
     clones[i] = new ClpSimplex(*model_);
+    // ClpModel's copy constructor only deep-copies the message handler when
+    // the source's defaultHandler_ is true; otherwise the clone *aliases*
+    // model_'s handler_ pointer. If the caller pushed a non-default handler
+    // (e.g. CbcSolver::solveInitialLp()'s shared ClpLpMsgHandler), every
+    // clone would then share that single CoinMessageHandler instance, and
+    // Clp's internal plumbing (presolve, scaling, simplex) calls its
+    // message()/setLogLevel()/finish() methods -- unsynchronized -- from
+    // each racing thread below, causing data races. Give each clone its
+    // own private handler (preserving the current log level) so only
+    // per-config progress reporting is shared, via the mutex-protected
+    // ClpLpPhaseState/RacingEventHandler/ClpLpTable::printRow() path below.
+    clones[i]->setDefaultMessageHandler();
     if (i < static_cast<int>(setupFns_.size()) && setupFns_[i])
       setupFns_[i](clones[i]);
   }
