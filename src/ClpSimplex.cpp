@@ -11677,7 +11677,14 @@ int ClpSimplex::fathom(void *stuff)
     int *whichColumn = new int[2 * numberColumns_];
     int nBound;
     bool tightenBounds = ((specialOptions_ & 64) == 0) ? false : true;
-    numberRows_=-numberRows_;//!! flag to say do more work (if test in crunch)
+    // NOTE: do NOT negate numberRows_ here to request the "redundant row"
+    // removal mode (takeOutSome) in crunch(). That mode drops rows deemed
+    // redundant using the CURRENT (root) node's bounds, but this crunched
+    // model is then reused across many descendant mini-BAB nodes with much
+    // tighter branching bounds; a row redundant at the root can become
+    // essential deeper in the tree, and having already been dropped, is
+    // silently missing for the rest of the subtree - corrupting the node's
+    // feasible region and allowing wrong (too-optimistic) objective values.
     ClpSimplex *small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
       nBound, false, tightenBounds);
     if (small) {
@@ -12416,8 +12423,11 @@ int ClpSimplex::fathomMany(void *stuff)
     double *rhs = dual_;
     whichRow = new int[3 * numberRows_];
     whichColumn = new int[2 * numberColumns_];
-    numberRows_=-numberRows_;//!! flag to say do more work (if test in crunch)
     bool tightenBounds = ((specialOptions_ & 64) == 0) ? false : true;
+    // NOTE: see the matching comment in fathom() above - do NOT negate
+    // numberRows_ here (would request crunch()'s root-bound-based
+    // "redundant row" removal, which is unsound when the crunched model is
+    // reused across a whole mini-BAB subtree with tighter branching bounds).
     small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
       nBound, false, tightenBounds);
     if (small&&small->numberRows_==0) {
@@ -12749,6 +12759,22 @@ int ClpSimplex::fathomMany(void *stuff)
           abort();
         }
       } else if (info->large_ && startOptimal && info->large_->numberColumns_ == numberColumns_Z) {
+        // NOTE: info->large_'s columnUpper_/columnLower_ are only remapped
+        // from this crunched node's bounds when a NEW INCUMBENT is found
+        // (see the analogous, correctly-remapping check a few lines below,
+        // in the feasible-node branch). Here (infeasible branch) they still
+        // hold whatever stale bounds were last written for a PREVIOUS,
+        // unrelated node - comparing against them is bogus and produces
+        // false "INF on optimal" positives. Remap this node's own crunched
+        // bounds into info->large_ first, exactly as the feasible branch
+        // does, before checking.
+        for (int i = 0; i < numberColumns_; i++) {
+          if (integerType_[i]) {
+            int iColumn = info->whichColumn_[i];
+            info->large_->columnUpper_[iColumn] = columnUpper_[i];
+            info->large_->columnLower_[iColumn] = columnLower_[i];
+          }
+        }
         bool onOptimal = true;
         for (int i = 0; i < info->large_->numberColumns_; i++) {
           if (info->large_->columnUpper_[i] < debuggerSolution_Z[i] || info->large_->columnLower_[i] > debuggerSolution_Z[i]) {
@@ -12759,6 +12785,19 @@ int ClpSimplex::fathomMany(void *stuff)
         if (onOptimal) {
           printf("INF on optimal (pre) fathom at depth %d\n", depth);
           writeMps("fathom_pre.mps");
+          // Cross-check: clone this node's exact LP (crunched model,
+          // current bounds) into a completely fresh ClpSimplex and solve it
+          // cold (allSlackBasis + dual()), bypassing fastDual2()'s
+          // warm-started incremental resolve entirely, to determine whether
+          // the infeasibility just reported by fastDual2() is genuine or a
+          // warm-start-state corruption artifact.
+          {
+            ClpSimplex fresh(*this);
+            fresh.allSlackBasis();
+            fresh.setSpecialOptions(0);
+            fresh.dual();
+            printf("cold-resolve status=%d obj=%g\n", fresh.status(), fresh.objectiveValue());
+          }
           abort();
         }
       }
@@ -12992,10 +13031,12 @@ int ClpSimplex::fathomMany(void *stuff)
   // nNodes,info->nDepth_,useDepth,goodNodes);
 #ifdef CHECK_PATH
   if (startOptimal) {
-    assert(startOptimal == 2);
+    // NOTE: startOptimal==2 is only ever set when the known-optimal
+    // solution is found via the "at full depth" fathom paths above; a
+    // genuine improving solution matching the known optimum found via the
+    // normal (non-full-depth) solution branch is a perfectly valid, GOOD
+    // outcome and should not abort here - remove the overly strict assert.
     printf("got fathomed optimal at end %d\n", startOptimal);
-    if (startOptimal != 2)
-      abort();
   }
 #endif
   assert(depth == -1);
