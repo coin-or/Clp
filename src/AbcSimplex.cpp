@@ -1482,7 +1482,7 @@ int AbcSimplex::housekeeping()
     numberPivots++; // allow for update not done
   int maximumPivots = abcFactorization_->maximumPivots();
   int numberDense = 0; //abcFactorization_->numberDense();
-  bool dontInvert = ((specialOptions_ & 16384) != 0 && numberIterations_ * 3 > 2 * maximumIterations());
+  bool dontInvert = ((specialOptions_ & 16384) != 0 && static_cast< CoinInt64 >(numberIterations_) * 3 > 2 * static_cast< CoinInt64 >(maximumIterations()));
   if (numberPivots == maximumPivots || maximumPivots < 2) {
     // If dense then increase
     if (maximumPivots > 100 && numberDense > 1.5 * maximumPivots && false) {

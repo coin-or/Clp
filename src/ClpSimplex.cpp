@@ -2463,7 +2463,7 @@ int ClpSimplex::housekeeping(double objectiveChange)
   int numberPivots = factorization_->pivots();
   int maximumPivots = factorization_->maximumPivots();
   int numberDense = factorization_->numberDense();
-  bool dontInvert = ((specialOptions_ & 16384) != 0 && numberIterations_ * 3 > 2 * maximumIterations());
+  bool dontInvert = ((specialOptions_ & 16384) != 0 && static_cast< CoinInt64 >(numberIterations_) * 3 > 2 * static_cast< CoinInt64 >(maximumIterations()));
   if (numberPivots == maximumPivots || maximumPivots < 2) {
     // If dense then increase
     if (maximumPivots > 100 && numberDense > 1.5 * maximumPivots
