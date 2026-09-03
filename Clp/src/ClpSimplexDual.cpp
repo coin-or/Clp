@@ -4879,14 +4879,22 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
           // get correct bounds on all variables
           resetFakeBounds(1);
           // need to reject something
-          char x = isColumn(sequenceOut_) ? 'C' : 'R';
-          handler_->message(CLP_SIMPLEX_FLAG, messages_)
-            << x << sequenceWithin(sequenceOut_)
-            << CoinMessageEol;
+          // statusOfProblemInDual can be entered before any pivot has been
+          // performed. Like on a re-entrant fastDual2 solve of the sub-model
+          // built by ClpSimplexOther::crunch() inside ClpSimplex::fathom() -
+          // in which case sequenceOut_ is still -1 and there is nothing to
+          // reject.  setFlagged(-1) does status_[-1] |= 64, a one byte
+          // out-of-bounds read/write that corrupts the heap.
+          if (sequenceOut_ >= 0) {
+            char x = isColumn(sequenceOut_) ? 'C' : 'R';
+            handler_->message(CLP_SIMPLEX_FLAG, messages_)
+              << x << sequenceWithin(sequenceOut_)
+              << CoinMessageEol;
 #ifdef COIN_DEVELOP
-          printf("flag d\n");
+            printf("flag d\n");
 #endif
-          setFlagged(sequenceOut_);
+            setFlagged(sequenceOut_);
+          }
           progress_.clearBadTimes();
 
           // Go to safe
