@@ -9215,7 +9215,17 @@ int ClpSimplex::pivot()
   bool updateSolution = true;
   while (roundAgain) {
     roundAgain = false;
-    unpackPacked(rowArray_[1],sequenceIn_);
+    /* The entering column has to be unpacked in whichever form
+       updateColumnFT expects, and read back in the SAME form -- see
+       pivotResultPart2, which is the other place that does this sequence.
+       Getting only half of that right leaves alpha_ read out of a slot that
+       holds a different entry's value, or none, so the pivot is rejected as
+       singular (or, worse, taken with the wrong alpha). */
+#ifndef COIN_FAC_NEW
+    unpackPacked(rowArray_[1], sequenceIn_);
+#else
+    unpack(rowArray_[1], sequenceIn_);
+#endif
     factorization_->updateColumnFT(rowArray_[2], rowArray_[1]);
     alpha_ = 0.0;
     int i;
@@ -9228,7 +9238,11 @@ int ClpSimplex::pivot()
       int ii = index[i];
       if (pivotVariable_[ii] == sequenceOut_) {
         pivotRow_ = ii;
+#ifndef COIN_FAC_NEW
+        alpha_ = element[i];
+#else
         alpha_ = element[pivotRow_];
+#endif
         break;
       }
     }
@@ -9259,7 +9273,13 @@ int ClpSimplex::pivot()
       int ii = index[i];
       // get column
       int ij = pivotVariable_[ii];
+      /* Same packing question as the alpha_ read above. saveSolution is our own
+         dense scratch and stays indexed by row either way. */
+#ifndef COIN_FAC_NEW
+      double value = element[i];
+#else
       double value = element[ii];
+#endif
       saveSolution[ii] = solution_[ij];
       solution_[ij] -= movement * value;
     }
