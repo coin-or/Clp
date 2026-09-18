@@ -1278,9 +1278,14 @@ void ClpModel::resize(int newNumberRows, int newNumberColumns)
     delete[] savedColumnScale_;
     savedColumnScale_ = temp;
   }
-  if (objective_ && numberColumns2 > maximumColumns_)
+  // Objective tracks its own exact numberColumns_ (no spare capacity like
+  // the arrays below), so it must be resized whenever the logical column
+  // count changes, regardless of maximumColumns_ capacity - otherwise
+  // objective_->numberColumns_ can go stale relative to this->numberColumns_
+  // when maximumColumns_ already covers newNumberColumns.
+  if (objective_)
     objective_->resize(newNumberColumns);
-  else if (!objective_)
+  else
     objective_ = new ClpLinearObjective(NULL, newNumberColumns);
   if (numberColumns2 > maximumColumns_) {
     columnLower_ = resizeDouble(columnLower_, numberColumns_,

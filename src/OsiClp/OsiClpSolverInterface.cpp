@@ -174,7 +174,12 @@ void OsiClpSolverInterface::initialSolve()
           break;
       }
     }
-    if (i == numberColumns) {
+    // fakeObjective_ is sized when set and never tracks later column
+    // additions/deletions (e.g. from a cut generator's temporary clone),
+    // so only substitute it in when its size still matches the model -
+    // otherwise a stale, smaller fakeObjective_ can be validated against
+    // the model's current (larger) column count downstream and throw.
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       // Check (Clp fast dual)
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
@@ -1125,7 +1130,8 @@ void OsiClpSolverInterface::resolve()
           break;
       }
     }
-    if (i == numberColumns) {
+    // See stale-fakeObjective_ note above (site guarded the same way).
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
         savedObjective = modelPtr_->objective_;
@@ -2014,7 +2020,8 @@ void OsiClpSolverInterface::markHotStart()
           break;
       }
     }
-    if (i == numberColumns) {
+    // See stale-fakeObjective_ note above (site guarded the same way).
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
         savedObjective = modelPtr_->objective_;
