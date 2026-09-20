@@ -5971,7 +5971,14 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
 	  handler_->message(CLP_GENERAL_WARNING, messages_)
 	    << temp
 	    << CoinMessageEol;
-	  primal();
+	  // Must preserve the caller's startFinishOptions (e.g. "keep work
+	  // areas") here - calling primal() with defaults (0) silently
+	  // deletes the rim (cost_/upper_/lower_/solution_/status_ arrays)
+	  // even when the caller asked to keep them, corrupting hot-start
+	  // callers (e.g. OsiClpSolverInterface::solveFromHotStart's
+	  // smallModel_ path) that read those arrays right after this call
+	  // returns, causing a null-pointer crash.
+	  primal(0, startFinishOptions);
 	}
       }
     }
@@ -6428,7 +6435,11 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
 	  handler_->message(CLP_GENERAL_WARNING, messages_)
 	    << temp
 	    << CoinMessageEol;
-	  dual();
+	  // See the analogous fix in ClpSimplex::dual()'s "try once more"
+	  // fallback above: must preserve startFinishOptions here too, or
+	  // this call silently deletes the rim even when the caller asked
+	  // to keep it, crashing hot-start callers that read it afterwards.
+	  dual(0, startFinishOptions);
 	}
       }
     }
