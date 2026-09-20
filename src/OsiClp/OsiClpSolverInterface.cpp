@@ -10093,7 +10093,16 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
       } else {
         if (canGo != 3) {
           double objValue = direction * objective[iColumn];
-          if (objValue >= 0.0 && (canGo & 1) == 0) {
+          // Note: when objValue == 0.0 exactly, fixing the column carries no
+          // objective benefit at all, so it isn't worth the risk of relying
+          // on the (unscaled, tolerance-free) canGo bits above -- on
+          // instances with large-magnitude coefficients/RHS those bits can
+          // be wrong due to floating-point round-off in the down[]/up[]
+          // accumulations, and fixing a zero-cost column purely on a tie
+          // has, in practice, wrongly excluded the true optimal/feasible
+          // solution (see neos-3656078-kumeu). Require a strict sign so we
+          // only ever fix when there is a genuine objective incentive.
+          if (objValue > 0.0 && (canGo & 1) == 0) {
 #if COIN_DEVELOP > 2
             printf("dual fix down on column %d\n", iColumn);
 #endif
@@ -10102,7 +10111,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
               nTightened++;
               setColUpper(iColumn, lower);
             }
-          } else if (objValue <= 0.0 && (canGo & 2) == 0) {
+          } else if (objValue < 0.0 && (canGo & 2) == 0) {
 #if COIN_DEVELOP > 2
             printf("dual fix up on column %d\n", iColumn);
 #endif
@@ -10133,7 +10142,10 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
       }
       if (canGo != 3) {
         double objValue = direction * objective[iColumn];
-        if (objValue >= 0.0 && (canGo & 1) == 0) {
+        // See the matching comment in the integer-column dual-fix branch
+        // above: don't fix on an exact objective tie, only on a genuine
+        // (strict) sign.
+        if (objValue > 0.0 && (canGo & 1) == 0) {
 #if COIN_DEVELOP > 2
           printf("dual fix down on continuous column %d lower %g\n",
             iColumn, lower);
@@ -10143,7 +10155,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
             nTightened++;
             setColUpper(iColumn, lower);
           }
-        } else if (objValue <= 0.0 && (canGo & 2) == 0) {
+        } else if (objValue < 0.0 && (canGo & 2) == 0) {
 #if COIN_DEVELOP > 2
           printf("dual fix up on continuous column %d upper %g\n",
             iColumn, upper);
