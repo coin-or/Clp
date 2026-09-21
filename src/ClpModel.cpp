@@ -2815,8 +2815,18 @@ bool ClpModel::hitMaximumIterations() const
 {
   // replaced - compiler error? bool hitMax= (numberIterations_>=maximumIterations());
   bool hitMax = (numberIterations_ >= intParam_[ClpMaxNumIteration]);
-  if ((specialOptions_&0x10000000)!=0)
-    return hitMax;
+  // NOTE: specialOptions_ bit 0x10000000 ("in Cbc branch and bound", set by
+  // CbcModel::resolve()) used to make this function return here, skipping
+  // the CPU/wall-time checks below entirely for every node-level LP resolve
+  // during B&B. That silently defeated CbcModel's own remaining-time
+  // propagation (setMaximumSeconds()/setMaximumWallSeconds() before each
+  // resolve): a single expensive resolve (e.g. a hard cut-generation
+  // re-solve, or a node whose LP is numerically difficult) could run to
+  // its own completion regardless of how little time was left, since the
+  // only place that time budget was ever consulted was disabled. An
+  // explicitly configured deadline (ClpMaxSeconds/ClpMaxWallSeconds) must
+  // still be honored even while running inside Cbc's B&B - so the time
+  // checks are no longer skipped for that bit.
   // Check the wall-clock/CPU-time deadline on every single iteration rather
   // than only every 10th. This used to be throttled to amortize the cost of
   // reading the clock, but CoinWallclockTime()/CoinCpuTime() are cheap
