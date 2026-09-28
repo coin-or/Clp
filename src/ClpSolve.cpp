@@ -3762,6 +3762,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 #endif
       } else if (barrierStatus == 4) {
         // memory problems
+        printf("Barrier: Cholesky setup/factorization failed (too large or "
+               "out of memory) - falling back to dual simplex\n");
         model2->setPerturbation(savePerturbation);
         model2->createStatus();
         model2->dual();

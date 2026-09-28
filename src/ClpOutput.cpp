@@ -748,9 +748,12 @@ int ClpLpMsgHandler::print()
     // Much later do pretty table - for now just out
     //return CoinMessageHandler::print();
     if (s_->fp) {
-      char temp[100];
-      sprintf(temp,"%s\n",messageBuffer()+8);
-      fprintf(s_->fp,temp,"\n%s\n");
+      // Skip the 8-char "Clp0NNNI" prefix; print as data, never as a
+      // format string (messages can be long and may contain '%').
+      const char *msg = messageBuffer();
+      if (std::strlen(msg) > 8)
+        msg += 8;
+      fprintf(s_->fp, "%s\n", msg);
       fflush(s_->fp);
       //printf(temp,"%s\n");
     }

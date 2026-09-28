@@ -261,6 +261,12 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   if (c_->status) {
     COIN_DETAIL_PRINT(std::cout << "CHOLMOD ordering failed" << std::endl);
     return 1;
+  } else if (c_->lnz > static_cast< double >(COIN_INT_MAX)) {
+    // With 32-bit (CHOLMOD_INT) indices cholmod_factorize would fail with
+    // CHOLMOD_TOO_LARGE and leave L_ symbolic - give up on barrier now.
+    printf("CHOLMOD: factor too large for 32-bit indices (%g nonzeros predicted)\n",
+      c_->lnz);
+    return 1;
   } else {
     COIN_DETAIL_PRINT(printf("%g nonzeros, flop count %g\n", c_->lnz, c_->fl));
   }
@@ -396,6 +402,11 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
   A.sorted = 1;
   A.packed = 1;
   cholmod_factorize(&A, L_, c_); /* factorize */
+  if (c_->status < CHOLMOD_OK || L_->xtype == CHOLMOD_PATTERN) {
+    // Hard failure (out of memory, too large, ...) - L_ is unusable.
+    printf("CHOLMOD: factorization failed (status %d)\n", c_->status);
+    return -1;
+  }
   choleskyCondition_ = 1.0;
   bool cleanCholesky;
   if (model_->numberIterations() < 2000)
