@@ -40,12 +40,24 @@ ClpCholeskyUfl::ClpCholeskyUfl(int denseThreshold)
   type_ = 14;
   L_ = NULL;
   c_ = NULL;
+  B_ = NULL;
+  X_ = NULL;
+  Y_ = NULL;
+  E_ = NULL;
+  forceSimplicial_ = false;
 
 #ifdef CLP_HAS_CHOLMOD
   c_ = (cholmod_common *)malloc(sizeof(cholmod_common));
   cholmod_start(c_);
-  // Can't use supernodal as may not be positive definite
-  c_->supernodal = 0;
+  /* Let CHOLMOD choose between the simplicial and the supernodal method.
+     A*D*A' + delta^2*I is positive definite, and the supernodal method is
+     the only one that uses the (threaded) dense BLAS on the dense trailing
+     blocks of the factor - which is exactly what the native ClpCholeskyBase
+     does by hand ("going dense for last n rows").  Forcing simplicial here
+     gave up that whole gain on every instance.  If a factorization ever does
+     fail numerically we fall back to simplicial LDL' for good - see
+     factorize(). */
+  c_->supernodal = CHOLMOD_AUTO;
 #endif
 }
 
@@ -64,6 +76,10 @@ ClpCholeskyUfl::ClpCholeskyUfl(const ClpCholeskyUfl &rhs)
 ClpCholeskyUfl::~ClpCholeskyUfl()
 {
 #ifdef CLP_HAS_CHOLMOD
+  cholmod_free_dense(&B_, c_);
+  cholmod_free_dense(&X_, c_);
+  cholmod_free_dense(&Y_, c_);
+  cholmod_free_dense(&E_, c_);
   cholmod_free_factor(&L_, c_);
   cholmod_finish(c_);
   free(c_);
@@ -128,16 +144,27 @@ int ClpCholeskyUfl::order(ClpInterior *model)
 /* Orders rows and saves pointer to matrix.and model */
 int ClpCholeskyUfl::order(ClpInterior *model)
 {
+  /* The CHOLMOD objects below are told the integer arrays are CHOLMOD_INT,
+     so a 64 bit CoinBigIndex would be silently misread. */
+  static_assert(sizeof(CoinBigIndex) == sizeof(int),
+    "ClpCholeskyUfl needs a 32 bit CoinBigIndex for CHOLMOD_INT");
   numberRows_ = model->numberRows();
   if (doKKT_) {
     numberRows_ += numberRows_ + model->numberColumns();
     printf("finish coding UFL KKT!\n");
     abort();
   }
+  /* This path never calls ClpCholeskyBase::preOrder, so the dense column
+     machinery (whichDense_/denseColumn_/dense_) is never set up, and solve()
+     below has no low rank correction for it either.  Make sure nothing else
+     thinks dense columns are being handled. */
+  denseThreshold_ = -1;
+  delete[] rowsDropped_;
   rowsDropped_ = new char[numberRows_];
   memset(rowsDropped_, 0, numberRows_);
   numberRowsDropped_ = 0;
   model_ = model;
+  delete rowCopy_;
   rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
   // Space for starts
   choleskyStart_ = new CoinBigIndex[numberRows_ + 1];
@@ -254,11 +281,22 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   A.dtype = CHOLMOD_DOUBLE;
   A.sorted = 1;
   A.packed = 1;
-  c_->nmethods = 9;
+  /* Use CHOLMOD's own ordering strategy: AMD, and METIS on top of it only
+     when AMD's fill-in turns out to be poor.  The previous value (9) asked
+     CHOLMOD to run *every* built-in method - AMD, COLAMD, METIS and four
+     NESDIS nested dissection variants - and keep the best.  On the normal
+     equations of a large LP the four NESDIS runs alone dominate the whole
+     barrier solve, for an ordering that is rarely better than AMD/METIS. */
+  c_->nmethods = 0;
   c_->postorder = true;
   //c_->dbound=1.0e-20;
+  cholmod_free_factor(&L_, c_);
+  cholmod_free_dense(&B_, c_);
+  cholmod_free_dense(&X_, c_);
+  cholmod_free_dense(&Y_, c_);
+  cholmod_free_dense(&E_, c_);
   L_ = cholmod_analyze(&A, c_);
-  if (c_->status) {
+  if (c_->status || !L_) {
     COIN_DETAIL_PRINT(std::cout << "CHOLMOD ordering failed" << std::endl);
     return 1;
   } else if (c_->lnz > static_cast< double >(COIN_INT_MAX)) {
@@ -388,6 +426,31 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
     }
   }
   delete[] work;
+  /* rows dropped for a tiny diagonal have to be reported to the caller, and
+     remembered, exactly as ClpCholeskyBase::factorize does - the old code
+     computed numberDroppedBefore and then threw it away, so rowsDropped_ was
+     never updated and the caller was always told that nothing was dropped. */
+  newDropped = numberDroppedBefore;
+  if (newDropped || numberRowsDropped_) {
+    /* Turn every dropped row into a unit row of the matrix being factorized.
+       Clamping only its diagonal to 1e-10 while leaving its off-diagonals in
+       place (what used to happen here) hands CHOLMOD an almost singular
+       matrix and the resulting direction is meaningless. */
+    for (iRow = 0; iRow < numberRows_; iRow++) {
+      CoinBigIndex start = choleskyStart_[iRow];
+      CoinBigIndex end = choleskyStart_[iRow + 1];
+      if (rowsDropped[iRow]) {
+        sparseFactor_[start] = 1.0;
+        for (CoinBigIndex j = start + 1; j < end; j++)
+          sparseFactor_[j] = 0.0;
+      } else {
+        for (CoinBigIndex j = start + 1; j < end; j++) {
+          if (rowsDropped[choleskyRow_[j]])
+            sparseFactor_[j] = 0.0;
+        }
+      }
+    }
+  }
   cholmod_sparse A;
   A.nrow = numberRows_;
   A.ncol = numberRows_;
@@ -402,7 +465,21 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
   A.sorted = 1;
   A.packed = 1;
   cholmod_factorize(&A, L_, c_); /* factorize */
-  if (c_->status < CHOLMOD_OK || L_->xtype == CHOLMOD_PATTERN) {
+  if (!forceSimplicial_ && L_ && c_->status >= CHOLMOD_OK
+    && L_->xtype != CHOLMOD_PATTERN
+    && L_->minor < static_cast< size_t >(numberRows_)) {
+    /* The supernodal method does no pivoting and gives up on the first non
+       positive pivot.  Redo this factorization - and every later one - with
+       the simplicial LDL' method, bounding tiny pivots instead. */
+    forceSimplicial_ = true;
+    c_->supernodal = CHOLMOD_SIMPLICIAL;
+    c_->dbound = 1.0e-20;
+    cholmod_free_factor(&L_, c_);
+    L_ = cholmod_analyze(&A, c_);
+    if (L_)
+      cholmod_factorize(&A, L_, c_);
+  }
+  if (!L_ || c_->status < CHOLMOD_OK || L_->xtype == CHOLMOD_PATTERN) {
     // Hard failure (out of memory, too large, ...) - L_ is unusable.
     printf("CHOLMOD: factorization failed (status %d)\n", c_->status);
     return -1;
@@ -472,13 +549,14 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
 /* Uses factorization to solve. */
 void ClpCholeskyUfl::solve(double *region)
 {
-  cholmod_dense *x, *b;
-  b = cholmod_allocate_dense(numberRows_, 1, numberRows_, CHOLMOD_REAL, c_);
-  CoinMemcpyN(region, numberRows_, (double *)b->x);
-  x = cholmod_solve(CHOLMOD_A, L_, b, c_);
-  CoinMemcpyN((double *)x->x, numberRows_, region);
-  cholmod_free_dense(&x, c_);
-  cholmod_free_dense(&b, c_);
+  /* cholmod_solve2 reuses B_/X_/Y_/E_ across calls; cholmod_solve used to
+     allocate and free a dense n-vector (plus internal workspace) on every
+     single solve, and the barrier does several of those per iteration. */
+  if (!B_)
+    B_ = cholmod_allocate_dense(numberRows_, 1, numberRows_, CHOLMOD_REAL, c_);
+  CoinMemcpyN(region, numberRows_, (double *)B_->x);
+  cholmod_solve2(CHOLMOD_A, L_, B_, NULL, &X_, NULL, &Y_, &E_, c_);
+  CoinMemcpyN((double *)X_->x, numberRows_, region);
 }
 #else
 void ClpCholeskyUfl::solve(double *region)

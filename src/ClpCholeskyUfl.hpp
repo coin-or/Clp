@@ -12,6 +12,7 @@ class ClpCholeskyDense;
 
 typedef struct cholmod_factor_struct cholmod_factor;
 typedef struct cholmod_common_struct cholmod_common;
+typedef struct cholmod_dense_struct cholmod_dense;
 
 /** Ufl class for Clp Cholesky factorization
 
@@ -62,6 +63,13 @@ public:
 private:
   cholmod_factor *L_;
   cholmod_common *c_;
+  /// Persistent right hand side / solution / workspace for cholmod_solve2
+  cholmod_dense *B_;
+  cholmod_dense *X_;
+  cholmod_dense *Y_;
+  cholmod_dense *E_;
+  /// Set once a supernodal factorization has failed numerically
+  bool forceSimplicial_;
 
   // Copy
   ClpCholeskyUfl(const ClpCholeskyUfl &);
