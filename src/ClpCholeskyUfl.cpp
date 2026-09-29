@@ -191,7 +191,8 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   int *used = new int[numberRows_ + 1];
   CoinZeroN(used, numberRows_);
   int iRow;
-  sizeFactor_ = 0;
+  // Counted in 64 bits: the 32 bit CoinBigIndex can wrap on large LPs.
+  int64_t totalSize = 0;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int number = 1;
     // make sure diagonal exists
@@ -214,13 +215,32 @@ int ClpCholeskyUfl::order(ClpInterior *model)
           }
         }
       }
-      sizeFactor_ += number;
+      totalSize += number;
       int j;
       for (j = 0; j < number; j++)
         used[which[j]] = 0;
     }
   }
   delete[] which;
+  /* Everything handed to CHOLMOD uses 32 bit (CHOLMOD_INT) indices, and
+     that limit is hit well before the lower triangle of A*A' itself
+     overflows: cholmod_analyze's AMD/METIS orderings first expand it to
+     full symmetric storage (about twice the entries) and AMD then wants
+     another ~20% elbow room on top.  CHOLMOD does not detect this - it
+     overflows internally and segfaults in cholmod_copy (seen on
+     neos-3402294-bobin and neos-4763324-toguru, whose lower triangles have
+     1.42e9 and 1.43e9 entries).  Give up on barrier before calling it,
+     exactly like the factor-size check after cholmod_analyze below. */
+  double fullSize = 2.0 * static_cast< double >(totalSize) - numberRows_;
+  if (1.2 * fullSize + 8.0 * numberRows_ > static_cast< double >(COIN_INT_MAX)) {
+    printf("CHOLMOD: A*A' too large for 32-bit indices (%g nonzeros in lower triangle)\n",
+      static_cast< double >(totalSize));
+    delete[] used;
+    delete[] choleskyStart_;
+    choleskyStart_ = NULL;
+    return 1;
+  }
+  sizeFactor_ = static_cast< CoinBigIndex >(totalSize);
   // Now we have size - create arrays and fill in
   try {
     choleskyRow_ = new CoinBigIndex[sizeFactor_];
