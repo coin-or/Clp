@@ -70,6 +70,10 @@ private:
   cholmod_dense *E_;
   /// Set once a supernodal factorization has failed numerically
   bool forceSimplicial_;
+  /** Rewrite every dropped row of sparseFactor_ as a unit row (diagonal 1,
+      off diagonals zero, and the symmetric entries in the other rows zeroed
+      too) so the matrix handed to CHOLMOD stays non singular. */
+  void applyDroppedRows(const int *rowsDropped);
 
   // Copy
   ClpCholeskyUfl(const ClpCholeskyUfl &);

@@ -342,6 +342,32 @@ int ClpCholeskyUfl::symbolic()
 }
 
 #ifdef CLP_HAS_CHOLMOD
+/* Maximum number of rows dropped-and-retried before giving up on the
+   supernodal method for the rest of the solve. */
+#define CLP_UFL_MAX_DROP_RETRIES 2
+
+/* Turn every dropped row into a unit row of the matrix being factorized.
+   Clamping only its diagonal to 1e-10 while leaving its off-diagonals in
+   place (what the old code did) hands CHOLMOD an almost singular matrix and
+   the resulting direction is meaningless. */
+void ClpCholeskyUfl::applyDroppedRows(const int *rowsDropped)
+{
+  for (int iRow = 0; iRow < numberRows_; iRow++) {
+    CoinBigIndex start = choleskyStart_[iRow];
+    CoinBigIndex end = choleskyStart_[iRow + 1];
+    if (rowsDropped[iRow]) {
+      sparseFactor_[start] = 1.0;
+      for (CoinBigIndex j = start + 1; j < end; j++)
+        sparseFactor_[j] = 0.0;
+    } else {
+      for (CoinBigIndex j = start + 1; j < end; j++) {
+        if (rowsDropped[choleskyRow_[j]])
+          sparseFactor_[j] = 0.0;
+      }
+    }
+  }
+}
+
 /* Factorize - filling in rowsDropped and returning number dropped */
 int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
 {
@@ -443,26 +469,8 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
      computed numberDroppedBefore and then threw it away, so rowsDropped_ was
      never updated and the caller was always told that nothing was dropped. */
   newDropped = numberDroppedBefore;
-  if (newDropped || numberRowsDropped_) {
-    /* Turn every dropped row into a unit row of the matrix being factorized.
-       Clamping only its diagonal to 1e-10 while leaving its off-diagonals in
-       place (what used to happen here) hands CHOLMOD an almost singular
-       matrix and the resulting direction is meaningless. */
-    for (iRow = 0; iRow < numberRows_; iRow++) {
-      CoinBigIndex start = choleskyStart_[iRow];
-      CoinBigIndex end = choleskyStart_[iRow + 1];
-      if (rowsDropped[iRow]) {
-        sparseFactor_[start] = 1.0;
-        for (CoinBigIndex j = start + 1; j < end; j++)
-          sparseFactor_[j] = 0.0;
-      } else {
-        for (CoinBigIndex j = start + 1; j < end; j++) {
-          if (rowsDropped[choleskyRow_[j]])
-            sparseFactor_[j] = 0.0;
-        }
-      }
-    }
-  }
+  if (newDropped || numberRowsDropped_)
+    applyDroppedRows(rowsDropped);
   cholmod_sparse A;
   A.nrow = numberRows_;
   A.ncol = numberRows_;
@@ -477,6 +485,34 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
   A.sorted = 1;
   A.packed = 1;
   cholmod_factorize(&A, L_, c_); /* factorize */
+  /* The supernodal method does no pivoting at all: it gives up at the first
+     non positive pivot, reporting the offending column in L_->minor.  Near
+     convergence the barrier diagonal becomes extreme and this happens on
+     most instances, so simply switching to the simplicial method for the
+     rest of the solve - what used to happen here - throws away BLAS3 for
+     every remaining iteration.  On an instance with a dense-ish factor that
+     is catastrophic (sorrell3 spends 99% of its time in simplicial rowfac).
+     Instead drop the offending row, exactly as ClpCholeskyBase drops a row
+     with a non positive pivot, and refactorize.  The sparsity pattern is
+     unchanged, so the symbolic analysis - and with it the supernodal
+     blocking - is reused; only the numeric factorization is repeated. */
+  int numberRetries = 0;
+  while (!forceSimplicial_ && L_ && c_->status >= CHOLMOD_OK
+    && L_->xtype != CHOLMOD_PATTERN
+    && L_->minor < static_cast< size_t >(numberRows_)
+    && numberRetries < CLP_UFL_MAX_DROP_RETRIES) {
+    /* L_->minor is in the permuted order used by the factor. */
+    int badRow = static_cast< int >(L_->minor);
+    if (L_->Perm)
+      badRow = static_cast< int * >(L_->Perm)[L_->minor];
+    if (badRow < 0 || badRow >= numberRows_ || rowsDropped[badRow])
+      break;
+    rowsDropped[badRow] = 2;
+    newDropped++;
+    applyDroppedRows(rowsDropped);
+    numberRetries++;
+    cholmod_factorize(&A, L_, c_);
+  }
   if (!forceSimplicial_ && L_ && c_->status >= CHOLMOD_OK
     && L_->xtype != CHOLMOD_PATTERN
     && L_->minor < static_cast< size_t >(numberRows_)) {
