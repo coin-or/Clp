@@ -164,6 +164,18 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   memset(rowsDropped_, 0, numberRows_);
   numberRowsDropped_ = 0;
   model_ = model;
+#if defined(CHOLMOD_VERSION) && CHOLMOD_VERSION >= CHOLMOD_VER_CODE(5, 0)
+  /* Respect the model's thread budget instead of letting CHOLMOD grab every
+     core it can see.  CHOLMOD defaults nthreads_max to the OpenMP maximum,
+     so a barrier solve run inside a 32-way parallel harness - or inside one
+     of Cbc's -threads N branch and bound threads, each with its own Clp -
+     silently oversubscribes the machine by that factor.  What is actually
+     paid for is mostly spinning: on a supernodal instance like seymour this
+     was ~49% of all cycles in gomp_barrier_wait_end, 2.3x the CPU time for
+     no wall clock gain at all. */
+  int numberThreads = model_->numberThreads();
+  c_->nthreads_max = (numberThreads > 0) ? numberThreads : 1;
+#endif
   delete rowCopy_;
   rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
   // Space for starts
