@@ -22,11 +22,12 @@
 #endif
 
 #include "CoinPragma.hpp"
+#include "CoinHelperFunctions.hpp"
+#include "ClpHelperFunctions.hpp"
+#include "ClpCholeskyDense.hpp"
 #include "ClpCholeskyUfl.hpp"
 #include "ClpMessage.hpp"
 #include "ClpInterior.hpp"
-#include "CoinHelperFunctions.hpp"
-#include "ClpHelperFunctions.hpp"
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -44,6 +45,12 @@ ClpCholeskyUfl::ClpCholeskyUfl(int denseThreshold)
   X_ = NULL;
   Y_ = NULL;
   E_ = NULL;
+  Ad_dense_ = NULL;
+  W_dense_ = NULL;
+  Y_dense_ = NULL;
+  E_dense_ = NULL;
+  whichDenseIndex_ = NULL;
+  numberDense_ = 0;
   forceSimplicial_ = false;
 
 #ifdef CLP_HAS_CHOLMOD
@@ -75,7 +82,13 @@ ClpCholeskyUfl::ClpCholeskyUfl(const ClpCholeskyUfl &rhs)
 //-------------------------------------------------------------------
 ClpCholeskyUfl::~ClpCholeskyUfl()
 {
+  delete[] whichDenseIndex_;
+  whichDenseIndex_ = NULL;
 #ifdef CLP_HAS_CHOLMOD
+  cholmod_free_dense(&Ad_dense_, c_);
+  cholmod_free_dense(&W_dense_, c_);
+  cholmod_free_dense(&Y_dense_, c_);
+  cholmod_free_dense(&E_dense_, c_);
   cholmod_free_dense(&B_, c_);
   cholmod_free_dense(&X_, c_);
   cholmod_free_dense(&Y_, c_);
@@ -104,7 +117,7 @@ ClpCholeskyUfl::operator=(const ClpCholeskyUfl &rhs)
 //-------------------------------------------------------------------
 ClpCholeskyBase *ClpCholeskyUfl::clone() const
 {
-  return new ClpCholeskyUfl(*this);
+  return new ClpCholeskyUfl(denseThreshold_);
 }
 
 #ifndef CLP_HAS_CHOLMOD
@@ -154,16 +167,26 @@ int ClpCholeskyUfl::order(ClpInterior *model)
     printf("finish coding UFL KKT!\n");
     abort();
   }
-  /* This path never calls ClpCholeskyBase::preOrder, so the dense column
-     machinery (whichDense_/denseColumn_/dense_) is never set up, and solve()
-     below has no low rank correction for it either.  Make sure nothing else
-     thinks dense columns are being handled. */
-  denseThreshold_ = -1;
   delete[] rowsDropped_;
   rowsDropped_ = new char[numberRows_];
   memset(rowsDropped_, 0, numberRows_);
   numberRowsDropped_ = 0;
   model_ = model;
+
+  // Reset any previous dense-column allocations
+  delete[] whichDense_;
+  whichDense_ = NULL;
+  delete[] whichDenseIndex_;
+  whichDenseIndex_ = NULL;
+  delete dense_;
+  dense_ = NULL;
+  numberDense_ = 0;
+#ifdef CLP_HAS_CHOLMOD
+  cholmod_free_dense(&Ad_dense_, c_);
+  cholmod_free_dense(&W_dense_, c_);
+  cholmod_free_dense(&Y_dense_, c_);
+  cholmod_free_dense(&E_dense_, c_);
+#endif
 #if defined(CHOLMOD_VERSION) && CHOLMOD_VERSION >= CHOLMOD_VER_CODE(5, 0)
   /* Respect the model's thread budget instead of letting CHOLMOD grab every
      core it can see.  CHOLMOD defaults nthreads_max to the OpenMP maximum,
@@ -180,12 +203,45 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
   // Space for starts
   choleskyStart_ = new CoinBigIndex[numberRows_ + 1];
+  int numberColumns = model->numberColumns();
   const CoinBigIndex *columnStart = model_->clpMatrix()->getVectorStarts();
   const int *columnLength = model_->clpMatrix()->getVectorLengths();
   const int *row = model_->clpMatrix()->getIndices();
   const CoinBigIndex *rowStart = rowCopy_->getVectorStarts();
   const int *rowLength = rowCopy_->getVectorLengths();
   const int *column = rowCopy_->getIndices();
+
+  // Dense column detection
+  int threshold = denseThreshold_;
+  if (threshold <= 0) {
+    threshold = std::max(100, numberRows_ / 20);
+  }
+  int candidateDense = 0;
+  for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
+    if (columnLength[iColumn] >= threshold) {
+      candidateDense++;
+    }
+  }
+  if (candidateDense > 0 && candidateDense <= 60) {
+    numberDense_ = candidateDense;
+    whichDense_ = new char[numberColumns];
+    memset(whichDense_, 0, numberColumns);
+    whichDenseIndex_ = new int[numberDense_];
+    int idx = 0;
+    for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
+      if (columnLength[iColumn] >= threshold) {
+        whichDense_[iColumn] = 1;
+        whichDenseIndex_[idx++] = iColumn;
+      }
+    }
+    dense_ = new ClpCholeskyDense();
+    dense_->reserveSpace(NULL, numberDense_);
+    if (model->messageHandler()->logLevel() > 0) {
+      printf("ClpCholeskyUfl: extracted %d dense columns (threshold %d)\n",
+        numberDense_, threshold);
+    }
+  }
+
   // We need two arrays for counts
   CoinBigIndex *which = new CoinBigIndex[numberRows_];
   int *used = new int[numberRows_ + 1];
@@ -203,6 +259,8 @@ int ClpCholeskyUfl::order(ClpInterior *model)
       CoinBigIndex endRow = rowStart[iRow] + rowLength[iRow];
       for (CoinBigIndex k = startRow; k < endRow; k++) {
         int iColumn = column[k];
+        if (whichDense_ && whichDense_[iColumn])
+          continue;
         CoinBigIndex start = columnStart[iColumn];
         CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
         for (CoinBigIndex j = start; j < end; j++) {
@@ -274,6 +332,8 @@ int ClpCholeskyUfl::order(ClpInterior *model)
       CoinBigIndex endRow = rowStart[iRow] + rowLength[iRow];
       for (CoinBigIndex k = startRow; k < endRow; k++) {
         int iColumn = column[k];
+        if (whichDense_ && whichDense_[iColumn])
+          continue;
         CoinBigIndex start = columnStart[iColumn];
         CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
         for (CoinBigIndex j = start; j < end; j++) {
@@ -327,6 +387,10 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   cholmod_free_dense(&X_, c_);
   cholmod_free_dense(&Y_, c_);
   cholmod_free_dense(&E_, c_);
+  cholmod_free_dense(&Ad_dense_, c_);
+  cholmod_free_dense(&W_dense_, c_);
+  cholmod_free_dense(&Y_dense_, c_);
+  cholmod_free_dense(&E_dense_, c_);
   L_ = cholmod_analyze(&A, c_);
   if (c_->status || !L_) {
     COIN_DETAIL_PRINT(std::cout << "CHOLMOD ordering failed" << std::endl);
@@ -552,6 +616,69 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
     printf("CHOLMOD: factorization failed (status %d)\n", c_->status);
     return -1;
   }
+
+  if (numberDense_ > 0 && dense_) {
+    // Allocate Ad_dense_ if needed
+    if (!Ad_dense_ || static_cast< int >(Ad_dense_->nrow) != numberRows_
+      || static_cast< int >(Ad_dense_->ncol) != numberDense_) {
+      cholmod_free_dense(&Ad_dense_, c_);
+      Ad_dense_ = cholmod_allocate_dense(numberRows_, numberDense_, numberRows_, CHOLMOD_REAL, c_);
+    }
+    double *Ad_val = static_cast< double * >(Ad_dense_->x);
+    memset(Ad_val, 0, numberRows_ * numberDense_ * sizeof(double));
+    for (int i = 0; i < numberDense_; i++) {
+      int iCol = whichDenseIndex_[i];
+      double *col_i = Ad_val + i * numberRows_;
+      CoinBigIndex start = columnStart[iCol];
+      CoinBigIndex end = start + columnLength[iCol];
+      for (CoinBigIndex p = start; p < end; p++) {
+        int r = row[p];
+        if (!rowsDropped[r]) {
+          col_i[r] = element[p];
+        }
+      }
+    }
+
+    // Solve W = Ms^-1 * Ad (simultaneous multi-RHS solve)
+    int ok = cholmod_solve2(CHOLMOD_A, L_, Ad_dense_, NULL,
+      &W_dense_, NULL, &Y_dense_, &E_dense_, c_);
+    if (!ok || !W_dense_ || c_->status < CHOLMOD_OK) {
+      return -1;
+    }
+
+    // Form C = Dd^-1 + Ad^T * W and factorize via dense_
+    dense_->resetRowsDropped();
+    longDouble *denseBlob = dense_->aMatrix();
+    longDouble *denseDiagonal = dense_->diagonal();
+    const double *W_val = static_cast< const double * >(W_dense_->x);
+
+    for (int i = 0; i < numberDense_; i++) {
+      int iCol = whichDenseIndex_[i];
+      double diagVal = (diagonal[iCol] > 1e-12) ? (1.0 / diagonal[iCol]) : 1.0;
+      const double *a_i = Ad_val + i * numberRows_;
+      const double *w_i = W_val + i * numberRows_;
+
+      for (int r = 0; r < numberRows_; r++) {
+        diagVal += a_i[r] * w_i[r];
+      }
+      denseDiagonal[i] = diagVal;
+
+      for (int j = i + 1; j < numberDense_; j++) {
+        const double *w_j = W_val + j * numberRows_;
+        double offVal = 0.0;
+        for (int r = 0; r < numberRows_; r++) {
+          offVal += a_i[r] * w_j[r];
+        }
+        *denseBlob++ = offVal;
+      }
+    }
+
+    int *denseRowsDropped = new int[numberDense_];
+    memset(denseRowsDropped, 0, numberDense_ * sizeof(int));
+    dense_->factorizePart2(denseRowsDropped);
+    delete[] denseRowsDropped;
+  }
+
   choleskyCondition_ = 1.0;
   bool cleanCholesky;
   if (model_->numberIterations() < 2000)
@@ -625,6 +752,43 @@ void ClpCholeskyUfl::solve(double *region)
   CoinMemcpyN(region, numberRows_, (double *)B_->x);
   cholmod_solve2(CHOLMOD_A, L_, B_, NULL, &X_, NULL, &Y_, &E_, c_);
   CoinMemcpyN((double *)X_->x, numberRows_, region);
+
+  if (numberDense_ > 0 && dense_) {
+    // Woodbury low-rank correction:
+    // region currently holds x_tilde = Ms^-1 * b
+    // 1. gamma = Ad^T * x_tilde
+    const double *Ad_val = static_cast< const double * >(Ad_dense_->x);
+    double change[64];
+    double *changePtr = (numberDense_ <= 64) ? change : new double[numberDense_];
+
+    for (int i = 0; i < numberDense_; i++) {
+      const double *a_i = Ad_val + i * numberRows_;
+      double dotVal = 0.0;
+      for (int r = 0; r < numberRows_; r++) {
+        dotVal += a_i[r] * region[r];
+      }
+      changePtr[i] = dotVal;
+    }
+
+    // 2. y = C^-1 * gamma
+    dense_->solve(changePtr);
+
+    // 3. region = x_tilde - W * y
+    const double *W_val = static_cast< const double * >(W_dense_->x);
+    for (int i = 0; i < numberDense_; i++) {
+      double y_i = changePtr[i];
+      if (y_i != 0.0) {
+        const double *w_i = W_val + i * numberRows_;
+        for (int r = 0; r < numberRows_; r++) {
+          region[r] -= y_i * w_i[r];
+        }
+      }
+    }
+
+    if (changePtr != change) {
+      delete[] changePtr;
+    }
+  }
 }
 #else
 void ClpCholeskyUfl::solve(double *region)

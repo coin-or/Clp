@@ -68,6 +68,17 @@ private:
   cholmod_dense *X_;
   cholmod_dense *Y_;
   cholmod_dense *E_;
+  /// Dense column RHS for cholmod_solve2 (size numberRows_ x numberDense_)
+  cholmod_dense *Ad_dense_;
+  /// Solution W = Ms^-1 * Ad (size numberRows_ x numberDense_)
+  cholmod_dense *W_dense_;
+  /// Workspaces for dense multi-RHS cholmod_solve2
+  cholmod_dense *Y_dense_;
+  cholmod_dense *E_dense_;
+  /// Indices of dense columns in model
+  int *whichDenseIndex_;
+  /// Number of dense columns currently active
+  int numberDense_;
   /// Set once a supernodal factorization has failed numerically
   bool forceSimplicial_;
   /** Rewrite every dropped row of sparseFactor_ as a unit row (diagonal 1,
