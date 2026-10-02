@@ -5894,6 +5894,32 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
         returnCode = static_cast< ClpSimplexPrimal * >(this)->primal(1, startFinishOptions);
       }
     }
+    if (problemStatus_ == 10 && !numberPrimalInfeasibilities_
+      && sumDualInfeasibilities_ == -123456789.0 && numberIterations_ < saveMax) {
+      // Primal clean up gave up (e.g. looping on a highly degenerate
+      // problem) while still dual infeasible.  Treating this as optimal
+      // (status 10 with no primal infeasibilities -> 0 below) returns a
+      // solution with large dual infeasibilities, so try again with a
+      // perturbation to break the degeneracy.  problemStatus_ is left at
+      // 10 so startup() keeps numberIterations_.
+      intParam_[ClpMaxNumIteration] = std::min(numberIterations_ + 1000 + 2 * numberRows_ + numberColumns_, saveMax);
+      perturbation_ = savePerturbation < 100 ? savePerturbation : 50;
+      baseIteration_ = numberIterations_;
+      // Say second call
+      moreSpecialOptions_ |= 256;
+      returnCode = static_cast< ClpSimplexPrimal * >(this)->primal(1, startFinishOptions);
+      if (problemStatus_ == 0 || problemStatus_ == 10) {
+        // Perturbation moved bounds - finish against the true bounds.
+        problemStatus_ = 10;
+        perturbation_ = 100;
+        intParam_[ClpMaxNumIteration] = std::min(numberIterations_ + 1000 + 2 * numberRows_ + numberColumns_, saveMax);
+        baseIteration_ = numberIterations_;
+        returnCode = static_cast< ClpSimplexPrimal * >(this)->primal(1, startFinishOptions);
+      }
+      // Say not second call
+      moreSpecialOptions_ &= ~256;
+      baseIteration_ = 0;
+    }
     if (problemStatus_ == 3 && numberIterations_ < saveMax) {
 #ifdef COIN_DEVELOP
       if (handler_->logLevel() > 0)
