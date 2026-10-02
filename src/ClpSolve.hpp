@@ -462,6 +462,8 @@ public:
   int oddState_;
   /// Check scaling etc after this
   int checkScalingAfter_;
+  /// Model iteration number when progress checking was (re)started
+  int startIteration_;
   //@}
 };
 

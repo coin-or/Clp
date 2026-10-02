@@ -4323,6 +4323,7 @@ ClpSimplexProgress::ClpSimplexProgress()
   model_ = NULL;
   oddState_ = 0;
   checkScalingAfter_ = 0;
+  startIteration_ = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -4366,6 +4367,7 @@ ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs)
   model_ = rhs.model_;
   oddState_ = rhs.oddState_;
   checkScalingAfter_ = rhs.checkScalingAfter_;
+  startIteration_ = rhs.startIteration_;
 }
 // Copy constructor.from model
 ClpSimplexProgress::ClpSimplexProgress(ClpSimplex *model)
@@ -4373,6 +4375,7 @@ ClpSimplexProgress::ClpSimplexProgress(ClpSimplex *model)
   model_ = model;
   reset();
   initialWeight_ = 0.0;
+  startIteration_ = model->numberIterations();
 }
 // Fill from model
 void ClpSimplexProgress::fillFromModel(ClpSimplex *model)
@@ -4380,6 +4383,7 @@ void ClpSimplexProgress::fillFromModel(ClpSimplex *model)
   model_ = model;
   reset();
   initialWeight_ = 0.0;
+  startIteration_ = model->numberIterations();
 }
 // Assignment operator. This copies the data
 ClpSimplexProgress &
@@ -4419,6 +4423,7 @@ ClpSimplexProgress::operator=(const ClpSimplexProgress &rhs)
     model_ = rhs.model_;
     oddState_ = rhs.oddState_;
     checkScalingAfter_ = rhs.checkScalingAfter_;
+    startIteration_ = rhs.startIteration_;
   }
   return *this;
 }
@@ -4462,7 +4467,11 @@ int ClpSimplexProgress::looping()
     infeasibility = model_->sumDualInfeasibilities();
     realInfeasibility = model_->nonLinearCost()->sumInfeasibilities();
     numberInfeasibilities = model_->numberDualInfeasibilities();
-    if (iterationNumber>3*model_->numberRows()+3*model_->numberColumns()) {
+    // Count only iterations done since this primal started - when primal
+    // is cleaning up after dual (or after postsolve), numberIterations_
+    // also includes all the earlier iterations, so a long dual would make
+    // the clean up give up at once, leaving it dual infeasible.
+    if (iterationNumber - startIteration_ > 3 * model_->numberRows() + 3 * model_->numberColumns()) {
       // should I put out a message
       return 1;
     }
