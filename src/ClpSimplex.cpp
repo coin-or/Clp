@@ -6438,6 +6438,15 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
     } else {
       returnCode = static_cast< ClpSimplexPrimal * >(this)->primal(0, startFinishOptions);
     }
+    if (problemStatus_ == 10 && !numberPrimalInfeasibilities_
+      && (numberDualInfeasibilities_ || sumDualInfeasibilities_ == -123456789.0)
+      && (matrix_->generalExpanded(this, 4, dummy) & 1) != 0) {
+      // Dual clean up can restore the original costs and request primal
+      // again.  Primal feasibility alone does not imply optimality.
+      perturbation_ = 100;
+      baseIteration_ = numberIterations_;
+      returnCode = static_cast< ClpSimplexPrimal * >(this)->primal(1, startFinishOptions);
+    }
     // Say not second call
     moreSpecialOptions_ &= ~256;
     baseIteration_ = 0;
@@ -6445,8 +6454,7 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
     perturbation_ = savePerturbation;
     if (problemStatus_ == 10) {
       if (!numberPrimalInfeasibilities_) {
-        problemStatus_ = 0;
-        numberDualInfeasibilities_ = 0;
+        problemStatus_ = (!numberDualInfeasibilities_ && sumDualInfeasibilities_ != -123456789.0) ? 0 : 4;
       } else {
 	// we really have problems
 	if ((moreSpecialOptions_&1073741824)!=0) {
