@@ -400,6 +400,10 @@ public:
         3 - clean up using dual if primal or dual infeasibility
         11,12,13 - as 1,2,3 but use primal
 
+        When unscaled dual infeasibility is reported, cleanup omits the
+        tolerance-only dual relaxation used by ordinary solves, while still
+        allowing for measured factorization error.
+
         return code as dual/primal
      */
   int cleanup(int cleanupScaling);

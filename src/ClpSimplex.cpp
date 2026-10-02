@@ -42,6 +42,8 @@
 #include <iostream>
 //#############################################################################
 
+static const unsigned int CLP_UNSCALED_CLEANUP = 0x20000000;
+
 ClpSimplex::ClpSimplex(bool emptyMessages)
   :
 
@@ -3279,7 +3281,8 @@ void ClpSimplex::checkBothSolutions()
   double dualTolerance = dualTolerance_;
   double relaxedToleranceD = dualTolerance;
   // we can't really trust infeasibilities if there is dual error
-  error = std::min(1.0e-2, std::max(largestDualError_, 5.0 * dualTolerance_));
+  const double minimumDualError = (specialOptions_ & CLP_UNSCALED_CLEANUP) ? 0.0 : 5.0 * dualTolerance_;
+  error = std::min(1.0e-2, std::max(largestDualError_, minimumDualError));
   // allow tolerance at least slightly bigger than standard
   relaxedToleranceD = relaxedToleranceD + error;
   // allow bigger tolerance for possible improvement
@@ -11309,6 +11312,11 @@ int ClpSimplex::cleanup(int cleanupScaling)
       // say matrix changed
       whatsChanged_ |= 1;
       scaling(0);
+      // Cleanup must not accept the same tolerance-only relaxation that
+      // caused the unscaled dual infeasibility in the first place.
+      const unsigned int saveCleanupOption = specialOptions_ & CLP_UNSCALED_CLEANUP;
+      if (dual)
+        specialOptions_ |= CLP_UNSCALED_CLEANUP;
       if (cleanupScaling < 10) {
         // dual
         returnCode = this->dual();
@@ -11316,6 +11324,7 @@ int ClpSimplex::cleanup(int cleanupScaling)
         // primal
         returnCode = this->primal();
       }
+      specialOptions_ = (specialOptions_ & ~CLP_UNSCALED_CLEANUP) | saveCleanupOption;
 #ifdef COUNT_CLEANUPS
       n2++;
       n3 += numberIterations_;

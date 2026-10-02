@@ -1409,6 +1409,45 @@ void ClpSimplexUnitTest(const std::string &dirSample)
 
   CoinRelFltEq eq(0.000001);
 
+  for (int cleanupMode = 2; cleanupMode <= 12; cleanupMode += 10) {
+    ClpSimplex solution;
+    const CoinBigIndex start[] = { 0, 1 };
+    const int row[] = { 0 };
+    const double element[] = { 1.0 };
+    const double lower[] = { -1.0 }, upper[] = { 1.0 }, cost[] = { 4.0e-6 };
+    const double rowLower[] = { -COIN_DBL_MAX }, rowUpper[] = { 0.0 };
+    solution.loadProblem(1, 1, start, row, element, lower, upper, cost, rowLower, rowUpper);
+    solution.setPrimalTolerance(1.0e-6);
+    solution.setDualTolerance(1.0e-6);
+    solution.setPerturbation(100);
+    solution.createStatus();
+    solution.setColumnStatus(0, ClpSimplex::basic);
+    solution.setRowStatus(0, ClpSimplex::atUpperBound);
+    solution.primalColumnSolution()[0] = 0.0;
+    solution.primalRowSolution()[0] = 0.0;
+    solution.dualRowSolution()[0] = cost[0];
+    solution.dualColumnSolution()[0] = 0.0;
+    solution.setProblemStatus(0);
+    solution.setSecondaryStatus(3);
+    const unsigned int specialOptions = solution.specialOptions();
+    ClpSimplex limited(solution);
+    limited.setMaximumIterations(0);
+    limited.cleanup(cleanupMode);
+    assert(limited.status() == 3);
+    assert(limited.specialOptions() == specialOptions);
+    ClpSimplex primalOnly(solution);
+    primalOnly.setSecondaryStatus(2);
+    primalOnly.cleanup(cleanupMode - 1);
+    assert(primalOnly.primalColumnSolution()[0] == 0.0);
+    assert(primalOnly.specialOptions() == specialOptions);
+    solution.cleanup(cleanupMode);
+    assert(solution.status() == 0);
+    assert(solution.secondaryStatus() == 0);
+    assert(fabs(solution.primalColumnSolution()[0] + 1.0) < 1.0e-12);
+    assert(fabs(solution.dualRowSolution()[0]) <= solution.dualTolerance());
+    assert(solution.specialOptions() == specialOptions);
+  }
+
   {
     ClpSimplex solution;
 
