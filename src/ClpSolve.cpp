@@ -1570,12 +1570,12 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     }
   }
 #endif
-  if (this->factorizationFrequency() == 200) {
+  if (this->factorizationFrequencyIsDefault()) {
     // User did not touch preset
     model2->defaultFactorizationFrequency();
   } else if (model2 != this) {
     // make sure model2 has correct value
-    model2->setFactorizationFrequency(this->factorizationFrequency());
+    model2->setExactFactorizationFrequency(this->factorizationFrequency());
   }
   if (method == ClpSolve::automatic) {
     if (doSprint == 0 && doIdiot == 0) {
@@ -2356,7 +2356,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
           // make sure no status left
           model2->createStatus();
           // solve
-          if (model2->factorizationFrequency() == 200) {
+          if (model2->factorizationFrequencyIsDefault()) {
             // User did not touch preset
             model2->defaultFactorizationFrequency();
           }
@@ -2844,7 +2844,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       ClpSimplex small(model2, numberRows, whichRows, numberSort, sort);
       small.setPerturbation(model2->perturbation());
       small.setInfeasibilityCost(model2->infeasibilityCost());
-      if (model2->factorizationFrequency() == 200) {
+      if (model2->factorizationFrequencyIsDefault()) {
         // User did not touch preset
         small.defaultFactorizationFrequency();
       }
@@ -3594,7 +3594,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         // solve
         if (!forceFixing)
           model2->setPerturbation(100);
-        if (model2->factorizationFrequency() == 200) {
+        if (model2->factorizationFrequencyIsDefault()) {
           // User did not touch preset
           model2->defaultFactorizationFrequency();
         }
@@ -5462,12 +5462,12 @@ int ClpSimplex::solveDW(CoinStructuredModel *model, ClpSolve &options)
             for (int i = 0; i < n; i++)
               obj[i] = -obj[i];
           }
-          if (this->factorizationFrequency() == 200) {
+          if (this->factorizationFrequencyIsDefault()) {
             // User did not touch preset
             sub[kBlock].defaultFactorizationFrequency();
           } else {
             // make sure model has correct value
-            sub[kBlock].setFactorizationFrequency(this->factorizationFrequency());
+            sub[kBlock].setExactFactorizationFrequency(this->factorizationFrequency());
           }
           sub[kBlock].setPerturbation(50);
           // Set columnCounts to be diagonal block index for cleanup
@@ -5544,12 +5544,12 @@ int ClpSimplex::solveDW(CoinStructuredModel *model, ClpSolve &options)
   // Create convexity rows for proposals
   int numberMasterColumns = master.numberColumns();
   master.resize(numberMasterRows + numberBlocks, numberMasterColumns);
-  if (this->factorizationFrequency() == 200) {
+  if (this->factorizationFrequencyIsDefault()) {
     // User did not touch preset
     master.defaultFactorizationFrequency();
   } else {
     // make sure model has correct value
-    master.setFactorizationFrequency(this->factorizationFrequency());
+    master.setExactFactorizationFrequency(this->factorizationFrequency());
   }
   master.setPerturbation(50);
   // Arrays to say which block and when created
@@ -6290,12 +6290,12 @@ int ClpSimplex::solveBenders(CoinStructuredModel *model, ClpSolve &options)
             for (int i = 0; i < n; i++)
               obj[i] = -obj[i];
           }
-          if (this->factorizationFrequency() == 200) {
+          if (this->factorizationFrequencyIsDefault()) {
             // User did not touch preset
             sub[kBlock].defaultFactorizationFrequency();
           } else {
             // make sure model has correct value
-            sub[kBlock].setFactorizationFrequency(this->factorizationFrequency());
+            sub[kBlock].setExactFactorizationFrequency(this->factorizationFrequency());
           }
           sub[kBlock].setPerturbation(50);
 #ifdef ADD_ARTIFICIALS
@@ -6464,12 +6464,12 @@ int ClpSimplex::solveBenders(CoinStructuredModel *model, ClpSolve &options)
   // Create columns for proposals
   int numberMasterRows = masterModel.numberRows();
   //masterModel.resize(numberMasterColumns + numberBlocks, numberMasterRows);
-  if (this->factorizationFrequency() == 200) {
+  if (this->factorizationFrequencyIsDefault()) {
     // User did not touch preset
     masterModel.defaultFactorizationFrequency();
   } else {
     // make sure model has correct value
-    masterModel.setFactorizationFrequency(this->factorizationFrequency());
+    masterModel.setExactFactorizationFrequency(this->factorizationFrequency());
   }
   masterModel.setPerturbation(50);
   // temp bounds

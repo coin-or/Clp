@@ -268,6 +268,7 @@ void OsiClpSolverInterface::initialSolve()
     // See if user set factorization frequency
     // borrowModel does not move
     solver->factorization()->maximumPivots(userFactorizationFrequency);
+    solver->factorization()->setExactMaximumPivots(modelPtr_->exactFactorizationFrequency());
   } else {
     solver = modelPtr_;
     deleteSolver = false;
@@ -392,10 +393,10 @@ void OsiClpSolverInterface::initialSolve()
       }
 
       // change from 200 (unless changed)
-      if (modelPtr_->factorization()->maximumPivots() == 200)
+      if (modelPtr_->factorizationFrequencyIsDefault())
         model2->factorization()->maximumPivots(100 + model2->numberRows() / 50);
       else
-        model2->factorization()->maximumPivots(userFactorizationFrequency);
+        model2->setExactFactorizationFrequency(userFactorizationFrequency);
       int savePerturbation = model2->perturbation();
       if (savePerturbation == 100)
         model2->setPerturbation(50);
@@ -1284,10 +1285,10 @@ void OsiClpSolverInterface::resolve()
     //     modelPtr_->numberRows(),model2->numberRows(),
     //     modelPtr_->numberColumns(),model2->numberColumns());
     // change from 200
-    if (modelPtr_->factorization()->maximumPivots() == 200)
+    if (modelPtr_->factorizationFrequencyIsDefault())
       model2->factorization()->maximumPivots(100 + model2->numberRows() / 50);
     else
-      model2->factorization()->maximumPivots(userFactorizationFrequency);
+      model2->setExactFactorizationFrequency(userFactorizationFrequency);
     if (algorithm < 0) {
       model2->dual(0,CLP_START_FINISH);
       totalIterations += model2->numberIterations();
@@ -10812,7 +10813,7 @@ void OsiClpSolverInterface::crossover(int options, int basis)
       extraPresolve = false;
     }
   }
-  if (model2->factorizationFrequency() == 200) {
+  if (model2->factorizationFrequencyIsDefault()) {
     // User did not touch preset
     model2->defaultFactorizationFrequency();
   }

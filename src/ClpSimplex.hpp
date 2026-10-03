@@ -683,15 +683,38 @@ public:
   /// Sparsity on or off
   bool sparseFactorization() const;
   void setSparseFactorization(bool value);
-  /// Factorization frequency
+  /** Factorization frequency. The preset 200 means "let Clp choose from the
+      problem size" (see defaultFactorizationFrequency()), so
+      setFactorizationFrequency(200) restores that guess.
+      setExactFactorizationFrequency() sets a value that is used as given,
+      200 included. */
   int factorizationFrequency() const;
   void setFactorizationFrequency(int value);
-  /// Dual bound
+  void setExactFactorizationFrequency(int value);
+  /// Whether the factorization frequency is the preset 200 that Clp may replace
+  bool factorizationFrequencyIsDefault() const;
+  /// Whether the factorization frequency was set with setExactFactorizationFrequency()
+  bool exactFactorizationFrequency() const;
+  /** Dual bound. The preset 1.0e10 may be replaced by a value derived from
+      the problem's bounds; setDualBound(1.0e10) restores that behaviour.
+      setExactDualBound() sets a value that is used as given, 1.0e10
+      included. Both ignore values <= 0. */
   inline double dualBound() const
   {
     return dualBound_;
   }
   void setDualBound(double value);
+  void setExactDualBound(double value);
+  /// Whether the dual bound is the preset 1.0e10 that Clp may replace
+  inline bool dualBoundIsDefault() const
+  {
+    return dualBound_ == 1.0e10 && !exactDualBound_;
+  }
+  /// Whether the dual bound was set with setExactDualBound()
+  inline bool exactDualBound() const
+  {
+    return exactDualBound_;
+  }
   /// Infeasibility cost
   inline double infeasibilityCost() const
   {
@@ -1823,6 +1846,8 @@ protected:
   double alphaAccuracy_;
   /// Dual bound
   double dualBound_;
+  /// See setExactDualBound()
+  bool exactDualBound_;
   /// Alpha (pivot element)
   double alpha_;
   /// Theta (pivot change)

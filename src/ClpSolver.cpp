@@ -225,11 +225,13 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
   int dualize = 3; // dualize if looks promising
   ClpParameters parameters;
   parameters.setModel(&model);
-  parameters[ClpParam::DUALBOUND]->setVal(model_.dualBound());
+  parameters[ClpParam::DUALBOUND]->setVal(model_.dualBoundIsDefault()
+      ? CoinParam::autoDblValue() : model_.dualBound());
   parameters[ClpParam::DUALTOLERANCE]->setVal(model_.dualTolerance());
   parameters[ClpParam::IDIOT]->setVal(doIdiot);
   parameters[ClpParam::LOGLEVEL]->setVal(model_.logLevel());
-  parameters[ClpParam::MAXFACTOR]->setVal(model_.factorizationFrequency());
+  parameters[ClpParam::MAXFACTOR]->setVal(model_.factorizationFrequencyIsDefault()
+      ? CoinParam::autoIntValue() : model_.factorizationFrequency());
   parameters[ClpParam::MAXITERATION]->setVal(model_.maximumIterations());
   parameters[ClpParam::OUTPUTFORMAT]->setVal(outputFormat);
   parameters[ClpParam::PRESOLVEPASS]->setVal(preSolve);

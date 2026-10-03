@@ -77,6 +77,7 @@ double factorization_instrument(int type)
 //-------------------------------------------------------------------
 ClpFactorization::ClpFactorization()
   : CoinFactorization()
+  , exactMaximumPivots_(false)
 {
 #ifndef SLIM_CLP
   networkBasis_ = NULL;
@@ -89,6 +90,7 @@ ClpFactorization::ClpFactorization()
 ClpFactorization::ClpFactorization(const ClpFactorization &rhs,
   int dummyDenseIfSmaller)
   : CoinFactorization(rhs)
+  , exactMaximumPivots_(rhs.exactMaximumPivots_)
 {
 #ifndef SLIM_CLP
   if (rhs.networkBasis_)
@@ -100,6 +102,7 @@ ClpFactorization::ClpFactorization(const ClpFactorization &rhs,
 
 ClpFactorization::ClpFactorization(const CoinFactorization &rhs)
   : CoinFactorization(rhs)
+  , exactMaximumPivots_(false)
 {
 #ifndef SLIM_CLP
   networkBasis_ = NULL;
@@ -127,6 +130,7 @@ ClpFactorization::operator=(const ClpFactorization &rhs)
 #endif
   if (this != &rhs) {
     CoinFactorization::operator=(rhs);
+    exactMaximumPivots_ = rhs.exactMaximumPivots_;
 #ifndef SLIM_CLP
     delete networkBasis_;
     if (rhs.networkBasis_)
@@ -1172,6 +1176,7 @@ ClpFactorization::ClpFactorization()
   goDenseThreshold_ = -1;
   goSmallThreshold_ = -1;
   doStatistics_ = true;
+  exactMaximumPivots_ = false;
   memset(&shortestAverage_, 0, 3 * (sizeof(double) + sizeof(int)));
 }
 
@@ -1195,6 +1200,7 @@ ClpFactorization::ClpFactorization(const ClpFactorization &rhs,
   goDenseThreshold_ = rhs.goDenseThreshold_;
   goSmallThreshold_ = rhs.goSmallThreshold_;
   doStatistics_ = rhs.doStatistics_;
+  exactMaximumPivots_ = rhs.exactMaximumPivots_;
   int goDense = 0;
 #ifdef CLP_REUSE_ETAS
   model_ = rhs.model_;
@@ -1275,6 +1281,7 @@ ClpFactorization::ClpFactorization(const CoinFactorization &rhs)
   goDenseThreshold_ = -1;
   goSmallThreshold_ = -1;
   doStatistics_ = true;
+  exactMaximumPivots_ = false;
   assert(!coinFactorizationA_ || !coinFactorizationB_);
   memset(&shortestAverage_, 0, 3 * (sizeof(double) + sizeof(int)));
 }
@@ -1295,6 +1302,7 @@ ClpFactorization::ClpFactorization(const CoinOtherFactorization &rhs)
   goDenseThreshold_ = -1;
   goSmallThreshold_ = -1;
   doStatistics_ = true;
+  exactMaximumPivots_ = false;
 #ifdef CLP_FACTORIZATION_INSTRUMENT
   factorization_instrument(1);
 #endif
@@ -1339,6 +1347,7 @@ ClpFactorization::operator=(const ClpFactorization &rhs)
     goDenseThreshold_ = rhs.goDenseThreshold_;
     goSmallThreshold_ = rhs.goSmallThreshold_;
     doStatistics_ = rhs.doStatistics_;
+    exactMaximumPivots_ = rhs.exactMaximumPivots_;
     memcpy(&shortestAverage_, &rhs.shortestAverage_, 3 * (sizeof(double) + sizeof(int)));
     if (rhs.coinFactorizationA_) {
       if (coinFactorizationA_)

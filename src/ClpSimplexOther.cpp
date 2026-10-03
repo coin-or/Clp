@@ -1370,7 +1370,10 @@ ClpSimplexOther::dualOfModel(double fractionRowRanges, double fractionColumnRang
   modelDual->loadProblem(rowCopy, fromRowsLower, fromRowsUpper, newObjective,
     fromColumnsLower, fromColumnsUpper);
   modelDual->setObjectiveOffset(objOffset);
-  modelDual->setDualBound(model2->dualBound());
+  if (model2->exactDualBound())
+    modelDual->setExactDualBound(model2->dualBound());
+  else
+    modelDual->setDualBound(model2->dualBound());
   modelDual->setInfeasibilityCost(model2->infeasibilityCost());
   modelDual->setDualTolerance(model2->dualTolerance());
   modelDual->setPrimalTolerance(model2->primalTolerance());
@@ -1378,7 +1381,10 @@ ClpSimplexOther::dualOfModel(double fractionRowRanges, double fractionColumnRang
   modelDual->setSpecialOptions(model2->specialOptions());
   modelDual->setMoreSpecialOptions(model2->moreSpecialOptions());
   modelDual->setMaximumIterations(model2->maximumIterations());
-  modelDual->setFactorizationFrequency(model2->factorizationFrequency());
+  if (model2->exactFactorizationFrequency())
+    modelDual->setExactFactorizationFrequency(model2->factorizationFrequency());
+  else
+    modelDual->setFactorizationFrequency(model2->factorizationFrequency());
   modelDual->setLogLevel(model2->logLevel());
   delete[] fromRowsLower;
   delete[] fromRowsUpper;
@@ -2004,7 +2010,10 @@ ClpSimplexOther::crunch(double *rhs, int *whichRow, int *whichColumn,
           }
 #endif
     // Set some stuff
-    small->setDualBound(dualBound_);
+    if (exactDualBound_)
+      small->setExactDualBound(dualBound_);
+    else
+      small->setDualBound(dualBound_);
     small->setInfeasibilityCost(infeasibilityCost_);
     small->setSpecialOptions(specialOptions_);
     small->setPerturbation(perturbation_);

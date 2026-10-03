@@ -63,6 +63,7 @@ ClpSimplex::ClpSimplex(bool emptyMessages)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
   , dualBound_(1.0e10)
+  , exactDualBound_(false)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -187,6 +188,7 @@ ClpSimplex::ClpSimplex(const ClpModel *rhs,
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
   , dualBound_(1.0e10)
+  , exactDualBound_(false)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -348,6 +350,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex *rhs,
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
   , dualBound_(1.0e10)
+  , exactDualBound_(false)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -2535,6 +2538,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs, int scalingMode)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
   , dualBound_(1.0e10)
+  , exactDualBound_(false)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -2645,6 +2649,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode)
   , largestDualError_(0.0)
   , alphaAccuracy_(-1.0)
   , dualBound_(1.0e10)
+  , exactDualBound_(false)
   , alpha_(0.0)
   , theta_(0.0)
   , lowerIn_(0.0)
@@ -2854,6 +2859,7 @@ void ClpSimplex::gutsOfCopy(const ClpSimplex &rhs)
   largestDualError_ = rhs.largestDualError_;
   alphaAccuracy_ = rhs.alphaAccuracy_;
   dualBound_ = rhs.dualBound_;
+  exactDualBound_ = rhs.exactDualBound_;
   alpha_ = rhs.alpha_;
   theta_ = rhs.theta_;
   lowerIn_ = rhs.lowerIn_;
@@ -4999,8 +5005,17 @@ void ClpSimplex::deleteRim(int getRidOfFactorizationData)
 }
 void ClpSimplex::setDualBound(double value)
 {
-  if (value > 0.0)
+  if (value > 0.0) {
     dualBound_ = value;
+    exactDualBound_ = false;
+  }
+}
+void ClpSimplex::setExactDualBound(double value)
+{
+  if (value > 0.0) {
+    dualBound_ = value;
+    exactDualBound_ = true;
+  }
 }
 void ClpSimplex::setInfeasibilityCost(double value)
 {
@@ -5178,7 +5193,7 @@ int ClpSimplex::tightenPrimalBounds(double factor, int doTight, bool tightIntege
   // If wanted compute a reasonable dualBound_
   if (factor == COIN_DBL_MAX) {
     factor = 0.0;
-    if (dualBound_ == 1.0e10) {
+    if (dualBoundIsDefault()) {
       // get largest scaled away from bound
       double largest = 1.0e-12;
       double largestScaled = 1.0e-12;
@@ -7192,6 +7207,7 @@ void ClpSimplex::borrowModel(ClpSimplex &otherModel)
   ClpModel::borrowModel(otherModel);
   createStatus();
   dualBound_ = otherModel.dualBound_;
+  exactDualBound_ = otherModel.exactDualBound_;
   dualTolerance_ = otherModel.dualTolerance_;
   primalTolerance_ = otherModel.primalTolerance_;
   delete dualRowPivot_;
@@ -9519,8 +9535,26 @@ int ClpSimplex::factorizationFrequency() const
 }
 void ClpSimplex::setFactorizationFrequency(int value)
 {
-  if (factorization_)
+  if (factorization_) {
     factorization_->maximumPivots(value);
+    factorization_->setExactMaximumPivots(false);
+  }
+}
+void ClpSimplex::setExactFactorizationFrequency(int value)
+{
+  if (factorization_) {
+    factorization_->maximumPivots(value);
+    factorization_->setExactMaximumPivots(true);
+  }
+}
+bool ClpSimplex::exactFactorizationFrequency() const
+{
+  return factorization_ && factorization_->exactMaximumPivots();
+}
+bool ClpSimplex::factorizationFrequencyIsDefault() const
+{
+  return factorization_ && factorization_->maximumPivots() == 200
+    && !factorization_->exactMaximumPivots();
 }
 // Common bits of coding for dual and primal
 int ClpSimplex::startup(int ifValuesPass, int startFinishOptions)
@@ -11502,7 +11536,7 @@ ClpSimplex::infeasibilityRay(bool fullRay) const
 // If user left factorization frequency then compute
 void ClpSimplex::defaultFactorizationFrequency()
 {
-  if (factorizationFrequency() == 200) {
+  if (factorizationFrequencyIsDefault()) {
     // User did not touch preset
     const int cutoff1 = 10000;
     const int base = 75;

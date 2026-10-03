@@ -185,6 +185,18 @@ public:
     else
       coinFactorizationB_->maximumPivots(value);
   }
+  /** Whether maximumPivots() was set explicitly, so a value of 200 means
+      exactly 200 instead of "let Clp choose from the problem size" (see
+      ClpSimplex::factorizationFrequencyIsDefault()). maximumPivots(int)
+      leaves this alone, because Clp changes the value temporarily. */
+  inline bool exactMaximumPivots() const
+  {
+    return exactMaximumPivots_;
+  }
+  inline void setExactMaximumPivots(bool yes)
+  {
+    exactMaximumPivots_ = yes;
+  }
   /// Returns number of pivots since factorization
   inline int pivots() const
   {
@@ -547,6 +559,8 @@ private:
 #endif
   /// To switch statistics on or off
   mutable bool doStatistics_;
+  /// See exactMaximumPivots()
+  bool exactMaximumPivots_;
   //@}
 };
 

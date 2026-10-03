@@ -303,7 +303,7 @@ void ClpParameters::setDefaults(int strategy) {
 #else
       parameters_[ClpParam::VECTOR]->setDefault("off");
 #endif
-      parameters_[ClpParam::DUALBOUND]->setDefault(0.0);
+      parameters_[ClpParam::DUALBOUND]->setDefault(CoinParam::autoDblValue());
       parameters_[ClpParam::FAKEBOUND]->setDefault(0.0);
       parameters_[ClpParam::FAKEBOUND]->setDefault(0.0);
       parameters_[ClpParam::OBJSCALE]->setDefault(1.0);
@@ -322,7 +322,7 @@ void ClpParameters::setDefaults(int strategy) {
       parameters_[ClpParam::DENSE]->setDefault(-1);
       parameters_[ClpParam::DUALIZE]->setDefault(0);
       parameters_[ClpParam::IDIOT]->setDefault(0);
-      parameters_[ClpParam::MAXFACTOR]->setDefault(0);
+      parameters_[ClpParam::MAXFACTOR]->setDefault(CoinParam::autoIntValue());
       parameters_[ClpParam::MAXITERATION]->setDefault(0);
       parameters_[ClpParam::MORESPECIALOPTIONS]->setDefault(0);
       parameters_[ClpParam::PRESOLVEPASS]->setDefault(0);
@@ -372,13 +372,18 @@ void ClpParameters::synchronizeModel() {
     // Integer parameters
     int intValue;
     int modelIntValue;
+    // auto keeps the preset 200, which Clp replaces from the problem size;
+    // a number, 200 included, is used as given
     parameters_[ClpParam::MAXFACTOR]->getVal(intValue);
 #ifdef PRINT_CLP_CHANGES
     modelIntValue = model_->factorization()->maximumPivots();
     if (intValue!=modelIntValue)
       printf("changing ? from %d to %d at line %d\n",modelIntValue,intValue,__LINE__+1);
 #endif
-    model_->factorization()->maximumPivots(intValue);
+    if (parameters_[ClpParam::MAXFACTOR]->isAuto())
+      model_->setFactorizationFrequency(200);
+    else
+      model_->setExactFactorizationFrequency(intValue);
     parameters_[ClpParam::PERTVALUE]->getVal(intValue);
 #ifdef PRINT_CLP_CHANGES
     modelIntValue = model_->perturbation();
@@ -444,13 +449,18 @@ void ClpParameters::synchronizeModel() {
       printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
 #endif
     model_->setSmallElementValue(doubleValue);
+    // auto keeps the preset 1.0e10, which may be replaced from the bounds;
+    // a number, 1.0e10 included, is used as given
     parameters_[ClpParam::DUALBOUND]->getVal(doubleValue);
 #ifdef PRINT_CLP_CHANGES
     modelDoubleValue = model_->dualBound();
     if (doubleValue!=modelDoubleValue)
       printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
 #endif
-    model_->setDualBound(doubleValue);
+    if (parameters_[ClpParam::DUALBOUND]->isAuto())
+      model_->setDualBound(1.0e10);
+    else
+      model_->setExactDualBound(doubleValue);
     parameters_[ClpParam::PRIMALWEIGHT]->getVal(doubleValue);
 #ifdef PRINT_CLP_CHANGES
     modelDoubleValue = model_->infeasibilityCost();
@@ -1342,7 +1352,11 @@ void ClpParameters::addClpDblParams() {
       "function in the primal algorithm.  Too high a value may mean more "
       "iterations, while too low a bound means the code may go all the way and "
       "then have to increase the bounds.  OSL had a heuristic to adjust "
-      "bounds, maybe we need that here.");
+      "bounds, maybe we need that here.  The default, auto, starts from "
+      "1.0e10 and lets the code replace it from the problem's bounds (Cbc "
+      "does so before branch and bound); a number, 1.0e10 included, is used "
+      "as given.");
+  parameters_[ClpParam::DUALBOUND]->setAutoAllowed();
 
   parameters_[ClpParam::DUALTOLERANCE]->setup("dualT!olerance", "For an optimal solution no dual infeasibility may exceed this value", 1.0e-20, COIN_DBL_MAX, "Normally the default tolerance is fine, but one may want to increase it a bit if the dual simplex algorithm seems to be having a hard time. One method which can be faster is to use a large tolerance e.g. 1.0e-4 and the dual simplex algorithm and then to clean up the problem using the primal simplex algorithm with the correct tolerance (remembering to switch off presolve for this final short clean up phase).");
 
@@ -1479,8 +1493,10 @@ void ClpParameters::addClpIntParams() {
   parameters_[ClpParam::MAXFACTOR]->setup(
       "maxF!actor", "Maximum number of iterations between refactorizations", 1,
       COIN_INT_MAX,
-      "If this is left at its default value of 200 then CLP will guess a  "
-      "value to use.  CLP may decide to re-factorize earlier for accuracy.");
+      "The default, auto, lets CLP guess a value from the number of rows; a "
+      "number, 200 included, is used as given.  CLP may decide to "
+      "re-factorize earlier for accuracy.");
+  parameters_[ClpParam::MAXFACTOR]->setAutoAllowed();
 
   parameters_[ClpParam::MAXITERATION]->setup(
       "maxIt!erations", "Maximum number of iterations before stopping", 0,
