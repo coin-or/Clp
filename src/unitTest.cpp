@@ -1404,10 +1404,115 @@ static void testingMessage(const char *const msg)
 
 //--------------------------------------------------------------------------
 // test factorization methods and simplex method and simple barrier
+namespace {
+struct PostsolveCleanupState {
+  bool injected;
+  bool limitCleanup;
+  double injectedDualResidual;
+  int reportedSecondary;
+  int cleanupScaling;
+};
+
+class PostsolveCleanupEventHandler : public ClpEventHandler {
+public:
+  explicit PostsolveCleanupEventHandler(PostsolveCleanupState &state)
+    : state_(&state)
+  {
+  }
+  ClpEventHandler *clone() const
+  {
+    return new PostsolveCleanupEventHandler(*this);
+  }
+  int event(Event whichEvent)
+  {
+    if (whichEvent == looksEndInDual && model_->status() == 0 && !state_->injected) {
+      state_->injected = true;
+      // Exercise the handoff independently of rounding in a particular solve.
+      model_->setSecondaryStatus(state_->reportedSecondary);
+      model_->primalColumnSolution()[0] += 1.0e-3;
+      model_->dualRowSolution()[0] += state_->injectedDualResidual;
+    }
+    if (whichEvent == presolveAfterFirstSolve) {
+      state_->cleanupScaling = model_->scalingFlag();
+      if (state_->limitCleanup) {
+        model_->setMaximumIterations(0);
+        model_->setRowUpper(0, 0.5);
+        model_->setRowLower(1, 0.75);
+      }
+    }
+    return -1;
+  }
+private:
+  PostsolveCleanupState *state_;
+};
+}
+
 void ClpSimplexUnitTest(const std::string &dirSample)
 {
 
   CoinRelFltEq eq(0.000001);
+
+  {
+    ClpSolve options;
+    assert(!options.unscaledPostsolve());
+    options.setSpecialOption(6, 1, 2);
+    assert(!options.unscaledPostsolve());
+    const int actions = options.presolveActions();
+    options.setUnscaledPostsolve(true);
+    assert(options.presolveActions() == actions);
+    assert(options.getSpecialOption(6) == 1);
+    assert(options.getExtraInfo(6) == 2);
+    options.setPresolveActions(0);
+    assert(options.unscaledPostsolve());
+    assert(options.presolveActions() == 0);
+    ClpSolve copied(options);
+    ClpSolve assigned;
+    assigned = copied;
+    assert(copied.unscaledPostsolve());
+    assert(assigned.unscaledPostsolve());
+    assigned.setUnscaledPostsolve(false);
+    assert(!assigned.unscaledPostsolve());
+    assert(assigned.getSpecialOption(6) == 1);
+    assert(assigned.getExtraInfo(6) == 2);
+    assert(assigned.presolveActions() == 0);
+    assert(copied.unscaledPostsolve());
+  }
+
+  for (int test = 0; test < 6; ++test) {
+    ClpSimplex solution;
+    const CoinBigIndex start[] = { 0, 2, 4, 5 };
+    const int row[] = { 0, 1, 0, 1, 2 };
+    const double element[] = { 1.0, 1.0, 1.0, 2.0, 1.0 };
+    const double lower[] = { 0.0, 0.0, 5.0 }, upper[] = { 10.0, 10.0, 5.0 };
+    const double cost[] = { -1.0, -1.0, 0.0 };
+    const double rowLower[] = { -COIN_DBL_MAX, -COIN_DBL_MAX, 5.0 };
+    const double rowUpper[] = { 1.0, 1.0, 5.0 };
+    solution.loadProblem(3, 3, start, row, element, lower, upper, cost, rowLower, rowUpper);
+    solution.scaling(3);
+    const bool enabled = test != 0;
+    solution.setMoreSpecialOptions(0);
+    PostsolveCleanupState state = { false, test == 3,
+      test == 2 ? 0.0 : (test == 5 ? 1.0e-3 : 1.0e12), test == 4 ? 0 : 2, -1 };
+    PostsolveCleanupEventHandler handler(state);
+    solution.passInEventHandler(&handler);
+    ClpSolve options;
+    options.setUnscaledPostsolve(enabled);
+    options.setSolveType(ClpSolve::useDual);
+    const int status = solution.initialSolve(options);
+    assert(state.injected);
+    assert(state.cleanupScaling == (enabled && state.reportedSecondary == 2 && state.injectedDualResidual == 1.0e12 ? 0 : 3));
+    assert(solution.scalingFlag() == 3);
+    assert(solution.moreSpecialOptions() == 0);
+    assert(status == solution.status());
+    if (state.limitCleanup) {
+      assert(status == 3);
+    } else {
+      assert(status == 0);
+      assert(solution.secondaryStatus() == 0);
+      assert(fabs(solution.primalColumnSolution()[0] - 1.0) < 1.0e-8);
+      assert(fabs(solution.primalColumnSolution()[1]) < 1.0e-8);
+    }
+  }
 
   for (int cleanupMode = 2; cleanupMode <= 12; cleanupMode += 10) {
     ClpSimplex solution;

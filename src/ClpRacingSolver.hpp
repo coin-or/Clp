@@ -46,6 +46,13 @@ public:
    *  portfolioSize=0 uses numThreads_ passed at construction. */
   void addDefaultConfigs(int portfolioSize = 0);
 
+  /// Set unscaled postsolve recovery for all current configurations.
+  void setUnscaledPostsolve(bool enable)
+  {
+    for (ClpSolve &config : configs_)
+      config.setUnscaledPostsolve(enable);
+  }
+
   /** Set how many seconds of the *overall* search had already elapsed
    *  (per the caller's own getCurrentSeconds()-style clock) when this LP
    *  race is about to begin. Used only so that the interleaved progress

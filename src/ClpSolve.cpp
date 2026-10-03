@@ -12,6 +12,7 @@
 #endif
 
 #include <math.h>
+#include <cfloat>
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpHelperFunctions.hpp"
@@ -3873,6 +3874,17 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     int oldStatus = problemStatus_;
     setProblemStatus(finalStatus);
     setSecondaryStatus(finalSecondaryStatus);
+    // Automatic root recovery is reserved for residuals so large that even
+    // their average roundoff scale exceeds the requested dual tolerance.
+    // Ordinary postsolve residuals retain the existing recovery path.
+    const bool unstablePostsolveDual = numberDualInfeasibilities_ > 0
+      && sumDualInfeasibilities_ * DBL_EPSILON
+        > dualTolerance() * numberDualInfeasibilities_;
+    if (finalStatus == 0 && finalSecondaryStatus >= 2
+      && finalSecondaryStatus <= 4 && sumDualInfeasibilities_ > dualTolerance()
+      && ((moreSpecialOptions_ & 134217728) != 0
+        || (options.unscaledPostsolve() && unstablePostsolveDual)))
+      scaling(0);
     /* Code modified so rcode -1 as normal, >0 clean up, 0 say optimal */
     int rcode = eventHandler()->event(ClpEventHandler::presolveAfterFirstSolve);
     //#define TREAT_AS_OPTIMAL_TOLERANCE 1.0e-4
@@ -7954,7 +7966,7 @@ int ClpSimplex::solveBenders(CoinStructuredModel *model, ClpSolve &options)
 #endif
   //masterModel.scaling(0);
   //masterModel.primal(1);
-  if (!options.independentOption(1))
+  if (!options.presolveActions())
     loadProblem(*model);
   // now put back a good solution
   const double *columnSolution = masterModel.primalColumnSolution();

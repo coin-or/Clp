@@ -102,6 +102,18 @@ public:
      */
   void setSpecialOption(int which, int value, int extraInfo = -1);
   int getSpecialOption(int which) const;
+  /// Enable unscaled postsolve recovery when dual residuals lose numerical precision.
+  inline void setUnscaledPostsolve(bool enable)
+  {
+    if (enable)
+      independentOptions_[1] |= 0x01000000;
+    else
+      independentOptions_[1] &= ~0x01000000;
+  }
+  inline bool unscaledPostsolve() const
+  {
+    return (independentOptions_[1] & 0x01000000) != 0;
+  }
 
   /// Solve types
   void setSolveType(SolveType method, int extraInfo = -1);
@@ -297,7 +309,8 @@ private:
   int extraInfo_[7];
   /** Extra algorithm dependent options
          0 - if set return from clpsolve if infeasible
-         1 - To be copied over to presolve options
+         1 - low 24 bits copied over to presolve options;
+             0x01000000 enables unscaled recovery for unstable postsolve duals
          2 - max substitution level
 	 If Dantzig Wolfe/benders 0 is number blocks, 2 is #passes (notional)
      */
