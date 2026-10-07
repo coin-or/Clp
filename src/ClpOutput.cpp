@@ -390,7 +390,9 @@ int ClpLpEventHandler::event(Event whichEvent)
   // This fix is not correct but what can I do
   // it does not matter too much
   iter = std::max(model_->numberIterations(), s_->maxIterSeen);
-  if (doIter || doTime || doForce) {
+  // Skip if old style printing
+  if ((doIter || doTime || doForce) &&
+      (model_->messageHandler()->prefix()&512)==0)  {
     printLpRow(iter, model_->objectiveValue(),
       model_->sumPrimalInfeasibilities(),
       model_->sumDualInfeasibilities(), elapsed);

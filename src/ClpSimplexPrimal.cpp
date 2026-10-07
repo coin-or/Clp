@@ -1169,7 +1169,8 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
   progressFlag_ = 0; //reset progress flag
 
   // Deal with printing (unless finishing)
-  if (numberDualInfeasibilities_||numberPrimalInfeasibilities_)
+  if ((numberDualInfeasibilities_||numberPrimalInfeasibilities_) &&
+      (handler_->prefix()&512)==0)
     eventHandler_->event(ClpEventHandler::endOfIteration);
   if (handler_->logLevel()>0&& (CoinWallclockTime() - lastStatusUpdate_ > minIntervalProgressUpdate_)) {
     handler_->message(CLP_SIMPLEX_STATUS, messages_)

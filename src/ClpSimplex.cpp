@@ -6387,6 +6387,12 @@ int ClpSimplex::primal(int ifValuesPass, int startFinishOptions)
         problemStatus_ = 0;
         numberDualInfeasibilities_ = 0;
       } else {
+	// if in idiot - return
+	if ((specialOptions_&0x020000000)!=0) {
+	  specialOptions_ &= ~0x020000000;
+	  problemStatus_ = -1;
+	  return 0;
+	}
 	// we really have problems
 	if ((moreSpecialOptions_&1073741824)!=0) {
 	  problemStatus_ = 4;

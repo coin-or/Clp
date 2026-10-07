@@ -2189,6 +2189,7 @@ void Idiot::crossOver(int mode)
         model_->dealWithAbc(1, 1 + 11);
 #endif
 #else
+	model_->setSpecialOptions(model_->specialOptions()|0x020000000);
 #ifndef TWO_GOES
         model_->primal(justValuesPass ? 2 : 1);
 #else
@@ -2214,6 +2215,9 @@ void Idiot::crossOver(int mode)
         delete model_;
         model_ = saveModel;
         saveModel = NULL;
+      } else if (model_->problemStatus()==-1) {
+	// some problems?
+	model_->primal(1);
       }
     } else {
       // not feasible
@@ -2470,6 +2474,8 @@ Idiot::Idiot(OsiSolverInterface &model)
   maxIts2_ = 100;
   reasonableInfeas_ = static_cast< double >(nrows) * 0.05;
   lightWeight_ = 0;
+  if ((model_->messageHandler()->prefix()&512)!=0)
+    minIntervalStatusUpdate_ = model_->getMinIntervalProgressUpdate();
 }
 // Copy constructor.
 Idiot::Idiot(const Idiot &rhs)
@@ -2477,6 +2483,8 @@ Idiot::Idiot(const Idiot &rhs)
   this->minIntervalStatusUpdate_ = rhs.minIntervalStatusUpdate_;
   this->lastStatusUpdate_ = rhs.lastStatusUpdate_;
   model_ = rhs.model_;
+  if ((model_->messageHandler()->prefix()&512)!=0)
+    minIntervalStatusUpdate_ = model_->getMinIntervalProgressUpdate();
   if (model_ && rhs.whenUsed_) {
     int numberColumns = model_->getNumCols();
     whenUsed_ = new int[numberColumns];

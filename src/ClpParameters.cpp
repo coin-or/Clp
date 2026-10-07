@@ -303,6 +303,7 @@ void ClpParameters::setDefaults(int strategy) {
 #else
       parameters_[ClpParam::VECTOR]->setDefault("off");
 #endif
+      parameters_[ClpParam::MESSAGES]->setDefault("off");
       parameters_[ClpParam::DUALBOUND]->setDefault(0.0);
       parameters_[ClpParam::FAKEBOUND]->setDefault(0.0);
       parameters_[ClpParam::FAKEBOUND]->setDefault(0.0);
@@ -1279,6 +1280,21 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::INTPRINT]->appendKwd("fixint");
   parameters_[ClpParam::INTPRINT]->appendKwd("fixall");
 
+  parameters_[ClpParam::MESSAGES]->setup(
+      "mess!ages", "Controls if Clpnnnn is printed",
+      "The default behavior is to put out messages such as:\n Clp0005 2261  "
+      "Objective 109.024 Primal infeas 944413 (758)\n but this program turns "
+      "this off to make it look more friendly.  It can be useful to turn them "
+      "back on if you want to be able to 'grep' for particular messages or if "
+      "you intend to override the behavior of a particular message."
+      "With new output - format is not active - but use oldStyle to "
+      "get old style with more information if ypu need it. "
+      "If you want to ignore time interval then more!OldStyle.");
+  parameters_[ClpParam::MESSAGES]->appendKwd("off");
+  parameters_[ClpParam::MESSAGES]->appendKwd("on");
+  parameters_[ClpParam::MESSAGES]->appendKwd("old!Style");
+  parameters_[ClpParam::MESSAGES]->appendKwd("more!OldStyle");
+
   parameters_[ClpParam::SCALING]->setup(
       "scal!ing", "Whether to scale problem",
       "Scaling can help in solving problems which might otherwise fail because of "
@@ -1646,15 +1662,6 @@ void ClpParameters::addClpBoolParams() {
   parameters_[ClpParam::KKT]->setup(
       "KKT", "Whether to use KKT factorization in barrier", "",
       CoinParam::displayPriorityLow);
-
-  parameters_[ClpParam::MESSAGES]->setup(
-      "mess!ages", "Controls if Clpnnnn is printed",
-      "The default behavior is to put out messages such as:\n Clp0005 2261  "
-      "Objective 109.024 Primal infeas 944413 (758)\n but this program turns "
-      "this off to make it look more friendly.  It can be useful to turn them "
-      "back on if you want to be able to 'grep' for particular messages or if "
-      "you intend to override the behavior of a particular message.");
-
   parameters_[ClpParam::PERTURBATION]->setup(
       "perturb!ation", "Whether to perturb the problem",
       "Perturbation helps to stop cycling, but CLP uses other measures for "

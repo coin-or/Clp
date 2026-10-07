@@ -5560,7 +5560,7 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
   // mark as having gone optimal if looks like it
   if (!numberPrimalInfeasibilities_ && !numberDualInfeasibilities_)
     progressFlag_ |= 8;
-  else
+  else if ((handler_->prefix()&512)==0)
     eventHandler_->event(ClpEventHandler::endOfIteration);
   if (handler_->logLevel() > 0 && handler_->detail(CLP_SIMPLEX_STATUS, messages_) < 100 && (CoinWallclockTime() - lastStatusUpdate_ > minIntervalProgressUpdate_)) {
     handler_->message(CLP_SIMPLEX_STATUS, messages_)

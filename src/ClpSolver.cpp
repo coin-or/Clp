@@ -211,6 +211,15 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
   int doCrash = 0;
   int doVector = 0;
   int doSprint = -1;
+  // To allow old way
+  int printPrefix = 0;
+  //#define CLP_ALWAYS_OLD_PRINT 2
+#if CLP_ALWAYS_OLD_PRINT
+  printPrefix=2;
+#endif
+#if CLP_ALWAYS_OLD_PRINT>1
+  printPrefix=3;
+#endif
   // set reasonable defaults
 #if CLP_INHERIT_MODE > 1
 #define DEFAULT_PRESOLVE_PASSES 20
@@ -781,6 +790,14 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
 #ifdef ABC_INHERIT
           model_.messageHandler()->setPrefix(mode != 0);
 #endif
+	  if (mode>=2) {
+	    model_.messageHandler()->setPrefix(255|512);
+	    if (mode==3) {
+	      // switch off time check for messages
+	      model_.setMinIntervalProgressUpdate(1.0e-5);
+	    }
+	    printPrefix = mode;
+	  }
           break;
         case ClpParam::CHOLESKY:
           choleskyType = mode;
@@ -1138,6 +1155,10 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           lpState->lastPrintTime = lpState->startTime;
           lpState->title = "LP solve";
           ClpLpMsgHandler   lpMsgH(lpState);
+	  // Maybe user wanted old style messages
+	  int prefix = model_.messageHandler()->prefix();
+	  if ((prefix&512)!=0)
+	    lpMsgH.setPrefix(prefix); // ? prefix|255
           ClpLpEventHandler lpEvtH(lpState);
 	  // modify later
 	  lpEvtH.setModifyMsg(0);
@@ -1147,7 +1168,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           model2->passInEventHandler(&lpEvtH);
           ClpLpEventHandler *lpProg =
             dynamic_cast<ClpLpEventHandler *>(model2->eventHandler());
-
+	  if ((printPrefix&512)!=0) {
+	    model2->messageHandler()->setPrefix(printPrefix);
+	    if (printPrefix>2)
+	      model2->setMinIntervalProgressUpdate(1.0e-6);
+	  }
           try {
             status = model2->initialSolve(solveOptions);
             // Print final LP status and close the table
@@ -1589,6 +1614,9 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
            // Print compact problem summary (dimensions + coefficient ranges)
            ClpOutput::printProblemSummary(model_.messageHandler(), model_,
              model_.logLevel());
+	   // make sure prefix OK
+	   if (printPrefix) 
+	     model_.messageHandler()->setPrefix(255|512);
            // Go to canned file if just input file
            if (inputQueue.empty()) {
               // only if ends .mps

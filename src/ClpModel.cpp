@@ -2899,7 +2899,7 @@ int ClpModel::readMps(const char *fileName,
   CoinMpsIO m;
   m.passInMessageHandler(handler_);
   *m.messagesPointer() = coinMessages();
-  bool savePrefix = m.messageHandler()->prefix();
+  int savePrefix = m.messageHandler()->prefix();
   m.messageHandler()->setPrefix(handler_->prefix());
   m.setSmallElementValue(std::max(smallElement_, m.getSmallElementValue()));
   double time1 = CoinCpuTime(), time2;

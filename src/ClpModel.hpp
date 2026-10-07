@@ -1199,6 +1199,7 @@ public:
 	 0x04000000 - zero costs!
 	 0x08000000 - get correct duals  on max iterations
 	 0x010000000 - do not check on time
+	 0x020000000 - in idiot - ignore some errors
      */
   inline unsigned int specialOptions() const
   {
