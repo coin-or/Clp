@@ -1649,11 +1649,13 @@ protected:
   bool inTrouble_;
   //@}
 };
-// switch off testing if OsiClp
-#ifndef CBC_OTHER_SOLVER
+// Cbc and Cgl test (CBC_SKIP_CLP_TEST || getClpSolver(solver)) before using
+// the result as an OsiClpSolverInterface. Defining CBC_SKIP_CLP_TEST as 1
+// skips that NULL check, which is only safe if every solver they see is an
+// OsiClpSolverInterface (not true for e.g. Bonmin's NLP solver), so it is
+// off by default.
 #ifndef CBC_SKIP_CLP_TEST
-#define CBC_SKIP_CLP_TEST 1
-#endif
+#define CBC_SKIP_CLP_TEST 0
 #endif
 #if 0
   /** Return pointer to OsiClpSolverInterface or NULL -
