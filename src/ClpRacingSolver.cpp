@@ -161,19 +161,19 @@ void ClpRacingSolver::addDefaultConfigs(int portfolioSize)
   if (k == 2) {
     // K=2 optimal portfolio (exhaustive k-fold search, 1.47x speedup vs baseline):
     //   dual_pertv72 + primal_idiot50
-    auto [o0, f0] = makeDualPertv72();
-    auto [o1, f1] = makePrimalIdiot50();
-    addConfig(o0, f0);
-    addConfig(o1, f1);
+    std::pair<ClpSolve, ConfigSetupFn> c0 = makeDualPertv72();
+    std::pair<ClpSolve, ConfigSetupFn> c1 = makePrimalIdiot50();
+    addConfig(c0.first, c0.second);
+    addConfig(c1.first, c1.second);
   } else {
     // K=3 optimal portfolio (exhaustive k-fold search, 1.59x speedup vs baseline):
     //   dual_pertv72 + primal_idiot50 + primal_sprint
-    auto [o0, f0] = makeDualPertv72();
-    auto [o1, f1] = makePrimalIdiot50();
-    auto [o2, f2] = makePrimalSprint();
-    addConfig(o0, f0);
-    addConfig(o1, f1);
-    addConfig(o2, f2);
+    std::pair<ClpSolve, ConfigSetupFn> c0 = makeDualPertv72();
+    std::pair<ClpSolve, ConfigSetupFn> c1 = makePrimalIdiot50();
+    std::pair<ClpSolve, ConfigSetupFn> c2 = makePrimalSprint();
+    addConfig(c0.first, c0.second);
+    addConfig(c1.first, c1.second);
+    addConfig(c2.first, c2.second);
   }
 }
 
