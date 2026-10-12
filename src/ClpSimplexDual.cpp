@@ -4946,6 +4946,7 @@ int ClpSimplexDual::checkUnbounded(CoinIndexedVector *ray,
     int iPivot = pivotVariable_[iRow];
     changeCost -= cost(iPivot) * array[iRow];
   }
+  double zeroTolerance = 1.0e-14 * dualBound_;
   double way;
   if (changeCost > 0.0) {
     // try going down
@@ -4957,11 +4958,31 @@ int ClpSimplexDual::checkUnbounded(CoinIndexedVector *ray,
 #ifdef CLP_DEBUG
     printf("can't decide on up or down\n");
 #endif
-    way = 0.0;
-    status = -3;
+    status=-3;
+    // Try both ways!
+    for (int iWay=-1;iWay<2;iWay+=2) {
+      double movement = 1.0e20 * iWay; // some largish number
+      bool unbounded=true;
+      for (i = 0; i < number; i++) {
+	int iRow = index[i];
+	int iPivot = pivotVariable_[iRow];
+	double arrayValue = array[iRow];
+	if (fabs(arrayValue) < zeroTolerance)
+	  arrayValue = 0.0;
+	double newValue = solution(iPivot) + movement * arrayValue;
+	if (newValue > upper(iPivot) + primalTolerance_ || newValue < lower(iPivot) - primalTolerance_) {
+	  unbounded=false;; // not unbounded this way
+	  break;
+	}
+      }
+      if (unbounded) {
+	status=2;
+	way = iWay;
+	break;
+      }
+    }
   }
   double movement = 1.0e20 * way; // some largish number
-  double zeroTolerance = 1.0e-14 * dualBound_;
   for (i = 0; i < number; i++) {
     int iRow = index[i];
     int iPivot = pivotVariable_[iRow];
