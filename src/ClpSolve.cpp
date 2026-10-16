@@ -15,6 +15,7 @@
 #include <cfloat>
 
 #include "CoinHelperFunctions.hpp"
+#include "CoinError.hpp"
 #include "ClpHelperFunctions.hpp"
 #include "CoinSort.hpp"
 #include "ClpFactorization.hpp"
@@ -3201,6 +3202,11 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     bool doKKT = false;
     bool forceFixing = false;
     int speed = 0;
+    bool throwOnSetupFailure = false;
+    if (barrierOptions & 8192) {
+      barrierOptions &= ~8192;
+      throwOnSetupFailure = true;
+    }
     if (barrierOptions & 16) {
       barrierOptions &= ~16;
       doKKT = true;
@@ -3763,11 +3769,20 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 #endif
       } else if (barrierStatus == 4) {
         // memory problems
+        if (throwOnSetupFailure)
+          throw CoinError("Barrier: Cholesky setup/factorization failed",
+            "initialSolve", "ClpSimplex");
+#ifdef CLP_BARRIER_NO_FALLBACK
+        throw CoinError("Barrier: Cholesky setup/factorization failed; "
+                        "simplex fallback disabled by CLP_BARRIER_NO_FALLBACK",
+          "initialSolve", "ClpSimplex");
+#else
         printf("Barrier: Cholesky setup/factorization failed (too large or "
                "out of memory) - falling back to dual simplex\n");
         model2->setPerturbation(savePerturbation);
         model2->createStatus();
         model2->dual();
+#endif
       } else if (maxIts && quadraticObj) {
         // make sure no status left
         model2->createStatus();

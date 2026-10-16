@@ -241,7 +241,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
   parameters[ClpParam::TIMELIMIT]->setVal(model_.maximumSeconds());
   parameters[ClpParam::SPRINT]->setVal(doSprint);
   parameters[ClpParam::SUBSTITUTION]->setVal(substitution);
-  parameters[ClpParam::DUALIZE]->setVal(dualize);
+  parameters[ClpParam::DUALIZE]->setVal(
+    dualize == 3 ? CoinParam::autoIntValue() : dualize);
   parameters[ClpParam::PRESOLVETOLERANCE]->setVal(1.0e-8);
   int verbose = 0;
 
@@ -582,7 +583,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
       else if (paramCode == ClpParam::SUBSTITUTION)
          substitution = iValue;
       else if (paramCode == ClpParam::DUALIZE)
-         dualize = iValue;
+         dualize = parameters[ClpParam::DUALIZE]->isAuto() ? 3 : iValue;
       else if (paramCode == ClpParam::VERBOSE)
          verbose = iValue;
 #if 0

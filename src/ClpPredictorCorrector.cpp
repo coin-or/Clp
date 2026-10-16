@@ -78,7 +78,10 @@ int ClpPredictorCorrector::solve()
   algorithm_ = 1;
   //create all regions
   if (!createWorkingData()) {
-    problemStatus_ = 4;
+    // sanityCheck() solves an empty problem directly (status 0-2);
+    // that is a result, not a setup failure.
+    if (problemStatus_ < 0 || problemStatus_ > 2)
+      problemStatus_ = 4;
     return 2;
   }
 #if COIN_LONG_WORK

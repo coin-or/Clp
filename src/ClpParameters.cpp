@@ -320,7 +320,7 @@ void ClpParameters::setDefaults(int strategy) {
       parameters_[ClpParam::CPP]->setDefault(0);
       parameters_[ClpParam::DECOMPOSE_BLOCKS]->setDefault(0);
       parameters_[ClpParam::DENSE]->setDefault(-1);
-      parameters_[ClpParam::DUALIZE]->setDefault(0);
+      parameters_[ClpParam::DUALIZE]->setDefault(CoinParam::autoIntValue());
       parameters_[ClpParam::IDIOT]->setDefault(0);
       parameters_[ClpParam::MAXFACTOR]->setDefault(CoinParam::autoIntValue());
       parameters_[ClpParam::MAXITERATION]->setDefault(0);
@@ -1479,8 +1479,16 @@ void ClpParameters::addClpIntParams() {
       CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::DUALIZE]->setup("dualize", "Solves dual reformulation",
-                                       0, 4, "Don't even think about it.",
+                                       0, 4,
+      "Solve the dual reformulation of the LP and map the solution back. "
+      "0 = off, 1 = on, 2 = on without the primal clean-up, 4 = for model "
+      "export only. `auto' (default, same as 3) decides from the instance: "
+      "barrier dualizes when rows >= 1.5*cols (the Cholesky factor is then "
+      "cols x cols instead of rows x rows); simplex methods dualize only "
+      "very tall models (rows >= 50000 and 5*cols <= rows). Any explicit "
+      "value overrides the automatic choice.",
                                        CoinParam::displayPriorityLow);
+  parameters_[ClpParam::DUALIZE]->setAutoAllowed();
 
   parameters_[ClpParam::IDIOT]->setup(
       "idiot!Crash", "Whether to try idiot crash", -1, COIN_INT_MAX,
