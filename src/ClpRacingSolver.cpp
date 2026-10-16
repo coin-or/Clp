@@ -352,6 +352,9 @@ int ClpRacingSolver::solve()
       model_->primalRowSolution());
     CoinMemcpyN(w->dualRowSolution(), nRows,
       model_->dualRowSolution());
+    // A model that was never solved has no status array yet
+    if (!model_->statusArray())
+      model_->createStatus();
     CoinMemcpyN(w->statusArray(), nCols + nRows,
       model_->statusArray());
     model_->setObjectiveValue(w->objectiveValue());
