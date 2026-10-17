@@ -1649,12 +1649,6 @@ protected:
   bool inTrouble_;
   //@}
 };
-// switch off testing if OsiClp
-#ifndef CBC_OTHER_SOLVER
-#ifndef CBC_SKIP_CLP_TEST
-#define CBC_SKIP_CLP_TEST 1
-#endif
-#endif
 #if 0
   /** Return pointer to OsiClpSolverInterface or NULL -
       Changed to a static_cast for speed */
