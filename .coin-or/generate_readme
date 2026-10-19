@@ -18,6 +18,20 @@ popd > /dev/null
 
 create_variables $SCRIPT_DIR/config.yml
 
+# Binary packages of this project that make_build_info lists (see
+# make_binary_packages in coinbrew's scripts/generate_readme)
+Package_Repology="coin-or-clp"
+Package_Arch="coin-or-clp"
+Package_Debian="coinor-clp coinor-libclp-dev"
+Package_Fedora="coin-or-Clp coin-or-Clp-devel"
+Package_FreeBSD="math/clp"
+Package_Homebrew="clp"
+Package_MSYS2="mingw-w64-ucrt-x86_64-coin-or-clp"
+Package_Conda="coin-or-clp"
+
+# The Doxygen documentation is published online
+Doxygen_URL=https://coin-or.github.io/$Description_Slug/Doxygen
+
 make_header
 
 echo "Clp (*C*oin-or *l*inear *p*rogramming) is an open-source linear programming solver.
@@ -118,7 +132,6 @@ Documentation:
 Interfaces:
  * [Matlab Interface + Windows x86 & x64 Interface Binaries (OPTI Toolbox)](https://www.inverseproblem.co.nz/OPTI/)
  * [Julia interface](https://github.com/JuliaOpt/Clp.jl)
- * [R and CLP - a quick start](https://cran.r-project.org/web/packages/clpAPI/vignettes/clpAPI.pdf)
  * [Java and CLP - performs well](http://orinanobworld.blogspot.co.uk/2016/06/using-clp-with-java.html)
 " 
 
