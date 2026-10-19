@@ -57,7 +57,7 @@ available [here](https://coin-or.github.io/user_introduction.html).
 
 There is a Docker image that provides Clp, as well as other projects
 in the [COIN-OR Optimization
-Suite](https://github.com/coin-or/COIN-OR-OptimizationSuite) [here](https://hub.docker.com/repository/docker/coinor/coin-or-optimization-suite)
+Suite](https://github.com/coin-or/COIN-OR-OptimizationSuite) [here](https://hub.docker.com/r/coinor/coin-or-optimization-suite).
 
 ### Binaries
 
@@ -67,38 +67,46 @@ releases in Github
 are archived as part of Clp
 [here](https://www.coin-or.org/download/binary/Clp).
 
- * *Linux* (see https://repology.org/project/coin-or-clp/versions for a complete listing): 
-   * arch:
+ * *Linux* (see https://repology.org/project/coin-or-clp/versions for a complete listing):
+   * Arch Linux:
      ```
-     $ sudo pacman -S  coin-or-clp
+     sudo pacman -S coin-or-clp
      ```
-   * Debian/Ubuntu:
+   * Debian and Ubuntu:
      ```
-     $ sudo apt-get install  coinor-clp coinor-libclp-dev
+     sudo apt install coinor-clp coinor-libclp-dev
      ```
-   * Fedora/Redhat/CentOS:
+   * Fedora:
      ```
-     $ sudo dnf install  coin-or-Clp coin-or-Clp-devel
+     sudo dnf install coin-or-Clp coin-or-Clp-devel
      ```
-   * freebsd:
-     ```
-     $ sudo pkg install math/clp
-     ```
-   * linuxbrew:
-     ```
-     $ brew install clp
-     ```
+ * *FreeBSD*:
+   ```
+   sudo pkg install math/clp
+   ```
+ * *macOS and Linux*: With [Homebrew](https://brew.sh), from the
+   [COIN-OR tap](https://github.com/coin-or-tools/homebrew-coinor), do
+   ```
+   brew update
+   brew tap coin-or-tools/coinor
+   brew trust coin-or-tools/coinor
+   brew install coin-or-tools/coinor/clp
+   ```
+   Since version 6.0, Homebrew loads formulas from taps other than its own
+   only if you trust them. `brew trust coin-or-tools/coinor` trusts all
+   formulas of the COIN-OR tap. This is needed because installing a formula by
+   its full name trusts only that formula, not the other formulas of the tap
+   that it depends on. `brew update` makes sure that your Homebrew is recent
+   enough to have the `brew trust` command.
  * *Windows*: The easiest way to get Clp on Windows is to download an archive as described above.
- * *Mac OS X*: The easiest way to get Clp on Mac OS X is through [Homebrew](https://brew.sh).
-     ```
-     $ brew tap coin-or-tools/coinor
-     $ brew install coin-or-tools/coinor/clp
-     ```
-
-* *conda* (cross-platform):
-     ```
-     $ conda install coin-or-clp
-     ```
+   With [MSYS2](https://www.msys2.org), in the UCRT64 environment, do
+   ```
+   pacman -S mingw-w64-ucrt-x86_64-coin-or-clp
+   ```
+ * *conda* (cross-platform):
+   ```
+   conda install -c conda-forge coin-or-clp
+   ```
 
 Due to license incompatibilities, pre-compiled binaries lack some 
 functionality. If binaries are not available for your platform for the latest 
@@ -121,7 +129,7 @@ Clp has a number of dependencies, which are detailed in
 automatically downloaded when obtaining the source with `coinbrew`. For some
 of the remaining third-party dependencies, automatic download scripts and
 build wrappers are provided (and will also be automatically run for required
-and recommended dependencies), while other libraries that are aeasy to obtain
+and recommended dependencies), while other libraries that are easy to obtain
 must be installed using an appropriate package manager (or may come with your
 OS by default). 
 
@@ -146,7 +154,7 @@ The `coinbrew` script will fetch the additional projects specified in the Depend
 
  * Download the source code, e.g., by cloning the git repo https://github.com/coin-or/Clp
  * Download and install the source code for the dependencies listed in [config.yml](.coin-or/config.yml)
- * Build the code as follows (make sure to set PKG_CONFIG_PTH to install directory for dependencies).
+ * Build the code as follows (make sure to set `PKG_CONFIG_PATH` to the `lib/pkgconfig` directory of the installation of the dependencies).
 
 ```
 ./configure -C
@@ -220,14 +228,14 @@ Other ones can get complicated so start simple and work your way up.
 
 If you have `Doxygen` available, you can build a HTML documentation by typing
 
-`make doxydoc` 
+`make doxygen-docs` 
 
 in the build directory. If Clp was built via `coinbrew`, then the build
 directory will be `./build/Clp/master` by default. The doxygen documentation main file
 is found at `<build-dir>/doxydoc/html/index.html`.
 
-If you don't have `doxygen` installed locally, you can use also find the
-documentation [here](http://coin-or.github.io/Clp/Doxygen).
+If you don't have `doxygen` installed locally, you can also find the
+documentation [here](https://coin-or.github.io/Clp/Doxygen).
 
 ## Project Links
 
