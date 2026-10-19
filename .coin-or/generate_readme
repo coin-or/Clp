@@ -132,7 +132,6 @@ Documentation:
 Interfaces:
  * [Matlab Interface + Windows x86 & x64 Interface Binaries (OPTI Toolbox)](https://www.inverseproblem.co.nz/OPTI/)
  * [Julia interface](https://github.com/JuliaOpt/Clp.jl)
- * [R and CLP - a quick start](https://cran.r-project.org/web/packages/clpAPI/vignettes/clpAPI.pdf)
  * [Java and CLP - performs well](http://orinanobworld.blogspot.co.uk/2016/06/using-clp-with-java.html)
 " 
 
