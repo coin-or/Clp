@@ -133,6 +133,11 @@ AC_COIN_CHK_GNU_READLINE([ClpLib])
 # way that causes at-exit crashes in static builds.
 AC_SEARCH_LIBS([pthread_create],[pthread])
 
+# ClpRacingSolver and OsiClpSolverInterface look up openblas_set_num_threads
+# with dlsym (not on Windows). On glibc >= 2.34, dlsym lives in libc; on
+# older systems (e.g., RHEL 8 and manylinux_2_28), it is in libdl.
+AC_SEARCH_LIBS([dlsym],[dl])
+
 ##############################################################################
 #                   VPATH links for example input files                      #
 ##############################################################################
