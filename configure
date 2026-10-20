@@ -22325,6 +22325,70 @@ then :
 fi
 
 
+# ClpRacingSolver and OsiClpSolverInterface look up openblas_set_num_threads
+# with dlsym (not on Windows). On glibc >= 2.34, dlsym lives in libc; on
+# older systems (e.g., RHEL 8 and manylinux_2_28), it is in libdl.
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing dlsym" >&5
+printf %s "checking for library containing dlsym... " >&6; }
+if test ${ac_cv_search_dlsym+y}
+then :
+  printf %s "(cached) " >&6
+else case e in #(
+  e) ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+namespace conftest {
+  extern "C" int dlsym ();
+}
+int
+main (void)
+{
+return conftest::dlsym ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' dl
+do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_cxx_try_link "$LINENO"
+then :
+  ac_cv_search_dlsym=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext
+  if test ${ac_cv_search_dlsym+y}
+then :
+  break
+fi
+done
+if test ${ac_cv_search_dlsym+y}
+then :
+
+else case e in #(
+  e) ac_cv_search_dlsym=no ;;
+esac
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS ;;
+esac
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_dlsym" >&5
+printf "%s\n" "$ac_cv_search_dlsym" >&6; }
+ac_res=$ac_cv_search_dlsym
+if test "$ac_res" != no
+then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+
 ##############################################################################
 #                   VPATH links for example input files                      #
 ##############################################################################
