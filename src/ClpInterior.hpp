@@ -155,6 +155,10 @@ public:
   int pdco(ClpPdcoBase *stuff, Options &options, Info &info, Outfo &outfo);
   /// Primal-Dual Predictor-Corrector barrier
   int primalDual();
+
+  /// Cooperative cancellation/deadline check at a safe barrier work boundary.
+  /// Dense tiles may defer clock reads while still polling event cancellation.
+  bool barrierStopRequested(bool checkTime = true);
   //@}
 
   /**@name most useful gets and sets */

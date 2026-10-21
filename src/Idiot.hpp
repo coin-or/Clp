@@ -258,6 +258,7 @@ public:
   void solve2(CoinMessageHandler *handler, const CoinMessages *messages);
 
 private:
+  bool stopRequested();
   IdiotResult IdiSolve(
     int nrows, int ncols, double *rowsol, double *colsol,
     double *pi, double *djs, const double *origcost,

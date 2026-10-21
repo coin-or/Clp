@@ -71,7 +71,7 @@ public:
   int winnerIndex() const { return winnerIndex_; }
 
   /// Descriptive name of the winning configuration ("dual", "primal+idiot",
-  /// "primal+sprint", or "unknown"), for callers that want to report it
+  /// "primal+sprint", "barrier", or "unknown"), for callers that want to report it
   /// themselves. Empty string if solve() hasn't found a winner.
   const char *winnerName() const;
 

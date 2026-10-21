@@ -2,6 +2,7 @@
 // All Rights Reserved. This code is published under the Eclipse Public License.
 
 #include "ClpOutput.hpp"
+#include "ClpInterior.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -339,6 +340,17 @@ static void flushPendingIdiotSprintState(ClpLpPhaseState &s)
 void ClpLpEventHandler::flushPendingIdiotSprint()
 {
   flushPendingIdiotSprintState(*s_);
+}
+
+int ClpLpEventHandler::eventWithInfo(Event whichEvent, void *info)
+{
+  if (whichEvent == endOfBarrierIteration && info) {
+    const ClpInterior *barrier = static_cast<const ClpInterior *>(info);
+    ClpLpTable::printRow(*s_, "Barrier", barrier->numberIterations(),
+      barrier->objectiveValue(), barrier->sumPrimalInfeasibilities(),
+      barrier->sumDualInfeasibilities());
+  }
+  return -1;
 }
 
 int ClpLpEventHandler::event(Event whichEvent)

@@ -4,9 +4,13 @@
 
 #include "ClpRacingSolver.hpp"
 #include "ClpEventHandler.hpp"
+#include "ClpInterior.hpp"
 #include "ClpOutput.hpp"
 #include "CoinTime.hpp"
+#include "CoinError.hpp"
 #include <atomic>
+#include <exception>
+#include <cstring>
 #include <memory>
 #include <vector>
 
@@ -59,6 +63,23 @@ inline void racing_set_openblas_threads(int) {}
 // sequential table, per-config chatter is not multiplied by nThreads.
 namespace {
 
+const char *configLabel(ClpSolve config)
+{
+  switch (config.getSolveType()) {
+  case ClpSolve::useBarrier:
+  case ClpSolve::useBarrierNoCross:
+    return "Barrier";
+  case ClpSolve::usePrimalorSprint:
+    return "Sprint";
+  case ClpSolve::usePrimal:
+    return config.getSpecialOption(1) == 2 ? "P+Idiot" : "Primal";
+  case ClpSolve::useDual:
+    return "Dual";
+  default:
+    return "Config";
+  }
+}
+
 class RacingEventHandler : public ClpEventHandler {
 public:
   RacingEventHandler(std::shared_ptr<ClpLpPhaseState> state,
@@ -88,9 +109,23 @@ public:
     if (whichEvent != endOfIteration || !model_ || !state_)
       return -1;
 
-    ClpLpTable::printRow(*state_, label_, model_->numberIterations(),
+    const char *phase = std::strcmp(label_, "Barrier") == 0 ? "B+Cross" : label_;
+    ClpLpTable::printRow(*state_, phase, model_->numberIterations(),
       model_->objectiveValue(), model_->sumPrimalInfeasibilities(),
       model_->sumDualInfeasibilities());
+    return -1;
+  }
+
+  int eventWithInfo(Event whichEvent, void *info) override
+  {
+    if (abortFlag_ && abortFlag_->load(std::memory_order_relaxed))
+      return 0;
+    if (whichEvent == endOfBarrierIteration && info && state_) {
+      const ClpInterior *barrier = static_cast<const ClpInterior *>(info);
+      ClpLpTable::printRow(*state_, label_, barrier->numberIterations(),
+        barrier->objectiveValue(), barrier->sumPrimalInfeasibilities(),
+        barrier->sumDualInfeasibilities());
+    }
     return -1;
   }
 
@@ -179,10 +214,22 @@ void ClpRacingSolver::addDefaultConfigs(int portfolioSize)
 
 const char *ClpRacingSolver::winnerName() const
 {
-  static const char *names[] = { "dual", "primal+idiot", "primal+sprint" };
-  if (winnerIndex_ < 0)
+  if (winnerIndex_ < 0 || winnerIndex_ >= static_cast<int>(configs_.size()))
     return "";
-  return (winnerIndex_ < 3) ? names[winnerIndex_] : "unknown";
+  ClpSolve config = configs_[winnerIndex_];
+  switch (config.getSolveType()) {
+  case ClpSolve::useBarrier:
+  case ClpSolve::useBarrierNoCross:
+    return "barrier";
+  case ClpSolve::useDual:
+    return "dual";
+  case ClpSolve::usePrimalorSprint:
+    return "primal+sprint";
+  case ClpSolve::usePrimal:
+    return config.getSpecialOption(1) == 2 ? "primal+idiot" : "primal";
+  default:
+    return "unknown";
+  }
 }
 
 int ClpRacingSolver::solve()
@@ -197,6 +244,8 @@ int ClpRacingSolver::solve()
 
   // If only one config, just solve directly (no threading overhead)
   if (nThreads <= 1) {
+    if (!setupFns_.empty() && setupFns_[0])
+      setupFns_[0](model_);
     model_->initialSolve(configs_[0]);
     if (model_->status() == 0) {
       winnerIndex_ = 0;
@@ -236,7 +285,6 @@ int ClpRacingSolver::solve()
   // printFinalStatus() call (made after solve() returns) closes the table
   // and prints the final summary line as usual. Falls back to a private
   // table state (same format) when no handler is installed.
-  static const char *configLabels[] = {"Dual", "P+Idiot", "Sprint"};
   ClpLpEventHandler *existingHandler
     = dynamic_cast<ClpLpEventHandler *>(model_->eventHandler());
   std::shared_ptr<ClpLpPhaseState> tableState;
@@ -264,19 +312,25 @@ int ClpRacingSolver::solve()
   }
 
   double startTime = CoinGetTimeOfDay();
+  std::vector<std::exception_ptr> failures(nThreads);
 
 #if CLP_RACING_USE_STD_THREAD
   std::vector<std::thread> threads;
   threads.reserve(nThreads);
   for (int i = 0; i < nThreads; i++) {
-    threads.emplace_back([i, &clones, &abortFlag, &winner, &tableState, this]() {
+    threads.emplace_back([i, &clones, &abortFlag, &winner, &tableState, &failures, this]() {
       ClpSimplex *clone = clones[i];
       clone->setLogLevel(0);
       racing_set_openblas_threads(1);
-      const char *label = (i < 3) ? configLabels[i] : "Config";
+      const char *label = configLabel(configs_[i]);
       RacingEventHandler handler(tableState, &abortFlag, label);
       clone->passInEventHandler(&handler);
-      clone->initialSolve(configs_[i]);
+      try {
+        clone->initialSolve(configs_[i]);
+      } catch (...) {
+        failures[i] = std::current_exception();
+        return;
+      }
       int st = clone->status();
       if (st == 0 || st == 1 || st == 2) {
         int expected = -1;
@@ -297,6 +351,7 @@ int ClpRacingSolver::solve()
     std::shared_ptr<ClpLpPhaseState> *tableState;
     const char *label;
     int index;
+    std::exception_ptr *failure;
   };
 
   std::vector<ThreadArg> args(nThreads);
@@ -308,8 +363,9 @@ int ClpRacingSolver::solve()
     args[i].abortFlag = &abortFlag;
     args[i].winner = &winner;
     args[i].tableState = &tableState;
-    args[i].label = (i < 3) ? configLabels[i] : "Config";
+    args[i].label = configLabel(configs_[i]);
     args[i].index = i;
+    args[i].failure = &failures[i];
 
     pthread_create(&threads[i], nullptr, [](void *arg) -> void * {
       ThreadArg *a = static_cast<ThreadArg *>(arg);
@@ -318,7 +374,12 @@ int ClpRacingSolver::solve()
       racing_set_openblas_threads(1);
       RacingEventHandler handler(*a->tableState, a->abortFlag, a->label);
       clone->passInEventHandler(&handler);
-      clone->initialSolve(*a->config);
+      try {
+        clone->initialSolve(*a->config);
+      } catch (...) {
+        *a->failure = std::current_exception();
+        return nullptr;
+      }
       int st = clone->status();
       if (st == 0 || st == 1 || st == 2) {
         int expected = -1;
@@ -332,6 +393,30 @@ int ClpRacingSolver::solve()
   for (int i = 0; i < nThreads; i++)
     pthread_join(threads[i], nullptr);
 #endif
+
+  std::exception_ptr unexpectedFailure;
+  for (int i = 0; i < nThreads; ++i) {
+    if (!failures[i])
+      continue;
+    try {
+      std::rethrow_exception(failures[i]);
+    } catch (const CoinError &error) {
+      if (error.message().find("Barrier: Cholesky setup/factorization failed") != 0) {
+        unexpectedFailure = failures[i];
+        break;
+      }
+      fprintf(stderr, "Racing %s failed: %s\n", configLabel(configs_[i]),
+        error.message().c_str());
+    } catch (...) {
+      unexpectedFailure = failures[i];
+      break;
+    }
+  }
+  if (unexpectedFailure) {
+    for (int i = 0; i < nThreads; ++i)
+      delete clones[i];
+    std::rethrow_exception(unexpectedFailure);
+  }
 
   double endTime = CoinGetTimeOfDay();
   winnerIndex_ = winner.load();

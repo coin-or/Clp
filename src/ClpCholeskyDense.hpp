@@ -93,6 +93,8 @@ typedef struct {
   int integerParameters_[2]; /* corresponds to 34, nThreads */
   int n;
   int numberBlocks;
+  void *stopContext;
+  int (*stopRequested)(void *);
 } ClpCholeskyDenseC;
 
 extern "C" {

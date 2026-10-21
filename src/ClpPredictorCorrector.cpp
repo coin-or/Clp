@@ -76,6 +76,8 @@ int ClpPredictorCorrector::solve()
 {
   problemStatus_ = -1;
   algorithm_ = 1;
+  if (barrierStopRequested())
+    return problemStatus_;
   //create all regions
   if (!createWorkingData()) {
     // sanityCheck() solves an empty problem directly (status 0-2);
@@ -140,10 +142,17 @@ int ClpPredictorCorrector::solve()
   //bool firstTime=true;
   //firstFactorization(true);
   int returnCode = cholesky_->order(this);
-  if (returnCode || cholesky_->symbolic()) {
+  if (returnCode || barrierStopRequested() || cholesky_->symbolic()) {
     COIN_DETAIL_PRINT(printf("Error return from symbolic - probably not enough memory\n"));
-    problemStatus_ = 4;
+    if (problemStatus_ != 3 && problemStatus_ != 5)
+      problemStatus_ = 4;
     //delete all temporary regions
+#if COIN_LONG_WORK
+    delete[] dual_;
+    delete[] reducedCost_;
+    dual_ = dualSave;
+    reducedCost_ = reducedCostSave;
+#endif
     deleteWorkingData();
     if (saveMatrix) {
       // restore normal copy
@@ -165,13 +174,24 @@ int ClpPredictorCorrector::solve()
   //initialize solution here
   if (createSolution() < 0) {
     COIN_DETAIL_PRINT(printf("Not enough memory\n"));
-    problemStatus_ = 4;
+    if (problemStatus_ != 3 && problemStatus_ != 5)
+      problemStatus_ = 4;
     //delete all temporary regions
+#if COIN_LONG_WORK
+    delete[] dual_;
+    delete[] reducedCost_;
+    dual_ = dualSave;
+    reducedCost_ = reducedCostSave;
+#endif
     deleteWorkingData();
     if (saveMatrix) {
       // restore normal copy
       delete matrix_;
       matrix_ = saveMatrix;
+    }
+    if (saveObjective) {
+      delete objective_;
+      objective_ = saveObjective;
     }
     return -1;
   }
@@ -261,7 +281,10 @@ int ClpPredictorCorrector::solve()
     // Check event
     // Printing is rubbish
     {
-      int status = eventHandler_->event(ClpEventHandler::endOfIteration);
+      int status = eventHandler_->eventWithInfo(
+        ClpEventHandler::endOfBarrierIteration, this);
+      if (status < 0)
+        status = eventHandler_->event(ClpEventHandler::endOfIteration);
       if (status >= 0) {
         problemStatus_ = 5;
         secondaryStatus_ = ClpEventHandler::endOfIteration;
@@ -542,6 +565,10 @@ int ClpPredictorCorrector::solve()
       diagonalScaleFactor_);
     int *rowsDroppedThisTime = new int[numberRows_];
     newDropped = cholesky_->factorize(diagonal_, rowsDroppedThisTime);
+    if (problemStatus_ == 3 || problemStatus_ == 5) {
+      delete[] rowsDroppedThisTime;
+      break;
+    }
     if (newDropped) {
       if (newDropped == -1) {
         COIN_DETAIL_PRINT(printf("Out of memory\n"));
@@ -2040,6 +2067,10 @@ int ClpPredictorCorrector::createSolution()
   }
   int *rowsDropped = new int[numberRows_];
   int returnCode = cholesky_->factorize(diagonal_, rowsDropped);
+  if (problemStatus_ == 3 || problemStatus_ == 5) {
+    delete[] rowsDropped;
+    return -1;
+  }
   if (returnCode == -1) {
     COIN_DETAIL_PRINT(printf("Out of memory\n"));
     problemStatus_ = 4;

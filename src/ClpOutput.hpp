@@ -163,6 +163,7 @@ public:
   explicit ClpLpEventHandler(std::shared_ptr<ClpLpPhaseState> state);
 
   virtual int event(Event whichEvent) override;
+  int eventWithInfo(Event whichEvent, void *info) override;
   virtual ClpEventHandler *clone() const override;
 
   /// Print presolve stats
