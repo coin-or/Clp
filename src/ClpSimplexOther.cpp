@@ -1150,7 +1150,7 @@ int ClpSimplexOther::readBasis(const char *fileName)
   CoinMpsIO m;
   m.passInMessageHandler(handler_);
   *m.messagesPointer() = coinMessages();
-  bool savePrefix = m.messageHandler()->prefix();
+  int savePrefix = m.messageHandler()->prefix();
   m.messageHandler()->setPrefix(handler_->prefix());
   status = m.readBasis(fileName, "", columnActivity_, status_ + numberColumns_,
     status_,
