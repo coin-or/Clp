@@ -2225,6 +2225,7 @@ void Idiot::crossOver(int mode)
         model_->dealWithAbc(1, 1 + 11);
 #endif
 #else
+	model_->setSpecialOptions(model_->specialOptions()|0x800000);
 #ifndef TWO_GOES
         model_->primal(justValuesPass ? 2 : 1);
 #else
