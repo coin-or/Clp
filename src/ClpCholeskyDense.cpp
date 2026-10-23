@@ -662,7 +662,20 @@ void ClpCholeskyDense::factorizePart2(int *rowsDropped)
     nBlock++;
     block -= nBlock + ifOdd;
   }
-  ClpCholeskyDenseC info;
+  ClpCholeskyDenseC info = {};
+  struct StopContext {
+    ClpInterior *model;
+    unsigned int calls;
+  } stopContext = {model_, 0};
+  info.stopContext = &stopContext;
+#ifndef CLP_CILK
+  info.stopRequested = [](void *context) -> int {
+    StopContext &stop = *static_cast<StopContext *>(context);
+    // A leaf handles a small dense tile; CPU-clock reads on every tile
+    // otherwise dominate these kernels when a time limit is enabled.
+    return stop.model && stop.model->barrierStopRequested((++stop.calls & 63) == 0);
+  };
+#endif
   info.diagonal_ = diagonal_;
   info.doubleParameters_[0] = doubleParameters_[10];
   info.integerParameters_[0] = integerParameters_[34];
@@ -678,6 +691,8 @@ void ClpCholeskyDense::factorizePart2(int *rowsDropped)
   info.integerParameters_[1] = model_->numberThreads();
   ClpCholeskySpawn(&info);
 #endif
+  if (model_ && (model_->status() == 3 || model_->status() == 5))
+    return;
   double largest = 0.0;
   double smallest = COIN_DBL_MAX;
   int numberDropped = 0;
@@ -697,6 +712,8 @@ void ClpCholeskyDense::factorizePart2(int *rowsDropped)
 void ClpCholeskyCfactor(ClpCholeskyDenseC *thisStruct, longDouble *a, int n, int numberBlocks,
   longDouble *diagonal, longDouble *work, int *rowsDropped)
 {
+  if (thisStruct->stopRequested && thisStruct->stopRequested(thisStruct->stopContext))
+    return;
   if (n <= BLOCK) {
     ClpCholeskyCfactorLeaf(thisStruct, a, n, diagonal, work, rowsDropped);
   } else {
@@ -720,6 +737,8 @@ void ClpCholeskyCtriRec(ClpCholeskyDenseC *thisStruct, longDouble *aTri, int nTh
   int nLeft, int iBlock, int jBlock,
   int numberBlocks)
 {
+  if (thisStruct->stopRequested && thisStruct->stopRequested(thisStruct->stopContext))
+    return;
   if (nThis <= BLOCK && nLeft <= BLOCK) {
     ClpCholeskyCtriRecLeaf(/*thisStruct,*/ aTri, aUnder, diagonal, work, nLeft);
   } else if (nThis < nLeft) {
@@ -754,6 +773,8 @@ void ClpCholeskyCrecTri(ClpCholeskyDenseC *thisStruct, longDouble *aUnder, int n
   longDouble *diagonal, longDouble *work,
   int numberBlocks)
 {
+  if (thisStruct->stopRequested && thisStruct->stopRequested(thisStruct->stopContext))
+    return;
   if (nTri <= BLOCK && nDo <= BLOCK) {
     ClpCholeskyCrecTriLeaf(/*thisStruct,*/ aUnder, aTri, /*diagonal,*/ work, nTri);
   } else if (nTri < nDo) {
@@ -792,6 +813,8 @@ void ClpCholeskyCrecRec(ClpCholeskyDenseC *thisStruct, longDouble *above, int nU
   int iBlock, int jBlock,
   int numberBlocks)
 {
+  if (thisStruct->stopRequested && thisStruct->stopRequested(thisStruct->stopContext))
+    return;
   if (nDo <= BLOCK && nUnder <= BLOCK && nUnderK <= BLOCK) {
     assert(nDo == BLOCK && nUnder == BLOCK);
     ClpCholeskyCrecRecLeaf(/*thisStruct,*/ above, aUnder, aOther, work, nUnderK);

@@ -304,7 +304,7 @@ void ClpParameters::setDefaults(int strategy) {
       parameters_[ClpParam::VECTOR]->setDefault("off");
 #endif
       parameters_[ClpParam::MESSAGES]->setDefault("off");
-      parameters_[ClpParam::DUALBOUND]->setDefault(0.0);
+      parameters_[ClpParam::DUALBOUND]->setDefault(CoinParam::autoDblValue());
       parameters_[ClpParam::FAKEBOUND]->setDefault(0.0);
       parameters_[ClpParam::FAKEBOUND]->setDefault(0.0);
       parameters_[ClpParam::OBJSCALE]->setDefault(1.0);
@@ -321,9 +321,9 @@ void ClpParameters::setDefaults(int strategy) {
       parameters_[ClpParam::CPP]->setDefault(0);
       parameters_[ClpParam::DECOMPOSE_BLOCKS]->setDefault(0);
       parameters_[ClpParam::DENSE]->setDefault(-1);
-      parameters_[ClpParam::DUALIZE]->setDefault(0);
+      parameters_[ClpParam::DUALIZE]->setDefault(CoinParam::autoIntValue());
       parameters_[ClpParam::IDIOT]->setDefault(0);
-      parameters_[ClpParam::MAXFACTOR]->setDefault(0);
+      parameters_[ClpParam::MAXFACTOR]->setDefault(CoinParam::autoIntValue());
       parameters_[ClpParam::MAXITERATION]->setDefault(0);
       parameters_[ClpParam::MORESPECIALOPTIONS]->setDefault(0);
       parameters_[ClpParam::PRESOLVEPASS]->setDefault(0);
@@ -373,13 +373,18 @@ void ClpParameters::synchronizeModel() {
     // Integer parameters
     int intValue;
     int modelIntValue;
+    // auto keeps the preset 200, which Clp replaces from the problem size;
+    // a number, 200 included, is used as given
     parameters_[ClpParam::MAXFACTOR]->getVal(intValue);
 #ifdef PRINT_CLP_CHANGES
     modelIntValue = model_->factorization()->maximumPivots();
     if (intValue!=modelIntValue)
       printf("changing ? from %d to %d at line %d\n",modelIntValue,intValue,__LINE__+1);
 #endif
-    model_->factorization()->maximumPivots(intValue);
+    if (parameters_[ClpParam::MAXFACTOR]->isAuto())
+      model_->setFactorizationFrequency(200);
+    else
+      model_->setExactFactorizationFrequency(intValue);
     parameters_[ClpParam::PERTVALUE]->getVal(intValue);
 #ifdef PRINT_CLP_CHANGES
     modelIntValue = model_->perturbation();
@@ -445,13 +450,18 @@ void ClpParameters::synchronizeModel() {
       printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
 #endif
     model_->setSmallElementValue(doubleValue);
+    // auto keeps the preset 1.0e10, which may be replaced from the bounds;
+    // a number, 1.0e10 included, is used as given
     parameters_[ClpParam::DUALBOUND]->getVal(doubleValue);
 #ifdef PRINT_CLP_CHANGES
     modelDoubleValue = model_->dualBound();
     if (doubleValue!=modelDoubleValue)
       printf("changing ? from %g to %g at line %d\n",modelDoubleValue,doubleValue,__LINE__+1);
 #endif
-    model_->setDualBound(doubleValue);
+    if (parameters_[ClpParam::DUALBOUND]->isAuto())
+      model_->setDualBound(1.0e10);
+    else
+      model_->setExactDualBound(doubleValue);
     parameters_[ClpParam::PRIMALWEIGHT]->getVal(doubleValue);
 #ifdef PRINT_CLP_CHANGES
     modelDoubleValue = model_->infeasibilityCost();
@@ -1280,21 +1290,6 @@ void ClpParameters::addClpKwdParams() {
   parameters_[ClpParam::INTPRINT]->appendKwd("fixint");
   parameters_[ClpParam::INTPRINT]->appendKwd("fixall");
 
-  parameters_[ClpParam::MESSAGES]->setup(
-      "mess!ages", "Controls if Clpnnnn is printed",
-      "The default behavior is to put out messages such as:\n Clp0005 2261  "
-      "Objective 109.024 Primal infeas 944413 (758)\n but this program turns "
-      "this off to make it look more friendly.  It can be useful to turn them "
-      "back on if you want to be able to 'grep' for particular messages or if "
-      "you intend to override the behavior of a particular message."
-      "With new output - format is not active - but use oldStyle to "
-      "get old style with more information if ypu need it. "
-      "If you want to ignore time interval then more!OldStyle.");
-  parameters_[ClpParam::MESSAGES]->appendKwd("off");
-  parameters_[ClpParam::MESSAGES]->appendKwd("on");
-  parameters_[ClpParam::MESSAGES]->appendKwd("old!Style");
-  parameters_[ClpParam::MESSAGES]->appendKwd("more!OldStyle");
-
   parameters_[ClpParam::SCALING]->setup(
       "scal!ing", "Whether to scale problem",
       "Scaling can help in solving problems which might otherwise fail because of "
@@ -1306,6 +1301,20 @@ void ClpParameters::addClpKwdParams() {
       " - 'geometric' uses the squareroot of the product of largest and smallest element.\n"
       " - 'auto' lets CLP choose a method that gives the best ratio of the largest element "
       "to the smallest one.", CoinParam::displayPriorityLow);
+  parameters_[ClpParam::MESSAGES]->setup(
+      "mess!ages", "Controls if Clpnnnn is printed",
+      "The default behavior is to put out messages such as:\n Clp0005 2261  "
+      "Objective 109.024 Primal infeas 944413 (758)\n but this program turns "
+      "this off to make it look more friendly.  It can be useful to turn them "
+      "back on if you want to be able to 'grep' for particular messages or if "
+      "you intend to override the behavior of a particular message."
+      "With new output - format is not active - but use oldStyle to "
+      "get old style with more information if ypu need it. "
+      "You may wish to set progressinterval to get enough information.");
+  parameters_[ClpParam::MESSAGES]->appendKwd("off");
+  parameters_[ClpParam::MESSAGES]->appendKwd("on");
+  parameters_[ClpParam::MESSAGES]->appendKwd("old!Style");
+
   parameters_[ClpParam::SCALING]->appendKwd("off");
   parameters_[ClpParam::SCALING]->appendKwd("equi!librium");
   parameters_[ClpParam::SCALING]->appendKwd("geo!metric");
@@ -1358,7 +1367,11 @@ void ClpParameters::addClpDblParams() {
       "function in the primal algorithm.  Too high a value may mean more "
       "iterations, while too low a bound means the code may go all the way and "
       "then have to increase the bounds.  OSL had a heuristic to adjust "
-      "bounds, maybe we need that here.");
+      "bounds, maybe we need that here.  The default, auto, starts from "
+      "1.0e10 and lets the code replace it from the problem's bounds (Cbc "
+      "does so before branch and bound); a number, 1.0e10 included, is used "
+      "as given.");
+  parameters_[ClpParam::DUALBOUND]->setAutoAllowed();
 
   parameters_[ClpParam::DUALTOLERANCE]->setup("dualT!olerance", "For an optimal solution no dual infeasibility may exceed this value", 1.0e-20, COIN_DBL_MAX, "Normally the default tolerance is fine, but one may want to increase it a bit if the dual simplex algorithm seems to be having a hard time. One method which can be faster is to use a large tolerance e.g. 1.0e-4 and the dual simplex algorithm and then to clean up the problem using the primal simplex algorithm with the correct tolerance (remembering to switch off presolve for this final short clean up phase).");
 
@@ -1481,8 +1494,16 @@ void ClpParameters::addClpIntParams() {
       CoinParam::displayPriorityLow);
 
   parameters_[ClpParam::DUALIZE]->setup("dualize", "Solves dual reformulation",
-                                       0, 4, "Don't even think about it.",
+                                       0, 4,
+      "Solve the dual reformulation of the LP and map the solution back. "
+      "0 = off, 1 = on, 2 = on without the primal clean-up, 4 = for model "
+      "export only. `auto' (default, same as 3) decides from the instance: "
+      "barrier dualizes when rows >= 1.5*cols (the Cholesky factor is then "
+      "cols x cols instead of rows x rows); simplex methods dualize only "
+      "very tall models (rows >= 50000 and 5*cols <= rows). Any explicit "
+      "value overrides the automatic choice.",
                                        CoinParam::displayPriorityLow);
+  parameters_[ClpParam::DUALIZE]->setAutoAllowed();
 
   parameters_[ClpParam::IDIOT]->setup(
       "idiot!Crash", "Whether to try idiot crash", -1, COIN_INT_MAX,
@@ -1495,8 +1516,10 @@ void ClpParameters::addClpIntParams() {
   parameters_[ClpParam::MAXFACTOR]->setup(
       "maxF!actor", "Maximum number of iterations between refactorizations", 1,
       COIN_INT_MAX,
-      "If this is left at its default value of 200 then CLP will guess a  "
-      "value to use.  CLP may decide to re-factorize earlier for accuracy.");
+      "The default, auto, lets CLP guess a value from the number of rows; a "
+      "number, 200 included, is used as given.  CLP may decide to "
+      "re-factorize earlier for accuracy.");
+  parameters_[ClpParam::MAXFACTOR]->setAutoAllowed();
 
   parameters_[ClpParam::MAXITERATION]->setup(
       "maxIt!erations", "Maximum number of iterations before stopping", 0,
@@ -1662,6 +1685,7 @@ void ClpParameters::addClpBoolParams() {
   parameters_[ClpParam::KKT]->setup(
       "KKT", "Whether to use KKT factorization in barrier", "",
       CoinParam::displayPriorityLow);
+
   parameters_[ClpParam::PERTURBATION]->setup(
       "perturb!ation", "Whether to perturb the problem",
       "Perturbation helps to stop cycling, but CLP uses other measures for "

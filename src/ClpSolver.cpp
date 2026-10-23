@@ -234,11 +234,13 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
   int dualize = 3; // dualize if looks promising
   ClpParameters parameters;
   parameters.setModel(&model);
-  parameters[ClpParam::DUALBOUND]->setVal(model_.dualBound());
+  parameters[ClpParam::DUALBOUND]->setVal(model_.dualBoundIsDefault()
+      ? CoinParam::autoDblValue() : model_.dualBound());
   parameters[ClpParam::DUALTOLERANCE]->setVal(model_.dualTolerance());
   parameters[ClpParam::IDIOT]->setVal(doIdiot);
   parameters[ClpParam::LOGLEVEL]->setVal(model_.logLevel());
-  parameters[ClpParam::MAXFACTOR]->setVal(model_.factorizationFrequency());
+  parameters[ClpParam::MAXFACTOR]->setVal(model_.factorizationFrequencyIsDefault()
+      ? CoinParam::autoIntValue() : model_.factorizationFrequency());
   parameters[ClpParam::MAXITERATION]->setVal(model_.maximumIterations());
   parameters[ClpParam::OUTPUTFORMAT]->setVal(outputFormat);
   parameters[ClpParam::PRESOLVEPASS]->setVal(preSolve);
@@ -248,7 +250,8 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
   parameters[ClpParam::TIMELIMIT]->setVal(model_.maximumSeconds());
   parameters[ClpParam::SPRINT]->setVal(doSprint);
   parameters[ClpParam::SUBSTITUTION]->setVal(substitution);
-  parameters[ClpParam::DUALIZE]->setVal(dualize);
+  parameters[ClpParam::DUALIZE]->setVal(
+    dualize == 3 ? CoinParam::autoIntValue() : dualize);
   parameters[ClpParam::PRESOLVETOLERANCE]->setVal(1.0e-8);
   int verbose = 0;
 
@@ -589,7 +592,7 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
       else if (paramCode == ClpParam::SUBSTITUTION)
          substitution = iValue;
       else if (paramCode == ClpParam::DUALIZE)
-         dualize = iValue;
+         dualize = parameters[ClpParam::DUALIZE]->isAuto() ? 3 : iValue;
       else if (paramCode == ClpParam::VERBOSE)
          verbose = iValue;
 #if 0
@@ -792,10 +795,6 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
 #endif
 	  if (mode>=2) {
 	    model_.messageHandler()->setPrefix(255|512);
-	    if (mode==3) {
-	      // switch off time check for messages
-	      model_.setMinIntervalProgressUpdate(1.0e-5);
-	    }
 	    printPrefix = mode;
 	  }
           break;

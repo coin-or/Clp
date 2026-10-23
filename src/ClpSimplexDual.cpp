@@ -5136,6 +5136,12 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
             matrix_->generalExpanded(this, 6, dummy);
             // debug
             int returnCode = internalFactorize(1);
+            if (problemStatus_ == 3)
+              return; // time limit hit inside internalFactorize(); stop the
+                       // singular-basis recovery retry loop immediately -
+                       // internalFactorize() will keep returning nonzero
+                       // once the deadline has passed, so looping below
+                       // would spin forever without making progress.
             while (returnCode) {
               // ouch
               // switch off dense
@@ -5147,6 +5153,9 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
               pivotVariable_[0] = -1;
               returnCode = internalFactorize(2);
               factorization_->setDenseThreshold(saveDense);
+              if (problemStatus_ == 3)
+                return; // ditto - bail out mid-loop if the deadline is hit
+                         // during a retry rather than spinning further
             }
             // get correct bounds on all variables
             resetFakeBounds(1);
@@ -5326,6 +5335,12 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
       matrix_->generalExpanded(this, 6, dummy);
       // debug
       int returnCode = internalFactorize(1);
+      if (problemStatus_ == 3)
+        return; // time limit hit inside internalFactorize(); stop the
+                 // singular-basis recovery retry loop immediately -
+                 // internalFactorize() will keep returning nonzero once
+                 // the deadline has passed, so looping below would spin
+                 // forever without making progress.
       while (returnCode) {
         // ouch
         // switch off dense
@@ -5337,6 +5352,9 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
         pivotVariable_[0] = -1;
         returnCode = internalFactorize(2);
         factorization_->setDenseThreshold(saveDense);
+        if (problemStatus_ == 3)
+          return; // ditto - bail out mid-loop if the deadline is hit
+                   // during a retry rather than spinning further
       }
       // get correct bounds on all variables
       resetFakeBounds(1);
@@ -5465,6 +5483,13 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
                 matrix_->generalExpanded(this, 6, dummy);
                 // debug
                 int returnCode = internalFactorize(1);
+                if (problemStatus_ == 3)
+                  return; // time limit hit inside internalFactorize(); stop
+                           // the singular-basis recovery retry loop
+                           // immediately - internalFactorize() will keep
+                           // returning nonzero once the deadline has
+                           // passed, so looping below would spin forever
+                           // without making progress.
                 while (returnCode) {
                   // ouch
                   // switch off dense
@@ -5476,6 +5501,10 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
                   pivotVariable_[0] = -1;
                   returnCode = internalFactorize(2);
                   factorization_->setDenseThreshold(saveDense);
+                  if (problemStatus_ == 3)
+                    return; // ditto - bail out mid-loop if the deadline is
+                             // hit during a retry rather than spinning
+                             // further
                 }
               }
               resetFakeBounds(0);
@@ -6648,7 +6677,6 @@ int ClpSimplexDual::perturb()
   if (perturbation_ >= 70) {
     modifyRowCosts = true;
     perturbation_ -= 20;
-    printf("Row costs modified, ");
   }
   bool uniformChange = false;
   bool inCbcOrOther = (specialOptions_ & 0x03000000) != 0;
@@ -6750,7 +6778,6 @@ int ClpSimplexDual::perturb()
     if (perturbation_ <= -900) {
       modifyRowCosts = true;
       perturbation_ += 1000;
-      printf("Row costs modified, ");
     }
     if (perturbation_ <= -10) {
       perturbation_ += 10;
@@ -7069,6 +7096,61 @@ int ClpSimplexDual::strongBranching(int numberVariables, const int *variables,
 
   int iSolution = 0;
   for (i = 0; i < numberVariables; i++) {
+    // Strong branching does two full fastDual() resolves per candidate and
+    // is called as a single opaque batch from CbcNode - unlike the
+    // slower per-candidate path in CbcNode.cpp, nothing outside this loop
+    // gets a chance to check elapsed time between candidates. Bail out here
+    // once the deadline (CPU time via ClpMaxSeconds, wall time via
+    // ClpMaxWallSeconds - set by the caller before invoking this function)
+    // is reached, rather than silently resolving every remaining candidate
+    // regardless of the time budget.
+    bool timeLimitReached = false;
+    if (dblParam_[ClpMaxSeconds] >= 0.0 && dblParam_[ClpMaxSeconds] < 4.0e7
+      && CoinCpuTime() >= dblParam_[ClpMaxSeconds])
+      timeLimitReached = true;
+    if (!timeLimitReached && dblParam_[ClpMaxWallSeconds] >= 0.0
+      && CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds])
+      timeLimitReached = true;
+    if (timeLimitReached) {
+      // Fill in every remaining (unevaluated) candidate with an explicit
+      // "unfinished" status (2) and a neutral objective change (0), and a
+      // safe fallback solution (the original, unperturbed LP solution) -
+      // never leave outputStatus/outputSolution uninitialized here, since
+      // the caller (CbcNode.cpp) reads every one of the numberVariables
+      // slots unconditionally, including calling setColSolution() on
+      // outputSolution regardless of status. Status 2 already maps, on the
+      // caller side, to "can't say much as we did not finish" (finishedDown/
+      // finishedUp = false) - so these candidates are correctly treated as
+      // unreliable/not proven, exactly like any other iteration-limited
+      // strong-branching result.
+      for (; i < numberVariables; i++) {
+        newUpper[i] = 0.0;
+        newLower[i] = 0.0;
+        if (outputSolution) {
+          if (scalingFlag_ <= 0) {
+            CoinMemcpyN(saveSolution, numberColumns_, outputSolution[iSolution]);
+          } else {
+            for (int j = 0; j < numberColumns_; j++)
+              outputSolution[iSolution][j] = saveSolution[j] * columnScale_[j];
+          }
+        }
+        outputStatus[iSolution] = 2;
+        outputIterations[iSolution] = 0;
+        iSolution++;
+        if (outputSolution) {
+          if (scalingFlag_ <= 0) {
+            CoinMemcpyN(saveSolution, numberColumns_, outputSolution[iSolution]);
+          } else {
+            for (int j = 0; j < numberColumns_; j++)
+              outputSolution[iSolution][j] = saveSolution[j] * columnScale_[j];
+          }
+        }
+        outputStatus[iSolution] = 2;
+        outputIterations[iSolution] = 0;
+        iSolution++;
+      }
+      break;
+    }
     int iColumn = variables[i];
     double objectiveChange;
     double saveBound;

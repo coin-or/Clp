@@ -8,20 +8,26 @@
 #ifndef CLP_HAS_AMD
 #error "Need to have AMD or CHOLMOD to compile ClpCholeskyUfl."
 #else
-extern "C" {  // for very old AMD versions, as coming with old versions of Glpk
+// Do NOT wrap this include in our own extern "C" block: amd.h (and the
+// SuiteSparse_config.h it pulls in) already guards its own declarations with
+// `#ifdef __cplusplus extern "C" { ... }`. Modern SuiteSparse versions'
+// SuiteSparse_config.h also does `#include <complex>` under __cplusplus
+// (for BLAS/LAPACK complex types) — if that happens while already inside an
+// extra outer extern "C" opened here, the compiler correctly rejects the
+// C++ templates pulled in by <complex> as having invalid C linkage.
 #include "amd.h"
-}
 #endif
 #else
 #include "cholmod.h"
 #endif
 
 #include "CoinPragma.hpp"
+#include "CoinHelperFunctions.hpp"
+#include "ClpHelperFunctions.hpp"
+#include "ClpCholeskyDense.hpp"
 #include "ClpCholeskyUfl.hpp"
 #include "ClpMessage.hpp"
 #include "ClpInterior.hpp"
-#include "CoinHelperFunctions.hpp"
-#include "ClpHelperFunctions.hpp"
 //#############################################################################
 // Constructors / Destructor / Assignment
 //#############################################################################
@@ -35,12 +41,30 @@ ClpCholeskyUfl::ClpCholeskyUfl(int denseThreshold)
   type_ = 14;
   L_ = NULL;
   c_ = NULL;
+  B_ = NULL;
+  X_ = NULL;
+  Y_ = NULL;
+  E_ = NULL;
+  Ad_dense_ = NULL;
+  W_dense_ = NULL;
+  Y_dense_ = NULL;
+  E_dense_ = NULL;
+  whichDenseIndex_ = NULL;
+  numberDense_ = 0;
+  forceSimplicial_ = false;
 
 #ifdef CLP_HAS_CHOLMOD
   c_ = (cholmod_common *)malloc(sizeof(cholmod_common));
   cholmod_start(c_);
-  // Can't use supernodal as may not be positive definite
-  c_->supernodal = 0;
+  /* Let CHOLMOD choose between the simplicial and the supernodal method.
+     A*D*A' + delta^2*I is positive definite, and the supernodal method is
+     the only one that uses the (threaded) dense BLAS on the dense trailing
+     blocks of the factor - which is exactly what the native ClpCholeskyBase
+     does by hand ("going dense for last n rows").  Forcing simplicial here
+     gave up that whole gain on every instance.  If a factorization ever does
+     fail numerically we fall back to simplicial LDL' for good - see
+     factorize(). */
+  c_->supernodal = CHOLMOD_AUTO;
 #endif
 }
 
@@ -58,7 +82,17 @@ ClpCholeskyUfl::ClpCholeskyUfl(const ClpCholeskyUfl &rhs)
 //-------------------------------------------------------------------
 ClpCholeskyUfl::~ClpCholeskyUfl()
 {
+  delete[] whichDenseIndex_;
+  whichDenseIndex_ = NULL;
 #ifdef CLP_HAS_CHOLMOD
+  cholmod_free_dense(&Ad_dense_, c_);
+  cholmod_free_dense(&W_dense_, c_);
+  cholmod_free_dense(&Y_dense_, c_);
+  cholmod_free_dense(&E_dense_, c_);
+  cholmod_free_dense(&B_, c_);
+  cholmod_free_dense(&X_, c_);
+  cholmod_free_dense(&Y_, c_);
+  cholmod_free_dense(&E_, c_);
   cholmod_free_factor(&L_, c_);
   cholmod_finish(c_);
   free(c_);
@@ -83,7 +117,7 @@ ClpCholeskyUfl::operator=(const ClpCholeskyUfl &rhs)
 //-------------------------------------------------------------------
 ClpCholeskyBase *ClpCholeskyUfl::clone() const
 {
-  return new ClpCholeskyUfl(*this);
+  return new ClpCholeskyUfl(denseThreshold_);
 }
 
 #ifndef CLP_HAS_CHOLMOD
@@ -123,31 +157,98 @@ int ClpCholeskyUfl::order(ClpInterior *model)
 /* Orders rows and saves pointer to matrix.and model */
 int ClpCholeskyUfl::order(ClpInterior *model)
 {
+  /* The CHOLMOD objects below are told the integer arrays are CHOLMOD_INT,
+     so a 64 bit CoinBigIndex would be silently misread. */
+  static_assert(sizeof(CoinBigIndex) == sizeof(int),
+    "ClpCholeskyUfl needs a 32 bit CoinBigIndex for CHOLMOD_INT");
   numberRows_ = model->numberRows();
   if (doKKT_) {
     numberRows_ += numberRows_ + model->numberColumns();
     printf("finish coding UFL KKT!\n");
     abort();
   }
+  delete[] rowsDropped_;
   rowsDropped_ = new char[numberRows_];
   memset(rowsDropped_, 0, numberRows_);
   numberRowsDropped_ = 0;
   model_ = model;
+
+  // Reset any previous dense-column allocations
+  delete[] whichDense_;
+  whichDense_ = NULL;
+  delete[] whichDenseIndex_;
+  whichDenseIndex_ = NULL;
+  delete dense_;
+  dense_ = NULL;
+  numberDense_ = 0;
+#ifdef CLP_HAS_CHOLMOD
+  cholmod_free_dense(&Ad_dense_, c_);
+  cholmod_free_dense(&W_dense_, c_);
+  cholmod_free_dense(&Y_dense_, c_);
+  cholmod_free_dense(&E_dense_, c_);
+#endif
+#if defined(CHOLMOD_VERSION) && CHOLMOD_VERSION >= CHOLMOD_VER_CODE(5, 0)
+  /* Respect the model's thread budget instead of letting CHOLMOD grab every
+     core it can see.  CHOLMOD defaults nthreads_max to the OpenMP maximum,
+     so a barrier solve run inside a 32-way parallel harness - or inside one
+     of Cbc's -threads N branch and bound threads, each with its own Clp -
+     silently oversubscribes the machine by that factor.  What is actually
+     paid for is mostly spinning: on a supernodal instance like seymour this
+     was ~49% of all cycles in gomp_barrier_wait_end, 2.3x the CPU time for
+     no wall clock gain at all. */
+  int numberThreads = model_->numberThreads();
+  c_->nthreads_max = (numberThreads > 0) ? numberThreads : 1;
+#endif
+  delete rowCopy_;
   rowCopy_ = model->clpMatrix()->reverseOrderedCopy();
   // Space for starts
   choleskyStart_ = new CoinBigIndex[numberRows_ + 1];
+  int numberColumns = model->numberColumns();
   const CoinBigIndex *columnStart = model_->clpMatrix()->getVectorStarts();
   const int *columnLength = model_->clpMatrix()->getVectorLengths();
   const int *row = model_->clpMatrix()->getIndices();
   const CoinBigIndex *rowStart = rowCopy_->getVectorStarts();
   const int *rowLength = rowCopy_->getVectorLengths();
   const int *column = rowCopy_->getIndices();
+
+  // Dense column detection
+  int threshold = denseThreshold_;
+  if (threshold <= 0) {
+    threshold = std::max(100, numberRows_ / 20);
+  }
+  int candidateDense = 0;
+  for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
+    if (columnLength[iColumn] >= threshold) {
+      candidateDense++;
+    }
+  }
+  if (candidateDense > 0 && candidateDense <= 60) {
+    numberDense_ = candidateDense;
+    whichDense_ = new char[numberColumns];
+    memset(whichDense_, 0, numberColumns);
+    whichDenseIndex_ = new int[numberDense_];
+    int idx = 0;
+    for (int iColumn = 0; iColumn < numberColumns; iColumn++) {
+      if (columnLength[iColumn] >= threshold) {
+        whichDense_[iColumn] = 1;
+        whichDenseIndex_[idx++] = iColumn;
+      }
+    }
+    dense_ = new ClpCholeskyDense();
+    dense_->reserveSpace(NULL, numberDense_);
+    if (model->messageHandler()->logLevel() > 0) {
+      printf("ClpCholeskyUfl: extracted %d dense columns (threshold %d)\n",
+        numberDense_, threshold);
+    }
+  }
+
   // We need two arrays for counts
   CoinBigIndex *which = new CoinBigIndex[numberRows_];
   int *used = new int[numberRows_ + 1];
   CoinZeroN(used, numberRows_);
   int iRow;
-  sizeFactor_ = 0;
+  // Counted in 64 bits: the 32 bit CoinBigIndex can wrap on large LPs.
+  int64_t totalSize = 0;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int number = 1;
     // make sure diagonal exists
@@ -158,6 +259,8 @@ int ClpCholeskyUfl::order(ClpInterior *model)
       CoinBigIndex endRow = rowStart[iRow] + rowLength[iRow];
       for (CoinBigIndex k = startRow; k < endRow; k++) {
         int iColumn = column[k];
+        if (whichDense_ && whichDense_[iColumn])
+          continue;
         CoinBigIndex start = columnStart[iColumn];
         CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
         for (CoinBigIndex j = start; j < end; j++) {
@@ -170,13 +273,32 @@ int ClpCholeskyUfl::order(ClpInterior *model)
           }
         }
       }
-      sizeFactor_ += number;
+      totalSize += number;
       int j;
       for (j = 0; j < number; j++)
         used[which[j]] = 0;
     }
   }
   delete[] which;
+  /* Everything handed to CHOLMOD uses 32 bit (CHOLMOD_INT) indices, and
+     that limit is hit well before the lower triangle of A*A' itself
+     overflows: cholmod_analyze's AMD/METIS orderings first expand it to
+     full symmetric storage (about twice the entries) and AMD then wants
+     another ~20% elbow room on top.  CHOLMOD does not detect this - it
+     overflows internally and segfaults in cholmod_copy (seen on
+     neos-3402294-bobin and neos-4763324-toguru, whose lower triangles have
+     1.42e9 and 1.43e9 entries).  Give up on barrier before calling it,
+     exactly like the factor-size check after cholmod_analyze below. */
+  double fullSize = 2.0 * static_cast< double >(totalSize) - numberRows_;
+  if (1.2 * fullSize + 8.0 * numberRows_ > static_cast< double >(COIN_INT_MAX)) {
+    printf("CHOLMOD: A*A' too large for 32-bit indices (%g nonzeros in lower triangle)\n",
+      static_cast< double >(totalSize));
+    delete[] used;
+    delete[] choleskyStart_;
+    choleskyStart_ = NULL;
+    return 1;
+  }
+  sizeFactor_ = static_cast< CoinBigIndex >(totalSize);
   // Now we have size - create arrays and fill in
   try {
     choleskyRow_ = new CoinBigIndex[sizeFactor_];
@@ -210,6 +332,8 @@ int ClpCholeskyUfl::order(ClpInterior *model)
       CoinBigIndex endRow = rowStart[iRow] + rowLength[iRow];
       for (CoinBigIndex k = startRow; k < endRow; k++) {
         int iColumn = column[k];
+        if (whichDense_ && whichDense_[iColumn])
+          continue;
         CoinBigIndex start = columnStart[iColumn];
         CoinBigIndex end = columnStart[iColumn] + columnLength[iColumn];
         for (CoinBigIndex j = start; j < end; j++) {
@@ -249,12 +373,33 @@ int ClpCholeskyUfl::order(ClpInterior *model)
   A.dtype = CHOLMOD_DOUBLE;
   A.sorted = 1;
   A.packed = 1;
-  c_->nmethods = 9;
+  /* Use CHOLMOD's own ordering strategy: AMD, and METIS on top of it only
+     when AMD's fill-in turns out to be poor.  The previous value (9) asked
+     CHOLMOD to run *every* built-in method - AMD, COLAMD, METIS and four
+     NESDIS nested dissection variants - and keep the best.  On the normal
+     equations of a large LP the four NESDIS runs alone dominate the whole
+     barrier solve, for an ordering that is rarely better than AMD/METIS. */
+  c_->nmethods = 0;
   c_->postorder = true;
   //c_->dbound=1.0e-20;
+  cholmod_free_factor(&L_, c_);
+  cholmod_free_dense(&B_, c_);
+  cholmod_free_dense(&X_, c_);
+  cholmod_free_dense(&Y_, c_);
+  cholmod_free_dense(&E_, c_);
+  cholmod_free_dense(&Ad_dense_, c_);
+  cholmod_free_dense(&W_dense_, c_);
+  cholmod_free_dense(&Y_dense_, c_);
+  cholmod_free_dense(&E_dense_, c_);
   L_ = cholmod_analyze(&A, c_);
-  if (c_->status) {
+  if (c_->status || !L_) {
     COIN_DETAIL_PRINT(std::cout << "CHOLMOD ordering failed" << std::endl);
+    return 1;
+  } else if (c_->lnz > static_cast< double >(COIN_INT_MAX)) {
+    // With 32-bit (CHOLMOD_INT) indices cholmod_factorize would fail with
+    // CHOLMOD_TOO_LARGE and leave L_ symbolic - give up on barrier now.
+    printf("CHOLMOD: factor too large for 32-bit indices (%g nonzeros predicted)\n",
+      c_->lnz);
     return 1;
   } else {
     COIN_DETAIL_PRINT(printf("%g nonzeros, flop count %g\n", c_->lnz, c_->fl));
@@ -281,6 +426,32 @@ int ClpCholeskyUfl::symbolic()
 }
 
 #ifdef CLP_HAS_CHOLMOD
+/* Maximum number of rows dropped-and-retried before giving up on the
+   supernodal method for the rest of the solve. */
+#define CLP_UFL_MAX_DROP_RETRIES 2
+
+/* Turn every dropped row into a unit row of the matrix being factorized.
+   Clamping only its diagonal to 1e-10 while leaving its off-diagonals in
+   place (what the old code did) hands CHOLMOD an almost singular matrix and
+   the resulting direction is meaningless. */
+void ClpCholeskyUfl::applyDroppedRows(const int *rowsDropped)
+{
+  for (int iRow = 0; iRow < numberRows_; iRow++) {
+    CoinBigIndex start = choleskyStart_[iRow];
+    CoinBigIndex end = choleskyStart_[iRow + 1];
+    if (rowsDropped[iRow]) {
+      sparseFactor_[start] = 1.0;
+      for (CoinBigIndex j = start + 1; j < end; j++)
+        sparseFactor_[j] = 0.0;
+    } else {
+      for (CoinBigIndex j = start + 1; j < end; j++) {
+        if (rowsDropped[choleskyRow_[j]])
+          sparseFactor_[j] = 0.0;
+      }
+    }
+  }
+}
+
 /* Factorize - filling in rowsDropped and returning number dropped */
 int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
 {
@@ -377,6 +548,13 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
     }
   }
   delete[] work;
+  /* rows dropped for a tiny diagonal have to be reported to the caller, and
+     remembered, exactly as ClpCholeskyBase::factorize does - the old code
+     computed numberDroppedBefore and then threw it away, so rowsDropped_ was
+     never updated and the caller was always told that nothing was dropped. */
+  newDropped = numberDroppedBefore;
+  if (newDropped || numberRowsDropped_)
+    applyDroppedRows(rowsDropped);
   cholmod_sparse A;
   A.nrow = numberRows_;
   A.ncol = numberRows_;
@@ -391,6 +569,116 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
   A.sorted = 1;
   A.packed = 1;
   cholmod_factorize(&A, L_, c_); /* factorize */
+  /* The supernodal method does no pivoting at all: it gives up at the first
+     non positive pivot, reporting the offending column in L_->minor.  Near
+     convergence the barrier diagonal becomes extreme and this happens on
+     most instances, so simply switching to the simplicial method for the
+     rest of the solve - what used to happen here - throws away BLAS3 for
+     every remaining iteration.  On an instance with a dense-ish factor that
+     is catastrophic (sorrell3 spends 99% of its time in simplicial rowfac).
+     Instead drop the offending row, exactly as ClpCholeskyBase drops a row
+     with a non positive pivot, and refactorize.  The sparsity pattern is
+     unchanged, so the symbolic analysis - and with it the supernodal
+     blocking - is reused; only the numeric factorization is repeated. */
+  int numberRetries = 0;
+  while (!forceSimplicial_ && L_ && c_->status >= CHOLMOD_OK
+    && L_->xtype != CHOLMOD_PATTERN
+    && L_->minor < static_cast< size_t >(numberRows_)
+    && numberRetries < CLP_UFL_MAX_DROP_RETRIES) {
+    /* L_->minor is in the permuted order used by the factor. */
+    int badRow = static_cast< int >(L_->minor);
+    if (L_->Perm)
+      badRow = static_cast< int * >(L_->Perm)[L_->minor];
+    if (badRow < 0 || badRow >= numberRows_ || rowsDropped[badRow])
+      break;
+    rowsDropped[badRow] = 2;
+    newDropped++;
+    applyDroppedRows(rowsDropped);
+    numberRetries++;
+    cholmod_factorize(&A, L_, c_);
+  }
+  if (!forceSimplicial_ && L_ && c_->status >= CHOLMOD_OK
+    && L_->xtype != CHOLMOD_PATTERN
+    && L_->minor < static_cast< size_t >(numberRows_)) {
+    /* The supernodal method does no pivoting and gives up on the first non
+       positive pivot.  Redo this factorization - and every later one - with
+       the simplicial LDL' method, bounding tiny pivots instead. */
+    forceSimplicial_ = true;
+    c_->supernodal = CHOLMOD_SIMPLICIAL;
+    c_->dbound = 1.0e-20;
+    cholmod_free_factor(&L_, c_);
+    L_ = cholmod_analyze(&A, c_);
+    if (L_)
+      cholmod_factorize(&A, L_, c_);
+  }
+  if (!L_ || c_->status < CHOLMOD_OK || L_->xtype == CHOLMOD_PATTERN) {
+    // Hard failure (out of memory, too large, ...) - L_ is unusable.
+    printf("CHOLMOD: factorization failed (status %d)\n", c_->status);
+    return -1;
+  }
+
+  if (numberDense_ > 0 && dense_) {
+    // Allocate Ad_dense_ if needed
+    if (!Ad_dense_ || static_cast< int >(Ad_dense_->nrow) != numberRows_
+      || static_cast< int >(Ad_dense_->ncol) != numberDense_) {
+      cholmod_free_dense(&Ad_dense_, c_);
+      Ad_dense_ = cholmod_allocate_dense(numberRows_, numberDense_, numberRows_, CHOLMOD_REAL, c_);
+    }
+    double *Ad_val = static_cast< double * >(Ad_dense_->x);
+    memset(Ad_val, 0, numberRows_ * numberDense_ * sizeof(double));
+    for (int i = 0; i < numberDense_; i++) {
+      int iCol = whichDenseIndex_[i];
+      double *col_i = Ad_val + i * numberRows_;
+      CoinBigIndex start = columnStart[iCol];
+      CoinBigIndex end = start + columnLength[iCol];
+      for (CoinBigIndex p = start; p < end; p++) {
+        int r = row[p];
+        if (!rowsDropped[r]) {
+          col_i[r] = element[p];
+        }
+      }
+    }
+
+    // Solve W = Ms^-1 * Ad (simultaneous multi-RHS solve)
+    int ok = cholmod_solve2(CHOLMOD_A, L_, Ad_dense_, NULL,
+      &W_dense_, NULL, &Y_dense_, &E_dense_, c_);
+    if (!ok || !W_dense_ || c_->status < CHOLMOD_OK) {
+      return -1;
+    }
+
+    // Form C = Dd^-1 + Ad^T * W and factorize via dense_
+    dense_->resetRowsDropped();
+    longDouble *denseBlob = dense_->aMatrix();
+    longDouble *denseDiagonal = dense_->diagonal();
+    const double *W_val = static_cast< const double * >(W_dense_->x);
+
+    for (int i = 0; i < numberDense_; i++) {
+      int iCol = whichDenseIndex_[i];
+      double diagVal = (diagonal[iCol] > 1e-12) ? (1.0 / diagonal[iCol]) : 1.0;
+      const double *a_i = Ad_val + i * numberRows_;
+      const double *w_i = W_val + i * numberRows_;
+
+      for (int r = 0; r < numberRows_; r++) {
+        diagVal += a_i[r] * w_i[r];
+      }
+      denseDiagonal[i] = diagVal;
+
+      for (int j = i + 1; j < numberDense_; j++) {
+        const double *w_j = W_val + j * numberRows_;
+        double offVal = 0.0;
+        for (int r = 0; r < numberRows_; r++) {
+          offVal += a_i[r] * w_j[r];
+        }
+        *denseBlob++ = offVal;
+      }
+    }
+
+    int *denseRowsDropped = new int[numberDense_];
+    memset(denseRowsDropped, 0, numberDense_ * sizeof(int));
+    dense_->factorizePart2(denseRowsDropped);
+    delete[] denseRowsDropped;
+  }
+
   choleskyCondition_ = 1.0;
   bool cleanCholesky;
   if (model_->numberIterations() < 2000)
@@ -456,13 +744,51 @@ int ClpCholeskyUfl::factorize(const double *diagonal, int *rowsDropped)
 /* Uses factorization to solve. */
 void ClpCholeskyUfl::solve(double *region)
 {
-  cholmod_dense *x, *b;
-  b = cholmod_allocate_dense(numberRows_, 1, numberRows_, CHOLMOD_REAL, c_);
-  CoinMemcpyN(region, numberRows_, (double *)b->x);
-  x = cholmod_solve(CHOLMOD_A, L_, b, c_);
-  CoinMemcpyN((double *)x->x, numberRows_, region);
-  cholmod_free_dense(&x, c_);
-  cholmod_free_dense(&b, c_);
+  /* cholmod_solve2 reuses B_/X_/Y_/E_ across calls; cholmod_solve used to
+     allocate and free a dense n-vector (plus internal workspace) on every
+     single solve, and the barrier does several of those per iteration. */
+  if (!B_)
+    B_ = cholmod_allocate_dense(numberRows_, 1, numberRows_, CHOLMOD_REAL, c_);
+  CoinMemcpyN(region, numberRows_, (double *)B_->x);
+  cholmod_solve2(CHOLMOD_A, L_, B_, NULL, &X_, NULL, &Y_, &E_, c_);
+  CoinMemcpyN((double *)X_->x, numberRows_, region);
+
+  if (numberDense_ > 0 && dense_) {
+    // Woodbury low-rank correction:
+    // region currently holds x_tilde = Ms^-1 * b
+    // 1. gamma = Ad^T * x_tilde
+    const double *Ad_val = static_cast< const double * >(Ad_dense_->x);
+    double change[64];
+    double *changePtr = (numberDense_ <= 64) ? change : new double[numberDense_];
+
+    for (int i = 0; i < numberDense_; i++) {
+      const double *a_i = Ad_val + i * numberRows_;
+      double dotVal = 0.0;
+      for (int r = 0; r < numberRows_; r++) {
+        dotVal += a_i[r] * region[r];
+      }
+      changePtr[i] = dotVal;
+    }
+
+    // 2. y = C^-1 * gamma
+    dense_->solve(changePtr);
+
+    // 3. region = x_tilde - W * y
+    const double *W_val = static_cast< const double * >(W_dense_->x);
+    for (int i = 0; i < numberDense_; i++) {
+      double y_i = changePtr[i];
+      if (y_i != 0.0) {
+        const double *w_i = W_val + i * numberRows_;
+        for (int r = 0; r < numberRows_; r++) {
+          region[r] -= y_i * w_i[r];
+        }
+      }
+    }
+
+    if (changePtr != change) {
+      delete[] changePtr;
+    }
+  }
 }
 #else
 void ClpCholeskyUfl::solve(double *region)

@@ -362,7 +362,16 @@ int ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool d
     int offset = includeDiagonal ? 0 : 1;
     if (lowerTriangular)
       offset = -offset;
+    // Check before adding: signed overflow cannot be detected after it occurs.
+    const int maxElements = static_cast< int >(std::min(
+      static_cast< double >(COIN_INT_MAX),
+      static_cast< double >(4LL * 1024 * 1024 * 1024) / sizeof(CoinBigIndex)));
     for (iRow = 0; iRow < numberRows_; iRow++) {
+      if ((iRow & 63) == 0 && model_->barrierStopRequested()) {
+        delete[] which;
+        delete[] used;
+        return -1;
+      }
       int number = 0;
       // make sure diagonal exists if includeDiagonal
       if (!offset) {
@@ -407,25 +416,25 @@ int ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool d
           }
         }
       }
+      if (number >= maxElements - sizeFactor_) {
+        delete[] which;
+        delete[] used;
+        delete[] choleskyStart_;
+        choleskyStart_ = NULL;
+        return -1;
+      }
       sizeFactor_ += number;
       int j;
       for (j = 0; j < number; j++)
         used[which[j]] = 0;
     }
     delete[] which;
-    // Detect int overflow: sizeFactor_ < 0 means the running sum wrapped past INT_MAX.
-    // Also cap at 4 GB to avoid Linux overcommit OOM SIGSEGV on the allocation below.
-    static const double kMaxElements = static_cast< double >(4LL * 1024 * 1024 * 1024) / sizeof(CoinBigIndex);
-    if (sizeFactor_ < 0 || static_cast< double >(sizeFactor_) >= kMaxElements) {
-      delete[] choleskyStart_;
-      choleskyStart_ = NULL;
-      return -1;
-    }
     // Now we have size - create arrays and fill in
     try {
       choleskyRow_ = new CoinBigIndex[sizeFactor_];
     } catch (...) {
       // no memory
+      delete[] used;
       delete[] choleskyStart_;
       choleskyStart_ = NULL;
       return -1;
@@ -433,6 +442,12 @@ int ClpCholeskyBase::preOrder(bool lowerTriangular, bool includeDiagonal, bool d
     sizeFactor_ = 0;
     which = choleskyRow_;
     for (iRow = 0; iRow < numberRows_; iRow++) {
+      if ((iRow & 63) == 0 && model_->barrierStopRequested()) {
+        delete[] choleskyRow_;
+        choleskyRow_ = NULL;
+        delete[] used;
+        return -1;
+      }
       int number = 0;
       // make sure diagonal exists if includeDiagonal
       if (!offset) {
@@ -1115,7 +1130,8 @@ static void chk(WSI ind, WSI i, WSI lim)
 static void
 myamlf(WSI n, WSI xadj[], WSI adjncy[], WSI dgree[], WSI varbl[],
   WSI snxt[], WSI perm[], WSI invp[], WSI head[], WSI lsize[],
-  WSI flag[], WSI erscore[], WSI locaux, WSI adjln, WSI speed)
+  WSI flag[], WSI erscore[], WSI locaux, WSI adjln, WSI speed,
+  ClpInterior *model = NULL)
 {
   WSI l, i, j, k;
   double x, y;
@@ -1193,6 +1209,8 @@ myamlf(WSI n, WSI xadj[], WSI adjncy[], WSI dgree[], WSI varbl[],
     }
   }
   while (counter <= n) {
+    if (model && model->barrierStopRequested())
+      return;
     for (deg = mindeg; head[deg - 1] < 1; deg++) {
     };
     nodeg = 0;
@@ -1958,7 +1976,11 @@ int ClpCholeskyBase::orderAMD()
   }
   myamlf(numberRows_, choleskyStart_, choleskyRow_,
     dgree, varbl, snxt, permute_, permuteInverse_,
-    head, lsize, flag, erscore, locaux, space, speed);
+    head, lsize, flag, erscore, locaux, space, speed, model_);
+  if (model_->status() == 3 || model_->status() == 5) {
+    delete[] use;
+    return -1;
+  }
   for (int iRow = 0; iRow < numberRows_; iRow++) {
     permute_[iRow]--;
   }
@@ -2037,6 +2059,12 @@ int ClpCholeskyBase::symbolic()
     for (iRow = 0; iRow < numberRows_; iRow++) {
       int number = 0;
       int iOriginalRow = permute_[iRow];
+      if ((iRow & 63) == 0 && model_->barrierStopRequested()) {
+        delete[] used;
+        delete[] Astart;
+        delete[] Arow;
+        return -1;
+      }
       Astart[iRow] = sizeFactor_;
       CoinBigIndex startRow = rowStart[iOriginalRow];
       CoinBigIndex endRow = rowStart[iOriginalRow] + rowLength[iOriginalRow];
@@ -2424,7 +2452,7 @@ int ClpCholeskyBase::symbolic()
     int returnCode = symbolic2(Astart, Arow);
     if (returnCode)
       noMemory = true;
-    if (sizeIndex_ < sizeFactor_) {
+    if (!noMemory && sizeIndex_ < sizeFactor_) {
       CoinBigIndex *indices = NULL;
       try {
         indices = new CoinBigIndex[sizeIndex_];
@@ -2443,6 +2471,8 @@ int ClpCholeskyBase::symbolic()
   // Use cholesky regions
   delete[] Astart;
   delete[] Arow;
+  if (model_->status() == 3 || model_->status() == 5)
+    return -1;
   double flops = 0.0;
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int length = choleskyStart_[iRow + 1] - choleskyStart_[iRow];
@@ -2514,6 +2544,8 @@ int ClpCholeskyBase::symbolic1(const int *Astart, const int *Arow)
   }
   for (iRow = 0; iRow < numberRows_; iRow++) {
     marked[iRow] = iRow;
+    if ((iRow & 63) == 0 && model_->barrierStopRequested())
+      return -1;
     for (CoinBigIndex j = Astart[iRow]; j < Astart[iRow + 1]; j++) {
       int kRow = Arow[j];
       while (marked[kRow] != iRow) {
@@ -2559,6 +2591,8 @@ int ClpCholeskyBase::symbolic2(const int *Astart, const int *Arow)
 
   for (iRow = 0; iRow < numberRows_; iRow++) {
     int nz = 0;
+    if ((iRow & 63) == 0 && model_->barrierStopRequested())
+      return -1;
     int merge = mergeLink[iRow];
     bool marked = false;
     if (merge < 0)
@@ -2826,6 +2860,8 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
     CoinWorkDouble largest2 = 1.0e-20;
     for (iRow = 0; iRow < numberRows_; iRow++) {
       longDouble *put = sparseFactor_ + choleskyStart_[iRow];
+      if ((iRow & 63) == 0 && model_->barrierStopRequested())
+        return -1;
       CoinBigIndex *which = choleskyRow_ + indexStart_[iRow];
       int iOriginalRow = permute_[iRow];
       int number = choleskyStart_[iRow + 1] - choleskyStart_[iRow];
@@ -2896,6 +2932,8 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
     doubleParameters_[4] = COIN_DBL_MAX;
     integerParameters_[34] = 0; // say all must be positive
     factorizePart2(rowsDropped);
+    if (model_->status() == 3 || model_->status() == 5)
+      return -1;
     newDropped = integerParameters_[20] + numberDroppedBefore;
     largest = doubleParameters_[3];
     smallest = doubleParameters_[4];
@@ -2959,6 +2997,8 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
       int *dropped = new int[numberDense];
       dense_->factorizePart2(dropped);
       delete[] dropped;
+      if (model_->status() == 3 || model_->status() == 5)
+        return -1;
     }
     // try allowing all every time
     //printf("trying ?\n");
@@ -3307,6 +3347,10 @@ int ClpCholeskyBase::factorize(const CoinWorkDouble *diagonal, int *rowsDropped)
     int *rowsDropped2 = new int[numberRows_];
     CoinZeroN(rowsDropped2, numberRows_);
     factorizePart2(rowsDropped2);
+    if (model_->status() == 3 || model_->status() == 5) {
+      delete[] rowsDropped2;
+      return -1;
+    }
     newDropped = integerParameters_[20];
     largest = doubleParameters_[3];
     smallest = doubleParameters_[4];
@@ -3377,6 +3421,10 @@ void ClpCholeskyBase::factorizePart2(int *rowsDropped)
   int nextRow2 = -1;
 
   for (iRow = 0; iRow < firstDense_ + 1; iRow++) {
+    if (model_->barrierStopRequested()) {
+      delete[] d;
+      return;
+    }
     if (iRow < firstDense_) {
       endClique = false;
       if (clique_[iRow] > 0) {
@@ -3409,6 +3457,10 @@ void ClpCholeskyBase::factorizePart2(int *rowsDropped)
       // We have just finished updating a clique - do block pivot and clean up
       int jRow;
       for (jRow = lastRow; jRow < iRow; jRow++) {
+        if (model_->barrierStopRequested()) {
+          delete[] d;
+          return;
+        }
         int jCount = jRow - lastRow;
         CoinWorkDouble diagonalValue = diagonal_[jRow];
         CoinBigIndex start = choleskyStart_[jRow];
@@ -3600,6 +3652,10 @@ void ClpCholeskyBase::factorizePart2(int *rowsDropped)
     // do dense
     // update dense part
     updateDense(d, /*work,*/ first);
+    if (model_->status() == 3 || model_->status() == 5) {
+      delete[] d;
+      return;
+    }
     ClpCholeskyDense dense;
     // just borrow space
     int nDense = numberRows_ - firstDense_;
@@ -3622,6 +3678,11 @@ void ClpCholeskyBase::factorizePart2(int *rowsDropped)
     dense.setIntegerParameter(34, firstPositive);
     dense.setModel(model_);
     dense.factorizePart2(dropped);
+    if (model_->status() == 3 || model_->status() == 5) {
+      delete[] dropped;
+      delete[] d;
+      return;
+    }
     largest = dense.getDoubleParameter(3);
     smallest = dense.getDoubleParameter(4);
     integerParameters_[20] += dense.getIntegerParameter(20);
@@ -3640,6 +3701,8 @@ void ClpCholeskyBase::factorizePart2(int *rowsDropped)
 void ClpCholeskyBase::updateDense(longDouble *d, /*longDouble * work,*/ int *first)
 {
   for (int iRow = 0; iRow < firstDense_; iRow++) {
+    if (model_->barrierStopRequested())
+      return;
     int start = first[iRow];
     int end = choleskyStart_[iRow + 1];
     if (start < end) {

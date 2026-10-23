@@ -7,6 +7,7 @@
 
 #include "ClpConfig.h"
 #include "ClpSimplex.hpp"
+#include <functional>
 #include <vector>
 
 /** Opportunistic parallel LP solver.
@@ -25,16 +26,41 @@
  */
 class CLPLIB_EXPORT ClpRacingSolver {
 public:
+  /// Per-config model setup function: applied to each cloned model before solve.
+  using ConfigSetupFn = std::function<void(ClpSimplex *)>;
+
   /** Construct with the model to solve and number of racing threads.
    *  If numThreads <= 0, uses the number of configs added. */
   ClpRacingSolver(ClpSimplex *model, int numThreads = 0);
 
-  /// Add a configuration to race.
-  void addConfig(const ClpSolve &config);
+  /// Add a configuration to race, with an optional model-setup callback.
+  void addConfig(const ClpSolve &config, ConfigSetupFn setupFn = nullptr);
 
-  /** Add the default racing portfolio (dual, primal+idiot, primal+sprint).
-   *  Clears any previously added configs. */
-  void addDefaultConfigs();
+  /** Add the data-validated racing portfolio for the requested size, selected
+   *  by exhaustive k-fold search over 12 cluster reps (C(12,2)=66 pairs,
+   *  C(12,3)=220 triples, 10-fold out-of-sample validation):
+   *    K=2: dual_pertv72 + primal_idiot50               (1.47x speedup vs baseline)
+   *    K=3: dual_pertv72 + primal_idiot50 + primal_sprint (1.59x speedup vs baseline)
+   *    Other K: falls back to the K=3 triple (capped or extended as needed).
+   *  Clears any previously added configs.
+   *  portfolioSize=0 uses numThreads_ passed at construction. */
+  void addDefaultConfigs(int portfolioSize = 0);
+
+  /// Set unscaled postsolve recovery for all current configurations.
+  void setUnscaledPostsolve(bool enable)
+  {
+    for (ClpSolve &config : configs_)
+      config.setUnscaledPostsolve(enable);
+  }
+
+  /** Set how many seconds of the *overall* search had already elapsed
+   *  (per the caller's own getCurrentSeconds()-style clock) when this LP
+   *  race is about to begin. Used only so that the interleaved progress
+   *  rows printed during the race show elapsed time since the overall
+   *  search began, not since the race itself started. Defaults to 0.0
+   *  (race start == overall search start), correct for a standalone/
+   *  isolated LP solve. */
+  void setSearchElapsedAtStart(double t) { searchElapsedAtStart_ = t; }
 
   /** Run the race.  Returns index of winning config (0-based), or -1 if
    *  all configs failed.  On success the model's solution, basis, and
@@ -43,6 +69,11 @@ public:
 
   /// Index of the winning configuration after solve(), -1 if none.
   int winnerIndex() const { return winnerIndex_; }
+
+  /// Descriptive name of the winning configuration ("dual", "primal+idiot",
+  /// "primal+sprint", "barrier", or "unknown"), for callers that want to report it
+  /// themselves. Empty string if solve() hasn't found a winner.
+  const char *winnerName() const;
 
   /// Wall-clock seconds taken by the winner.
   double winnerTime() const { return winnerTime_; }
@@ -53,7 +84,9 @@ public:
 private:
   ClpSimplex *model_;
   std::vector<ClpSolve> configs_;
+  std::vector<ConfigSetupFn> setupFns_;
   int numThreads_;
+  double searchElapsedAtStart_ = 0.0;
   int winnerIndex_ = -1;
   double winnerTime_ = 0.0;
   int winnerIterations_ = 0;

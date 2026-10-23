@@ -8,6 +8,7 @@
 
 #include "CoinHelperFunctions.hpp"
 #include "ClpInterior.hpp"
+#include "ClpEventHandler.hpp"
 #include "ClpMatrixBase.hpp"
 #include "ClpLsqr.hpp"
 #include "ClpPdcoBase.hpp"
@@ -1085,6 +1086,22 @@ void ClpInterior::borrowModel(ClpModel &otherModel)
 void ClpInterior::returnModel(ClpModel &otherModel)
 {
   ClpModel::returnModel(otherModel);
+}
+bool ClpInterior::barrierStopRequested(bool checkTime)
+{
+  if (problemStatus_ == 3 || problemStatus_ == 5)
+    return true;
+  if (eventHandler_->event(ClpEventHandler::barrierCheckpoint) >= 0) {
+    problemStatus_ = 5;
+    secondaryStatus_ = ClpEventHandler::barrierCheckpoint;
+    return true;
+  }
+  if (checkTime && hitMaximumIterations()) {
+    problemStatus_ = 3;
+    onStopped();
+    return true;
+  }
+  return false;
 }
 // Return number fixed to see if worth presolving
 int ClpInterior::numberFixed() const

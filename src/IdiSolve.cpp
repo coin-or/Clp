@@ -378,6 +378,9 @@ Idiot::IdiSolve(
   stop[1] = 0;
   iter = 0;
   for (; iter < maxIts; iter++) {
+    // Amortize clock reads without waiting for a full major crash pass.
+    if ((iter & 7) == 0 && stopRequested())
+      break;
     double sum1 = 0.0, sum2 = 0.0;
     double lastObj = 1.0e70;
     int good = 0, doScale = 0;

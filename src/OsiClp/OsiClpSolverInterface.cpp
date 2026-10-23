@@ -174,7 +174,12 @@ void OsiClpSolverInterface::initialSolve()
           break;
       }
     }
-    if (i == numberColumns) {
+    // fakeObjective_ is sized when set and never tracks later column
+    // additions/deletions (e.g. from a cut generator's temporary clone),
+    // so only substitute it in when its size still matches the model -
+    // otherwise a stale, smaller fakeObjective_ can be validated against
+    // the model's current (larger) column count downstream and throw.
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       // Check (Clp fast dual)
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
@@ -263,6 +268,7 @@ void OsiClpSolverInterface::initialSolve()
     // See if user set factorization frequency
     // borrowModel does not move
     solver->factorization()->maximumPivots(userFactorizationFrequency);
+    solver->factorization()->setExactMaximumPivots(modelPtr_->exactFactorizationFrequency());
   } else {
     solver = modelPtr_;
     deleteSolver = false;
@@ -387,10 +393,10 @@ void OsiClpSolverInterface::initialSolve()
       }
 
       // change from 200 (unless changed)
-      if (modelPtr_->factorization()->maximumPivots() == 200)
+      if (modelPtr_->factorizationFrequencyIsDefault())
         model2->factorization()->maximumPivots(100 + model2->numberRows() / 50);
       else
-        model2->factorization()->maximumPivots(userFactorizationFrequency);
+        model2->setExactFactorizationFrequency(userFactorizationFrequency);
       int savePerturbation = model2->perturbation();
       if (savePerturbation == 100)
         model2->setPerturbation(50);
@@ -883,6 +889,12 @@ void OsiClpSolverInterface::initialSolve()
   }
   solver->messageHandler()->setLogLevel(saveMessageLevel);
 disaster:
+  // Always clear the disaster handler on modelPtr_ before cleanup.
+  // When solver == modelPtr_ (deleteSolver == false), goto disaster may have
+  // skipped the normal setDisasterHandler(NULL) call, leaving disasterArea_ set.
+  // When solver != modelPtr_ (deleteSolver == true), returnModel() below also
+  // clears it — this explicit clear is a cheap defensive belt-and-suspenders guard.
+  modelPtr_->setDisasterHandler(NULL);
   if (deleteSolver) {
     solver->returnModel(*modelPtr_);
     //#define DEBUG_BORROW
@@ -1119,7 +1131,8 @@ void OsiClpSolverInterface::resolve()
           break;
       }
     }
-    if (i == numberColumns) {
+    // See stale-fakeObjective_ note above (site guarded the same way).
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
         savedObjective = modelPtr_->objective_;
@@ -1272,10 +1285,10 @@ void OsiClpSolverInterface::resolve()
     //     modelPtr_->numberRows(),model2->numberRows(),
     //     modelPtr_->numberColumns(),model2->numberColumns());
     // change from 200
-    if (modelPtr_->factorization()->maximumPivots() == 200)
+    if (modelPtr_->factorizationFrequencyIsDefault())
       model2->factorization()->maximumPivots(100 + model2->numberRows() / 50);
     else
-      model2->factorization()->maximumPivots(userFactorizationFrequency);
+      model2->setExactFactorizationFrequency(userFactorizationFrequency);
     if (algorithm < 0) {
       model2->dual(0,CLP_START_FINISH);
       totalIterations += model2->numberIterations();
@@ -1559,6 +1572,9 @@ void OsiClpSolverInterface::resolve()
 disaster:
   //printf("basis after dual\n");
   //basis_.print();
+  // Clear disaster handler — a goto disaster from within resolve() may have
+  // skipped the normal setDisasterHandler(NULL) call after the LP solve.
+  modelPtr_->setDisasterHandler(NULL);
   if (!defaultHandler_)
     modelPtr_->popMessageHandler(saveHandler, oldDefault);
   modelPtr_->messageHandler()->setLogLevel(saveMessageLevel);
@@ -2005,7 +2021,8 @@ void OsiClpSolverInterface::markHotStart()
           break;
       }
     }
-    if (i == numberColumns) {
+    // See stale-fakeObjective_ note above (site guarded the same way).
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
         savedObjective = modelPtr_->objective_;
@@ -2548,6 +2565,23 @@ void OsiClpSolverInterface::solveFromHotStart()
     int saveNumberFake = (static_cast< ClpSimplexDual * >(modelPtr_))->numberFake_;
     int status = (static_cast< ClpSimplexDual * >(modelPtr_))->fastDual(alwaysFinish);
     (static_cast< ClpSimplexDual * >(modelPtr_))->numberFake_ = saveNumberFake;
+
+    // When LP is optimal, recompute objective accurately from external activities.
+    // The running sum in objectiveValue_ can accumulate FP errors from non-power-of-2
+    // scale factors (geometric mean scaling), especially on platforms with FMA instructions.
+    // This mirrors what fastDual2 does ("be on safe side").
+    if (!modelPtr_->problemStatus()) {
+      double *sol = modelPtr_->primalColumnSolution();
+      const double *solI = modelPtr_->solutionRegion();
+      if (!columnScale) {
+        for (iColumn = 0; iColumn < numberColumns; iColumn++)
+          sol[iColumn] = solI[iColumn];
+      } else {
+        for (iColumn = 0; iColumn < numberColumns; iColumn++)
+          sol[iColumn] = solI[iColumn] * columnScale[iColumn];
+      }
+      modelPtr_->computeObjectiveValue();
+    }
 
     int problemStatus = modelPtr_->problemStatus();
     double objectiveValue = modelPtr_->objectiveValue() * modelPtr_->optimizationDirection();
@@ -10060,7 +10094,16 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
       } else {
         if (canGo != 3) {
           double objValue = direction * objective[iColumn];
-          if (objValue >= 0.0 && (canGo & 1) == 0) {
+          // Note: when objValue == 0.0 exactly, fixing the column carries no
+          // objective benefit at all, so it isn't worth the risk of relying
+          // on the (unscaled, tolerance-free) canGo bits above -- on
+          // instances with large-magnitude coefficients/RHS those bits can
+          // be wrong due to floating-point round-off in the down[]/up[]
+          // accumulations, and fixing a zero-cost column purely on a tie
+          // has, in practice, wrongly excluded the true optimal/feasible
+          // solution (see neos-3656078-kumeu). Require a strict sign so we
+          // only ever fix when there is a genuine objective incentive.
+          if (objValue > 0.0 && (canGo & 1) == 0) {
 #if COIN_DEVELOP > 2
             printf("dual fix down on column %d\n", iColumn);
 #endif
@@ -10069,7 +10112,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
               nTightened++;
               setColUpper(iColumn, lower);
             }
-          } else if (objValue <= 0.0 && (canGo & 2) == 0) {
+          } else if (objValue < 0.0 && (canGo & 2) == 0) {
 #if COIN_DEVELOP > 2
             printf("dual fix up on column %d\n", iColumn);
 #endif
@@ -10100,7 +10143,10 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
       }
       if (canGo != 3) {
         double objValue = direction * objective[iColumn];
-        if (objValue >= 0.0 && (canGo & 1) == 0) {
+        // See the matching comment in the integer-column dual-fix branch
+        // above: don't fix on an exact objective tie, only on a genuine
+        // (strict) sign.
+        if (objValue > 0.0 && (canGo & 1) == 0) {
 #if COIN_DEVELOP > 2
           printf("dual fix down on continuous column %d lower %g\n",
             iColumn, lower);
@@ -10110,7 +10156,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
             nTightened++;
             setColUpper(iColumn, lower);
           }
-        } else if (objValue <= 0.0 && (canGo & 2) == 0) {
+        } else if (objValue < 0.0 && (canGo & 2) == 0) {
 #if COIN_DEVELOP > 2
           printf("dual fix up on continuous column %d upper %g\n",
             iColumn, upper);
@@ -10613,6 +10659,12 @@ void OsiClpSolverInterface::passInMessageHandler(CoinMessageHandler *handler)
   handler_ = handler;
   if (modelPtr_)
     modelPtr_->passInMessageHandler(handler);
+  // Also update the cached small model used by crunch(), which copies its
+  // handler pointer from modelPtr_ at creation time.  Without this, restoring
+  // the handler after B&B leaves smallModel_ with a dangling pointer that
+  // triggers a use-after-free when resolve() reuses the cached model.
+  if (smallModel_)
+    smallModel_->passInMessageHandler(handler);
 }
 // Set log level (will also set underlying solver's log level)
 void OsiClpSolverInterface::setLogLevel(int value)
@@ -10761,7 +10813,7 @@ void OsiClpSolverInterface::crossover(int options, int basis)
       extraPresolve = false;
     }
   }
-  if (model2->factorizationFrequency() == 200) {
+  if (model2->factorizationFrequencyIsDefault()) {
     // User did not touch preset
     model2->defaultFactorizationFrequency();
   }

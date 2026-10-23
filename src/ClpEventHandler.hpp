@@ -72,7 +72,10 @@ public:
     beforeCreateNonLinear,
     afterCreateNonLinear,
     startOfCrossover, // in Idiot
-    noTheta // At end (because no pivot)
+    noTheta, // At end (because no pivot)
+    barrierCheckpoint, // cancellation only; no progress row
+    endOfBarrierIteration, // eventWithInfo: ClpInterior* (valid during callback)
+    idiotCheckpoint // cancellation only; no progress row
   };
   /**@name Virtual method that the derived classes should provide.
       The base class instance does nothing and as event() is only useful method
@@ -83,6 +86,10 @@ public:
          if 0 sets ClpModel::status() to 5 (stopped by event) and will return to user.
          At present if <-1 carries on and if >0 acts as if 0 - this may change.
 	 For ClpSolve 2 -> too big return status of -2 and -> too small 3
+         barrierCheckpoint and idiotCheckpoint are cooperative safe points,
+         not progress events. Returning >=0 stops with primary status 5.
+         Time/iteration limits instead retain primary status 3; neither
+         mechanism guarantees preemption inside an external library call.
      */
   virtual int event(Event whichEvent);
   /** This can do whatever it likes.  Return code -1 means no action.

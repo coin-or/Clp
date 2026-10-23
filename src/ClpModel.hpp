@@ -1199,7 +1199,7 @@ public:
 	 0x04000000 - zero costs!
 	 0x08000000 - get correct duals  on max iterations
 	 0x010000000 - do not check on time
-	 0x020000000 - in idiot - ignore some errors
+         0x20000000 - internal: unscaled cleanup without tolerance-only dual relaxation
      */
   inline unsigned int specialOptions() const
   {
@@ -1458,7 +1458,7 @@ public:
 
 // Semi experimental options 
 #if 1 //def CLP_EXPERIMENT_JJF
-#define CLP_CHECK_SCALING 1 // for badly scaled problems
+//#define CLP_CHECK_SCALING 1 - seems to give problems // for badly scaled problems
 #define OSICLP_TUNING 10 // various switches
 #define CLP_MOVEMENT 2 // be more careful on pivot row in primal
 #endif

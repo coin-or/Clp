@@ -263,7 +263,11 @@ int ClpPEDualRowDantzig::pivotRow()
     modelPE_->checkCompatibilityRow(chosenRow);
 #endif
   }
-  if (psi_ < 1 && modelPE_->isCompatibleRow(chosenRow)) {
+  // chosenRow is -1 when no infeasible basic variable remains (dual
+  // feasible/optimal): isCompatibleRow() asserts on a negative row index, so
+  // it must only be queried for an actual chosen row. Mirrors the
+  // "chosenRow >= 0 &&" guard ClpPEDualRowSteepest::pivotRow() already has.
+  if (chosenRow >= 0 && psi_ < 1 && modelPE_->isCompatibleRow(chosenRow)) {
     modelPE_->isLastPivotCompatible(true);
     modelPE_->addCompatiblePivot();
   } else

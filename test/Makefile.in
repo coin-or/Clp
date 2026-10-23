@@ -96,7 +96,8 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-noinst_PROGRAMS = $(am__EXEEXT_1) testRacingLP$(EXEEXT)
+noinst_PROGRAMS = $(am__EXEEXT_1) testRacingLP$(EXEEXT) \
+	testBarrierControl$(EXEEXT)
 
 ########################################################################
 #                         unitTest for OsiClp                          #
@@ -135,6 +136,11 @@ AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+am_testBarrierControl_OBJECTS =  \
+	testBarrierControl-test_barrier_control.$(OBJEXT)
+testBarrierControl_OBJECTS = $(am_testBarrierControl_OBJECTS)
+testBarrierControl_DEPENDENCIES = ../src/libClp.la \
+	$(am__DEPENDENCIES_1)
 am_testRacingLP_OBJECTS = testRacingLP-test_racing_lp.$(OBJEXT)
 testRacingLP_OBJECTS = $(am_testRacingLP_OBJECTS)
 testRacingLP_DEPENDENCIES = ../src/libClp.la \
@@ -158,6 +164,7 @@ am__maybe_remake_depfiles = depfiles
 am__depfiles_remade =  \
 	./$(DEPDIR)/osiUnitTest-OsiClpSolverInterfaceTest.Po \
 	./$(DEPDIR)/osiUnitTest-osiUnitTest.Po \
+	./$(DEPDIR)/testBarrierControl-test_barrier_control.Po \
 	./$(DEPDIR)/testRacingLP-test_racing_lp.Po
 am__mv = mv -f
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -178,7 +185,8 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(osiUnitTest_SOURCES) $(testRacingLP_SOURCES)
+SOURCES = $(osiUnitTest_SOURCES) $(testBarrierControl_SOURCES) \
+	$(testRacingLP_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -369,6 +377,9 @@ AM_LDFLAGS = $(LT_LDFLAGS)
 
 @COIN_HAS_OSITESTS_TRUE@osiUnitTest_CPPFLAGS = -I$(srcdir)/../src -I$(srcdir)/../src/OsiClp $(OSICLPUNITTEST_CFLAGS)
 @COIN_HAS_OSITESTS_TRUE@testdepend = osiUnitTest$(EXEEXT)
+testBarrierControl_SOURCES = test_barrier_control.cpp
+testBarrierControl_LDADD = ../src/libClp.la $(CLPLIB_LFLAGS)
+testBarrierControl_CPPFLAGS = -I$(srcdir)/../src $(CLPLIB_CFLAGS)
 testRacingLP_SOURCES = test_racing_lp.cpp
 testRacingLP_LDADD = ../src/libClp.la ../src/OsiClp/libOsiClp.la \
 	$(CLPLIB_LFLAGS) $(OSICLPLIB_LFLAGS)
@@ -430,6 +441,10 @@ osiUnitTest$(EXEEXT): $(osiUnitTest_OBJECTS) $(osiUnitTest_DEPENDENCIES) $(EXTRA
 	@rm -f osiUnitTest$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(osiUnitTest_OBJECTS) $(osiUnitTest_LDADD) $(LIBS)
 
+testBarrierControl$(EXEEXT): $(testBarrierControl_OBJECTS) $(testBarrierControl_DEPENDENCIES) $(EXTRA_testBarrierControl_DEPENDENCIES)
+	@rm -f testBarrierControl$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(testBarrierControl_OBJECTS) $(testBarrierControl_LDADD) $(LIBS)
+
 testRacingLP$(EXEEXT): $(testRacingLP_OBJECTS) $(testRacingLP_DEPENDENCIES) $(EXTRA_testRacingLP_DEPENDENCIES) 
 	@rm -f testRacingLP$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(testRacingLP_OBJECTS) $(testRacingLP_LDADD) $(LIBS)
@@ -442,6 +457,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osiUnitTest-OsiClpSolverInterfaceTest.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/osiUnitTest-osiUnitTest.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testBarrierControl-test_barrier_control.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testRacingLP-test_racing_lp.Po@am__quote@ # am--include-marker
 
 $(am__depfiles_remade):
@@ -501,6 +517,20 @@ osiUnitTest-OsiClpSolverInterfaceTest.obj: OsiClpSolverInterfaceTest.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='OsiClpSolverInterfaceTest.cpp' object='osiUnitTest-OsiClpSolverInterfaceTest.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(osiUnitTest_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o osiUnitTest-OsiClpSolverInterfaceTest.obj `if test -f 'OsiClpSolverInterfaceTest.cpp'; then $(CYGPATH_W) 'OsiClpSolverInterfaceTest.cpp'; else $(CYGPATH_W) '$(srcdir)/OsiClpSolverInterfaceTest.cpp'; fi`
+
+testBarrierControl-test_barrier_control.o: test_barrier_control.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testBarrierControl_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT testBarrierControl-test_barrier_control.o -MD -MP -MF $(DEPDIR)/testBarrierControl-test_barrier_control.Tpo -c -o testBarrierControl-test_barrier_control.o `test -f 'test_barrier_control.cpp' || echo '$(srcdir)/'`test_barrier_control.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/testBarrierControl-test_barrier_control.Tpo $(DEPDIR)/testBarrierControl-test_barrier_control.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='test_barrier_control.cpp' object='testBarrierControl-test_barrier_control.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testBarrierControl_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o testBarrierControl-test_barrier_control.o `test -f 'test_barrier_control.cpp' || echo '$(srcdir)/'`test_barrier_control.cpp
+
+testBarrierControl-test_barrier_control.obj: test_barrier_control.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testBarrierControl_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT testBarrierControl-test_barrier_control.obj -MD -MP -MF $(DEPDIR)/testBarrierControl-test_barrier_control.Tpo -c -o testBarrierControl-test_barrier_control.obj `if test -f 'test_barrier_control.cpp'; then $(CYGPATH_W) 'test_barrier_control.cpp'; else $(CYGPATH_W) '$(srcdir)/test_barrier_control.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/testBarrierControl-test_barrier_control.Tpo $(DEPDIR)/testBarrierControl-test_barrier_control.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='test_barrier_control.cpp' object='testBarrierControl-test_barrier_control.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testBarrierControl_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o testBarrierControl-test_barrier_control.obj `if test -f 'test_barrier_control.cpp'; then $(CYGPATH_W) 'test_barrier_control.cpp'; else $(CYGPATH_W) '$(srcdir)/test_barrier_control.cpp'; fi`
 
 testRacingLP-test_racing_lp.o: test_racing_lp.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(testRacingLP_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT testRacingLP-test_racing_lp.o -MD -MP -MF $(DEPDIR)/testRacingLP-test_racing_lp.Tpo -c -o testRacingLP-test_racing_lp.o `test -f 'test_racing_lp.cpp' || echo '$(srcdir)/'`test_racing_lp.cpp
@@ -616,6 +646,7 @@ clean-am: clean-generic clean-libtool clean-noinstPROGRAMS \
 distclean: distclean-am
 	-rm -f ./$(DEPDIR)/osiUnitTest-OsiClpSolverInterfaceTest.Po
 	-rm -f ./$(DEPDIR)/osiUnitTest-osiUnitTest.Po
+	-rm -f ./$(DEPDIR)/testBarrierControl-test_barrier_control.Po
 	-rm -f ./$(DEPDIR)/testRacingLP-test_racing_lp.Po
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
@@ -664,6 +695,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/osiUnitTest-OsiClpSolverInterfaceTest.Po
 	-rm -f ./$(DEPDIR)/osiUnitTest-osiUnitTest.Po
+	-rm -f ./$(DEPDIR)/testBarrierControl-test_barrier_control.Po
 	-rm -f ./$(DEPDIR)/testRacingLP-test_racing_lp.Po
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
@@ -703,12 +735,13 @@ uninstall-am:
 
 
 # We are using the CLP solver executable to do the unit test
-test: ../src/clp$(EXEEXT) $(testdepend) testRacingLP$(EXEEXT)
+test: ../src/clp$(EXEEXT) $(testdepend) testRacingLP$(EXEEXT) testBarrierControl$(EXEEXT)
 	../src/clp$(EXEEXT) $(unittestflags) || exit 1
 	if test -e osiUnitTest$(EXEEXT) ; then \
 	  ./osiUnitTest$(EXEEXT) $(osiunittestflags) || exit 1 ; \
 	fi
 	./testRacingLP$(EXEEXT) || exit 1
+	./testBarrierControl$(EXEEXT) || exit 1
 
 .PHONY: test
 

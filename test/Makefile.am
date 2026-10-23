@@ -30,7 +30,11 @@ endif
 #                      LP Racing unit test                             #
 ########################################################################
 
-noinst_PROGRAMS += testRacingLP
+noinst_PROGRAMS += testRacingLP testBarrierControl
+
+testBarrierControl_SOURCES = test_barrier_control.cpp
+testBarrierControl_LDADD = ../src/libClp.la $(CLPLIB_LFLAGS)
+testBarrierControl_CPPFLAGS = -I$(srcdir)/../src $(CLPLIB_CFLAGS)
 
 testRacingLP_SOURCES = test_racing_lp.cpp
 
@@ -56,12 +60,13 @@ if COIN_HAS_NETLIB
 endif
 
 # We are using the CLP solver executable to do the unit test
-test: ../src/clp$(EXEEXT) $(testdepend) testRacingLP$(EXEEXT)
+test: ../src/clp$(EXEEXT) $(testdepend) testRacingLP$(EXEEXT) testBarrierControl$(EXEEXT)
 	../src/clp$(EXEEXT) $(unittestflags) || exit 1
 	if test -e osiUnitTest$(EXEEXT) ; then \
 	  ./osiUnitTest$(EXEEXT) $(osiunittestflags) || exit 1 ; \
 	fi
 	./testRacingLP$(EXEEXT) || exit 1
+	./testBarrierControl$(EXEEXT) || exit 1
 
 .PHONY: test
 

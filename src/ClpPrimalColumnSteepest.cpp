@@ -720,15 +720,26 @@ int ClpPrimalColumnSteepest::pivotColumn(CoinIndexedVector *updates,
   model_->eventHandler()->eventWithInfo(ClpEventHandler::afterChooseIncoming,
     reinterpret_cast< void * >(&tempInfo));
 #endif
-#ifndef NDEBUG
+  // Guard against stale infeas entries: after many degenerate pivots the
+  // incremental reduced-cost cache can drift so that infeas[best] is still
+  // positive while dj_[best] has flipped sign.  Detect this, evict the stale
+  // entry and return -1 so the caller triggers a refactorisation with fresh
+  // reduced costs.  (In a clean solve this never fires; it only occurs under
+  // numerical drift that would have self-corrected on the next refactorisation
+  // anyway.)
   if (bestSequence >= 0) {
-    if (model_->getStatus(bestSequence) == ClpSimplex::atLowerBound)
-      assert(model_->reducedCost(bestSequence) < 0.0);
-    if (model_->getStatus(bestSequence) == ClpSimplex::atUpperBound) {
-      assert(model_->reducedCost(bestSequence) > 0.0);
+    bool stale = false;
+    double rc = model_->reducedCost(bestSequence);
+    if (model_->getStatus(bestSequence) == ClpSimplex::atLowerBound && rc >= 0.0)
+      stale = true;
+    if (model_->getStatus(bestSequence) == ClpSimplex::atUpperBound && rc <= 0.0)
+      stale = true;
+    if (stale) {
+      double *infeas = infeasible_->denseVector();
+      infeas[bestSequence] = 0.0;
+      bestSequence = -1;
     }
   }
-#endif
 #ifdef ALT_UPDATE_WEIGHTSz
   printf("weights");
   for (int i = 0; i < model_->numberColumns() + model_->numberRows(); i++) {

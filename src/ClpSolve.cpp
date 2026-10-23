@@ -12,8 +12,10 @@
 #endif
 
 #include <math.h>
+#include <cfloat>
 
 #include "CoinHelperFunctions.hpp"
+#include "CoinError.hpp"
 #include "ClpHelperFunctions.hpp"
 #include "CoinSort.hpp"
 #include "ClpFactorization.hpp"
@@ -852,6 +854,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
   ClpSolve::PresolveType presolve = options.getPresolveType();
   int saveMaxIterations = maximumIterations();
   int finalStatus = -1;
+  const char *barrierFailure = NULL;
   int numberIterations = 0;
   // Select timing basis: wall time when a wall-clock limit is active (the
   // default in CBC), CPU time otherwise.  All interval and summary messages
@@ -1569,12 +1572,12 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     }
   }
 #endif
-  if (this->factorizationFrequency() == 200) {
+  if (this->factorizationFrequencyIsDefault()) {
     // User did not touch preset
     model2->defaultFactorizationFrequency();
   } else if (model2 != this) {
     // make sure model2 has correct value
-    model2->setFactorizationFrequency(this->factorizationFrequency());
+    model2->setExactFactorizationFrequency(this->factorizationFrequency());
   }
   if (method == ClpSolve::automatic) {
     if (doSprint == 0 && doIdiot == 0) {
@@ -2351,11 +2354,12 @@ int ClpSimplex::initialSolve(ClpSolve &options)
           << "Idiot Crash" << timeIdiot << time2 - time1
           << CoinMessageEol;
         timeX = time2;
-        if (nPasses > 100000 && nPasses < 100500) {
+        if (model2->status() != 3 && model2->status() != 5
+          && nPasses > 100000 && nPasses < 100500) {
           // make sure no status left
           model2->createStatus();
           // solve
-          if (model2->factorizationFrequency() == 200) {
+          if (model2->factorizationFrequencyIsDefault()) {
             // User did not touch preset
             model2->defaultFactorizationFrequency();
           }
@@ -2415,7 +2419,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     }
 #endif
     // ?
-    if (doCrash) {
+    if (doCrash && model2->status() != 3 && model2->status() != 5) {
       switch (doCrash) {
         // standard
       case 1:
@@ -2444,12 +2448,12 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       }
     }
 #ifndef SLIM_CLP
-    if (doSlp && objective_->type() == 2) {
+    if (doSlp && objective_->type() == 2 && model2->status() != 3 && model2->status() != 5) {
       model2->nonlinearSLP(doSlp, 1.0e-5);
     }
 #endif
 #ifndef LACI_TRY
-    if (model2->status()&&
+    if (model2->status() && model2->status() != 3 && model2->status() != 5 &&
 	(options.getSpecialOption(1) != 2 || options.getExtraInfo(1) < 1000000)) {
       if (dynamic_cast< ClpPackedMatrix * >(matrix_)) {
         // See if original wanted vector
@@ -2843,7 +2847,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       ClpSimplex small(model2, numberRows, whichRows, numberSort, sort);
       small.setPerturbation(model2->perturbation());
       small.setInfeasibilityCost(model2->infeasibilityCost());
-      if (model2->factorizationFrequency() == 200) {
+      if (model2->factorizationFrequencyIsDefault()) {
         // User did not touch preset
         small.defaultFactorizationFrequency();
       }
@@ -3200,6 +3204,11 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     bool doKKT = false;
     bool forceFixing = false;
     int speed = 0;
+    bool throwOnSetupFailure = false;
+    if (barrierOptions & 8192) {
+      barrierOptions &= ~8192;
+      throwOnSetupFailure = true;
+    }
     if (barrierOptions & 16) {
       barrierOptions &= ~16;
       doKKT = true;
@@ -3385,7 +3394,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     ClpPresolve pinfo2;
     ClpSimplex *saveModel2 = NULL;
     bool extraPresolve = false;
-    int numberFixed = barrier.numberFixed();
+    int numberFixed = (barrierStatus == 3 || barrierStatus == 4 || barrierStatus == 5)
+      ? 0 : barrier.numberFixed();
     if (numberFixed) {
       int numberRows = barrier.numberRows();
       int numberColumns = barrier.numberColumns();
@@ -3533,7 +3543,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       }
     }
 #ifdef BORROW
-    int saveNumberIterations = barrier.numberIterations();
+    int saveNumberIterations = std::max(0, barrier.numberIterations());
     barrier.returnModel(*model2);
     double *rowPrimal = new double[numberRows];
     double *columnPrimal = new double[numberColumns];
@@ -3582,7 +3592,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         saveUpper = NULL;
       }
     }
-    if (method == ClpSolve::useBarrier || barrierStatus < 0) {
+    if ((method == ClpSolve::useBarrier || barrierStatus < 0)
+      && barrierStatus != 3 && barrierStatus != 5) {
       if (maxIts && barrierStatus < 4 && !quadraticObj) {
         //printf("***** crossover - needs more thought on difficult models\n");
 #if SAVEIT == 1
@@ -3593,7 +3604,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         // solve
         if (!forceFixing)
           model2->setPerturbation(100);
-        if (model2->factorizationFrequency() == 200) {
+        if (model2->factorizationFrequencyIsDefault()) {
           // User did not touch preset
           model2->defaultFactorizationFrequency();
         }
@@ -3762,9 +3773,23 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 #endif
       } else if (barrierStatus == 4) {
         // memory problems
-        model2->setPerturbation(savePerturbation);
-        model2->createStatus();
-        model2->dual();
+        if (throwOnSetupFailure)
+          barrierFailure = "Barrier: Cholesky setup/factorization failed";
+#ifdef CLP_BARRIER_NO_FALLBACK
+        else
+          barrierFailure = "Barrier: Cholesky setup/factorization failed; "
+                           "simplex fallback disabled by CLP_BARRIER_NO_FALLBACK";
+#else
+        if (!barrierFailure) {
+          printf("Barrier: Cholesky setup/factorization failed (too large or "
+               "out of memory) - falling back to dual simplex\n");
+          model2->setPerturbation(savePerturbation);
+          model2->createStatus();
+          model2->dual();
+        }
+#endif
+        if (barrierFailure)
+          model2->setProblemStatus(4);
       } else if (maxIts && quadraticObj) {
         // make sure no status left
         model2->createStatus();
@@ -3800,7 +3825,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       delete[] saveUpper;
       saveLower = NULL;
       saveUpper = NULL;
-      if (method != ClpSolve::useBarrierNoCross)
+      if (method != ClpSolve::useBarrierNoCross
+        && barrierStatus != 3 && barrierStatus != 5)
         model2->primal(1);
     }
     model2->setPerturbation(savePerturbation);
@@ -3871,6 +3897,17 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     int oldStatus = problemStatus_;
     setProblemStatus(finalStatus);
     setSecondaryStatus(finalSecondaryStatus);
+    // Automatic root recovery is reserved for residuals so large that even
+    // their average roundoff scale exceeds the requested dual tolerance.
+    // Ordinary postsolve residuals retain the existing recovery path.
+    const bool unstablePostsolveDual = numberDualInfeasibilities_ > 0
+      && sumDualInfeasibilities_ * DBL_EPSILON
+        > dualTolerance() * numberDualInfeasibilities_;
+    if (finalStatus == 0 && finalSecondaryStatus >= 2
+      && finalSecondaryStatus <= 4 && sumDualInfeasibilities_ > dualTolerance()
+      && ((moreSpecialOptions_ & 134217728) != 0
+        || (options.unscaledPostsolve() && unstablePostsolveDual)))
+      scaling(0);
     /* Code modified so rcode -1 as normal, >0 clean up, 0 say optimal */
     int rcode = eventHandler()->event(ClpEventHandler::presolveAfterFirstSolve);
     //#define TREAT_AS_OPTIMAL_TOLERANCE 1.0e-4
@@ -3878,7 +3915,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     if (rcode == -1 && sumPrimalInfeasibilities_ < TREAT_AS_OPTIMAL_TOLERANCE && sumDualInfeasibilities_ < TREAT_AS_OPTIMAL_TOLERANCE)
       rcode = 0;
 #endif
-    if (finalStatus != 3 && rcode < 0 && (finalStatus || oldStatus == -1)) {
+    if (!barrierFailure && finalStatus != 3 && finalStatus != 5 && rcode < 0 && (finalStatus || oldStatus == -1)) {
       double sumPrimal = sumPrimalInfeasibilities_;
       double sumDual = sumDualInfeasibilities_;
       if (sumDual > 1.0e-6 || sumPrimal > 1.0e-6)
@@ -3974,7 +4011,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         << "Cleanup" << time2 - timeX << time2 - time1
         << CoinMessageEol;
       timeX = time2;
-    } else if (rcode > 0) { // was >= 0
+    } else if (!barrierFailure && rcode > 0 && finalStatus != 3 && finalStatus != 5) { // was >= 0
 #ifdef ABC_INHERIT
       dealWithAbc(1, 2, true);
 #else
@@ -4045,7 +4082,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     delete objective_;
     objective_ = savedObjective;
   }
-  if (options.getSpecialOption(1) == 2 && options.getExtraInfo(1) > 1000000
+  if (!barrierFailure && finalStatus != 3 && finalStatus != 5
+      && options.getSpecialOption(1) == 2 && options.getExtraInfo(1) > 1000000
       && options.getExtraInfo(1) < 2000000) {
     ClpObjective *savedObjective = objective_;
     // make up zero objective
@@ -4065,6 +4103,8 @@ int ClpSimplex::initialSolve(ClpSolve &options)
 #ifdef CLP_USEFUL_PRINTOUT
   debugInt[23] = numberIterations_;
 #endif
+  if (barrierFailure)
+    throw CoinError(barrierFailure, "initialSolve", "ClpSimplex");
   return finalStatus;
 }
 // General solve
@@ -4321,6 +4361,7 @@ ClpSimplexProgress::ClpSimplexProgress()
   model_ = NULL;
   oddState_ = 0;
   checkScalingAfter_ = 0;
+  startIteration_ = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -4364,6 +4405,7 @@ ClpSimplexProgress::ClpSimplexProgress(const ClpSimplexProgress &rhs)
   model_ = rhs.model_;
   oddState_ = rhs.oddState_;
   checkScalingAfter_ = rhs.checkScalingAfter_;
+  startIteration_ = rhs.startIteration_;
 }
 // Copy constructor.from model
 ClpSimplexProgress::ClpSimplexProgress(ClpSimplex *model)
@@ -4371,6 +4413,7 @@ ClpSimplexProgress::ClpSimplexProgress(ClpSimplex *model)
   model_ = model;
   reset();
   initialWeight_ = 0.0;
+  startIteration_ = model->numberIterations();
 }
 // Fill from model
 void ClpSimplexProgress::fillFromModel(ClpSimplex *model)
@@ -4378,6 +4421,7 @@ void ClpSimplexProgress::fillFromModel(ClpSimplex *model)
   model_ = model;
   reset();
   initialWeight_ = 0.0;
+  startIteration_ = model->numberIterations();
 }
 // Assignment operator. This copies the data
 ClpSimplexProgress &
@@ -4417,6 +4461,7 @@ ClpSimplexProgress::operator=(const ClpSimplexProgress &rhs)
     model_ = rhs.model_;
     oddState_ = rhs.oddState_;
     checkScalingAfter_ = rhs.checkScalingAfter_;
+    startIteration_ = rhs.startIteration_;
   }
   return *this;
 }
@@ -4460,7 +4505,11 @@ int ClpSimplexProgress::looping()
     infeasibility = model_->sumDualInfeasibilities();
     realInfeasibility = model_->nonLinearCost()->sumInfeasibilities();
     numberInfeasibilities = model_->numberDualInfeasibilities();
-    if (iterationNumber>3*model_->numberRows()+3*model_->numberColumns()) {
+    // Count only iterations done since this primal started - when primal
+    // is cleaning up after dual (or after postsolve), numberIterations_
+    // also includes all the earlier iterations, so a long dual would make
+    // the clean up give up at once, leaving it dual infeasible.
+    if (iterationNumber - startIteration_ > 3 * model_->numberRows() + 3 * model_->numberColumns()) {
       // should I put out a message
       return 1;
     }
@@ -5439,12 +5488,12 @@ int ClpSimplex::solveDW(CoinStructuredModel *model, ClpSolve &options)
             for (int i = 0; i < n; i++)
               obj[i] = -obj[i];
           }
-          if (this->factorizationFrequency() == 200) {
+          if (this->factorizationFrequencyIsDefault()) {
             // User did not touch preset
             sub[kBlock].defaultFactorizationFrequency();
           } else {
             // make sure model has correct value
-            sub[kBlock].setFactorizationFrequency(this->factorizationFrequency());
+            sub[kBlock].setExactFactorizationFrequency(this->factorizationFrequency());
           }
           sub[kBlock].setPerturbation(50);
           // Set columnCounts to be diagonal block index for cleanup
@@ -5521,12 +5570,12 @@ int ClpSimplex::solveDW(CoinStructuredModel *model, ClpSolve &options)
   // Create convexity rows for proposals
   int numberMasterColumns = master.numberColumns();
   master.resize(numberMasterRows + numberBlocks, numberMasterColumns);
-  if (this->factorizationFrequency() == 200) {
+  if (this->factorizationFrequencyIsDefault()) {
     // User did not touch preset
     master.defaultFactorizationFrequency();
   } else {
     // make sure model has correct value
-    master.setFactorizationFrequency(this->factorizationFrequency());
+    master.setExactFactorizationFrequency(this->factorizationFrequency());
   }
   master.setPerturbation(50);
   // Arrays to say which block and when created
@@ -6267,12 +6316,12 @@ int ClpSimplex::solveBenders(CoinStructuredModel *model, ClpSolve &options)
             for (int i = 0; i < n; i++)
               obj[i] = -obj[i];
           }
-          if (this->factorizationFrequency() == 200) {
+          if (this->factorizationFrequencyIsDefault()) {
             // User did not touch preset
             sub[kBlock].defaultFactorizationFrequency();
           } else {
             // make sure model has correct value
-            sub[kBlock].setFactorizationFrequency(this->factorizationFrequency());
+            sub[kBlock].setExactFactorizationFrequency(this->factorizationFrequency());
           }
           sub[kBlock].setPerturbation(50);
 #ifdef ADD_ARTIFICIALS
@@ -6441,12 +6490,12 @@ int ClpSimplex::solveBenders(CoinStructuredModel *model, ClpSolve &options)
   // Create columns for proposals
   int numberMasterRows = masterModel.numberRows();
   //masterModel.resize(numberMasterColumns + numberBlocks, numberMasterRows);
-  if (this->factorizationFrequency() == 200) {
+  if (this->factorizationFrequencyIsDefault()) {
     // User did not touch preset
     masterModel.defaultFactorizationFrequency();
   } else {
     // make sure model has correct value
-    masterModel.setFactorizationFrequency(this->factorizationFrequency());
+    masterModel.setExactFactorizationFrequency(this->factorizationFrequency());
   }
   masterModel.setPerturbation(50);
   // temp bounds
@@ -7943,7 +7992,7 @@ int ClpSimplex::solveBenders(CoinStructuredModel *model, ClpSolve &options)
 #endif
   //masterModel.scaling(0);
   //masterModel.primal(1);
-  if (!options.independentOption(1))
+  if (!options.presolveActions())
     loadProblem(*model);
   // now put back a good solution
   const double *columnSolution = masterModel.primalColumnSolution();

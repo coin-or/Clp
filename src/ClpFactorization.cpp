@@ -13,6 +13,7 @@
 #endif
 #include "CoinHelperFunctions.hpp"
 #include "CoinIndexedVector.hpp"
+#include "CoinTime.hpp"
 #include "ClpSimplex.hpp"
 #include "ClpSimplexDual.hpp"
 #include "ClpMatrixBase.hpp"
@@ -76,6 +77,7 @@ double factorization_instrument(int type)
 //-------------------------------------------------------------------
 ClpFactorization::ClpFactorization()
   : CoinFactorization()
+  , exactMaximumPivots_(false)
 {
 #ifndef SLIM_CLP
   networkBasis_ = NULL;
@@ -88,6 +90,7 @@ ClpFactorization::ClpFactorization()
 ClpFactorization::ClpFactorization(const ClpFactorization &rhs,
   int dummyDenseIfSmaller)
   : CoinFactorization(rhs)
+  , exactMaximumPivots_(rhs.exactMaximumPivots_)
 {
 #ifndef SLIM_CLP
   if (rhs.networkBasis_)
@@ -99,6 +102,7 @@ ClpFactorization::ClpFactorization(const ClpFactorization &rhs,
 
 ClpFactorization::ClpFactorization(const CoinFactorization &rhs)
   : CoinFactorization(rhs)
+  , exactMaximumPivots_(false)
 {
 #ifndef SLIM_CLP
   networkBasis_ = NULL;
@@ -126,6 +130,7 @@ ClpFactorization::operator=(const ClpFactorization &rhs)
 #endif
   if (this != &rhs) {
     CoinFactorization::operator=(rhs);
+    exactMaximumPivots_ = rhs.exactMaximumPivots_;
 #ifndef SLIM_CLP
     delete networkBasis_;
     if (rhs.networkBasis_)
@@ -1171,6 +1176,7 @@ ClpFactorization::ClpFactorization()
   goDenseThreshold_ = -1;
   goSmallThreshold_ = -1;
   doStatistics_ = true;
+  exactMaximumPivots_ = false;
   memset(&shortestAverage_, 0, 3 * (sizeof(double) + sizeof(int)));
 }
 
@@ -1194,6 +1200,7 @@ ClpFactorization::ClpFactorization(const ClpFactorization &rhs,
   goDenseThreshold_ = rhs.goDenseThreshold_;
   goSmallThreshold_ = rhs.goSmallThreshold_;
   doStatistics_ = rhs.doStatistics_;
+  exactMaximumPivots_ = rhs.exactMaximumPivots_;
   int goDense = 0;
 #ifdef CLP_REUSE_ETAS
   model_ = rhs.model_;
@@ -1274,6 +1281,7 @@ ClpFactorization::ClpFactorization(const CoinFactorization &rhs)
   goDenseThreshold_ = -1;
   goSmallThreshold_ = -1;
   doStatistics_ = true;
+  exactMaximumPivots_ = false;
   assert(!coinFactorizationA_ || !coinFactorizationB_);
   memset(&shortestAverage_, 0, 3 * (sizeof(double) + sizeof(int)));
 }
@@ -1294,6 +1302,7 @@ ClpFactorization::ClpFactorization(const CoinOtherFactorization &rhs)
   goDenseThreshold_ = -1;
   goSmallThreshold_ = -1;
   doStatistics_ = true;
+  exactMaximumPivots_ = false;
 #ifdef CLP_FACTORIZATION_INSTRUMENT
   factorization_instrument(1);
 #endif
@@ -1338,6 +1347,7 @@ ClpFactorization::operator=(const ClpFactorization &rhs)
     goDenseThreshold_ = rhs.goDenseThreshold_;
     goSmallThreshold_ = rhs.goSmallThreshold_;
     doStatistics_ = rhs.doStatistics_;
+    exactMaximumPivots_ = rhs.exactMaximumPivots_;
     memcpy(&shortestAverage_, &rhs.shortestAverage_, 3 * (sizeof(double) + sizeof(int)));
     if (rhs.coinFactorizationA_) {
       if (coinFactorizationA_)
@@ -2032,11 +2042,35 @@ scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
   if (!networkBasis_ || doCheck) {
 #endif
     coinFactorizationA_->setStatus(-99);
+    // Propagate the model's remaining wall-clock budget into the
+    // low-level factorization so a slow/degenerate pivot sequence can be
+    // aborted cleanly (status -100) instead of stalling silently past
+    // the caller's time limit (see periodic check in
+    // CoinFactorization2.cpp factorSparseSmall()/factorSparseLarge()).
+    double maxWallSeconds = -1.0;
+    model->getDblParam(ClpMaxWallSeconds, maxWallSeconds);
+    // ClpMaxWallSeconds holds an *absolute* epoch deadline (CoinWallclockTime()
+    // returns absolute epoch time, not "seconds since first call"), so it is
+    // always well above any small-value sanity bound; -1.0 is the sole
+    // "disabled" sentinel.
+    bool hasWallDeadline = (maxWallSeconds >= 0.0);
+    coinFactorizationA_->setTimeLimit(hasWallDeadline ? maxWallSeconds : -1.0);
     int *COIN_RESTRICT pivotVariable = model->pivotVariable();
     int nTimesRound = 0;
     //returns 0 -okay, -1 singular, -2 too many in basis, -99 memory */
     while (coinFactorizationA_->status() < -98) {
       nTimesRound++;
+      // A persistently failing (out-of-memory/singular) factorization can
+      // spin this retry loop many times, each iteration doing real (if
+      // individually cheap) O(numberRows) setup work below. Since each
+      // attempt may finish well before the periodic in-pivot-loop deadline
+      // check in CoinFactorization2.cpp ever fires (e.g. failing early,
+      // before 64 pivots), that check alone cannot bound this loop's total
+      // wall-clock cost. Check the deadline directly here too.
+      if (hasWallDeadline && CoinWallclockTime() >= maxWallSeconds) {
+        coinFactorizationA_->setStatus(-100);
+        break;
+      }
 
       int i;
       int numberBasic = 0;
@@ -2198,6 +2232,10 @@ scaledDense,scaledDense_2,scaledL,scaledR,scaledU\n");
 #endif
       //printf("L, U, R %d %d %d\n",numberElementsL(),numberElementsU(),numberElementsR());
       while (coinFactorizationA_->status() == -99) {
+        if (hasWallDeadline && CoinWallclockTime() >= maxWallSeconds) {
+          coinFactorizationA_->setStatus(-100);
+          break;
+        }
         // maybe for speed will be better to leave as many regions as possible
         coinFactorizationA_->gutsOfDestructor();
         coinFactorizationA_->gutsOfInitialize(2);

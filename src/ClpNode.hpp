@@ -156,9 +156,9 @@ protected:
   /// Dual solution
   double *dualSolution_;
   /// Integer lower bounds (only used in fathomMany)
-  int *lower_;
+  double *lower_;
   /// Integer upper bounds (only used in fathomMany)
-  int *upper_;
+  double *upper_;
   /// Pivot variables for factorization
   int *pivotVariables_;
   /// Variables fixed by reduced costs (at end of branch) 0x10000000 added if fixed to UB

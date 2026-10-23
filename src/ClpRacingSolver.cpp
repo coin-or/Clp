@@ -4,8 +4,13 @@
 
 #include "ClpRacingSolver.hpp"
 #include "ClpEventHandler.hpp"
+#include "ClpInterior.hpp"
+#include "ClpOutput.hpp"
 #include "CoinTime.hpp"
+#include "CoinError.hpp"
 #include <atomic>
+#include <exception>
+#include <cstring>
 #include <memory>
 #include <vector>
 
@@ -13,7 +18,8 @@
 // On Linux/Unix we use POSIX pthreads directly to avoid embedding GCC's
 // std::thread weak symbols (_M_thread_deps_never_run, _State_impl vtable)
 // into static binaries, which can cause at-exit crashes on certain
-// glibc/libstdc++ versions.
+// glibc/libstdc++ versions. (std::mutex itself -- used by ClpLpPhaseState,
+// see ClpOutput.hpp -- does not carry the same risk; only std::thread does.)
 #ifdef _WIN32
 #include <mutex>
 #include <thread>
@@ -47,26 +53,36 @@ inline void racing_set_openblas_threads(int) {}
 #endif
 
 // ─── Racing progress handler ─────────────────────────────────────────────────
-// Shared across all racing threads; prints interleaved progress rows showing
-// which method is currently reporting, gated by a time frequency.
+// Feeds each racing config's progress into the *same* unified LP-progress
+// table (ClpLpTable, see ClpOutput.hpp) that a normal, non-racing LP solve
+// uses -- instead of a separate ad hoc table. ClpLpTable::printRow() is
+// thread-safe and rate-limits printing *across all racing configs combined*
+// via the shared ClpLpPhaseState's timeFreq/lastPrintTime, so only one row
+// (from whichever config happens to report once the interval has elapsed)
+// is printed per interval -- keeping racing's output just as compact as the
+// sequential table, per-config chatter is not multiplied by nThreads.
 namespace {
 
-struct RacingProgressState {
-#if CLP_RACING_USE_STD_THREAD
-  std::mutex mu;
-#else
-  pthread_mutex_t mu;
-#endif
-  FILE *fp = nullptr;
-  double startTime = 0.0;
-  double lastPrintTime = 0.0;
-  double timeFreq = 5.0;
-  bool headerPrinted = false;
-};
+const char *configLabel(ClpSolve config)
+{
+  switch (config.getSolveType()) {
+  case ClpSolve::useBarrier:
+  case ClpSolve::useBarrierNoCross:
+    return "Barrier";
+  case ClpSolve::usePrimalorSprint:
+    return "Sprint";
+  case ClpSolve::usePrimal:
+    return config.getSpecialOption(1) == 2 ? "P+Idiot" : "Primal";
+  case ClpSolve::useDual:
+    return "Dual";
+  default:
+    return "Config";
+  }
+}
 
 class RacingEventHandler : public ClpEventHandler {
 public:
-  RacingEventHandler(std::shared_ptr<RacingProgressState> state,
+  RacingEventHandler(std::shared_ptr<ClpLpPhaseState> state,
     const std::atomic<bool> *abortFlag, const char *label)
     : ClpEventHandler()
     , state_(state)
@@ -90,49 +106,31 @@ public:
     if (abortFlag_ && abortFlag_->load(std::memory_order_relaxed))
       return 0; // stop
 
-    if (whichEvent != endOfIteration || !model_)
+    if (whichEvent != endOfIteration || !model_ || !state_)
       return -1;
 
-    // Time-gated progress output
-    if (!state_ || !state_->fp)
-      return -1;
+    const char *phase = std::strcmp(label_, "Barrier") == 0 ? "B+Cross" : label_;
+    ClpLpTable::printRow(*state_, phase, model_->numberIterations(),
+      model_->objectiveValue(), model_->sumPrimalInfeasibilities(),
+      model_->sumDualInfeasibilities());
+    return -1;
+  }
 
-    const double now = CoinWallclockTime();
-#if CLP_RACING_USE_STD_THREAD
-    std::lock_guard<std::mutex> lock(state_->mu);
-    if (now - state_->lastPrintTime < state_->timeFreq)
-      return -1;
-#else
-    pthread_mutex_lock(&state_->mu);
-    if (now - state_->lastPrintTime < state_->timeFreq) {
-      pthread_mutex_unlock(&state_->mu);
-      return -1;
+  int eventWithInfo(Event whichEvent, void *info) override
+  {
+    if (abortFlag_ && abortFlag_->load(std::memory_order_relaxed))
+      return 0;
+    if (whichEvent == endOfBarrierIteration && info && state_) {
+      const ClpInterior *barrier = static_cast<const ClpInterior *>(info);
+      ClpLpTable::printRow(*state_, label_, barrier->numberIterations(),
+        barrier->objectiveValue(), barrier->sumPrimalInfeasibilities(),
+        barrier->sumDualInfeasibilities());
     }
-#endif
-
-    if (!state_->headerPrinted) {
-      fprintf(state_->fp, "  %-12s %10s %16s %12s %8s\n",
-        "Method", "Iter", "Objective", "Infeas", "Time");
-      state_->headerPrinted = true;
-    }
-
-    double elapsed = now - state_->startTime;
-    fprintf(state_->fp, "  %-12s %10d %16.6e %12.4e %7.1fs\n",
-      label_,
-      model_->numberIterations(),
-      model_->objectiveValue(),
-      model_->sumPrimalInfeasibilities(),
-      elapsed);
-    fflush(state_->fp);
-    state_->lastPrintTime = now;
-#if !CLP_RACING_USE_STD_THREAD
-    pthread_mutex_unlock(&state_->mu);
-#endif
     return -1;
   }
 
 private:
-  std::shared_ptr<RacingProgressState> state_;
+  std::shared_ptr<ClpLpPhaseState> state_;
   const std::atomic<bool> *abortFlag_;
   const char *label_;
 };
@@ -145,49 +143,99 @@ ClpRacingSolver::ClpRacingSolver(ClpSimplex *model, int numThreads)
 {
 }
 
-void ClpRacingSolver::addConfig(const ClpSolve &config)
+void ClpRacingSolver::addConfig(const ClpSolve &config, ConfigSetupFn setupFn)
 {
   configs_.push_back(config);
+  setupFns_.push_back(std::move(setupFn));
 }
 
-void ClpRacingSolver::addDefaultConfigs()
+void ClpRacingSolver::addDefaultConfigs(int portfolioSize)
 {
   configs_.clear();
+  setupFns_.clear();
 
-  // Config 0: Dual simplex with presolve (default)
-  {
+  int k = portfolioSize > 0 ? portfolioSize : numThreads_;
+
+  // ── Shared config builder helpers ─────────────────────────────────────────
+
+  // dual_pertv72: plain dual simplex + perturbation value 72.
+  // Mirrors "-pertValue 72 -lpMethod dual" (no PE steepest pivot).
+  // Selected as optimal dual component via exhaustive k-fold search over 12
+  // cluster reps (C(12,2)=66 pairs, C(12,3)=220 triples, 10-fold CV).
+  auto makeDualPertv72 = []() -> std::pair<ClpSolve, ConfigSetupFn> {
     ClpSolve opts;
     opts.setSolveType(ClpSolve::useDual);
     opts.setPresolveType(ClpSolve::presolveOn);
-    opts.setSpecialOption(2, 1); // no signal handler (thread-safe)
-    configs_.push_back(opts);
-  }
+    opts.setSpecialOption(2, 1);
+    ConfigSetupFn fn = [](ClpSimplex *m) {
+      m->setPerturbation(72);
+    };
+    return {opts, fn};
+  };
 
-  // Config 1: Primal + Idiot crash (60 passes) with presolve
-  {
+  // primal_idiot50: primal simplex with 50 idiot-crash passes
+  auto makePrimalIdiot50 = []() -> std::pair<ClpSolve, ConfigSetupFn> {
     ClpSolve opts;
     opts.setSolveType(ClpSolve::usePrimal);
     opts.setPresolveType(ClpSolve::presolveOn);
-    opts.setSpecialOption(1, 2, 60); // idiot with 60 passes
+    opts.setSpecialOption(1, 2, 50); // idiot, 50 passes
     opts.setSpecialOption(2, 1);
-    configs_.push_back(opts);
-  }
+    return {opts, nullptr};
+  };
 
-  // Config 2: Primal + Sprint with presolve
-  {
+  // primal_sprint: primal simplex with sprint
+  auto makePrimalSprint = []() -> std::pair<ClpSolve, ConfigSetupFn> {
     ClpSolve opts;
     opts.setSolveType(ClpSolve::usePrimalorSprint);
     opts.setPresolveType(ClpSolve::presolveOn);
-    opts.setSpecialOption(1, 3); // sprint
+    opts.setSpecialOption(1, 3);
     opts.setSpecialOption(2, 1);
-    configs_.push_back(opts);
+    return {opts, nullptr};
+  };
+
+  if (k == 2) {
+    // K=2 optimal portfolio (exhaustive k-fold search, 1.47x speedup vs baseline):
+    //   dual_pertv72 + primal_idiot50
+    std::pair<ClpSolve, ConfigSetupFn> c0 = makeDualPertv72();
+    std::pair<ClpSolve, ConfigSetupFn> c1 = makePrimalIdiot50();
+    addConfig(c0.first, c0.second);
+    addConfig(c1.first, c1.second);
+  } else {
+    // K=3 optimal portfolio (exhaustive k-fold search, 1.59x speedup vs baseline):
+    //   dual_pertv72 + primal_idiot50 + primal_sprint
+    std::pair<ClpSolve, ConfigSetupFn> c0 = makeDualPertv72();
+    std::pair<ClpSolve, ConfigSetupFn> c1 = makePrimalIdiot50();
+    std::pair<ClpSolve, ConfigSetupFn> c2 = makePrimalSprint();
+    addConfig(c0.first, c0.second);
+    addConfig(c1.first, c1.second);
+    addConfig(c2.first, c2.second);
+  }
+}
+
+const char *ClpRacingSolver::winnerName() const
+{
+  if (winnerIndex_ < 0 || winnerIndex_ >= static_cast<int>(configs_.size()))
+    return "";
+  ClpSolve config = configs_[winnerIndex_];
+  switch (config.getSolveType()) {
+  case ClpSolve::useBarrier:
+  case ClpSolve::useBarrierNoCross:
+    return "barrier";
+  case ClpSolve::useDual:
+    return "dual";
+  case ClpSolve::usePrimalorSprint:
+    return "primal+sprint";
+  case ClpSolve::usePrimal:
+    return config.getSpecialOption(1) == 2 ? "primal+idiot" : "primal";
+  default:
+    return "unknown";
   }
 }
 
 int ClpRacingSolver::solve()
 {
   if (configs_.empty())
-    addDefaultConfigs();
+    addDefaultConfigs(numThreads_);
 
   int nConfigs = static_cast<int>(configs_.size());
   int nThreads = numThreads_ > 0 ? numThreads_ : nConfigs;
@@ -196,6 +244,8 @@ int ClpRacingSolver::solve()
 
   // If only one config, just solve directly (no threading overhead)
   if (nThreads <= 1) {
+    if (!setupFns_.empty() && setupFns_[0])
+      setupFns_[0](model_);
     model_->initialSolve(configs_[0]);
     if (model_->status() == 0) {
       winnerIndex_ = 0;
@@ -207,40 +257,80 @@ int ClpRacingSolver::solve()
   std::atomic<bool> abortFlag{false};
   std::atomic<int> winner{-1};
 
-  // Clone models for each racing thread
+  // Clone models for each racing thread; apply per-config setup functions.
   std::vector<ClpSimplex *> clones(nThreads, nullptr);
-  for (int i = 0; i < nThreads; i++)
+  for (int i = 0; i < nThreads; i++) {
     clones[i] = new ClpSimplex(*model_);
+    // ClpModel's copy constructor only deep-copies the message handler when
+    // the source's defaultHandler_ is true; otherwise the clone *aliases*
+    // model_'s handler_ pointer. If the caller pushed a non-default handler
+    // (e.g. CbcSolver::solveInitialLp()'s shared ClpLpMsgHandler), every
+    // clone would then share that single CoinMessageHandler instance, and
+    // Clp's internal plumbing (presolve, scaling, simplex) calls its
+    // message()/setLogLevel()/finish() methods -- unsynchronized -- from
+    // each racing thread below, causing data races. Give each clone its
+    // own private handler (preserving the current log level) so only
+    // per-config progress reporting is shared, via the mutex-protected
+    // ClpLpPhaseState/RacingEventHandler/ClpLpTable::printRow() path below.
+    clones[i]->setDefaultMessageHandler();
+    if (i < static_cast<int>(setupFns_.size()) && setupFns_[i])
+      setupFns_[i](clones[i]);
+  }
 
-  // Set up shared progress reporting
-  static const char *configLabels[] = {"Dual", "Primal+Idiot", "Sprint"};
-  std::shared_ptr<RacingProgressState> progressState;
-  if (model_->logLevel() > 0) {
-    progressState = std::make_shared<RacingProgressState>();
-#if !CLP_RACING_USE_STD_THREAD
-    pthread_mutex_init(&progressState->mu, nullptr);
-#endif
-    progressState->fp = model_->messageHandler()
+  // Set up shared progress reporting. Prefer reusing an already-installed
+  // ClpLpEventHandler's ClpLpPhaseState (installed by the caller -- e.g.
+  // CbcSolver::solveInitialLp() -- for the unified LP progress table) so
+  // racing rows land in the exact same Phase/Iter/Objective/Primal inf/
+  // Dual inf/Time table as a normal LP solve, and so the caller's own
+  // printFinalStatus() call (made after solve() returns) closes the table
+  // and prints the final summary line as usual. Falls back to a private
+  // table state (same format) when no handler is installed.
+  ClpLpEventHandler *existingHandler
+    = dynamic_cast<ClpLpEventHandler *>(model_->eventHandler());
+  std::shared_ptr<ClpLpPhaseState> tableState;
+  bool ownTableState = false;
+  if (existingHandler) {
+    tableState = existingHandler->sharedState();
+  } else if (model_->logLevel() > 0) {
+    tableState = std::make_shared<ClpLpPhaseState>();
+    tableState->fp = model_->messageHandler()
       ? model_->messageHandler()->filePointer() : stdout;
-    progressState->startTime = CoinGetTimeOfDay();
-    progressState->lastPrintTime = progressState->startTime;
-    progressState->timeFreq = 5.0;
+    tableState->utf8 = ClpOutput::useUtf8();
+    tableState->compact = ClpOutput::useCompact();
+    tableState->logLevel = model_->logLevel();
+    tableState->timeFreq = 2.0;
+    // Shift the local wall-clock reference back by however much overall
+    // search time had already elapsed before racing began, so every
+    // "now - startTime" computation yields time elapsed since the
+    // *overall search* began, not just since this LP race started
+    // (matches the same fix applied to the sequential root LP relaxation
+    // table in CbcSolver::solveInitialLp()).
+    tableState->startTime = CoinWallclockTime() - searchElapsedAtStart_;
+    tableState->lastPrintTime = tableState->startTime;
+    tableState->title = "LP solve";
+    ownTableState = true;
   }
 
   double startTime = CoinGetTimeOfDay();
+  std::vector<std::exception_ptr> failures(nThreads);
 
 #if CLP_RACING_USE_STD_THREAD
   std::vector<std::thread> threads;
   threads.reserve(nThreads);
   for (int i = 0; i < nThreads; i++) {
-    threads.emplace_back([i, &clones, &abortFlag, &winner, &progressState, this]() {
+    threads.emplace_back([i, &clones, &abortFlag, &winner, &tableState, &failures, this]() {
       ClpSimplex *clone = clones[i];
       clone->setLogLevel(0);
       racing_set_openblas_threads(1);
-      const char *label = (i < 3) ? configLabels[i] : "Config";
-      RacingEventHandler handler(progressState, &abortFlag, label);
+      const char *label = configLabel(configs_[i]);
+      RacingEventHandler handler(tableState, &abortFlag, label);
       clone->passInEventHandler(&handler);
-      clone->initialSolve(configs_[i]);
+      try {
+        clone->initialSolve(configs_[i]);
+      } catch (...) {
+        failures[i] = std::current_exception();
+        return;
+      }
       int st = clone->status();
       if (st == 0 || st == 1 || st == 2) {
         int expected = -1;
@@ -258,9 +348,10 @@ int ClpRacingSolver::solve()
     ClpSolve *config;
     std::atomic<bool> *abortFlag;
     std::atomic<int> *winner;
-    std::shared_ptr<RacingProgressState> *progressState;
+    std::shared_ptr<ClpLpPhaseState> *tableState;
     const char *label;
     int index;
+    std::exception_ptr *failure;
   };
 
   std::vector<ThreadArg> args(nThreads);
@@ -271,18 +362,24 @@ int ClpRacingSolver::solve()
     args[i].config = &configs_[i];
     args[i].abortFlag = &abortFlag;
     args[i].winner = &winner;
-    args[i].progressState = &progressState;
-    args[i].label = (i < 3) ? configLabels[i] : "Config";
+    args[i].tableState = &tableState;
+    args[i].label = configLabel(configs_[i]);
     args[i].index = i;
+    args[i].failure = &failures[i];
 
     pthread_create(&threads[i], nullptr, [](void *arg) -> void * {
       ThreadArg *a = static_cast<ThreadArg *>(arg);
       ClpSimplex *clone = a->clone;
       clone->setLogLevel(0);
       racing_set_openblas_threads(1);
-      RacingEventHandler handler(*a->progressState, a->abortFlag, a->label);
+      RacingEventHandler handler(*a->tableState, a->abortFlag, a->label);
       clone->passInEventHandler(&handler);
-      clone->initialSolve(*a->config);
+      try {
+        clone->initialSolve(*a->config);
+      } catch (...) {
+        *a->failure = std::current_exception();
+        return nullptr;
+      }
       int st = clone->status();
       if (st == 0 || st == 1 || st == 2) {
         int expected = -1;
@@ -295,10 +392,31 @@ int ClpRacingSolver::solve()
 
   for (int i = 0; i < nThreads; i++)
     pthread_join(threads[i], nullptr);
-
-  if (progressState)
-    pthread_mutex_destroy(&progressState->mu);
 #endif
+
+  std::exception_ptr unexpectedFailure;
+  for (int i = 0; i < nThreads; ++i) {
+    if (!failures[i])
+      continue;
+    try {
+      std::rethrow_exception(failures[i]);
+    } catch (const CoinError &error) {
+      if (error.message().find("Barrier: Cholesky setup/factorization failed") != 0) {
+        unexpectedFailure = failures[i];
+        break;
+      }
+      fprintf(stderr, "Racing %s failed: %s\n", configLabel(configs_[i]),
+        error.message().c_str());
+    } catch (...) {
+      unexpectedFailure = failures[i];
+      break;
+    }
+  }
+  if (unexpectedFailure) {
+    for (int i = 0; i < nThreads; ++i)
+      delete clones[i];
+    std::rethrow_exception(unexpectedFailure);
+  }
 
   double endTime = CoinGetTimeOfDay();
   winnerIndex_ = winner.load();
@@ -319,12 +437,32 @@ int ClpRacingSolver::solve()
       model_->primalRowSolution());
     CoinMemcpyN(w->dualRowSolution(), nRows,
       model_->dualRowSolution());
+    // A model that was never solved has no status array yet
+    if (!model_->statusArray())
+      model_->createStatus();
     CoinMemcpyN(w->statusArray(), nCols + nRows,
       model_->statusArray());
     model_->setObjectiveValue(w->objectiveValue());
     model_->setProblemStatus(w->status());
     model_->setNumberIterations(winnerIterations_);
     model_->setSecondaryStatus(w->secondaryStatus());
+
+    if (tableState) {
+      tableState->racingWinner = winnerName();
+      if (existingHandler) {
+        // Point the caller's ClpLpEventHandler at the original model (now
+        // holding the winner's solution/status/iterations) so its later
+        // printFinalStatus() call -- made by the caller after solve()
+        // returns -- closes the table and prints the final summary line
+        // exactly as it would for a non-racing solve.
+        existingHandler->setSimplex(model_);
+      } else if (ownTableState) {
+        // No external handler was installed (e.g. a standalone racing
+        // caller with no unified progress table already set up) -- close
+        // out the table ourselves using the same shared formatting code.
+        ClpLpTable::printFinalStatus(*tableState, model_);
+      }
+    }
   }
 
   // Clean up clones

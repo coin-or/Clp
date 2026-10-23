@@ -333,6 +333,30 @@ static int countCostedSlacks(OsiSolverInterface *model)
     slackStart = -1;
   return slackStart;
 }
+bool Idiot::stopRequested()
+{
+#ifndef OSI_IDIOT
+  if (model_->status() == 3 || model_->status() == 5)
+    return true;
+  if (model_->eventHandler()->event(ClpEventHandler::idiotCheckpoint) >= 0) {
+    model_->setProblemStatus(5);
+    model_->setSecondaryStatus(ClpEventHandler::idiotCheckpoint);
+    return true;
+  }
+  if (model_->hitMaximumIterations()) {
+    model_->setProblemStatus(3);
+    double wallLimit;
+    model_->getDblParam(ClpMaxWallSeconds, wallLimit);
+    const double cpuLimit = model_->maximumSeconds();
+    model_->setSecondaryStatus(
+      (cpuLimit >= 0.0 && CoinCpuTime() >= cpuLimit)
+        || (wallLimit >= 0.0 && CoinWallclockTime() >= wallLimit) ? 9 : 0);
+    return true;
+  }
+#endif
+  return false;
+}
+
 void Idiot::crash(int numberPass, CoinMessageHandler *handler,
   const CoinMessages *messages, bool doCrossover)
 {
@@ -386,7 +410,7 @@ void Idiot::crash(int numberPass, CoinMessageHandler *handler,
   if (numberColumns)
     solve2(handler, messages);
 #ifndef OSI_IDIOT
-  if (doCrossover) {
+  if (doCrossover && !stopRequested()) {
     double averageInfeas = model_->sumPrimalInfeasibilities() / static_cast< double >(model_->numberRows());
     if ((averageInfeas < 0.01 && (strategy_ & 512) != 0) || (strategy_ & 8192) != 0)
       crossOver(16 + 1);
@@ -404,6 +428,8 @@ void Idiot::solve()
 }
 void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
 {
+  if (stopRequested())
+    return;
   int strategy = 0;
   double d2;
   int i, n;
@@ -869,6 +895,8 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
   double lastInfeas = 1.0e31;
   double bestInfeas = 1.0e31;
   while ((mu > stopMu && lastResult.infeas > smallInfeas) || (lastResult.infeas <= smallInfeas && dropping(lastResult, exitDrop, smallInfeas, &badIts)) || checkIteration < 2 || lambdaIteration < lambdaIterations_) {
+    if (stopRequested())
+      break;
     if (lastResult.infeas <= exitFeasibility_)
       break;
     iteration++;
@@ -897,6 +925,8 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
       lower, upper, elemXX, row, columnStart, columnLength, lambda,
       maxIts, mu, drop,
       maxmin, offset, strategy, djTol, djExit, djFlag, randomNumberGenerator);
+    if (stopRequested())
+      break;
     n = cleanIteration(iteration, ordStart, ordEnd,
       colsol, lower, upper,
       rowlower, rowupper,
@@ -1323,6 +1353,8 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
 #ifndef OSI_IDIOT
 void Idiot::crossOver(int mode)
 {
+  if (stopRequested())
+    return;
   if (lightWeight_ == 2) {
     // total failure
     model_->allSlackBasis();
@@ -1341,7 +1373,11 @@ void Idiot::crossOver(int mode)
   const int *columnLength = matrix->getVectorLengths();
   const double *element = matrix->getElements();
   const double *rowupper = model_->getRowUpper();
-  model_->eventHandler()->event(ClpEventHandler::startOfCrossover);
+  if (model_->eventHandler()->event(ClpEventHandler::startOfCrossover) >= 0) {
+    model_->setProblemStatus(5);
+    model_->setSecondaryStatus(ClpEventHandler::startOfCrossover);
+    return;
+  }
   int nrows = model_->getNumRows();
   int ncols = model_->getNumCols();
   double *rowsol, *colsol;
@@ -2189,7 +2225,7 @@ void Idiot::crossOver(int mode)
         model_->dealWithAbc(1, 1 + 11);
 #endif
 #else
-	model_->setSpecialOptions(model_->specialOptions()|0x020000000);
+	model_->setSpecialOptions(model_->specialOptions()|0x800000);
 #ifndef TWO_GOES
         model_->primal(justValuesPass ? 2 : 1);
 #else
@@ -2560,4 +2596,3 @@ Idiot::~Idiot()
 {
   delete[] whenUsed_;
 }
-
