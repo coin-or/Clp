@@ -81,11 +81,10 @@ void OsiClpSolverInterface::initialSolve()
     int winner = racer.solve();
     if (winner >= 0) {
       if (clp->logLevel() > 0) {
-        const char *names[] = {"dual", "primal+idiot", "primal+sprint"};
         char msg[200];
         snprintf(msg, sizeof(msg),
           "LP racing: winner=%s time=%.2fs iters=%d",
-          (winner < 3 ? names[winner] : "unknown"),
+          racer.winnerName(),
           racer.winnerTime(), racer.winnerIterations());
         clp->messageHandler()->message(0, "", msg, ' ') << CoinMessageEol;
       }

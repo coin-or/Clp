@@ -206,17 +206,7 @@ void ClpRacingSolver::addDefaultConfigs(int portfolioSize)
     return {opts, nullptr};
   };
 
-  // primal_sprint: primal simplex with sprint
-  auto makePrimalSprint = []() -> std::pair<ClpSolve, ConfigSetupFn> {
-    ClpSolve opts;
-    opts.setSolveType(ClpSolve::usePrimalorSprint);
-    opts.setPresolveType(ClpSolve::presolveOn);
-    opts.setSpecialOption(1, 3);
-    opts.setSpecialOption(2, 1);
-    return {opts, nullptr};
-  };
-
-  if (k == 2) {
+  if (k == 1 || k == 2) {
     // K=2 optimal portfolio (exhaustive k-fold search, 1.47x speedup vs baseline):
     //   dual_pertv72 + primal_idiot50
     std::pair<ClpSolve, ConfigSetupFn> c0 = makeDualPertv72();
@@ -224,14 +214,18 @@ void ClpRacingSolver::addDefaultConfigs(int portfolioSize)
     addConfig(c0.first, c0.second);
     addConfig(c1.first, c1.second);
   } else {
-    // K=3 optimal portfolio (exhaustive k-fold search, 1.59x speedup vs baseline):
-    //   dual_pertv72 + primal_idiot50 + primal_sprint
-    std::pair<ClpSolve, ConfigSetupFn> c0 = makeDualPertv72();
-    std::pair<ClpSolve, ConfigSetupFn> c1 = makePrimalIdiot50();
-    std::pair<ClpSolve, ConfigSetupFn> c2 = makePrimalSprint();
-    addConfig(c0.first, c0.second);
-    addConfig(c1.first, c1.second);
-    addConfig(c2.first, c2.second);
+    // Native barrier + dual72 + idiot50/pert50, validated in concurrent races.
+    ClpSolve barrier;
+    barrier.setSolveType(ClpSolve::useBarrier);
+    barrier.setPresolveType(ClpSolve::presolveOn);
+    barrier.setSpecialOption(4, 0); // native Cholesky
+    addConfig(barrier);
+    std::pair<ClpSolve, ConfigSetupFn> dual = makeDualPertv72();
+    std::pair<ClpSolve, ConfigSetupFn> primal = makePrimalIdiot50();
+    addConfig(dual.first, dual.second);
+    addConfig(primal.first, [](ClpSimplex *m) {
+      m->setPerturbation(50);
+    });
   }
 }
 

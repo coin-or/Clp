@@ -18,7 +18,7 @@
  *  to the original model.
  *
  *  Intended for root-node LP relaxation where the best method is unknown
- *  a priori and different configurations (dual, primal+idiot, primal+sprint)
+ *  a priori and different configurations (native barrier, dual, primal+idiot)
  *  can have dramatically different performance.
  *
  *  The caller should presolve the model before racing (presolve once, race
@@ -36,12 +36,13 @@ public:
   /// Add a configuration to race, with an optional model-setup callback.
   void addConfig(const ClpSolve &config, ConfigSetupFn setupFn = nullptr);
 
-  /** Add the data-validated racing portfolio for the requested size, selected
-   *  by exhaustive k-fold search over 12 cluster reps (C(12,2)=66 pairs,
-   *  C(12,3)=220 triples, 10-fold out-of-sample validation):
-   *    K=2: dual_pertv72 + primal_idiot50               (1.47x speedup vs baseline)
-   *    K=3: dual_pertv72 + primal_idiot50 + primal_sprint (1.59x speedup vs baseline)
-   *    Other K: falls back to the K=3 triple (capped or extended as needed).
+  /** Add the data-validated racing portfolio for the requested size:
+   *    K=2: dual_pertv72 + primal_idiot50_pert50 (unchanged k-fold-selected pair).
+   *    K=3: native barrier + dual_pertv72 + primal_idiot50_pert50.
+   *  The triple was validated on 403 instances with three seeds in real races.
+   *  Barrier uses native Cholesky with crossover; it replaces primal+sprint.
+   *  A single thread retains the pair's dual-only fallback. Other K uses
+   *  the K=3 triple, capped by the requested thread count.
    *  Clears any previously added configs.
    *  portfolioSize=0 uses numThreads_ passed at construction. */
   void addDefaultConfigs(int portfolioSize = 0);
