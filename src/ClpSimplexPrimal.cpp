@@ -3411,6 +3411,18 @@ int ClpSimplexPrimal::pivotResult(int ifValuesPass)
             0);
         }
         if (pivotRow_ == -1 || (pivotRow_ >= 0 && fabs(alpha_) < 1.0e-5)) {
+          if (pivotRow_ == -1 && valueOut_ == COIN_DBL_MAX) {
+            /* The incoming variable has no blocking row and no finite
+               bound in its direction of movement, so it improves the
+               objective without limit: the problem is unbounded.
+               Rejecting (flagging) the variable here would drop the
+               only dual infeasibility and lead to a false "optimal". */
+            returnCode = 2; //say looks unbounded
+            // do ray
+            if (!nonLinearCost_->sumInfeasibilities())
+              primalRay(rowArray_[1]);
+            break;
+          }
           if (solveType_ == 1) {
             // reject it
             char x = isColumn(sequenceIn_) ? 'C' : 'R';
