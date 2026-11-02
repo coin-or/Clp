@@ -39,10 +39,16 @@ exit /b 1
 :test
 echo INFO: Starting Tests
 
+@REM Set code page to UTF-8 to avoid problems with non-ASCII characters in the output
+chcp 65001 >NUL
+
 "%BINDIR%\clp.exe" -dirSample %SAMPLEDIR% -unitTest -dirNetlib %netlibdir% -netlib
 if not %errorlevel%==0 echo ERROR: Error running clp.exe tests. && goto :error
 
 "%BINDIR%\osiUnitTest.exe" -mpsDir=%SAMPLEDIR% -netlibDir=%NETLIBDIR% -testOsiSolverInterface 
+if not %errorlevel%==0 echo ERROR: Error running osiUnitTest.exe tests. && goto :error
+
+"%BINDIR%\ClpMakeTest.exe"
 if not %errorlevel%==0 echo ERROR: Error running osiUnitTest.exe tests. && goto :error
 
 echo INFO: Finished Tests successfully (%ERRORLEVEL%)
