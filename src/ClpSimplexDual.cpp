@@ -5444,7 +5444,11 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
               unflagVariables = false;
               changeMade_++; // say something changed
               int nTotal = numberRows_ + numberColumns_;
-              CoinMemcpyN(saveStatus_, nTotal, status_);
+	      for (int i=0;i<nTotal;i++) {
+		if (!flagged(i))
+		  status_[i]=saveStatus_[i];
+	      }
+              //CoinMemcpyN(saveStatus_, nTotal, status_);
               CoinMemcpyN(savedSolution_ + numberColumns_,
                 numberRows_, rowActivityWork_);
               CoinMemcpyN(savedSolution_,
@@ -7603,7 +7607,7 @@ ClpSimplexDual::setupForStrongBranching(char *arrays, int numberRows,
     int saveMaximumIterations = intParam_[ClpMaxNumIteration];
     intParam_[ClpMaxNumIteration] = 100 + numberRows_ + numberColumns_;
     dual(0, 7);
-    if (problemStatus_ == 10) {
+    if (problemStatus_ == 11) { // was 10 but skip if any problems at all
       ClpSimplex::dual(0, 7);
       // if (problemStatus_)
       // printf("second go in hot start %d iterations - status %d\n",
