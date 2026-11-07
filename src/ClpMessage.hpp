@@ -111,6 +111,14 @@ enum CLP_Message {
   CLP_GENERAL,
   CLP_GENERAL2,
   CLP_GENERAL_WARNING,
+  // Structure of the tabular LP progress output; null (empty) in us_en
+  CLP_TABLE_HEADER,
+  CLP_TABLE_ROW,
+  CLP_TABLE_RULE,
+  CLP_TABLE_END,
+  CLP_TABLE_SUMMARY,
+  CLP_PRESOLVE_SUMMARY,
+  CLP_POSTSOLVE_DONE,
   CLP_DUMMY_END
 };
 

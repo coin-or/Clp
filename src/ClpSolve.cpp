@@ -3068,6 +3068,13 @@ int ClpSimplex::initialSolve(ClpSolve &options)
         << iPass + 1 << small.numberIterations() << small.objectiveValue() << sumNegative
         << numberNegative << sumArtificials << small.numberColumns()
         << CoinMessageEol;
+      if (model2->eventHandler()) {
+        // progress for the tabular LP output
+        ClpPassProgress progress = { totalIterations, small.objectiveValue(),
+          sumArtificials, sumNegative };
+        model2->eventHandler()->eventWithInfo(ClpEventHandler::endOfSprintPass,
+          &progress);
+      }
       if (sumArtificials < 1.0e-8 && originalMaxSprintPass >= 0) {
         maxSprintPass = iPass + originalMaxSprintPass;
         originalMaxSprintPass = -1;
@@ -3870,15 +3877,12 @@ int ClpSimplex::initialSolve(ClpSolve &options)
     factorization_->areaFactor(model2->factorization()->adjustedAreaFactor());
     time2 = clpGetTime();
     timePresolve += time2 - timeX;
-    // I wish the log levels had not been changed
-    // if in clp - cheat to get postsolve message
-    int logLevel = handler_->logLevel();
-    if (logLevel==1 && (model2->specialOptions()&COIN_CBC_USING_CLP)==0)
-      handler_->setLogLevel(2);
     handler_->message(CLP_INTERVAL_TIMING, messages_)
       << "Postsolve" << time2 - timeX << time2 - time1
       << CoinMessageEol;
-    handler_->setLogLevel(logLevel);
+    // The tabular output notes where postsolve ends (null in us_en)
+    if ((model2->specialOptions() & COIN_CBC_USING_CLP) == 0)
+      handler_->message(CLP_POSTSOLVE_DONE, messages_) << CoinMessageEol;
     timeX = time2;
     if (!presolveToFile) {
 #if 1 //ndef ABC_INHERIT

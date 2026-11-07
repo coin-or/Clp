@@ -113,11 +113,58 @@ static Clp_message clp_us_english[] = {
   { CLP_GENERAL, 1000, 1, "%s" },
   { CLP_GENERAL2, 1001, 2, "%s" },
   { CLP_GENERAL_WARNING, 3006, 1, "%s" },
+  // The tabular LP output's own messages print nothing in us_en
+  { CLP_TABLE_HEADER, 66, 1, "" },
+  { CLP_TABLE_ROW, 67, 1, "" },
+  { CLP_TABLE_RULE, 68, 1, "" },
+  { CLP_TABLE_END, 69, 1, "" },
+  { CLP_TABLE_SUMMARY, 70, 1, "" },
+  { CLP_PRESOLVE_SUMMARY, 71, 1, "" },
+  { CLP_POSTSOLVE_DONE, 72, 1, "" },
   { CLP_DUMMY_END, 999999, 0, "" }
 };
 static Clp_message uk_english[] = {
   { CLP_SIMPLEX_FINISHED, 0, 1, "Optimal - objective value %g,\
  okay CLP can solve some LPs but you really need Xpress from Dash Associates :-)" },
+  { CLP_DUMMY_END, 999999, 0, "" }
+};
+/*
+  Tabular output style (en_tabular). The LP table's own messages get their
+  texts. Messages whose content the table shows instead get empty texts, so
+  they print nothing: the simplex status and end-of-solve messages, the
+  final timing line, and the Idiot, Sprint and barrier iteration messages
+  (ClpLpEventHandler prints table rows for these). Every other message keeps
+  its us_en text and prints as usual for its detail level.
+
+  The values a call sends are the same in every language; a text can leave
+  some out with %~ codes (see CoinMessageHandler).
+*/
+static Clp_message en_tabular_messages[] = {
+  { CLP_SIMPLEX_FINISHED, 0, 1, "" },
+  { CLP_SIMPLEX_INFEASIBLE, 1, 1, "" },
+  { CLP_SIMPLEX_UNBOUNDED, 2, 1, "" },
+  { CLP_SIMPLEX_STOPPED, 3, 1, "" },
+  { CLP_SIMPLEX_ERROR, 4, 1, "" },
+  { CLP_SIMPLEX_INTERRUPT, 5, 1, "" },
+  { CLP_SIMPLEX_STATUS, 6, 1, "" },
+  { CLP_SIMPLEX_PERTURB, 14, 2, "  Perturbation: %.4g%% of %.6g%~g%~g%~g" },
+  { CLP_IDIOT_ITERATION, 30, 2, "" },
+  { CLP_TIMING, 32, 1, "" },
+  { CLP_SPRINT, 34, 2, "" },
+  { CLP_BARRIER_ITERATION, 35, 1, "" },
+  // header block: lead-in (blank line, optional title), top rule, column
+  // headings, middle rule
+  { CLP_TABLE_HEADER, 66, 1, "%s%s\n%s\n%s" },
+  // phase, Iter, Objective, Primal inf, Dual inf, Time; the %s between the
+  // columns are the separators (spaces, or bars when not compact)
+  { CLP_TABLE_ROW, 67, 1, "  %-8s%s%8d%s%15.6e%s%12.4e%s%12.4e%s%8s" },
+  { CLP_TABLE_RULE, 68, 1, "  %s" },
+  // bottom rule, then the final status line
+  { CLP_TABLE_END, 69, 1, "%s\n\n%s" },
+  // optional title, then the status line, when no table was printed
+  { CLP_TABLE_SUMMARY, 70, 1, "%s%s" },
+  { CLP_PRESOLVE_SUMMARY, 71, 1, "  CLP presolve: %d rows, %d cols \xe2\x86\x92 %d rows, %d cols (%.2fs)" },
+  { CLP_POSTSOLVE_DONE, 72, 1, "  After Postsolve" },
   { CLP_DUMMY_END, 999999, 0, "" }
 };
 /* Constructor */
@@ -143,6 +190,9 @@ ClpMessage::ClpMessage(Language language)
   switch (language) {
   case uk_en:
     message = uk_english;
+    break;
+  case en_tabular:
+    message = en_tabular_messages;
     break;
 
   default:

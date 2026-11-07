@@ -58,10 +58,13 @@ private:
 };
 
 // ─── ClpLpPhaseState ──────────────────────────────────────────────────────────
-// Shared mutable state for ClpLpEventHandler and ClpLpMsgHandler.
-// Both handlers hold a std::shared_ptr to the same instance so that data
-// written by the message handler (Idiot/Sprint rows) is immediately visible
-// to the event handler (LP rows), and vice-versa.
+// Shared mutable state for ClpLpEventHandler and ClpLpMsgHandler, and for
+// ClpLpTable::printRow() callers. All of them hold a std::shared_ptr to the
+// same instance.
+//
+// The table is printed as messages (CLP_TABLE_*), so it shows only when the
+// messages are in the en_tabular language (ClpModel::newLanguage()); in us_en
+// they print nothing.
 // ──────────────────────────────────────────────────────────────────────────────
 struct ClpLpPhaseState {
   // ── Table bookkeeping ─────────────────────────────────────────────────────
@@ -72,20 +75,15 @@ struct ClpLpPhaseState {
   int lastPrintIter = 0;
   int maxIterSeen = 0;
 
-  // ── Idiot: last-row tracking (force-print when LP begins or solve ends) ───
-  int lastIdiotIter = -1;
-  double lastIdiotInfeas = 0.0, lastIdiotObj = 0.0, lastIdiotTime = 0.0;
-  bool idiotSeen = false;  // first Idiot message received
-  bool sprintSeen = false; // first Sprint message received
-  bool idiotPending = false; // last received Idiot row not yet printed
-
-  // ── Sprint: accumulated LP iters + last-row tracking ─────────────────────
-  int sprintCumIters = 0;
-  int lastSprintCumIters = -1;
-  double lastSprintObj = 0.0, lastSprintDInf = 0.0, lastSprintTime = 0.0;
-  bool sprintPending = false; // last received Sprint row not yet printed
+  bool idiotSeen = false;  // first Idiot row printed
+  bool sprintSeen = false; // first Sprint row printed
 
   // ── Configuration (set at construction, read-only afterwards) ─────────────
+  /** Where the table's messages go. If null, ClpLpEventHandler uses its
+   *  model's handler and messages; ClpLpTable::printRow() callers without a
+   *  model must set them. */
+  CoinMessageHandler *handler = nullptr;
+  CoinMessages *messages = nullptr;
   FILE *fp = nullptr;
   bool utf8 = false;
   bool compact = true;
@@ -126,7 +124,8 @@ namespace ClpLpTable {
  *  which naturally keeps racing's output as compact as the sequential
  *  table (only the "current leader" reports, one row at a time). */
 CLPLIB_EXPORT void printRow(ClpLpPhaseState &state, const char *phaseLabel,
-  int iter, double obj, double pInf, double dInf);
+  int iter, double obj, double pInf, double dInf,
+  CoinMessageHandler *handler = nullptr, CoinMessages *messages = nullptr);
 
 /** Print the final status line (and close the table if one was opened).
  *  Shared implementation used by both ClpLpEventHandler::printFinalStatus()
@@ -138,11 +137,13 @@ CLPLIB_EXPORT void printFinalStatus(ClpLpPhaseState &state, ClpSimplex *model,
 } // namespace ClpLpTable
 
 // ─── ClpLpEventHandler ────────────────────────────────────────────────────────
-// ClpEventHandler that drives a unified LP+Idiot+Sprint progress table.
+// ClpEventHandler that drives a unified LP+Idiot+Sprint progress table: it
+// decides when to print a row and sends it as a message. Rows for Idiot and
+// Sprint (endOfIdiotIteration, endOfSprintPass) show from log level 2.
 //
-// Install on a ClpSimplex model via passInEventHandler() (Clp clones it).
-// Always pair with a ClpLpMsgHandler installed as the model's message handler
-// so that Idiot and Sprint messages appear as rows in the same table.
+// Install on a ClpSimplex model via passInEventHandler() (Clp clones it),
+// with a ClpLpMsgHandler as the model's message handler, and switch the
+// model to the tabular style with newLanguage(CoinMessages::en_tabular).
 //
 // Usage:
 //   auto state = std::make_shared<ClpLpPhaseState>();
@@ -152,11 +153,13 @@ CLPLIB_EXPORT void printFinalStatus(ClpLpPhaseState &state, ClpSimplex *model,
 //   bool msgOldDefault;
 //   CoinMessageHandler *savedMsg = model->pushMessageHandler(&msgH, msgOldDefault);
 //   model->passInEventHandler(&evtH);
+//   model->newLanguage(CoinMessages::en_tabular);
 //   auto *evtClone = dynamic_cast<ClpLpEventHandler *>(model->eventHandler());
 //   ... model->initialSolve() ...
 //   if (evtClone) evtClone->printFinalStatus(numInts, numFrac);
 //   model->popMessageHandler(savedMsg, msgOldDefault);
 //   ClpEventHandler defEvt; model->passInEventHandler(&defEvt);
+//   model->newLanguage(CoinMessages::us_en);
 // ──────────────────────────────────────────────────────────────────────────────
 class CLPLIB_EXPORT ClpLpEventHandler : public ClpEventHandler {
 public:
@@ -195,33 +198,23 @@ private:
 
   void openTable();
   void printLpRow(int iter, double obj, double pInf, double dInf, double elapsed);
-  /** Force-print any pending (unshown) last Idiot/Sprint row. */
-  void flushPendingIdiotSprint();
+  void printPassRow(const char *phase, bool &seen, const ClpPassProgress &progress);
 };
 
 // ─── ClpLpMsgHandler ──────────────────────────────────────────────────────────
-// CoinMessageHandler that intercepts CLP_IDIOT_ITERATION (ext 30) and
-// CLP_SPRINT (ext 34), emitting them as "Idiot" / "Sprint" rows into the
-// unified LP table driven by ClpLpEventHandler.
-//
-// All other Clp messages are suppressed; detail-0 critical errors are forwarded.
-//
-// IMPORTANT: The Clp model's log level must NOT be set to 0 while Idiot is
-// active — Idiot checks the model log level before constructing messages at all.
+// The message handler for the tabular LP output. It prints every message to
+// the state's file at the state's log level, without the Clpnnnn prefix; the
+// language of the messages decides what each one looks like, or whether it
+// prints at all (en_tabular drops the messages that the table replaces).
 // ──────────────────────────────────────────────────────────────────────────────
 class CLPLIB_EXPORT ClpLpMsgHandler : public CoinMessageHandler {
 public:
   explicit ClpLpMsgHandler(std::shared_ptr<ClpLpPhaseState> state);
 
-  virtual int print() override;
   virtual CoinMessageHandler *clone() const override;
 
 private:
   std::shared_ptr<ClpLpPhaseState> s_;
-
-  void ensureTableOpen();
-  void printIdiotRow(int iter, double infeas, double obj, double elapsed);
-  void printSprintRow(int cumIters, double obj, double dInf, double elapsed);
 };
 
 // ─── ClpOutput ────────────────────────────────────────────────────────────────
