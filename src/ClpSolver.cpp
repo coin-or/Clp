@@ -1154,10 +1154,16 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
           lpState->lastPrintTime = lpState->startTime;
           lpState->title = "LP solve";
           ClpLpMsgHandler   lpMsgH(lpState);
-	  // Maybe user wanted old style messages
-	  int prefix = model_.messageHandler()->prefix();
-	  if ((prefix&512)!=0)
-	    lpMsgH.setPrefix(prefix); // ? prefix|255
+          // Same prefix as the model's handler; bit 512 (-messages oldStyle)
+          // selects the classic output
+          int prefix = model_.messageHandler()->prefix();
+          lpMsgH.setPrefix(prefix);
+          // The output style is the language of the messages: en_tabular
+          // gives the progress table, us_en the classic messages
+          const CoinMessages::Language lpSavedLanguage =
+            model2->messagesPointer()->language();
+          model2->newLanguage((prefix & 512) != 0 ? CoinMessages::us_en
+                                                  : CoinMessages::en_tabular);
           ClpLpEventHandler lpEvtH(lpState);
 	  // modify later
 	  lpEvtH.setModifyMsg(0);
@@ -1177,10 +1183,11 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
             // Print final LP status and close the table
             if (lpProg)
               lpProg->printFinalStatus();
-            // Restore handlers
+            // Restore handlers and language
             model2->popMessageHandler(lpSavedMsg, lpMsgOldDefault);
             ClpEventHandler defaultHandler;
             model2->passInEventHandler(&defaultHandler);
+            model2->newLanguage(lpSavedLanguage);
             lpProg = nullptr;
             if (usingAmpl) {
               double value = model2->getObjValue() * model2->getObjSense();
@@ -1368,10 +1375,12 @@ int ClpMain1(std::deque<std::string> inputQueue, AbcSimplex &model,
             }
 #endif
           } catch (CoinError e) {
-            // Clean up progress handler on error
+            // Clean up progress handlers and language on error
             if (lpProg) {
+              model2->popMessageHandler(lpSavedMsg, lpMsgOldDefault);
               ClpEventHandler defaultHandler;
               model2->passInEventHandler(&defaultHandler);
+              model2->newLanguage(lpSavedLanguage);
               lpProg = nullptr;
             }
             e.print();

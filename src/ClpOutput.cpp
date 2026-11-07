@@ -3,6 +3,7 @@
 
 #include "ClpOutput.hpp"
 #include "ClpInterior.hpp"
+#include "ClpMessage.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -238,6 +239,12 @@ int ClpProgressEventHandler::event(Event whichEvent)
 }
 
 // ─── ClpLpPhaseState helpers ──────────────────────────────────────────────────
+//
+// The table is printed as messages (CLP_TABLE_*), so its look comes from the
+// language of the messages: en_tabular gives the table, and in us_en these
+// messages are null and print nothing. The layout that depends on the
+// settings (UTF-8, compact) is passed in as values: the rules, the column
+// headings and the column separators.
 
 static std::string fmtTime(double t)
 {
@@ -253,38 +260,61 @@ static std::string fmtTime(double t)
   return buf;
 }
 
-static void lpPhaseOpenTable(ClpLpPhaseState &s)
+// Where the table's messages go: the state's handler and messages if set,
+// otherwise the model's.
+static CoinMessageHandler *tableHandler(const ClpLpPhaseState &s,
+  ClpSimplex *model)
 {
-  if (s.headerPrinted || !s.fp)
+  if (s.handler)
+    return s.handler;
+  return model ? model->messageHandler() : nullptr;
+}
+
+static CoinMessages *tableMessages(const ClpLpPhaseState &s, ClpSimplex *model)
+{
+  if (s.messages)
+    return s.messages;
+  return model ? model->messagesPointer() : nullptr;
+}
+
+static void lpPhaseOpenTable(ClpLpPhaseState &s, CoinMessageHandler *handler,
+  CoinMessages *messages)
+{
+  if (s.headerPrinted || !handler || !messages)
     return;
   const bool u8 = s.utf8;
+  std::string lead = "\n";
   if (!s.title.empty())
-    fprintf(s.fp, "\n%s\n\n", CoinTable::phaseStart(s.title, u8).c_str());
-  else
-    fprintf(s.fp, "\n");
+    lead += CoinTable::phaseStart(s.title, u8) + "\n\n";
   const CoinTable tbl = makeLpTable(s.utf8, s.compact);
-  fprintf(s.fp, "%s\n", tbl.sepLine(CoinTable::Top).c_str());
-  fprintf(s.fp, "%s\n", tbl.headerLine().c_str());
-  fprintf(s.fp, "%s\n", tbl.sepLine(CoinTable::Middle).c_str());
-  fflush(s.fp);
+  handler->message(CLP_TABLE_HEADER, *messages)
+    << lead << tbl.sepLine(CoinTable::Top) << tbl.headerLine()
+    << tbl.sepLine(CoinTable::Middle) << CoinMessageEol;
   s.headerPrinted = true;
 }
 
-static void lpPhaseRow(ClpLpPhaseState &s, const char *phase, int iter,
-  double obj, double pInf, double dInf, double elapsed)
+static void lpPhaseRow(ClpLpPhaseState &s, CoinMessageHandler *handler,
+  CoinMessages *messages, const char *phase, int iter, double obj,
+  double pInf, double dInf, double elapsed)
 {
-  if (!s.fp)
+  if (!handler || !messages)
     return;
   const char *bar = s.compact ? " " : (s.utf8 ? " \xe2\x94\x82 " : " | ");
-  const std::string tbuf = fmtTime(elapsed);
-  fprintf(s.fp, "  %-*s%s%*d%s%*.6e%s%*.4e%s%*.4e%s%*s\n",
-    LP_W_PHASE, phase, bar,
-    LP_W_ITER, iter, bar,
-    LP_W_OBJ, obj, bar,
-    LP_W_PINF, (pInf > 0.0 ? pInf : 0.0), bar,
-    LP_W_DINF, (dInf > 0.0 ? dInf : 0.0), bar,
-    LP_W_TIME, tbuf.c_str());
-  fflush(s.fp);
+  handler->message(CLP_TABLE_ROW, *messages)
+    << phase << bar << iter << bar << obj << bar
+    << (pInf > 0.0 ? pInf : 0.0) << bar
+    << (dInf > 0.0 ? dInf : 0.0) << bar
+    << fmtTime(elapsed) << CoinMessageEol;
+}
+
+static const char *lpPhaseName(int algo)
+{
+  switch (algo) {
+  case -1: return "Dual";
+  case  1: return "Primal";
+  case  2: return "Barrier";
+  default: return "LP";
+  }
 }
 
 // ─── ClpLpEventHandler ────────────────────────────────────────────────────────
@@ -302,53 +332,56 @@ ClpEventHandler *ClpLpEventHandler::clone() const
 
 void ClpLpEventHandler::openTable()
 {
-  lpPhaseOpenTable(*s_);
+  lpPhaseOpenTable(*s_, tableHandler(*s_, model_), tableMessages(*s_, model_));
 }
 
 void ClpLpEventHandler::printLpRow(int iter, double obj, double pInf,
   double dInf, double elapsed)
 {
   const int algo = model_ ? model_->algorithm() : 0;
-  const char *phase;
-  switch (algo) {
-  case -1: phase = "Dual";    break;
-  case  1: phase = "Primal";  break;
-  case  2: phase = "Barrier"; break;
-  default: phase = "LP";      break;
-  }
-  lpPhaseRow(*s_, phase, iter, obj, pInf, dInf, elapsed);
+  lpPhaseRow(*s_, tableHandler(*s_, model_), tableMessages(*s_, model_),
+    lpPhaseName(algo), iter, obj, pInf, dInf, elapsed);
 }
 
-static void flushPendingIdiotSprintState(ClpLpPhaseState &s)
+/*
+  A row for an Idiot iteration or a Sprint pass. These show from log level 2
+  up, one row for each (there are at most a few dozen of them, unlike
+  simplex iterations).
+*/
+void ClpLpEventHandler::printPassRow(const char *phase, bool &seen,
+  const ClpPassProgress &progress)
 {
-  if (!s.fp)
+  if (s_->logLevel < 2 || !s_->fp)
     return;
-  if (s.idiotPending) {
-    lpPhaseRow(s, "Idiot", s.lastIdiotIter,
-      s.lastIdiotObj, s.lastIdiotInfeas, 0.0, s.lastIdiotTime);
-    s.idiotPending = false;
-    s.lastPrintTime = CoinWallclockTime();
-  }
-  if (s.sprintPending) {
-    lpPhaseRow(s, "Sprint", s.lastSprintCumIters,
-      s.lastSprintObj, 0.0, s.lastSprintDInf, s.lastSprintTime);
-    s.sprintPending = false;
-    s.lastPrintTime = CoinWallclockTime();
-  }
-}
-
-void ClpLpEventHandler::flushPendingIdiotSprint()
-{
-  flushPendingIdiotSprintState(*s_);
+  const double now = CoinWallclockTime();
+  seen = true;
+  openTable();
+  lpPhaseRow(*s_, tableHandler(*s_, model_), tableMessages(*s_, model_),
+    phase, progress.iteration, progress.objective,
+    progress.primalInfeasibility, progress.dualInfeasibility,
+    now - s_->startTime);
+  s_->lastPrintTime = now;
 }
 
 int ClpLpEventHandler::eventWithInfo(Event whichEvent, void *info)
 {
-  if (whichEvent == endOfBarrierIteration && info) {
-    const ClpInterior *barrier = static_cast<const ClpInterior *>(info);
+  if (!info)
+    return -1;
+  if (whichEvent == endOfBarrierIteration) {
+    // The barrier model has no ClpSimplex to take the handler and messages
+    // from, so use its own (it's a copy of the LP model, same language).
+    ClpInterior *barrier = static_cast<ClpInterior *>(info);
     ClpLpTable::printRow(*s_, "Barrier", barrier->numberIterations(),
       barrier->objectiveValue(), barrier->sumPrimalInfeasibilities(),
-      barrier->sumDualInfeasibilities());
+      barrier->sumDualInfeasibilities(),
+      s_->handler ? s_->handler : barrier->messageHandler(),
+      s_->messages ? s_->messages : barrier->messagesPointer());
+  } else if (whichEvent == endOfIdiotIteration) {
+    printPassRow("Idiot", s_->idiotSeen,
+      *static_cast<const ClpPassProgress *>(info));
+  } else if (whichEvent == endOfSprintPass) {
+    printPassRow("Sprint", s_->sprintSeen,
+      *static_cast<const ClpPassProgress *>(info));
   }
   return -1;
 }
@@ -365,10 +398,9 @@ int ClpLpEventHandler::event(Event whichEvent)
   const double elapsed = now - s_->startTime;
 
   if (!s_->lpStarted) {
-    // First LP endOfIteration event: flush any unshown last Idiot/Sprint row,
-    // open the table if it wasn't already opened by Idiot/Sprint.
+    // First LP endOfIteration event: open the table if Idiot or Sprint
+    // haven't already.
     s_->lpStarted = true;
-    flushPendingIdiotSprint();
     openTable();
     // Print the first row with actual iteration count (not fake 0,
     // since this event fires after the first iteration has completed).
@@ -391,8 +423,10 @@ int ClpLpEventHandler::event(Event whichEvent)
     const CoinTable tbl = makeLpTable(s_->utf8, s_->compact);
     const int w = tbl.totalWidth();
     const std::string rule = CoinTable::sectionRule("restart", s_->utf8, w, w / 3);
-    fprintf(s_->fp, "  %s\n", rule.c_str());
-    fflush(s_->fp);
+    CoinMessageHandler *handler = tableHandler(*s_, model_);
+    CoinMessages *messages = tableMessages(*s_, model_);
+    if (handler && messages)
+      handler->message(CLP_TABLE_RULE, *messages) << rule << CoinMessageEol;
     //s_->lastPrintIter = -1;
     //s_->lastPrintTime = now;
   }
@@ -452,6 +486,10 @@ void printFinalStatus(ClpLpPhaseState &s, ClpSimplex *model,
 {
   if (s.logLevel <= 0 || !s.fp)
     return;
+  CoinMessageHandler *handler = tableHandler(s, model);
+  CoinMessages *messages = tableMessages(s, model);
+  if (!handler || !messages)
+    return;
 
   const bool u8 = s.utf8;
   const double elapsed = CoinWallclockTime() - s.startTime;
@@ -461,7 +499,6 @@ void printFinalStatus(ClpLpPhaseState &s, ClpSimplex *model,
   // presolve with 0 simplex iterations), print a compact single-line summary
   // without opening the full iteration table.
   if (!s.headerPrinted) {
-    flushPendingIdiotSprintState(s);
     if (!model)
       return;
     const char *baseStatus = "Unknown";
@@ -511,44 +548,34 @@ void printFinalStatus(ClpLpPhaseState &s, ClpSimplex *model,
           statusStr.c_str(), CoinTable::dashSep(u8),
           model->objectiveValue(), tStr.c_str());
     }
+    std::string lead;
     if (!s.title.empty())
-      fprintf(s.fp, "\n%s\n", CoinTable::phaseStart(s.title, u8).c_str());
+      lead = "\n" + CoinTable::phaseStart(s.title, u8) + "\n";
     appendRacingWinner(summary, sizeof(summary), s, u8);
-    fprintf(s.fp, "%s\n", CoinTable::phaseEnd(summary, u8).c_str());
-    fflush(s.fp);
+    handler->message(CLP_TABLE_SUMMARY, *messages)
+      << lead << CoinTable::phaseEnd(summary, u8) << CoinMessageEol;
     return;
   }
 
-  // Intermediate output was printed — flush any unshown Idiot/Sprint row,
-  // print the final LP row if it was skipped, then close the table.
-  flushPendingIdiotSprintState(s);
-
+  // Intermediate output was printed: print the final LP row if it was
+  // skipped, then close the table.
   const CoinTable tbl = makeLpTable(u8, s.compact);
 
   if (s.lpStarted && model) {
     const int iters = std::max(model->numberIterations(), s.maxIterSeen);
     if (s.lastPrintIter < iters) {
-      const int algo = model->algorithm();
-      const char *phase;
-      switch (algo) {
-      case -1: phase = "Dual";    break;
-      case  1: phase = "Primal";  break;
-      case  2: phase = "Barrier"; break;
-      default: phase = "LP";      break;
-      }
       const double now = CoinWallclockTime();
-      lpPhaseRow(s, phase, iters, model->objectiveValue(),
+      lpPhaseRow(s, handler, messages, lpPhaseName(model->algorithm()),
+        iters, model->objectiveValue(),
         model->sumPrimalInfeasibilities(),
         model->sumDualInfeasibilities(), now - s.startTime);
     }
   }
 
-  fprintf(s.fp, "%s\n", tbl.sepLine(CoinTable::Bottom).c_str());
-
   if (!model) {
-    fprintf(s.fp, "\n%s\n",
-      CoinTable::phaseEnd("LP complete", u8).c_str());
-    fflush(s.fp);
+    handler->message(CLP_TABLE_END, *messages)
+      << tbl.sepLine(CoinTable::Bottom)
+      << CoinTable::phaseEnd("LP complete", u8) << CoinMessageEol;
     return;
   }
 
@@ -593,29 +620,36 @@ void printFinalStatus(ClpLpPhaseState &s, ClpSimplex *model,
       model->objectiveValue(), iters, tStr.c_str());
   }
   appendRacingWinner(summary, sizeof(summary), s, u8);
-  fprintf(s.fp, "\n%s\n", CoinTable::phaseEnd(summary, u8).c_str());
-  fflush(s.fp);
+  handler->message(CLP_TABLE_END, *messages)
+    << tbl.sepLine(CoinTable::Bottom) << CoinTable::phaseEnd(summary, u8)
+    << CoinMessageEol;
 }
 
-void printRow(ClpLpPhaseState &s, const char *phaseLabel, int iter,
-  double obj, double pInf, double dInf)
+void printRow(ClpLpPhaseState &state, const char *phaseLabel, int iter,
+  double obj, double pInf, double dInf, CoinMessageHandler *handler,
+  CoinMessages *messages)
 {
-  std::lock_guard<std::mutex> lock(s.mu);
-  if (s.logLevel <= 0 || !s.fp)
+  std::lock_guard<std::mutex> lock(state.mu);
+  if (state.logLevel <= 0 || !state.fp)
     return;
+  if (!handler)
+    handler = state.handler;
+  if (!messages)
+    messages = state.messages;
 
   const double now = CoinWallclockTime();
-  const double elapsed = now - s.startTime;
+  const double elapsed = now - state.startTime;
 
-  if (!s.lpStarted) {
+  if (!state.lpStarted) {
     // First row from any racing config: open the table (mirrors the
     // sequential path always showing the first LP row) and print it
     // unconditionally, regardless of timeFreq.
-    s.lpStarted = true;
-    lpPhaseOpenTable(s);
-    lpPhaseRow(s, phaseLabel, iter, obj, pInf, dInf, elapsed);
-    s.lastPrintTime = now;
-    s.lastPrintIter = iter;
+    state.lpStarted = true;
+    lpPhaseOpenTable(state, handler, messages);
+    lpPhaseRow(state, handler, messages, phaseLabel, iter, obj, pInf, dInf,
+      elapsed);
+    state.lastPrintTime = now;
+    state.lastPrintIter = iter;
     return;
   }
 
@@ -623,11 +657,12 @@ void printRow(ClpLpPhaseState &s, const char *phaseLabel, int iter,
   // whichever config happens to report once the interval has elapsed gets
   // to print, so the table stays as compact as the sequential one instead
   // of every thread printing independently.
-  const bool doTime = (s.timeFreq > 0.0 && now - s.lastPrintTime >= s.timeFreq);
+  const bool doTime = (state.timeFreq > 0.0 && now - state.lastPrintTime >= state.timeFreq);
   if (doTime) {
-    lpPhaseRow(s, phaseLabel, iter, obj, pInf, dInf, elapsed);
-    s.lastPrintTime = now;
-    s.lastPrintIter = iter;
+    lpPhaseRow(state, handler, messages, phaseLabel, iter, obj, pInf, dInf,
+      elapsed);
+    state.lastPrintTime = now;
+    state.lastPrintIter = iter;
   }
 }
 
@@ -639,9 +674,11 @@ ClpLpMsgHandler::ClpLpMsgHandler(std::shared_ptr<ClpLpPhaseState> state)
   : CoinMessageHandler()
   , s_(std::move(state))
 {
-  // Leave at 1 setting to 2 causes all sorts of problems
-  //setLogLevel(2); // Idiot maps handler logLevel 0<lv<3 → internal logLevel_=1 (bit-0 set → sends messages)
-                  // detail-2 Idiot/Sprint messages reach print() because 2 >= 2
+  // The model's log level: the language decides how each message looks,
+  // and its detail level whether it shows.
+  setLogLevel(s_->logLevel);
+  // Tables read better without the Clpnnnn prefix; set it to show it.
+  setPrefix(false);
   if (s_->fp)
     setFilePointer(s_->fp);
 }
@@ -649,137 +686,6 @@ ClpLpMsgHandler::ClpLpMsgHandler(std::shared_ptr<ClpLpPhaseState> state)
 CoinMessageHandler *ClpLpMsgHandler::clone() const
 {
   return new ClpLpMsgHandler(*this);
-}
-
-void ClpLpMsgHandler::ensureTableOpen()
-{
-  lpPhaseOpenTable(*s_);
-}
-
-void ClpLpMsgHandler::printIdiotRow(int iter, double infeas, double obj,
-  double elapsed)
-{
-  ensureTableOpen();
-  lpPhaseRow(*s_, "Idiot", iter, obj, infeas, 0.0, elapsed);
-  s_->lastPrintTime = CoinWallclockTime();
-}
-
-void ClpLpMsgHandler::printSprintRow(int cumIters, double obj, double dInf,
-  double elapsed)
-{
-  ensureTableOpen();
-  lpPhaseRow(*s_, "Sprint", cumIters, obj, 0.0, dInf, elapsed);
-  s_->lastPrintTime = CoinWallclockTime();
-}
-
-int ClpLpMsgHandler::print()
-{
-  if (s_->logLevel <= 0 || !s_->fp)
-    return 0;
-
-  const int ext = currentMessage().externalNumber();
-
-  // CLP_SIMPLEX_PERTURB (ext 14): one-time diagnostic, print before table
-  if (ext == 14) {
-    // Parse: "Perturbing problem by X% of Y - largest nonzero change Z (W%) - largest zero change V"
-    double pct = 0.0, base = 0.0;
-    if (sscanf(messageBuffer(), "%*s Perturbing problem by %lf%% of %lf", &pct, &base) >= 2) {
-      fprintf(s_->fp, "  Perturbation: %.4g%% of %.6g\n", pct, base);
-    }
-    return 0;
-  }
-
-  // CLP_IDIOT_ITERATION (ext 30):
-  //   format: "%d infeas %g, obj %g - mu %g, its %d, %d interior"
-  if (ext == 30) {
-    int iterNum = 0, its = 0, n = 0;
-    double infeas = 0.0, obj = 0.0, mu = 0.0;
-    if (sscanf(messageBuffer(), "%*s %d infeas %lf, obj %lf - mu %lf, its %d, %d interior",
-          &iterNum, &infeas, &obj, &mu, &its, &n) >= 3) {
-      const double elapsed = CoinWallclockTime() - s_->startTime;
-      // Always store latest data for force-print in flushPendingIdiotSprint()
-      s_->lastIdiotIter = iterNum;
-      s_->lastIdiotInfeas = infeas;
-      s_->lastIdiotObj = obj;
-      s_->lastIdiotTime = elapsed;
-      // Print on first Idiot row, or when time threshold elapsed
-      const bool isFirst = !s_->idiotSeen;
-      s_->idiotSeen = true;
-      const bool doTime = (s_->timeFreq <= 0.0
-        || CoinWallclockTime() - s_->lastPrintTime >= s_->timeFreq);
-      if (isFirst || doTime) {
-        printIdiotRow(iterNum, infeas, obj, elapsed);
-        s_->idiotPending = false;
-      } else {
-        s_->idiotPending = true;
-      }
-    }
-    return 0; // suppress raw output
-  }
-  // See if after postsolve
-  // CLP_INTERVAL_TIMING (ext 33)
-  if (ext == 33) {
-    if (strstr(messageBuffer(),"Postsolve")) {
-      if (s_->fp) {
-	fprintf(s_->fp,"  After Postsolve\n");
-	fflush(s_->fp);
-      }
-    }
-  }
-  // CLP_SPRINT (ext 34):
-  //   format: "Pass %d took %d iterations, objective %g, dual infeasibilities %g( %d)..."
-  if (ext == 34) {
-    int sprintPass = 0, iters = 0, numNeg = 0;
-    double obj = 0.0, dInf = 0.0;
-    if (sscanf(messageBuffer(),
-          "%*s Pass %d took %d iterations, objective %lf, dual infeasibilities %lf( %d)",
-          &sprintPass, &iters, &obj, &dInf, &numNeg) >= 3) {
-      s_->sprintCumIters += iters;
-      const double elapsed = CoinWallclockTime() - s_->startTime;
-      s_->lastSprintCumIters = s_->sprintCumIters;
-      s_->lastSprintObj = obj;
-      s_->lastSprintDInf = dInf;
-      s_->lastSprintTime = elapsed;
-      // Print on first Sprint row, or when time threshold elapsed
-      const bool isFirst = !s_->sprintSeen;
-      s_->sprintSeen = true;
-      const bool doTime = (s_->timeFreq <= 0.0
-        || CoinWallclockTime() - s_->lastPrintTime >= s_->timeFreq);
-      if (isFirst || doTime) {
-        printSprintRow(s_->sprintCumIters, obj, dInf, elapsed);
-        s_->sprintPending = false;
-      } else {
-        s_->sprintPending = true;
-      }
-    }
-    return 0; // suppress raw output
-  }
-
-  // CLP_BARRIER_ITERATION (ext 35):
-  // format:"%d Primal %g Dual %g Complementarity %g - %d fixed, rank %d"
-  // do others as well
-  if (ext >= 35 && ext <= 59) {
-    // Much later do pretty table - for now just out
-    //return CoinMessageHandler::print();
-    if (s_->fp) {
-      // Skip the 8-char "Clp0NNNI" prefix; print as data, never as a
-      // format string (messages can be long and may contain '%').
-      const char *msg = messageBuffer();
-      if (std::strlen(msg) > 8)
-        msg += 8;
-      fprintf(s_->fp, "%s\n", msg);
-      fflush(s_->fp);
-      //printf(temp,"%s\n");
-    }
-    return 0;
-  }
-
-  // Forward detail-0 critical errors; suppress everything else.
-  // Messages with ext 0-6 (simplex status/progress) and ext 32 (timing)
-  // are replaced by the structured LP progress table.
-  if (currentMessage().detail() == 0)
-    return CoinMessageHandler::print();
-  return 0;
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -991,9 +897,12 @@ void ClpLpEventHandler::printPresolveStats()
 {
   // Print presolve stats
   if (model_ && model_->presolveRows() >= 0 && s_->origRows > 0) {
-    fprintf(s_->fp, "  CLP presolve: %d rows, %d cols → %d rows, %d cols (%.2fs)\n",
-	    s_->origRows, s_->origCols,
-	    model_->presolveRows(), model_->presolveCols(),
-	    model_->presolveTime());
+    CoinMessageHandler *handler = tableHandler(*s_, model_);
+    CoinMessages *messages = tableMessages(*s_, model_);
+    if (handler && messages)
+      handler->message(CLP_PRESOLVE_SUMMARY, *messages)
+        << s_->origRows << s_->origCols
+        << model_->presolveRows() << model_->presolveCols()
+        << model_->presolveTime() << CoinMessageEol;
   }
 }

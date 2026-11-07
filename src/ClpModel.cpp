@@ -2901,6 +2901,7 @@ void ClpModel::setDefaultMessageHandler()
 void ClpModel::newLanguage(CoinMessages::Language language)
 {
   messages_ = ClpMessage(language);
+  coinMessages_ = CoinMessage(language);
 }
 #ifndef SLIM_NOIO
 // Read an mps file from the given filename
