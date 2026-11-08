@@ -333,6 +333,21 @@ static int countCostedSlacks(OsiSolverInterface *model)
     slackStart = -1;
   return slackStart;
 }
+#ifndef OSI_IDIOT
+/*
+  Tell the event handler about an Idiot iteration (the tabular LP output can
+  show it as a table row).
+*/
+static void idiotProgress(ClpSimplex *model, int iteration, double objective,
+  double infeasibility)
+{
+  ClpEventHandler *handler = model ? model->eventHandler() : NULL;
+  if (handler) {
+    ClpPassProgress progress = { iteration, objective, infeasibility, 0.0 };
+    handler->eventWithInfo(ClpEventHandler::endOfIdiotIteration, &progress);
+  }
+}
+#endif
 bool Idiot::stopRequested()
 {
 #ifndef OSI_IDIOT
@@ -868,6 +883,9 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
     for (i = 0; i < nrows; i++)
       rowsol[i] += rowsol2[i];
   }
+#ifndef OSI_IDIOT
+  idiotProgress(model_, iteration, lastResult.objval, lastResult.infeas);
+#endif
   if ( ((logLevel_ & 1) != 0) && (CoinWallclockTime()-lastStatusUpdate_ > minIntervalStatusUpdate_) ) {
 #ifndef OSI_IDIOT
     if (!handler) {
@@ -945,6 +963,9 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
         maxInfeasibility = std::max(maxInfeasibility, infeasibility);
       }
     }
+#ifndef OSI_IDIOT
+    idiotProgress(model_, iteration, result.objval, result.infeas);
+#endif
     if ( ((logLevel_ & 1) != 0) && (CoinWallclockTime()-lastStatusUpdate_ > minIntervalStatusUpdate_) ) {
 #ifndef OSI_IDIOT
       if (!handler) {
@@ -953,15 +974,9 @@ void Idiot::solve2(CoinMessageHandler *handler, const CoinMessages *messages)
           iteration, result.infeas, result.objval, mu, result.iteration, n);
 #ifndef OSI_IDIOT
       } else {
-	// I don't understand what has been done to log levels
-	// So Cheat
-	int level = handler->logLevel();
-	if (level==1)
-	  handler->setLogLevel(2);
         handler->message(CLP_IDIOT_ITERATION, *messages)
           << iteration << result.infeas << result.objval << mu << result.iteration << n
           << CoinMessageEol;
-	handler->setLogLevel(level);
       }
 #endif
       lastStatusUpdate_ = CoinWallclockTime();

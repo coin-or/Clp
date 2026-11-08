@@ -23,6 +23,20 @@ User can derive and construct from CbcModel  - not pretty
 
 */
 
+/** Progress of an Idiot iteration or a Sprint pass, passed to
+    ClpEventHandler::eventWithInfo() with endOfIdiotIteration and
+    endOfSprintPass. The return code of those events is ignored.
+*/
+struct ClpPassProgress {
+  /// Idiot's major iteration, or Sprint's total simplex iterations so far
+  int iteration;
+  double objective;
+  /// Idiot's infeasibility, or Sprint's sum of artificials
+  double primalInfeasibility;
+  /// Sprint's sum of dual infeasibilities (0 for Idiot)
+  double dualInfeasibility;
+};
+
 class CLPLIB_EXPORT ClpEventHandler {
 
 public:
@@ -75,7 +89,9 @@ public:
     noTheta, // At end (because no pivot)
     barrierCheckpoint, // cancellation only; no progress row
     endOfBarrierIteration, // eventWithInfo: ClpInterior* (valid during callback)
-    idiotCheckpoint // cancellation only; no progress row
+    idiotCheckpoint, // cancellation only; no progress row
+    endOfIdiotIteration, // eventWithInfo: ClpPassProgress*; progress only
+    endOfSprintPass // eventWithInfo: ClpPassProgress*; progress only
   };
   /**@name Virtual method that the derived classes should provide.
       The base class instance does nothing and as event() is only useful method

@@ -336,6 +336,14 @@ int ClpRacingSolver::solve()
     ownTableState = true;
   }
 
+  // Racing rows are printed without a model, so give the table the
+  // original model's message handler and messages (whose language decides
+  // whether the table shows).
+  if (tableState && !tableState->handler) {
+    tableState->handler = model_->messageHandler();
+    tableState->messages = model_->messagesPointer();
+  }
+
   double startTime = CoinGetTimeOfDay();
   std::vector<std::exception_ptr> failures(nThreads);
 

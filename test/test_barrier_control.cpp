@@ -377,6 +377,12 @@ int main(int argc, char **argv)
       state->logLevel = 1;
       state->timeFreq = 0;
       state->startTime = CoinWallclockTime();
+      // The table is printed as messages in the tabular style, through a
+      // handler that writes to the log
+      ClpLpMsgHandler msgHandler(state);
+      bool oldDefault;
+      CoinMessageHandler *savedHandler = m.pushMessageHandler(&msgHandler, oldDefault);
+      m.newLanguage(CoinMessages::en_tabular);
       ClpLpEventHandler handler(state);
       m.passInEventHandler(&handler);
       ClpRacingSolver racer(&m, 2);
@@ -387,6 +393,7 @@ int main(int argc, char **argv)
       racer.addConfig(stopped, [](ClpSimplex *clone) { clone->setMaximumIterations(0); });
       require(racer.solve() == 0, "Barrier did not win against stopped competitor");
       require(std::string(racer.winnerName()) == "barrier", "Incorrect winner label");
+      m.popMessageHandler(savedHandler, oldDefault);
       std::rewind(log);
       char text[1024];
       bool found = false;
