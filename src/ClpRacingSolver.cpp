@@ -63,6 +63,31 @@ inline void racing_set_openblas_threads(int) {}
 // sequential table, per-config chatter is not multiplied by nThreads.
 namespace {
 
+void solveRacingConfig(ClpSimplex *model, ClpSolve config, bool warmStart)
+{
+  if (warmStart) {
+    model->setWhatsChanged(0);
+    model->setProblemStatus(-1);
+  }
+  if (!warmStart || config.getPresolveType() != ClpSolve::presolveOff) {
+    model->initialSolve(config);
+    return;
+  }
+  if (config.getSolveType() == ClpSolve::useDual)
+    model->dual(0);
+  else if (config.getSolveType() == ClpSolve::usePrimal)
+    model->primal(1);
+  else
+    throw CoinError("Warm-start racing requires dual or primal simplex",
+      "solveRacingConfig", "ClpRacingSolver");
+  if (config.unscaledPostsolve() && !model->status()
+    && model->secondaryStatus() >= 2 && model->secondaryStatus() <= 4) {
+    const int iterations = model->numberIterations();
+    model->cleanup(model->secondaryStatus() == 3 ? 12 : 1);
+    model->setNumberIterations(iterations + model->numberIterations());
+  }
+}
+
 const char *configLabel(ClpSolve config)
 {
   switch (config.getSolveType()) {
@@ -246,7 +271,7 @@ int ClpRacingSolver::solve()
   if (nThreads <= 1) {
     if (!setupFns_.empty() && setupFns_[0])
       setupFns_[0](model_);
-    model_->initialSolve(configs_[0]);
+    solveRacingConfig(model_, configs_[0], warmStart_);
     if (model_->status() == 0) {
       winnerIndex_ = 0;
       winnerIterations_ = model_->numberIterations();
@@ -326,7 +351,7 @@ int ClpRacingSolver::solve()
       RacingEventHandler handler(tableState, &abortFlag, label);
       clone->passInEventHandler(&handler);
       try {
-        clone->initialSolve(configs_[i]);
+        solveRacingConfig(clone, configs_[i], warmStart_);
       } catch (...) {
         failures[i] = std::current_exception();
         return;
@@ -352,6 +377,7 @@ int ClpRacingSolver::solve()
     const char *label;
     int index;
     std::exception_ptr *failure;
+    bool warmStart;
   };
 
   std::vector<ThreadArg> args(nThreads);
@@ -366,6 +392,7 @@ int ClpRacingSolver::solve()
     args[i].label = configLabel(configs_[i]);
     args[i].index = i;
     args[i].failure = &failures[i];
+    args[i].warmStart = warmStart_;
 
     pthread_create(&threads[i], nullptr, [](void *arg) -> void * {
       ThreadArg *a = static_cast<ThreadArg *>(arg);
@@ -375,7 +402,7 @@ int ClpRacingSolver::solve()
       RacingEventHandler handler(*a->tableState, a->abortFlag, a->label);
       clone->passInEventHandler(&handler);
       try {
-        clone->initialSolve(*a->config);
+        solveRacingConfig(clone, *a->config, a->warmStart);
       } catch (...) {
         *a->failure = std::current_exception();
         return nullptr;

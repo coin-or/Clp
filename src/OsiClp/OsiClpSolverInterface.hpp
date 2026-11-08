@@ -1162,6 +1162,26 @@ public:
   {
     solveOptions_ = options;
   }
+  /** Persistent policy for resolve(), independent of initialSolve().
+      ResolveDefault retains the existing hints and optimized simplex paths.
+      Explicit simplex methods override algorithm hints. Barrier always crosses
+      over to a basis; racing compares warm-start dual and primal simplex,
+      without the cold-start Idiot/Sprint portfolio. Specialized strong-branching
+      hot starts are not changed by this policy.
+  */
+  enum ResolveMethod {
+    ResolveDefault = 0,
+    ResolveDual,
+    ResolvePrimal,
+    ResolveBarrier,
+    ResolveRacing
+  };
+  void setResolveOptions(ResolveMethod method, const ClpSolve &options,
+    int racingThreads = 2, int perturbation = -1, int presolve = -1);
+  inline ResolveMethod resolveMethod() const
+  {
+    return resolveMethod_;
+  }
   /// Enable/disable LP racing for initialSolve (races dual vs primal variants)
   inline void setRacingLP(int numThreads)
   {
@@ -1494,6 +1514,11 @@ protected:
   mutable ClpDataSave saveData_;
   /// Options for initialSolve
   ClpSolve solveOptions_;
+  ClpSolve resolveOptions_;
+  ResolveMethod resolveMethod_ = ResolveDefault;
+  int resolveRacingThreads_ = 2;
+  int resolvePerturbation_ = -1;
+  int resolvePresolve_ = -1;
   /// Number of threads for LP racing (0 = disabled)
   int racingLPThreads_ = 0;
   /** Scaling option
