@@ -4491,8 +4491,9 @@ int ClpPackedMatrix::scale(ClpModel *model, ClpSimplex *simplex) const
           }
         }
       }
-      if (scalingMethod == 1 || scalingMethod == 2) {
-        finished = true;
+     if (scalingMethod == 1 || scalingMethod == 2 ||
+	  (scalingMethod == 3 && overallSmallest<1.0e-15)) { 
+         finished = true;
       } else if (savedOverallRatio == 0.0 && scalingMethod != 4) {
         savedOverallRatio = overallSmallest;
         scalingMethod = 4;
