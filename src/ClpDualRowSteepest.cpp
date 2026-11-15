@@ -894,10 +894,25 @@ void ClpDualRowSteepest::saveWeights(ClpSimplex *model, int mode)
       }
       // restore (a bit slow - but only every re-factorization)
       double *array = savedWeights_->denseVector();
+#ifndef NDEBUG
+      int nBadSeq=0;
+#endif
       for (i = 0; i < numberRows; i++) {
         int iSeq = which[i];
-        back[iSeq] = i;
+	if (iSeq>=0&&iSeq<numberRows+numberColumns) {
+	  back[iSeq] = i;
+#ifndef NDEBUG
+	} else {
+	  nBadSeq++;
+	  //printf("bad seq i=%d which[i]=%d\n",i,iSeq);
+#endif
+	}
       }
+#ifndef NDEBUG
+      if (nBadSeq) 
+	printf("%d bad sequence numbers in saved Steepest - investigate\n",
+	       nBadSeq);
+#endif
       int firstRow = 0;
       int lastRow = numberRows;
       if (mode == 7) {
