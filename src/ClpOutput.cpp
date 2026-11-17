@@ -4,6 +4,7 @@
 #include "ClpOutput.hpp"
 #include "ClpInterior.hpp"
 #include "ClpMessage.hpp"
+#include "ClpNonLinearCost.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -60,7 +61,8 @@ static std::string infNumber(double sum, int number)
   return buf;
 }
 
-// What a row shows for a simplex model in the middle of a solve
+// What a row shows for a simplex model in the middle of a solve: the same
+// values as Clp's classic status line (CLP_SIMPLEX_STATUS)
 struct LpRowValues {
   double obj;
   double pInf;
@@ -72,9 +74,20 @@ struct LpRowValues {
 static LpRowValues simplexRowValues(const ClpSimplex *model)
 {
   LpRowValues v;
-  v.obj = model->objectiveValue();
-  v.pInf = model->sumPrimalInfeasibilities();
-  v.nPInf = model->numberPrimalInfeasibilities();
+  const ClpNonLinearCost *nonLinearCost = model->nonLinearCost();
+  if (model->algorithm() > 0 && nonLinearCost) {
+    // The primal relaxes the bounds that are violated and puts a penalty on
+    // them in the costs, so the model's objective includes the penalty and
+    // its sum of primal infeasibilities is zero. The classic status line
+    // takes them from the nonlinear cost instead (ClpSimplexPrimal).
+    v.obj = nonLinearCost->feasibleReportCost();
+    v.pInf = nonLinearCost->sumInfeasibilities();
+    v.nPInf = nonLinearCost->numberInfeasibilities();
+  } else {
+    v.obj = model->objectiveValue();
+    v.pInf = model->sumPrimalInfeasibilities();
+    v.nPInf = model->numberPrimalInfeasibilities();
+  }
   v.dInf = model->sumDualInfeasibilities();
   v.nDInf = model->numberDualInfeasibilities();
   return v;
