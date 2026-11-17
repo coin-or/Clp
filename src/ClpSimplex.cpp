@@ -54,6 +54,7 @@ ClpSimplex::ClpSimplex(bool emptyMessages)
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(-COIN_DBL_MAX)
   , moreSpecialOptions_(2)
+  , moreSpecialOptions2_(0)
   , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(0)
@@ -179,6 +180,7 @@ ClpSimplex::ClpSimplex(const ClpModel *rhs,
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(-COIN_DBL_MAX)
   , moreSpecialOptions_(2)
+  , moreSpecialOptions2_(0)
   , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(0)
@@ -341,6 +343,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex *rhs,
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(-COIN_DBL_MAX)
   , moreSpecialOptions_(2)
+  , moreSpecialOptions2_(0)
   , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(rhs->vectorMode_)
@@ -2529,6 +2532,7 @@ ClpSimplex::ClpSimplex(const ClpSimplex &rhs, int scalingMode)
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(rhs.bestObjectiveValue_)
   , moreSpecialOptions_(2)
+  , moreSpecialOptions2_(0)
   , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(rhs.vectorMode_)
@@ -2640,6 +2644,7 @@ ClpSimplex::ClpSimplex(const ClpModel &rhs, int scalingMode)
   , rowPrimalSequence_(-2)
   , bestObjectiveValue_(-COIN_DBL_MAX)
   , moreSpecialOptions_(2)
+  , moreSpecialOptions2_(0)
   , blasNumThreads_(-1)
   , baseIteration_(0)
   , vectorMode_(0)
@@ -2769,6 +2774,7 @@ void ClpSimplex::gutsOfCopy(const ClpSimplex &rhs)
   dontFactorizePivots_ = rhs.dontFactorizePivots_;
   int numberRows2 = numberRows_ + numberExtraRows_;
   moreSpecialOptions_ = rhs.moreSpecialOptions_;
+  moreSpecialOptions2_ = 0; // as only used within a single solve
   blasNumThreads_ = rhs.blasNumThreads_;
   if ((whatsChanged_ & 1) != 0) {
     int numberTotal = numberColumns_ + numberRows2;
@@ -11731,6 +11737,8 @@ bool ClpSimplex::startPermanentArrays()
 int ClpSimplex::fathom(void *stuff)
 {
   assert(stuff);
+  // Say clean
+  moreSpecialOptions2_ = 0;
   ClpNodeStuff *info = reinterpret_cast< ClpNodeStuff * >(stuff);
   info->nNodes_ = 0;
   // say can declare optimal
@@ -13206,6 +13214,8 @@ ClpSimplex::doubleCheck()
 // Start Fast dual
 int ClpSimplex::startFastDual2(ClpNodeStuff *info)
 {
+  // Say clean
+  moreSpecialOptions2_ = 0;
   info->saveOptions_ = specialOptions_;
   assert((info->solverOptions_ & 65536) == 0);
   info->solverOptions_ |= 65536;
