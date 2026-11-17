@@ -35,6 +35,10 @@ struct ClpPassProgress {
   double primalInfeasibility;
   /// Sprint's sum of dual infeasibilities (0 for Idiot)
   double dualInfeasibility;
+  /// Number of primal infeasibilities (0 if not known: Idiot, Sprint)
+  int numberPrimalInfeasibilities;
+  /// Number of dual infeasibilities: Sprint's (0 for Idiot)
+  int numberDualInfeasibilities;
 };
 
 class CLPLIB_EXPORT ClpEventHandler {

@@ -343,7 +343,7 @@ static void idiotProgress(ClpSimplex *model, int iteration, double objective,
 {
   ClpEventHandler *handler = model ? model->eventHandler() : NULL;
   if (handler) {
-    ClpPassProgress progress = { iteration, objective, infeasibility, 0.0 };
+    ClpPassProgress progress = { iteration, objective, infeasibility, 0.0, 0, 0 };
     handler->eventWithInfo(ClpEventHandler::endOfIdiotIteration, &progress);
   }
 }

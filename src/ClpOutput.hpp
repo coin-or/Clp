@@ -54,7 +54,7 @@ private:
   int origNZ_;
 
   void printHeader() const;
-  void printRow(int iter, double obj, double pInf, double dInf, double elapsed, int algo) const;
+  void printRow(int iter, double elapsed, int algo) const;
 };
 
 // ─── ClpLpPhaseState ──────────────────────────────────────────────────────────
@@ -122,9 +122,17 @@ namespace ClpLpTable {
  *  "P+Idiot"). Opens the table on the first call from any thread. Only one
  *  row is printed per timeFreq interval *across all callers combined*,
  *  which naturally keeps racing's output as compact as the sequential
- *  table (only the "current leader" reports, one row at a time). */
+ *  table (only the "current leader" reports, one row at a time).
+ *  The row shows the sums of the infeasibilities but not their numbers. */
 CLPLIB_EXPORT void printRow(ClpLpPhaseState &state, const char *phaseLabel,
   int iter, double obj, double pInf, double dInf,
+  CoinMessageHandler *handler = nullptr, CoinMessages *messages = nullptr);
+
+/** The same for a simplex model in the middle of a solve: the row takes the
+ *  iteration, objective, and the sums and numbers of the infeasibilities
+ *  from the model, as Clp's classic status line (CLP_SIMPLEX_STATUS) does. */
+CLPLIB_EXPORT void printRow(ClpLpPhaseState &state, const char *phaseLabel,
+  const ClpSimplex *model,
   CoinMessageHandler *handler = nullptr, CoinMessages *messages = nullptr);
 
 /** Print the final status line (and close the table if one was opened).
@@ -197,7 +205,7 @@ private:
   std::shared_ptr<ClpLpPhaseState> s_;
 
   void openTable();
-  void printLpRow(int iter, double obj, double pInf, double dInf, double elapsed);
+  void printLpRow(int iter, double elapsed);
   void printPassRow(const char *phase, bool &seen, const ClpPassProgress &progress);
 };
 

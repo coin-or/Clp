@@ -24,17 +24,61 @@ bool ClpOutput::useCompact_ = true;
 
 // ─── LP progress table layout ─────────────────────────────────────────────────
 //
-//   Phase   |     Iter |       Objective |   Primal inf |    Dual inf |    Time
-//   ─────────┬──────────┬─────────────────┬──────────────┬──────────────┬─────────
-//   Dual    |     3123  |     3.709408e+01 |  1.7376e+02  |  2.8598e+14 |   5.0s
+//   ──────── ──────── ─────────────── ──────────────────── ──────────────────── ────────
+//   Phase        Iter       Objective  Primal inf    (num)    Dual inf    (num)     Time
+//   ──────── ──────── ─────────────── ──────────────────── ──────────────────── ────────
+//   Dual            0    1.267985e+03  1.7403e+04    (239)  1.0932e+03     (53)    0.020
+//
+// Primal inf and Dual inf are the sums of the infeasibilities, each followed
+// by their number in parentheses, as in the classic CLP_SIMPLEX_STATUS line.
+// The number is left out when it is not known (barrier, Idiot) or the sum
+// is zero.
 //
 // Column widths:
 static const int LP_W_PHASE = 8;
 static const int LP_W_ITER  = 8;
 static const int LP_W_OBJ   = 15;
-static const int LP_W_PINF  = 12;
-static const int LP_W_DINF  = 12;
+static const int LP_W_SUM   = 11; // sum of infeasibilities
+static const int LP_W_NUM   = 8;  // "(n)", the number of infeasibilities
+static const int LP_W_PINF  = LP_W_SUM + 1 + LP_W_NUM;
+static const int LP_W_DINF  = LP_W_SUM + 1 + LP_W_NUM;
 static const int LP_W_TIME  = 8;
+
+// A heading over the sum, and "(num)" over the number, in one column
+static std::string infHeading(const char *name)
+{
+  return std::string(name) + std::string(LP_W_NUM + 1 - 5, ' ') + "(num)";
+}
+
+// The number of infeasibilities as "(n)", or empty if it isn't shown
+static std::string infNumber(double sum, int number)
+{
+  if (!(sum > 0.0) || number <= 0)
+    return std::string();
+  char buf[32];
+  std::snprintf(buf, sizeof(buf), "(%d)", number);
+  return buf;
+}
+
+// What a row shows for a simplex model in the middle of a solve
+struct LpRowValues {
+  double obj;
+  double pInf;
+  int nPInf;
+  double dInf;
+  int nDInf;
+};
+
+static LpRowValues simplexRowValues(const ClpSimplex *model)
+{
+  LpRowValues v;
+  v.obj = model->objectiveValue();
+  v.pInf = model->sumPrimalInfeasibilities();
+  v.nPInf = model->numberPrimalInfeasibilities();
+  v.dInf = model->sumDualInfeasibilities();
+  v.nDInf = model->numberDualInfeasibilities();
+  return v;
+}
 
 static CoinTable makeLpTable(bool utf8, bool compact)
 {
@@ -42,8 +86,8 @@ static CoinTable makeLpTable(bool utf8, bool compact)
     { "Phase",      LP_W_PHASE, /*leftAlign=*/true },
     { "Iter",       LP_W_ITER  },
     { "Objective",  LP_W_OBJ   },
-    { "Primal inf", LP_W_PINF  },
-    { "Dual inf",   LP_W_DINF  },
+    { infHeading("Primal inf"), LP_W_PINF },
+    { infHeading("Dual inf"),   LP_W_DINF },
     { "Time",       LP_W_TIME  },
   }, utf8, /*indent=*/2, compact);
 }
@@ -110,10 +154,9 @@ void ClpProgressEventHandler::printHeader() const
   fflush(fp);
 }
 
-void ClpProgressEventHandler::printRow(int iter, double obj, double pInf,
-  double dInf, double elapsed, int algo) const
+void ClpProgressEventHandler::printRow(int iter, double elapsed, int algo) const
 {
-  if (!handler_)
+  if (!handler_ || !model_)
     return;
   FILE *fp = handler_->filePointer();
   if (!fp)
@@ -123,12 +166,17 @@ void ClpProgressEventHandler::printRow(int iter, double obj, double pInf,
   const char *bar = compact ? " " : (u8 ? " \xe2\x94\x82 " : " | ");
   char tbuf[16];
   std::snprintf(tbuf, sizeof(tbuf), "%.1fs", elapsed);
-  fprintf(fp, "  %-*s%s%*d%s%*.6e%s%*.4e%s%*.4e%s%*s\n",
+  const LpRowValues v = simplexRowValues(model_);
+  const double obj = v.obj, pInf = v.pInf, dInf = v.dInf;
+  const int nPInf = v.nPInf, nDInf = v.nDInf;
+  fprintf(fp, "  %-*s%s%*d%s%*.6e%s%*.4e %*s%s%*.4e %*s%s%*s\n",
     LP_W_PHASE, clpAlgoShortName(algo), bar,
     LP_W_ITER, iter, bar,
     LP_W_OBJ, obj, bar,
-    LP_W_PINF, (pInf > 0.0 ? pInf : 0.0), bar,
-    LP_W_DINF, (dInf > 0.0 ? dInf : 0.0), bar,
+    LP_W_SUM, (pInf > 0.0 ? pInf : 0.0),
+    LP_W_NUM, infNumber(pInf, nPInf).c_str(), bar,
+    LP_W_SUM, (dInf > 0.0 ? dInf : 0.0),
+    LP_W_NUM, infNumber(dInf, nDInf).c_str(), bar,
     LP_W_TIME, tbuf);
   fflush(fp);
 }
@@ -194,9 +242,7 @@ int ClpProgressEventHandler::event(Event whichEvent)
     shared_->headerPrinted = true;
     const int iter = model_->numberIterations();
     const double elapsed = CoinWallclockTime() - shared_->startTime;
-    printRow(iter, model_->objectiveValue(),
-      model_->sumPrimalInfeasibilities(),
-      model_->sumDualInfeasibilities(), elapsed, model_->algorithm());
+    printRow(iter, elapsed, model_->algorithm());
     shared_->lastPrintTime = elapsed;
     shared_->lastPrintIter = iter;
     return -1;
@@ -229,9 +275,7 @@ int ClpProgressEventHandler::event(Event whichEvent)
   const bool doForce = (shared_->lastPrintIter < 0);
 
   if (doIter || doTime || doForce) {
-    printRow(iter, model_->objectiveValue(),
-      model_->sumPrimalInfeasibilities(),
-      model_->sumDualInfeasibilities(), elapsed, model_->algorithm());
+    printRow(iter, elapsed, model_->algorithm());
     shared_->lastPrintTime = elapsed;
     shared_->lastPrintIter = iter;
   }
@@ -295,15 +339,15 @@ static void lpPhaseOpenTable(ClpLpPhaseState &s, CoinMessageHandler *handler,
 
 static void lpPhaseRow(ClpLpPhaseState &s, CoinMessageHandler *handler,
   CoinMessages *messages, const char *phase, int iter, double obj,
-  double pInf, double dInf, double elapsed)
+  double pInf, int nPInf, double dInf, int nDInf, double elapsed)
 {
   if (!handler || !messages)
     return;
   const char *bar = s.compact ? " " : (s.utf8 ? " \xe2\x94\x82 " : " | ");
   handler->message(CLP_TABLE_ROW, *messages)
     << phase << bar << iter << bar << obj << bar
-    << (pInf > 0.0 ? pInf : 0.0) << bar
-    << (dInf > 0.0 ? dInf : 0.0) << bar
+    << (pInf > 0.0 ? pInf : 0.0) << infNumber(pInf, nPInf) << bar
+    << (dInf > 0.0 ? dInf : 0.0) << infNumber(dInf, nDInf) << bar
     << fmtTime(elapsed) << CoinMessageEol;
 }
 
@@ -335,12 +379,14 @@ void ClpLpEventHandler::openTable()
   lpPhaseOpenTable(*s_, tableHandler(*s_, model_), tableMessages(*s_, model_));
 }
 
-void ClpLpEventHandler::printLpRow(int iter, double obj, double pInf,
-  double dInf, double elapsed)
+void ClpLpEventHandler::printLpRow(int iter, double elapsed)
 {
-  const int algo = model_ ? model_->algorithm() : 0;
+  if (!model_)
+    return;
+  const LpRowValues v = simplexRowValues(model_);
   lpPhaseRow(*s_, tableHandler(*s_, model_), tableMessages(*s_, model_),
-    lpPhaseName(algo), iter, obj, pInf, dInf, elapsed);
+    lpPhaseName(model_->algorithm()), iter, v.obj, v.pInf, v.nPInf,
+    v.dInf, v.nDInf, elapsed);
 }
 
 /*
@@ -358,7 +404,8 @@ void ClpLpEventHandler::printPassRow(const char *phase, bool &seen,
   openTable();
   lpPhaseRow(*s_, tableHandler(*s_, model_), tableMessages(*s_, model_),
     phase, progress.iteration, progress.objective,
-    progress.primalInfeasibility, progress.dualInfeasibility,
+    progress.primalInfeasibility, progress.numberPrimalInfeasibilities,
+    progress.dualInfeasibility, progress.numberDualInfeasibilities,
     now - s_->startTime);
   s_->lastPrintTime = now;
 }
@@ -404,9 +451,7 @@ int ClpLpEventHandler::event(Event whichEvent)
     openTable();
     // Print the first row with actual iteration count (not fake 0,
     // since this event fires after the first iteration has completed).
-    printLpRow(iter, model_->objectiveValue(),
-      model_->sumPrimalInfeasibilities(),
-      model_->sumDualInfeasibilities(), elapsed);
+    printLpRow(iter, elapsed);
     s_->lastPrintTime = now;
     s_->lastPrintIter = iter;
     return -1;
@@ -444,9 +489,7 @@ int ClpLpEventHandler::event(Event whichEvent)
   // Skip if old style printing
   if ((doIter || doTime || doForce) &&
       (model_->messageHandler()->prefix()&512)==0)  {
-    printLpRow(iter, model_->objectiveValue(),
-      model_->sumPrimalInfeasibilities(),
-      model_->sumDualInfeasibilities(), elapsed);
+    printLpRow(iter, elapsed);
     s_->lastPrintTime = now;
     s_->lastPrintIter = iter;
     //if (iter<lastIterZ)
@@ -567,8 +610,9 @@ void printFinalStatus(ClpLpPhaseState &s, ClpSimplex *model,
       const double now = CoinWallclockTime();
       lpPhaseRow(s, handler, messages, lpPhaseName(model->algorithm()),
         iters, model->objectiveValue(),
-        model->sumPrimalInfeasibilities(),
-        model->sumDualInfeasibilities(), now - s.startTime);
+        model->sumPrimalInfeasibilities(), model->numberPrimalInfeasibilities(),
+        model->sumDualInfeasibilities(), model->numberDualInfeasibilities(),
+        now - s.startTime);
     }
   }
 
@@ -625,8 +669,9 @@ void printFinalStatus(ClpLpPhaseState &s, ClpSimplex *model,
     << CoinMessageEol;
 }
 
-void printRow(ClpLpPhaseState &state, const char *phaseLabel, int iter,
-  double obj, double pInf, double dInf, CoinMessageHandler *handler,
+static void printRateLimitedRow(ClpLpPhaseState &state,
+  const char *phaseLabel, int iter, double obj, double pInf, int numberPInf,
+  double dInf, int numberDInf, CoinMessageHandler *handler,
   CoinMessages *messages)
 {
   std::lock_guard<std::mutex> lock(state.mu);
@@ -646,8 +691,8 @@ void printRow(ClpLpPhaseState &state, const char *phaseLabel, int iter,
     // unconditionally, regardless of timeFreq.
     state.lpStarted = true;
     lpPhaseOpenTable(state, handler, messages);
-    lpPhaseRow(state, handler, messages, phaseLabel, iter, obj, pInf, dInf,
-      elapsed);
+    lpPhaseRow(state, handler, messages, phaseLabel, iter, obj,
+      pInf, numberPInf, dInf, numberDInf, elapsed);
     state.lastPrintTime = now;
     state.lastPrintIter = iter;
     return;
@@ -659,11 +704,30 @@ void printRow(ClpLpPhaseState &state, const char *phaseLabel, int iter,
   // of every thread printing independently.
   const bool doTime = (state.timeFreq > 0.0 && now - state.lastPrintTime >= state.timeFreq);
   if (doTime) {
-    lpPhaseRow(state, handler, messages, phaseLabel, iter, obj, pInf, dInf,
-      elapsed);
+    lpPhaseRow(state, handler, messages, phaseLabel, iter, obj,
+      pInf, numberPInf, dInf, numberDInf, elapsed);
     state.lastPrintTime = now;
     state.lastPrintIter = iter;
   }
+}
+
+void printRow(ClpLpPhaseState &state, const char *phaseLabel, int iter,
+  double obj, double pInf, double dInf, CoinMessageHandler *handler,
+  CoinMessages *messages)
+{
+  printRateLimitedRow(state, phaseLabel, iter, obj, pInf, 0, dInf, 0,
+    handler, messages);
+}
+
+void printRow(ClpLpPhaseState &state, const char *phaseLabel,
+  const ClpSimplex *model, CoinMessageHandler *handler,
+  CoinMessages *messages)
+{
+  if (!model)
+    return;
+  const LpRowValues v = simplexRowValues(model);
+  printRateLimitedRow(state, phaseLabel, model->numberIterations(), v.obj,
+    v.pInf, v.nPInf, v.dInf, v.nDInf, handler, messages);
 }
 
 } // namespace ClpLpTable

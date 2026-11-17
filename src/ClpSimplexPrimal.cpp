@@ -459,7 +459,7 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
         {
           // progress for the tabular LP output
           ClpPassProgress progress = { numberIterations_, objectiveValue(),
-            0.0, sumNegative };
+            0.0, sumNegative, 0, numberNegative };
           eventHandler_->eventWithInfo(ClpEventHandler::endOfSprintPass,
             &progress);
         }
@@ -4243,7 +4243,7 @@ int ClpSimplexPrimal::lexSolve()
         {
           // progress for the tabular LP output
           ClpPassProgress progress = { numberIterations_, objectiveValue(),
-            0.0, sumNegative };
+            0.0, sumNegative, 0, numberNegative };
           eventHandler_->eventWithInfo(ClpEventHandler::endOfSprintPass,
             &progress);
         }

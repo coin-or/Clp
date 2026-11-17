@@ -155,9 +155,10 @@ static Clp_message en_tabular_messages[] = {
   // header block: lead-in (blank line, optional title), top rule, column
   // headings, middle rule
   { CLP_TABLE_HEADER, 66, 1, "%s%s\n%s\n%s" },
-  // phase, Iter, Objective, Primal inf, Dual inf, Time; the %s between the
-  // columns are the separators (spaces, or bars when not compact)
-  { CLP_TABLE_ROW, 67, 1, "  %-8s%s%8d%s%15.6e%s%12.4e%s%12.4e%s%8s" },
+  // phase, Iter, Objective, Primal inf and its number "(n)", Dual inf and
+  // its number, Time; the %s between the columns are the separators
+  // (spaces, or bars when not compact)
+  { CLP_TABLE_ROW, 67, 1, "  %-8s%s%8d%s%15.6e%s%11.4e %8s%s%11.4e %8s%s%8s" },
   { CLP_TABLE_RULE, 68, 1, "  %s" },
   // bottom rule, then the final status line
   { CLP_TABLE_END, 69, 1, "%s\n\n%s" },

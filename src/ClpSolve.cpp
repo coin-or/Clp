@@ -3071,7 +3071,7 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       if (model2->eventHandler()) {
         // progress for the tabular LP output
         ClpPassProgress progress = { totalIterations, small.objectiveValue(),
-          sumArtificials, sumNegative };
+          sumArtificials, sumNegative, 0, numberNegative };
         model2->eventHandler()->eventWithInfo(ClpEventHandler::endOfSprintPass,
           &progress);
       }

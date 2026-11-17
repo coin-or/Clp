@@ -110,9 +110,7 @@ public:
       return -1;
 
     const char *phase = std::strcmp(label_, "Barrier") == 0 ? "B+Cross" : label_;
-    ClpLpTable::printRow(*state_, phase, model_->numberIterations(),
-      model_->objectiveValue(), model_->sumPrimalInfeasibilities(),
-      model_->sumDualInfeasibilities());
+    ClpLpTable::printRow(*state_, phase, model_);
     return -1;
   }
 
