@@ -1966,6 +1966,8 @@ public:
   mutable int spareIntArray_[4];
   /// Spare double array for passing information [0]!=0 switches on
   mutable double spareDoubleArray_[4];
+  /// Deletes rows (just ClpMode::deleteRows plus a bit)
+  void deleteRows(int number, const int *which);
 
 protected:
   /// Allow OsiClp certain perks

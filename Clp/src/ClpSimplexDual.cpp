@@ -305,6 +305,18 @@ int ClpSimplexDual::startupSolve(int ifValuesPass, double *saveDuals, int startF
       }
     }
 
+    // Detect inverted column bounds - these arise when CBC creates a B&B node whose
+    // branching constraints are mutually infeasible (lower > upper). The nonLinearCost
+    // encoding assumes lower <= upper; violated bounds corrupt it and cause assertion
+    // failures in checkInfeasibilities. Return infeasible before any simplex work.
+    // Bounds within the primal tolerance are treated as equal (as in createRim).
+    for (int i = 0; i < numberColumns_; i++) {
+      if (columnLower_[i] > columnUpper_[i] + primalTolerance_) {
+        problemStatus_ = 1;
+        return 1;
+      }
+    }
+
     double objectiveChange;
     assert(!numberFake_);
     assert(numberChanged_ == 0);
@@ -2361,7 +2373,7 @@ updateDualBit(clpTempInfo &info)
       double value = reducedCost[iSequence] - theta * alphaI;
       reducedCost[iSequence] = value;
       //printf("xx %d %.18g\n",iSequence,reducedCost[iSequence]);
-      double mult = multiplier[iStatus - 1];
+      double mult = (iStatus > 0) ? multiplier[iStatus - 1] : 0.0;
       value *= mult;
       // skip if free
       if (value < -tolerance && iStatus > 0) {
@@ -2517,7 +2529,7 @@ int ClpSimplexDual::updateDualsInDual(CoinIndexedVector *rowArray,
             assert(iStatus > 0);
             reducedCost[iSequence] = value;
             //printf("xx %d %.18g\n",iSequence,reducedCost[iSequence]);
-            double mult = multiplier[iStatus - 1];
+            double mult = multiplier[iStatus + 1];
             value *= mult;
             // skip if free
             if (value < -tolerance && iStatus > 0) {
@@ -3229,6 +3241,8 @@ int ClpSimplexDual::changeBounds(int initialize,
               value *= multiplier;
             }
             upper_[iSequence] = value;
+            if (lower_[iSequence] > upper_[iSequence])
+              upper_[iSequence] = lower_[iSequence]; // clamp (safety net)
             setFakeBound(iSequence, ClpSimplexDual::noFake);
           }
         }
@@ -3253,6 +3267,8 @@ int ClpSimplexDual::changeBounds(int initialize,
           if (getFakeBound(iSequence) != ClpSimplexDual::noFake) {
             lower_[iSequence] = columnLower_[iSequence];
             upper_[iSequence] = columnUpper_[iSequence];
+            if (lower_[iSequence] > upper_[iSequence])
+              upper_[iSequence] = lower_[iSequence]; // clamp (safety net)
             setFakeBound(iSequence, ClpSimplexDual::noFake);
           }
         }
@@ -3260,6 +3276,8 @@ int ClpSimplexDual::changeBounds(int initialize,
           if (getFakeBound(iSequence + numberColumns_) != ClpSimplexDual::noFake) {
             lower_[iSequence + numberColumns_] = rowLower_[iSequence];
             upper_[iSequence + numberColumns_] = rowUpper_[iSequence];
+            if (lower_[iSequence + numberColumns_] > upper_[iSequence + numberColumns_])
+              upper_[iSequence + numberColumns_] = lower_[iSequence + numberColumns_]; // clamp (safety net)
             setFakeBound(iSequence + numberColumns_, ClpSimplexDual::noFake);
           }
         }
@@ -3272,6 +3290,14 @@ int ClpSimplexDual::changeBounds(int initialize,
         double lowerValue = lower_[iSequence];
         double upperValue = upper_[iSequence];
         double value = solution_[iSequence];
+        // Safety net: if inverted bounds somehow reach here despite the startupSolve
+        // pre-check, clamp and signal infeasibility rather than corrupting nonLinearCost.
+        if (lowerValue > upperValue) {
+          upper_[iSequence] = lowerValue;
+          if (lowerValue > upperValue + primalTolerance_)
+            problemStatus_ = 1;
+          continue;
+        }
         if (lowerValue > -largeValue_ || upperValue < largeValue_) {
           if (true || lowerValue - value > -0.5 * dualBound_ || upperValue - value < 0.5 * dualBound_) {
             if (fabs(lowerValue - value) <= fabs(upperValue - value)) {
@@ -3493,7 +3519,7 @@ dualColumn00(clpTempInfo &info)
   for (int i = 0; i < numberToDo; i++) {
     int iSequence = which[i];
     int wanted = (status[iSequence] & 3) - 1;
-    if (wanted) {
+    if (wanted > 0) {
       double mult = multiplier[wanted - 1];
       double alpha = work[i] * mult;
       if (alpha > 0.0) {
@@ -3620,7 +3646,7 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
     // No free or super basic
     // bestPossible will re recomputed if necessary
 #ifndef COIN_AVX2
-    double multiplier[] = { -1.0, 1.0 };
+    double multiplier[] = { 0.0, 0.0, -1.0, 1.0 };
 #else
     double multiplier[4] = { 0.0, 0.0, -1.0, 1.0 };
 #endif
@@ -3661,7 +3687,7 @@ int ClpSimplexDual::dualColumn0(const CoinIndexedVector *rowArray,
 	//&& getStatus(iSequence + addSequence) != superBasic);
         int iStatus = (statusArray[iSequence] & 3) - 1;
         if (iStatus) {
-          double mult = multiplier[iStatus - 1];
+          double mult = multiplier[iStatus + 1];
           alpha = work[i] * mult;
           if (alpha > 0.0) {
             oldValue = reducedCost[iSequence] * mult;

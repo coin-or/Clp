@@ -2258,7 +2258,7 @@ int ClpSimplex::housekeeping(double objectiveChange)
   int numberPivots = factorization_->pivots();
   int maximumPivots = factorization_->maximumPivots();
   int numberDense = factorization_->numberDense();
-  bool dontInvert = ((specialOptions_ & 16384) != 0 && numberIterations_ * 3 > 2 * maximumIterations());
+  bool dontInvert = ((specialOptions_ & 16384) != 0 && static_cast< CoinInt64 >(numberIterations_) * 3 > 2 * static_cast< CoinInt64 >(maximumIterations()));
   if (numberPivots == maximumPivots || maximumPivots < 2) {
     // If dense then increase
     if (maximumPivots > 100 && numberDense > 1.5 * maximumPivots
@@ -4073,6 +4073,17 @@ bool ClpSimplex::createRim(int what, bool makeRowCopy, int startFinishOptions)
   }
   // we need to treat matrix as if each element by rowScaleIn and columnScaleout??
   // maybe we need to move scales to SimplexModel for factorization?
+  // Safety: if rows were added since the last factorization, pivotVariable_ is
+  // too small for the current row count.  Force reallocation so all subsequent
+  // loops (which run up to numberRows2) stay in bounds.
+  if (what == 63 && pivotVariable_ && factorization_
+    && factorization_->numberRows() < numberRows2) {
+    delete[] pivotVariable_;
+    pivotVariable_ = new int[numberRows2 + 1];
+    for (int i = 0; i < numberRows2 + 1; i++)
+      pivotVariable_[i] = -1;
+    keepPivots = false;
+  }
   if ((what == 63 && !pivotVariable_) || (newArrays && !keepPivots)) {
     delete[] pivotVariable_;
     pivotVariable_ = new int[numberRows2 + 1];
@@ -7509,6 +7520,17 @@ void ClpSimplex::allSlackBasis(bool resetSolution)
         }
       }
     }
+  }
+}
+// Deletes rows (just ClpMode::deleteRows plus a bit)
+void
+ClpSimplex::deleteRows(int number, const int *which)
+{
+  if (number) {
+    // do more if necessary
+    delete [] pivotVariable_;
+    pivotVariable_=NULL;
+    ClpModel::deleteRows(number,which);
   }
 }
 /* Loads a problem (the constraints on the

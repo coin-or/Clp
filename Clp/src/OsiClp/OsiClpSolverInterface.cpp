@@ -98,7 +98,12 @@ void OsiClpSolverInterface::initialSolve()
           break;
       }
     }
-    if (i == numberColumns) {
+    // fakeObjective_ is sized when set and never tracks later column
+    // additions/deletions (e.g. from a cut generator's temporary clone),
+    // so only substitute it in when its size still matches the model -
+    // otherwise a stale, smaller fakeObjective_ can be validated against
+    // the model's current (larger) column count downstream and throw.
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       // Check (Clp fast dual)
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
@@ -741,6 +746,12 @@ void OsiClpSolverInterface::initialSolve()
   }
   solver->messageHandler()->setLogLevel(saveMessageLevel);
 disaster:
+  // Always clear the disaster handler on modelPtr_ before cleanup.
+  // When solver == modelPtr_ (deleteSolver == false), goto disaster may have
+  // skipped the normal setDisasterHandler(NULL) call, leaving disasterArea_ set.
+  // When solver != modelPtr_ (deleteSolver == true), returnModel() below also
+  // clears it - this explicit clear is a cheap defensive belt-and-suspenders guard.
+  modelPtr_->setDisasterHandler(NULL);
   if (deleteSolver) {
     solver->returnModel(*modelPtr_);
     delete solver;
@@ -874,7 +885,8 @@ void OsiClpSolverInterface::resolve()
           break;
       }
     }
-    if (i == numberColumns) {
+    // See stale-fakeObjective_ note above (site guarded the same way).
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
         savedObjective = modelPtr_->objective_;
@@ -1288,6 +1300,9 @@ void OsiClpSolverInterface::resolve()
 disaster:
   //printf("basis after dual\n");
   //basis_.print();
+  // Clear disaster handler - a goto disaster from within resolve() may have
+  // skipped the normal setDisasterHandler(NULL) call after the LP solve.
+  modelPtr_->setDisasterHandler(NULL);
   if (!defaultHandler_)
     modelPtr_->popMessageHandler(saveHandler, oldDefault);
   modelPtr_->messageHandler()->setLogLevel(saveMessageLevel);
@@ -1718,7 +1733,8 @@ void OsiClpSolverInterface::markHotStart()
           break;
       }
     }
-    if (i == numberColumns) {
+    // See stale-fakeObjective_ note above (site guarded the same way).
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
         savedObjective = modelPtr_->objective_;
@@ -10178,6 +10194,12 @@ void OsiClpSolverInterface::passInMessageHandler(CoinMessageHandler *handler)
   handler_ = handler;
   if (modelPtr_)
     modelPtr_->passInMessageHandler(handler);
+  // Also update the cached small model used by crunch(), which copies its
+  // handler pointer from modelPtr_ at creation time.  Without this, restoring
+  // the handler after B&B leaves smallModel_ with a dangling pointer that
+  // triggers a use-after-free when resolve() reuses the cached model.
+  if (smallModel_)
+    smallModel_->passInMessageHandler(handler);
 }
 // Set log level (will also set underlying solver's log level)
 void OsiClpSolverInterface::setLogLevel(int value)
