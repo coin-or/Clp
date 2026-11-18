@@ -5260,7 +5260,11 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
               unflagVariables = false;
               changeMade_++; // say something changed
               int nTotal = numberRows_ + numberColumns_;
-              CoinMemcpyN(saveStatus_, nTotal, status_);
+	      for (int i=0;i<nTotal;i++) {
+		if (!flagged(i))
+		  status_[i]=saveStatus_[i];
+	      }
+              //CoinMemcpyN(saveStatus_, nTotal, status_);
               CoinMemcpyN(savedSolution_ + numberColumns_,
                 numberRows_, rowActivityWork_);
               CoinMemcpyN(savedSolution_,
