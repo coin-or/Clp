@@ -1476,6 +1476,15 @@ public:
   {
     return moreSpecialOptions_;
   }
+  /** Return yet more special options
+      These are only used within a single solve 
+         1 bit - tried unflagging once 
+  */
+
+  inline int moreSpecialOptions2() const
+  {
+    return moreSpecialOptions2_;
+  }
   /// Get vector mode
   inline int vectorMode() const
   {
@@ -1514,6 +1523,14 @@ public:
   inline void setMoreSpecialOptions(int value)
   {
     moreSpecialOptions_ = value;
+  }
+  /** See more...2
+      These are only used within a single solve
+      to flag certain disasters?
+  */
+  inline void setMoreSpecialOptions2(int value)
+  {
+    moreSpecialOptions2_ = value;
   }
   /// Set vector mode
   inline void setVectorMode(int value)
@@ -1827,6 +1844,8 @@ protected:
   double bestObjectiveValue_;
   /// More special options - see set for details
   int moreSpecialOptions_;
+  /// Yet more special options - see get for details
+  int moreSpecialOptions2_;
   /** Maximum BLAS threads during LP solves; -1 = no restriction.
       When >= 0, openblas_set_num_threads() is called before each resolve(). */
   int blasNumThreads_;

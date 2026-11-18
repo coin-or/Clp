@@ -441,6 +441,8 @@ void ClpSimplexDual::gutsOfDual(int ifValuesPass, double *&saveDuals, int initia
   double largestDualError = 0.0;
   double smallestPrimalInfeasibility = COIN_DBL_MAX;
   int numberRayTries = 0;
+  // Say clean
+  moreSpecialOptions2_ = 0;
   // Start can skip some things in transposeTimes
   specialOptions_ |= 131072;
   int lastCleaned = 0; // last time objective or bounds cleaned up
@@ -725,6 +727,8 @@ int ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
   dontFactorizePivots_ = saveDont;
   if (problemStatus_ == 3)
     objectiveValue_ = std::max(bestObjectiveValue_, objectiveValue_ - bestPossibleImprovement_);
+  // Say clean
+  moreSpecialOptions2_ = 0;
   return problemStatus_;
 }
 // old way
@@ -2116,7 +2120,10 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
       bool specialCase;
       int useNumberFake;
       returnCode = 0;
-      if (numberPivots <= std::max(dontFactorizePivots_, 20) && (specialOptions_ & 2048) != 0 && (true || !numberChanged_ || perturbation_ == 101)
+      assert (pivotRow_<0);
+      int checkIterations=std::max(dontFactorizePivots_,20);
+      checkIterations=0; // see what effect this has
+      if (numberPivots <= checkIterations && (specialOptions_ & 2048) != 0 && (true || !numberChanged_ || perturbation_ == 101)
         && dualBound_ >= 1.0e8) {
         specialCase = true;
         // as dual bound high - should be okay
@@ -2130,16 +2137,28 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
           problemStatus_ = -4;
         // may have crept through - so may be optimal
         // check any flagged variables
-        int iRow;
-        for (iRow = 0; iRow < numberRows_; iRow++) {
-          int iPivot = pivotVariable_[iRow];
-          if (flagged(iPivot))
+        int iSeq;
+        for (iSeq = 0; iSeq < numberRows_+numberColumns_; iSeq++) {
+          if (flagged(iSeq))
             break;
         }
-        if (iRow < numberRows_ && numberPivots) {
-          // try factorization
-          returnCode = -2;
-        }
+        if (iSeq < numberRows_+numberColumns_) {
+	  if (numberPivots) {
+ 	    // try factorization
+	    returnCode = -2;
+	    break;
+	  } else if ((moreSpecialOptions2_&1)==0) {
+	    // try unflagging once
+	    moreSpecialOptions2_ |= 1;
+	    //printf("What now\n");
+	    returnCode = -2;
+	    for (int jSeq = 0; jSeq < numberRows_+numberColumns_; jSeq++)
+	      clearFlagged(jSeq);
+	    break;
+	  } else {
+	    //printf("Infeasible? BAD_DUAL?\n");
+	  }
+	}
 
         if (useNumberFake || numberDualInfeasibilities_) {
           // may be dual infeasible
@@ -2156,7 +2175,7 @@ int ClpSimplexDual::whileIterating(double *&givenDuals, int ifValuesPass)
             }
           }
         } else {
-          if (iRow < numberRows_) {
+          if (iSeq < numberRows_ + numberColumns_) {
 #ifdef COIN_DEVELOP
             std::cout << "Flagged variables at end - infeasible?" << std::endl;
             printf("Probably infeasible - pivot was %g\n", alpha_);
@@ -5046,7 +5065,11 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
     if (alphaAccuracy_ != -1.0)
       alphaAccuracy_ = -2.0;
     // trouble - restore solution
-    CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
+    for (int i=0;i<numberColumns_+numberRows_;i++) {
+      if (!flagged(i))
+	status_[i]=saveStatus_[i];
+    }
+    //CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
     CoinMemcpyN(savedSolution_ + numberColumns_,
       numberRows_, rowActivityWork_);
     CoinMemcpyN(savedSolution_,
@@ -5126,7 +5149,11 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
           type = 2;
           // assert (internalFactorize(1)==0);
           if (internalFactorize(1)) {
-            CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
+	    for (int i=0;i<numberColumns_+numberRows_;i++) {
+	      if (!flagged(i))
+		status_[i]=saveStatus_[i];
+	    }
+	    //CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
             CoinMemcpyN(savedSolution_ + numberColumns_,
               numberRows_, rowActivityWork_);
             CoinMemcpyN(savedSolution_,
@@ -5325,7 +5352,11 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
     type = 2;
     // assert (internalFactorize(1)==0);
     if (internalFactorize(1)) {
-      CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
+      for (int i=0;i<numberColumns_+numberRows_;i++) {
+	if (!flagged(i))
+	  status_[i]=saveStatus_[i];
+      }
+      //CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
       CoinMemcpyN(savedSolution_ + numberColumns_,
         numberRows_, rowActivityWork_);
       CoinMemcpyN(savedSolution_,
@@ -5477,7 +5508,11 @@ void ClpSimplexDual::statusOfProblemInDual(int &lastCleaned, int type,
               if (alphaAccuracy_ != -1.0)
                 alphaAccuracy_ = -2.0;
               if (internalFactorize(1)) {
-                CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
+		for (int i=0;i<numberColumns_+numberRows_;i++) {
+		  if (!flagged(i))
+		    status_[i]=saveStatus_[i];
+		}
+		//CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
                 CoinMemcpyN(savedSolution_ + numberColumns_,
                   numberRows_, rowActivityWork_);
                 CoinMemcpyN(savedSolution_,

@@ -217,6 +217,8 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
 
   algorithm_ = +1;
   moreSpecialOptions_ &= ~16; // clear check replaceColumn accuracy
+  // Say clean
+  moreSpecialOptions2_ = 0;
 
   // save data
   ClpDataSave data = saveData();
@@ -605,6 +607,8 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
   unflag();
   finish(startFinishOptions);
   restoreData(data);
+  // Say clean
+  moreSpecialOptions2_ = 0;
   return problemStatus_;
 }
 /*
@@ -866,7 +870,11 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
 #endif
   if (type == 2) {
     // trouble - restore solution
-    CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
+    for (int i=0;i<numberColumns_+numberRows_;i++) {
+      if (!flagged(i))
+	status_[i]=saveStatus_[i];
+    }
+    //CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
     CoinMemcpyN(savedSolution_ + numberColumns_,
       numberRows_, rowActivityWork_);
     CoinMemcpyN(savedSolution_,
@@ -1081,7 +1089,11 @@ void ClpSimplexPrimal::statusOfProblemInPrimal(int &lastCleaned, int type,
       if (numberPivots || (numberThrownOut == -123456789 && saveStatus_)) {
         // go back
         // trouble - restore solution
-        CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
+	for (int i=0;i<numberColumns_+numberRows_;i++) {
+	  if (!flagged(i))
+	    status_[i]=saveStatus_[i];
+	}
+        //CoinMemcpyN(saveStatus_, numberColumns_ + numberRows_, status_);
         CoinMemcpyN(savedSolution_ + numberColumns_,
           numberRows_, rowActivityWork_);
         CoinMemcpyN(savedSolution_,

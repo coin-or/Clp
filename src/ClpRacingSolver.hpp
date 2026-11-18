@@ -46,6 +46,11 @@ public:
    *  portfolioSize=0 uses numThreads_ passed at construction. */
   void addDefaultConfigs(int portfolioSize = 0);
 
+  /** Race simplex directly from each clone's basis when presolve is off,
+   *  instead of using the cold initialSolve machinery. Configurations must
+   *  be dual or primal simplex. The default remains a cold-start race. */
+  void setWarmStart(bool enable) { warmStart_ = enable; }
+
   /// Set unscaled postsolve recovery for all current configurations.
   void setUnscaledPostsolve(bool enable)
   {
@@ -86,6 +91,7 @@ private:
   std::vector<ClpSolve> configs_;
   std::vector<ConfigSetupFn> setupFns_;
   int numThreads_;
+  bool warmStart_ = false;
   double searchElapsedAtStart_ = 0.0;
   int winnerIndex_ = -1;
   double winnerTime_ = 0.0;

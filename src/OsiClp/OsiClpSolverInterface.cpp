@@ -983,8 +983,26 @@ disaster:
   int oldMpsNumber=mpsNumber;
 #endif
 //-----------------------------------------------------------------------------
+void OsiClpSolverInterface::setResolveOptions(ResolveMethod method,
+  const ClpSolve &options, int racingThreads, int perturbation, int presolve)
+{
+  if (method < ResolveDefault || method > ResolveRacing
+    || (method == ResolveRacing && racingThreads < 2)
+    || perturbation < -5000 || perturbation > 102
+    || presolve < -1 || presolve > 1)
+    throw CoinError("Invalid reoptimization options", "setResolveOptions",
+      "OsiClpSolverInterface");
+  resolveMethod_ = method;
+  resolveOptions_ = options;
+  resolveRacingThreads_ = racingThreads;
+  resolvePerturbation_ = perturbation;
+  resolvePresolve_ = presolve;
+}
+
 void OsiClpSolverInterface::resolve()
 {
+  if (resolvePerturbation_ != -1)
+    modelPtr_->setPerturbation(resolvePerturbation_);
 #ifdef COIN_DEVELOP
   {
     int i;
@@ -1019,11 +1037,13 @@ void OsiClpSolverInterface::resolve()
   if (modelPtr_->blasNumThreads() >= 0)
     openblas_set_num_threads(modelPtr_->blasNumThreads());
 #endif
-  if ((stuff_.solverOptions_ & 65536) != 0) {
+  if (resolveMethod_ == ResolveDefault && resolvePresolve_ != 1
+    && (stuff_.solverOptions_ & 65536) != 0) {
     modelPtr_->fastDual2(&stuff_);
     return;
   }
-  if ((specialOptions_ & 2097152) != 0 || (specialOptions_ & 4194304) != 0) {
+  if (resolveMethod_ == ResolveDefault && resolvePresolve_ != 1
+    && ((specialOptions_ & 2097152) != 0 || (specialOptions_ & 4194304) != 0)) {
     bool takeHint;
     OsiHintStrength strength;
     int algorithm = 0;
@@ -1148,7 +1168,8 @@ void OsiClpSolverInterface::resolve()
   assert(gotHint);
   if ((modelPtr_->specialOptions()&0x01000000)!=0 && takeHint)
     modelPtr_->setMoreSpecialOptions(modelPtr_->moreSpecialOptions()|8192); // stay in dual
-  if (strength != OsiHintIgnore && !takeHint && solveOptions_.getSpecialOption(6)) {
+  if (resolveMethod_ == ResolveDefault && resolvePresolve_ == -1
+    && strength != OsiHintIgnore && !takeHint && solveOptions_.getSpecialOption(6)) {
     ClpSolve options = solveOptions_;
     // presolve
     getHintParam(OsiDoPresolveInResolve, takeHint, strength);
@@ -1246,11 +1267,56 @@ void OsiClpSolverInterface::resolve()
   assert(gotHint);
   if (strength != OsiHintIgnore)
     algorithm = takeHint ? -1 : 1;
+  if (resolveMethod_ == ResolveDual)
+    algorithm = -1;
+  else if (resolveMethod_ == ResolvePrimal)
+    algorithm = 1;
   //modelPtr_->saveModel("save.bad");
   // presolve
   gotHint = (getHintParam(OsiDoPresolveInResolve, takeHint, strength));
   assert(gotHint);
-  if (strength != OsiHintIgnore && takeHint) {
+  if (resolvePresolve_ >= 0) {
+    takeHint = resolvePresolve_ != 0;
+    strength = OsiHintDo;
+  }
+  if (resolveMethod_ == ResolveBarrier || resolveMethod_ == ResolveRacing) {
+#ifdef KEEP_SMALL
+    delete[] spareArrays_;
+    spareArrays_ = NULL;
+    delete smallModel_;
+    smallModel_ = NULL;
+#endif
+    // The winner's basis is copied back, not its factorization.
+    modelPtr_->whatsChanged_ = 0;
+    modelPtr_->setSpecialOptions(saveOptions | 1024);
+    ClpSolve options = resolveOptions_;
+    options.setPresolveType(strength != OsiHintIgnore && takeHint
+        ? ClpSolve::presolveOn : ClpSolve::presolveOff);
+    options.setUnscaledPostsolve(true);
+    if (resolveMethod_ == ResolveBarrier) {
+      options.setSolveType(ClpSolve::useBarrier);
+      modelPtr_->initialSolve(options);
+    } else {
+      ClpRacingSolver racer(modelPtr_, resolveRacingThreads_);
+      racer.setWarmStart(true);
+      options.setSolveType(ClpSolve::useDual);
+      racer.addConfig(options);
+      options.setSolveType(ClpSolve::usePrimal);
+      options.setSpecialOption(1, 4); // no crash, Idiot or Sprint
+      racer.addConfig(options);
+      if (racer.solve() >= 0) {
+        modelPtr_->setAlgorithm(racer.winnerIndex() == 0 ? -1 : 1);
+      } else {
+        modelPtr_->messageHandler()->message(0, "",
+          "Reoptimization racing found no optimal solution; retrying dual simplex", ' ')
+          << CoinMessageEol;
+        options.setSolveType(ClpSolve::useDual);
+        modelPtr_->initialSolve(options);
+      }
+    }
+    totalIterations += modelPtr_->numberIterations();
+    lastAlgorithm_ = modelPtr_->algorithm() < 0 ? 2 : 1;
+  } else if (strength != OsiHintIgnore && takeHint) {
 #ifdef KEEP_SMALL
     if (smallModel_) {
       delete[] spareArrays_;
@@ -1291,20 +1357,28 @@ void OsiClpSolverInterface::resolve()
       model2->setExactFactorizationFrequency(userFactorizationFrequency);
     if (algorithm < 0) {
       model2->dual(0,CLP_START_FINISH);
+      if (resolveMethod_ != ResolveDefault)
+        lastAlgorithm_ = 2;
       totalIterations += model2->numberIterations();
       // check if clp thought it was in a loop
       if (model2->status() == 3 && !model2->hitMaximumIterations()) {
         // switch algorithm
         model2->primal(0,CLP_START_FINISH);
+        if (resolveMethod_ != ResolveDefault)
+          lastAlgorithm_ = 1;
         totalIterations += model2->numberIterations();
       }
     } else {
       model2->primal(1,CLP_START_FINISH);
+      if (resolveMethod_ != ResolveDefault)
+        lastAlgorithm_ = 1;
       totalIterations += model2->numberIterations();
       // check if clp thought it was in a loop
       if (model2->status() == 3 && !model2->hitMaximumIterations()) {
         // switch algorithm
         model2->dual(0,CLP_START_FINISH);
+        if (resolveMethod_ != ResolveDefault)
+          lastAlgorithm_ = 2;
         totalIterations += model2->numberIterations();
       }
     }
@@ -1332,7 +1406,7 @@ void OsiClpSolverInterface::resolve()
     if (algorithm < 0) {
       //writeMps("try1");
       int savePerturbation = modelPtr_->perturbation();
-      if ((specialOptions_ & 2) != 0)
+      if ((specialOptions_ & 2) != 0 && resolvePerturbation_ == -1)
         modelPtr_->setPerturbation(100);
       //modelPtr_->messageHandler()->setLogLevel(1);
       //writeMpsNative("bad",NULL,NULL,2,1,1.0);
@@ -5294,6 +5368,11 @@ OsiClpSolverInterface::OsiClpSolverInterface(
   }
   saveData_ = rhs.saveData_;
   solveOptions_ = rhs.solveOptions_;
+  resolveOptions_ = rhs.resolveOptions_;
+  resolveMethod_ = rhs.resolveMethod_;
+  resolveRacingThreads_ = rhs.resolveRacingThreads_;
+  resolvePerturbation_ = rhs.resolvePerturbation_;
+  resolvePresolve_ = rhs.resolvePresolve_;
   racingLPThreads_ = rhs.racingLPThreads_;
   cleanupScaling_ = rhs.cleanupScaling_;
   specialOptions_ = rhs.specialOptions_;
@@ -5446,6 +5525,11 @@ OsiClpSolverInterface::operator=(const OsiClpSolverInterface &rhs)
     linearObjective_ = modelPtr_->objective();
     saveData_ = rhs.saveData_;
     solveOptions_ = rhs.solveOptions_;
+    resolveOptions_ = rhs.resolveOptions_;
+    resolveMethod_ = rhs.resolveMethod_;
+    resolveRacingThreads_ = rhs.resolveRacingThreads_;
+    resolvePerturbation_ = rhs.resolvePerturbation_;
+    resolvePresolve_ = rhs.resolvePresolve_;
     racingLPThreads_ = rhs.racingLPThreads_;
     cleanupScaling_ = rhs.cleanupScaling_;
     specialOptions_ = rhs.specialOptions_;

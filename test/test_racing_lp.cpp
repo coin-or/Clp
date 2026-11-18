@@ -796,6 +796,57 @@ int main()
     CHECK(!r.optimal, "Unbounded50 Racing3: not optimal");
   }
 
+  // Adding a cheaper column preserves primal feasibility but changes the dual;
+  // tightening its bound changes the primal. A copied solver must not reuse
+  // stale work arrays from the previous race.
+  printf("\n--- Warm-start reoptimization policies ---\n");
+  for (OsiClpSolverInterface::ResolveMethod method : {
+         OsiClpSolverInterface::ResolveDefault, OsiClpSolverInterface::ResolveDual,
+         OsiClpSolverInterface::ResolvePrimal, OsiClpSolverInterface::ResolveBarrier,
+         OsiClpSolverInterface::ResolveRacing }) {
+    for (int presolve = 0; presolve <= 1; ++presolve) {
+      printf("  resolve method=%d presolve=%d\n", static_cast<int>(method), presolve);
+      fflush(stdout);
+      OsiClpSolverInterface si;
+      si.messageHandler()->setLogLevel(0);
+      CoinPackedMatrix matrix(false, 0, 0);
+      matrix.setDimensions(0, 1);
+      int index = 0;
+      double element = 1.0;
+      matrix.appendRow(1, &index, &element);
+      double lower = 0.0, upper = COIN_DBL_MAX, cost = 2.0;
+      double rowLower = 10.0, rowUpper = COIN_DBL_MAX;
+      si.loadProblem(matrix, &lower, &upper, &cost, &rowLower, &rowUpper);
+      si.initialSolve();
+      ClpSolve options;
+      si.setResolveOptions(method, options, 2, 72, presolve);
+      si.setHintParam(OsiDoDualInResolve,
+        method == OsiClpSolverInterface::ResolvePrimal, OsiHintDo);
+      si.addCol(1, &index, &element, lower, upper, 0.5);
+      si.resolve();
+      CHECK(si.isProvenOptimal() && fabs(si.getObjValue() - 5.0) < kTol,
+        "priced column reoptimizes to the new optimum");
+      CHECK(checkOptimalityConditions(si, "priced column") == 0,
+        "priced column satisfies LP optimality conditions");
+      if (method == OsiClpSolverInterface::ResolvePrimal && !presolve)
+        CHECK(si.lastAlgorithm() == 1, "explicit primal overrides dual hint");
+      if (method == OsiClpSolverInterface::ResolveDual && !presolve)
+        CHECK(si.lastAlgorithm() == 2, "explicit dual overrides primal hint");
+
+      OsiClpSolverInterface copied(si);
+      copied.setColUpper(1, 5.0);
+      copied.resolve();
+      CHECK(copied.isProvenOptimal() && fabs(copied.getObjValue() - 12.5) < kTol,
+        "copied warm solver respects modified bounds");
+      CHECK(checkOptimalityConditions(copied, "copied bound change") == 0,
+        "copied solver satisfies LP optimality conditions");
+      copied.setRowLower(0, 12.0);
+      copied.resolve();
+      CHECK(copied.isProvenOptimal() && fabs(copied.getObjValue() - 16.5) < kTol,
+        "repeated resolve respects changed row bounds");
+    }
+  }
+
   printf("\n=== Results: %d passed, %d failed ===\n", nPass, nFail);
   return nFail > 0 ? 1 : 0;
 }
