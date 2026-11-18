@@ -11206,6 +11206,7 @@ int ClpSimplex::fathom(void *stuff)
   (static_cast< ClpSimplexDual * >(this))->changeBounds(3, NULL, dummyChange);
   saveNumberFake = numberFake_;
   ClpNode **nodes = new ClpNode *[maxDepthSize];
+  memset(nodes,0,maxDepthSize*sizeof(ClpNode *));
   int numberTotal = numberRows_ + numberColumns_;
   double *saveLower = CoinCopyOfArray(columnLower_, numberColumns_);
   double *saveUpper = CoinCopyOfArray(columnUpper_, numberColumns_);
@@ -11418,7 +11419,7 @@ int ClpSimplex::fathom(void *stuff)
       abort();
     } else {
       // Create node
-      ClpNode *node;
+      ClpNode *node = NULL;
       computeDuals(NULL);
       if (depth > 0) {
         int way = nodes[depth - 1]->way();
@@ -11639,17 +11640,32 @@ int ClpSimplex::fathomMany(void *stuff)
   }
 #endif
   int whichSolution = -1;
+  int *whichRow = NULL;
+  int *whichColumn = NULL;
+  ClpSimplex *small = NULL;
+  int nBound;
+  bool feasible = true;
   if (info->presolveType_) {
     // crunch down
-    bool feasible = true;
     // Use dual region
     double *rhs = dual_;
-    int *whichRow = new int[3 * numberRows_];
-    int *whichColumn = new int[2 * numberColumns_];
-    int nBound;
+    whichRow = new int[3 * numberRows_];
+    whichColumn = new int[2 * numberColumns_];
     bool tightenBounds = ((specialOptions_ & 64) == 0) ? false : true;
-    ClpSimplex *small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
+    small = static_cast< ClpSimplexOther * >(this)->crunch(rhs, whichRow, whichColumn,
       nBound, false, tightenBounds);
+    if (small && small->numberRows_ == 0) {
+      // empty problem goes wrong
+      delete[] whichRow;
+      whichRow = NULL;
+      delete[] whichColumn;
+      whichColumn = NULL;
+      delete small;
+      small = NULL;
+      info->presolveType_ = 0;
+    }
+  }
+  if (info->presolveType_) {
     if (small) {
       info->large_ = this;
       info->whichRow_ = whichRow;
@@ -12029,6 +12045,12 @@ int ClpSimplex::fathomMany(void *stuff)
         }
       }
 #endif
+      // Track whether the solution was already saved into nodeInfo[goodNodes]
+      // (Path B). In that case we must NOT call gutsOfConstructor a second
+      // time after doubleCheck(), because doubleCheck() re-solves the LP and
+      // the updated column solution may have marginally fractional integer
+      // values, causing the assert below to fire.
+      bool savedToGoodNodesSlot = false;
       if (depth < info->nDepth_ && !stopAtOnce) {
         node = nodeInfo[useDepth];
         if (node) {
@@ -12047,6 +12069,7 @@ int ClpSimplex::fathomMany(void *stuff)
         if (!node->oddArraysExist())
           node->createArrays(this);
         node->gutsOfConstructor(this, info, 2, depth);
+        savedToGoodNodesSlot = true;
       }
       if (node->sequence() < 0) {
         // solution
@@ -12067,8 +12090,9 @@ int ClpSimplex::fathomMany(void *stuff)
             for (int i = 0; i < numberColumns_; i++) {
               if (integerType_[i]) {
                 int iColumn = info->whichColumn_[i];
-                info->large_->columnUpper_[iColumn] = columnUpper_[i];
-                info->large_->columnLower_[iColumn] = columnLower_[i];
+		double value = floor(columnActivity_[i]+0.5);
+                info->large_->columnUpper_[iColumn] = value;
+                info->large_->columnLower_[iColumn] = value;
               }
             }
             static_cast< ClpSimplexOther * >(info->large_)->afterCrunch(*this, info->whichRow_, info->whichColumn_, info->nBound_);
@@ -12076,7 +12100,11 @@ int ClpSimplex::fathomMany(void *stuff)
             if (!node->oddArraysExist())
               node->createArrays(info->large_);
             node->gutsOfConstructor(info->large_, info, 2, depth);
-          } else {
+          } else if (!savedToGoodNodesSlot) {
+            // Path A: need to copy the integer solution into the goodNodes slot.
+            // Skip when savedToGoodNodesSlot (Path B): the node was already
+            // saved before doubleCheck(), and re-saving after doubleCheck()
+            // may produce sequence()>=0 due to the LP state having changed.
             if (!node->oddArraysExist())
               node->createArrays(this);
             node->gutsOfConstructor(this, info, 2, depth);
@@ -12406,7 +12434,7 @@ int ClpSimplex::fastDual2(ClpNodeStuff *info)
       perturbation_ = savePerturbation;
       baseIteration_ = numberIterations_;
       goodWeights = false;
-      status = static_cast< ClpSimplexPrimal * >(this)->primal(0);
+      status = static_cast< ClpSimplexPrimal * >(this)->primal(0,1);
       baseIteration_ = 0;
       computeObjectiveValue();
       // can't rely on djs either
