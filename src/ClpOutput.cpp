@@ -115,6 +115,22 @@ static const char *clpAlgoShortName(int algo)
   }
 }
 
+// The final status label.  Clp's status codes: 0 optimal, 1 primal
+// infeasible, 2 dual infeasible, 3 stopped (secondary status 9 if on time;
+// see ClpModel::onStopped), 4 errors, 5 event handler.
+static const char *lpStatusLabel(const ClpSimplex *model)
+{
+  switch (model->status()) {
+  case 0: return "Optimal";
+  case 1: return "Infeasible";
+  case 2: return "Unbounded";
+  case 3: return model->secondaryStatus() == 9 ? "Time limit" : "Stopped";
+  case 4: return "Numerical difficulties";
+  case 5: return "Stopped by event";
+  default: return "Unknown";
+  }
+}
+
 // ─── ClpProgressEventHandler ──────────────────────────────────────────────────
 
 ClpProgressEventHandler::ClpProgressEventHandler(CoinMessageHandler *handler,
@@ -213,26 +229,7 @@ void ClpProgressEventHandler::printFinalStatus() const
 
   fprintf(fp, "%s\n", tbl.sepLine(CoinTable::Bottom).c_str());
 
-  const char *status = "Unknown";
-  const int s = model_->status();
-  const int ss = model_->secondaryStatus();
-  if (s == 0)
-    status = "Optimal";
-  else if (s == 1) {
-    if (ss == 4)
-      status = "Iteration limit";
-    else if (ss == 9)
-      status = "Time limit";
-    else
-      status = "Infeasible";
-  } else if (s == 2)
-    status = "Unbounded";
-  else if (s == 3)
-    status = "Stopped";
-  else if (s == 4)
-    status = "Numerical error";
-  else if (s == 5)
-    status = "Event";
+  const char *status = lpStatusLabel(model_);
 
   // Build phase-end summary line
   char summary[256];
@@ -557,26 +554,7 @@ void printFinalStatus(ClpLpPhaseState &s, ClpSimplex *model,
   if (!s.headerPrinted) {
     if (!model)
       return;
-    const char *baseStatus = "Unknown";
-    const int st = model->status();
-    const int ss = model->secondaryStatus();
-    if (st == 0)
-      baseStatus = "Optimal";
-    else if (st == 1) {
-      if (ss == 4)
-        baseStatus = "Iteration limit";
-      else if (ss == 9)
-        baseStatus = "Time limit";
-      else
-        baseStatus = "Infeasible";
-    } else if (st == 2)
-      baseStatus = "Unbounded";
-    else if (st == 3)
-      baseStatus = "Stopped";
-    else if (st == 4)
-      baseStatus = "Numerical difficulties";
-    else if (st == 5)
-      baseStatus = "Stopped by event";
+    const char *baseStatus = lpStatusLabel(model);
     const std::string statusStr = (numInts > 0 ? "LP " : "") + std::string(baseStatus);
     char summary[512];
     const int iters = model->numberIterations();
@@ -636,28 +614,7 @@ void printFinalStatus(ClpLpPhaseState &s, ClpSimplex *model,
     return;
   }
 
-  // Build status string
-  const char *baseStatus = "Unknown";
-  const int st = model->status();
-  const int ss = model->secondaryStatus();
-  if (st == 0)
-    baseStatus = "Optimal";
-  else if (st == 1) {
-    if (ss == 4)
-      baseStatus = "Iteration limit";
-    else if (ss == 9)
-      baseStatus = "Time limit";
-    else
-      baseStatus = "Infeasible";
-  } else if (st == 2)
-    baseStatus = "Unbounded";
-  else if (st == 3)
-    baseStatus = "Stopped";
-  else if (st == 4)
-    baseStatus = "Numerical difficulties";
-  else if (st == 5)
-    baseStatus = "Stopped by event";
-
+  const char *baseStatus = lpStatusLabel(model);
   const std::string statusStr = (numInts > 0 ? "LP " : "") + std::string(baseStatus);
   const int iters = s.lpStarted
     ? std::max(model->numberIterations(), s.maxIterSeen)
