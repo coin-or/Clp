@@ -637,11 +637,41 @@ int ClpSimplexDual::dual(int ifValuesPass, int startFinishOptions)
   }
   // If infeasible but primal errors - try primal
   if (problemStatus_ == 1 && numberPrimalInfeasibilities_) {
-    bool inCbcOrOther = (specialOptions_ & 0x03000000) != 0;
-    double factor = (!inCbcOrOther) ? 1.0 : 0.3;
+    // be more cautious - was 0.3 if in Cbc or other
+    double factor = 1.0;
     double averageInfeasibility = sumPrimalInfeasibilities_ / static_cast< double >(numberPrimalInfeasibilities_);
     if (averageInfeasibility < factor * largestPrimalError_)
       problemStatus_ = 10;
+    if (problemStatus_==1 && (specialOptions_&1024)==0
+	&& (moreSpecialOptions_&256) == 0 ) {
+      // check if any free variables have non-zero dj etc
+      // (keep any ray out of getSolution - it would be unscaled twice)
+      double *saveRay = ray_;
+      ray_ = NULL;
+      getSolution(NULL,NULL);
+      ray_ = saveRay;
+      if (numberDualInfeasibilities_) {
+	char generalPrint[100];
+	sprintf(generalPrint,"Looks infeasible - but some (free?) variables have bad reduced costs -> primal");
+	handler_->message(CLP_GENERAL_WARNING, messages_)
+	  << generalPrint << CoinMessageEol;
+	problemStatus_ = 10;
+      } else if (numberFake_) {
+	// check flagged
+	int nFlagged = 0;
+	for (int i=0;i<numberColumns_+numberRows_;i++) {
+	  if (flagged(i))
+	    nFlagged++;
+	}
+	if (nFlagged) {
+	  char generalPrint[100];
+	  sprintf(generalPrint,"Looks infeasible but double checking -> primal");
+	  handler_->message(CLP_GENERAL_WARNING, messages_)
+	    << generalPrint << CoinMessageEol;
+	  problemStatus_ = 10;
+	}
+      }
+    }
   }
 
   if (problemStatus_ == 10)
