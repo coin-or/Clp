@@ -2659,6 +2659,11 @@ int ClpSimplex::initialSolve(ClpSolve &options)
       model2->addColumns(numberArtificials, NULL, NULL, addCost,
         addStarts, addRow, addElement);
     }
+    // redo
+    element = model2->matrix()->getElements();
+    row = model2->matrix()->getIndices();
+    columnStart = model2->matrix()->getVectorStarts();
+    columnLength = model2->matrix()->getVectorLengths();
     delete[] addStarts;
     delete[] addRow;
     delete[] addElement;

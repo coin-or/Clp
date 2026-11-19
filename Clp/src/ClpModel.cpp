@@ -1281,9 +1281,14 @@ void ClpModel::resize(int newNumberRows, int newNumberColumns)
     delete[] savedColumnScale_;
     savedColumnScale_ = temp;
   }
-  if (objective_ && numberColumns2 > maximumColumns_)
+  // Objective tracks its own exact numberColumns_ (no spare capacity like
+  // the arrays below), so it must be resized whenever the logical column
+  // count changes, regardless of maximumColumns_ capacity - otherwise
+  // objective_->numberColumns_ can go stale relative to this->numberColumns_
+  // when maximumColumns_ already covers newNumberColumns.
+  if (objective_)
     objective_->resize(newNumberColumns);
-  else if (!objective_)
+  else
     objective_ = new ClpLinearObjective(NULL, newNumberColumns);
   if (numberColumns2 > maximumColumns_) {
     columnLower_ = resizeDouble(columnLower_, numberColumns_,
@@ -1367,6 +1372,9 @@ void ClpModel::resize(int newNumberRows, int newNumberColumns)
       which[i - newNumberColumns] = i;
     matrix_->deleteCols(numberColumns_ - newNumberColumns, which);
     delete[] which;
+  } else if (!matrix_) {
+    CoinPackedMatrix matrix;
+    matrix_ = new ClpPackedMatrix(matrix);
   }
   if (integerType_ && numberColumns2 > maximumColumns_) {
     char *temp = new char[newNumberColumns];
@@ -3759,7 +3767,8 @@ int ClpModel::emptyProblem(int *infeasNumber, double *infeasSum, bool printMessa
     delete[] ray_;
     ray_ = new double[numberColumns_];
     CoinZeroN(ray_, numberColumns_);
-    ray_[badColumn] = badValue;
+    if (badColumn>=0) // might be empty problem!
+      ray_[badColumn] = badValue;
   }
   return returnCode;
 }
@@ -4062,7 +4071,7 @@ ClpModel::createCoinModel() const
   coinModel->zapRowNames();
   coinModel->zapColumnNames();
   for (i = 0; i < numberRows_; i++) {
-    char temp[30];
+    char temp[300];
     strcpy(temp, rowName(i).c_str());
     size_t length = strlen(temp);
     for (size_t j = 0; j < length; j++) {
@@ -4072,7 +4081,7 @@ ClpModel::createCoinModel() const
     coinModel->setRowName(i, temp);
   }
   for (i = 0; i < numberColumns_; i++) {
-    char temp[30];
+    char temp[300];
     strcpy(temp, columnName(i).c_str());
     size_t length = strlen(temp);
     for (size_t j = 0; j < length; j++) {
@@ -4095,7 +4104,7 @@ ClpModel::createCoinModel() const
         CoinBigIndex start = columnStart[i];
         double constant = coinModel->getColumnObjective(i);
         char temp[100000];
-        char temp2[30];
+        char temp2[300];
         sprintf(temp, "%g", constant);
         for (CoinBigIndex k = start; k < start + nels; k++) {
           int kColumn = row[k];

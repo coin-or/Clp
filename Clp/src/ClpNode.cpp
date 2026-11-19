@@ -116,16 +116,9 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
         CoinMemcpyN(model->djRegion(), numberTotal, dualSolution_); //? has duals as well?
         ClpDualRowSteepest *pivot = dynamic_cast< ClpDualRowSteepest * >(model->dualRowPivot());
         if (pivot) {
-          if (weights_) {
-            //if (weights_->numberRows()==pivot->numberRows()) {
-            weights_->fill(*pivot);
-            //} else {
-            //delete weights_;
-            //weights_ = new ClpDualRowSteepest(*pivot);
-            //}
-          } else {
-            weights_ = new ClpDualRowSteepest(*pivot);
-          }
+	  // safer to redo
+	  delete weights_;
+	  weights_ = new ClpDualRowSteepest(*pivot);
         }
         CoinMemcpyN(model->pivotVariable(), numberRows, pivotVariables_);
       } else {
@@ -164,8 +157,15 @@ void ClpNode::gutsOfConstructor(ClpSimplex *model, const ClpNodeStuff *stuff,
         CoinMemcpyN(model->dualRowSolution(), numberRows, dualSolution_ + numberColumns);
       }
       pivotVariables_ = new int[maximumRows_];
-      if (model->pivotVariable() && model->numberRows() == numberRows)
-        CoinMemcpyN(model->pivotVariable(), numberRows, pivotVariables_);
+      // Only copy pivotVariables_ when arraysExist==1 (small model with a
+      // freshly-allocated pivotVariable_ from startFastDual2/createRim).
+      // For arraysExist==2 the model passed is info->large_, whose
+      // pivotVariable_ may be stale (rows were added via cuts since it was
+      // last solved), causing a heap-buffer-overflow.  Those nodes are
+      // restored with applyNode(..., 3) which never reads pivotVariables_,
+      // so filling with -1 is safe.
+      if (arraysExist == 1 && model->pivotVariable())
+	CoinMemcpyN(model->pivotVariable(), numberRows, pivotVariables_);
       else
         CoinFillN(pivotVariables_, numberRows, -1);
     }
@@ -779,7 +779,7 @@ ClpNodeStuff::operator=(const ClpNodeStuff &rhs)
     maximumNodes_ = rhs.maximumNodes_;
     numberBeforeTrust_ = rhs.numberBeforeTrust_;
     stateOfSearch_ = rhs.stateOfSearch_;
-    int n = maximumNodes();
+    int n = maximumSpace();
     if (n) {
       for (int i = 0; i < n; i++)
         delete nodeInfo_[i];
@@ -843,7 +843,7 @@ ClpNodeStuff::~ClpNodeStuff()
   delete[] numberUp_;
   delete[] numberDownInfeasible_;
   delete[] numberUpInfeasible_;
-  int n = maximumNodes();
+  int n = maximumSpace();
   if (n) {
     for (int i = 0; i < n; i++)
       delete nodeInfo_[i];
