@@ -135,9 +135,7 @@ public:
       return -1;
 
     const char *phase = std::strcmp(label_, "Barrier") == 0 ? "B+Cross" : label_;
-    ClpLpTable::printRow(*state_, phase, model_->numberIterations(),
-      model_->objectiveValue(), model_->sumPrimalInfeasibilities(),
-      model_->sumDualInfeasibilities());
+    ClpLpTable::printRow(*state_, phase, model_);
     return -1;
   }
 
@@ -334,6 +332,14 @@ int ClpRacingSolver::solve()
     tableState->lastPrintTime = tableState->startTime;
     tableState->title = "LP solve";
     ownTableState = true;
+  }
+
+  // Racing rows are printed without a model, so give the table the
+  // original model's message handler and messages (whose language decides
+  // whether the table shows).
+  if (tableState && !tableState->handler) {
+    tableState->handler = model_->messageHandler();
+    tableState->messages = model_->messagesPointer();
   }
 
   double startTime = CoinGetTimeOfDay();

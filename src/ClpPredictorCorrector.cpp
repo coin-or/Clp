@@ -264,11 +264,6 @@ int ClpPredictorCorrector::solve()
 #endif
     complementarityGap_ = complementarityGap(numberComplementarityPairs_,
       numberComplementarityItems_, 0);
-    // I don't understand what has been done to log levels
-    // So Cheat
-    int level = handler_->logLevel();
-    if (level==1)
-      handler_->setLogLevel(2);
     handler_->message(CLP_BARRIER_ITERATION, messages_)
       << numberIterations_
       << static_cast< double >(primalObjective_ * objScale - dblParam_[ClpObjOffset])
@@ -277,7 +272,6 @@ int ClpPredictorCorrector::solve()
       << numberFixedTotal
       << cholesky_->rank()
       << CoinMessageEol;
-    handler_->setLogLevel(level);
     // Check event
     // Printing is rubbish
     {

@@ -458,6 +458,13 @@ int ClpSimplexPrimal::primal(int ifValuesPass, int startFinishOptions)
           << sprintPass << numberIterations_ - lastSprintIteration << objectiveValue() << sumNegative
           << numberNegative
           << CoinMessageEol;
+        {
+          // progress for the tabular LP output
+          ClpPassProgress progress = { numberIterations_, objectiveValue(),
+            0.0, sumNegative, 0, numberNegative };
+          eventHandler_->eventWithInfo(ClpEventHandler::endOfSprintPass,
+            &progress);
+        }
         sprintPass++;
         lastSprintIteration = numberIterations_;
         if (objectiveValue() * optimizationDirection_ > lastObjectiveValue - 1.0e-7 && sprintPass > 5) {
@@ -4245,6 +4252,13 @@ int ClpSimplexPrimal::lexSolve()
           << sprintPass << numberIterations_ - lastSprintIteration << objectiveValue() << sumNegative
           << numberNegative
           << CoinMessageEol;
+        {
+          // progress for the tabular LP output
+          ClpPassProgress progress = { numberIterations_, objectiveValue(),
+            0.0, sumNegative, 0, numberNegative };
+          eventHandler_->eventWithInfo(ClpEventHandler::endOfSprintPass,
+            &progress);
+        }
         sprintPass++;
         lastSprintIteration = numberIterations_;
         if (objectiveValue() * optimizationDirection_ > lastObjectiveValue - 1.0e-7 && sprintPass > 5) {
