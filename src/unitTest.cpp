@@ -2474,6 +2474,23 @@ void ClpSimplexUnitTest(const std::string &dirSample)
     }
   }
 #if 1
+  // Contradictory rows must not be optimal just because the barrier gap is small.
+  {
+    ClpSimplex solution;
+    CoinBigIndex start[3] = { 0, 2, 4 };
+    int rows[4] = { 0, 1, 0, 1 };
+    double elements[4] = { 1.0, -1.0, -1.0, 1.0 };
+    double colLower[2] = { 0.0, 0.0 };
+    double colUpper[2] = { COIN_DBL_MAX, COIN_DBL_MAX };
+    double objective[2] = { 1.0, 1.0 };
+    double rowLower[2] = { 1.0, 1.0 };
+    double rowUpper[2] = { COIN_DBL_MAX, COIN_DBL_MAX };
+    solution.loadProblem(2, 2, start, rows, elements, colLower, colUpper,
+      objective, rowLower, rowUpper);
+    solution.setLogLevel(0);
+    solution.initialBarrierNoCrossSolve();
+    assert(solution.status() == 1);
+  }
   // Test barrier
   {
     CoinMpsIO m;
