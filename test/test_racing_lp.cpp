@@ -13,6 +13,7 @@
 #include "CoinPackedMatrix.hpp"
 #include "CoinPackedVector.hpp"
 #include "ClpSimplex.hpp"
+#include "ClpRacingSolver.hpp"
 #include <cassert>
 #include <cmath>
 #include <cstdio>
@@ -752,6 +753,22 @@ int main()
     printf("  Racing1: opt=%d obj=%.4f\n", r2.optimal, r2.objValue);
     CHECK(r1.optimal && r2.optimal, "NQueens50 Racing1: both optimal");
     CHECK(fabs(r1.objValue - r2.objValue) < kTol, "NQueens50 Racing1: obj match");
+  }
+
+  // Run only the first default configuration to verify the portfolio's method.
+  for (int portfolioSize = 1; portfolioSize <= 3; ++portfolioSize) {
+    OsiClpSolverInterface si;
+    si.messageHandler()->setLogLevel(0);
+    buildTSP40(si, 0);
+    ClpRacingSolver racer(si.getModelPtr(), 1);
+    racer.addDefaultConfigs(portfolioSize);
+    const char *expected = portfolioSize <= 2 ? "dual" : "barrier";
+    CHECK(racer.solve() == 0, "Default portfolio: first configuration solves");
+    CHECK(std::string(racer.winnerName()) == expected,
+      "Default portfolio: single/pair start with dual, triple with native barrier");
+    CHECK(si.isProvenOptimal(), "Default portfolio: optimal result");
+    CHECK(checkOptimalityConditions(si, expected) == 0,
+      "Default portfolio: primal and dual feasibility");
   }
 
   // Racing=3 (full portfolio)

@@ -1182,7 +1182,7 @@ public:
   {
     return resolveMethod_;
   }
-  /// Enable/disable LP racing for initialSolve (races dual vs primal variants)
+  /// Enable/disable LP racing for initialSolve (native barrier/dual/idiot triple)
   inline void setRacingLP(int numThreads)
   {
     racingLPThreads_ = numThreads;
