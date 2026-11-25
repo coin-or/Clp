@@ -5944,7 +5944,16 @@ int ClpSimplex::dualDebug(int ifValuesPass, int startFinishOptions)
       moreSpecialOptions_ &= ~256;
       baseIteration_ = 0;
     }
-    if (problemStatus_ == 3 && numberIterations_ < saveMax) {
+    // Status 3 may mean that the clean up stopped at the time limit, not
+    // at its own iteration limit. Don't try again then: the factorization
+    // may have given up at the deadline and freed its arrays, and the
+    // retry below reuses it (startFinishOptions bit 2).
+    bool timeUp = (dblParam_[ClpMaxSeconds] >= 0.0
+                    && dblParam_[ClpMaxSeconds] < 4.0e7
+                    && CoinCpuTime() >= dblParam_[ClpMaxSeconds])
+      || (dblParam_[ClpMaxWallSeconds] >= 0.0
+        && CoinWallclockTime() >= dblParam_[ClpMaxWallSeconds]);
+    if (problemStatus_ == 3 && numberIterations_ < saveMax && !timeUp) {
 #ifdef COIN_DEVELOP
       if (handler_->logLevel() > 0)
         printf("looks like trouble - too many iterations in clean up - trying again\n");
