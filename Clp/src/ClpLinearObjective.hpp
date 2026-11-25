@@ -87,6 +87,15 @@ public:
 
   //@}
 
+  ///@name Accessors
+  //@{
+  /// Number of columns this objective is sized for
+  inline int numberColumns() const
+  {
+    return numberColumns_;
+  }
+  //@}
+
   //---------------------------------------------------------------------------
 
 private:

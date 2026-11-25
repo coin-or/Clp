@@ -98,7 +98,12 @@ void OsiClpSolverInterface::initialSolve()
           break;
       }
     }
-    if (i == numberColumns) {
+    // fakeObjective_ is sized when set and never tracks later column
+    // additions/deletions (e.g. from a cut generator's temporary clone),
+    // so only substitute it in when its size still matches the model -
+    // otherwise a stale, smaller fakeObjective_ can be validated against
+    // the model's current (larger) column count downstream and throw.
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       // Check (Clp fast dual)
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
@@ -741,6 +746,12 @@ void OsiClpSolverInterface::initialSolve()
   }
   solver->messageHandler()->setLogLevel(saveMessageLevel);
 disaster:
+  // Always clear the disaster handler on modelPtr_ before cleanup.
+  // When solver == modelPtr_ (deleteSolver == false), goto disaster may have
+  // skipped the normal setDisasterHandler(NULL) call, leaving disasterArea_ set.
+  // When solver != modelPtr_ (deleteSolver == true), returnModel() below also
+  // clears it - this explicit clear is a cheap defensive belt-and-suspenders guard.
+  modelPtr_->setDisasterHandler(NULL);
   if (deleteSolver) {
     solver->returnModel(*modelPtr_);
     delete solver;
@@ -874,7 +885,8 @@ void OsiClpSolverInterface::resolve()
           break;
       }
     }
-    if (i == numberColumns) {
+    // See stale-fakeObjective_ note above (site guarded the same way).
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
         savedObjective = modelPtr_->objective_;
@@ -1288,6 +1300,9 @@ void OsiClpSolverInterface::resolve()
 disaster:
   //printf("basis after dual\n");
   //basis_.print();
+  // Clear disaster handler - a goto disaster from within resolve() may have
+  // skipped the normal setDisasterHandler(NULL) call after the LP solve.
+  modelPtr_->setDisasterHandler(NULL);
   if (!defaultHandler_)
     modelPtr_->popMessageHandler(saveHandler, oldDefault);
   modelPtr_->messageHandler()->setLogLevel(saveMessageLevel);
@@ -1718,7 +1733,8 @@ void OsiClpSolverInterface::markHotStart()
           break;
       }
     }
-    if (i == numberColumns) {
+    // See stale-fakeObjective_ note above (site guarded the same way).
+    if (i == numberColumns && fakeObjective_->numberColumns() == numberColumns) {
       if ((specialOptions_ & 524288) == 0) {
         // Set fake
         savedObjective = modelPtr_->objective_;
@@ -2543,6 +2559,8 @@ void OsiClpSolverInterface::solveFromHotStart()
     }
     if (status) {
       // not finished - might be optimal
+      // put back objective in case perturbed
+      CoinMemcpyN(saveObjective, number, smallModel_->costRegion());
       smallModel_->checkPrimalSolution(smallModel_->solutionRegion(0),
         smallModel_->solutionRegion(1));
       //smallModel_->gutsOfSolution(NULL,NULL,0);
@@ -7689,6 +7707,51 @@ void OsiClpSolverInterface::crunch()
     small->moreSpecialOptions_ = modelPtr_->moreSpecialOptions_;
     small->dual(0, 7);
 #endif
+    if (small->problemStatus() == 0 && small->secondaryStatus_ > 2) {
+      // had dual infeasibilities - clean up with primal
+      // If primal does not finish, keep the dual result (as before)
+      // rather than report an unfinished or abandoned solve
+      int numberRows2 = small->numberRows();
+      int numberColumns2 = small->numberColumns();
+      int numberTotal2 = numberRows2 + numberColumns2;
+      unsigned char *saveStatus2 = CoinCopyOfArray(small->statusArray(), numberTotal2);
+      double *saveSolution2 = new double[2 * numberTotal2];
+      CoinMemcpyN(small->primalColumnSolution(), numberColumns2, saveSolution2);
+      CoinMemcpyN(small->dualColumnSolution(), numberColumns2,
+        saveSolution2 + numberColumns2);
+      CoinMemcpyN(small->primalRowSolution(), numberRows2,
+        saveSolution2 + 2 * numberColumns2);
+      CoinMemcpyN(small->dualRowSolution(), numberRows2,
+        saveSolution2 + 2 * numberColumns2 + numberRows2);
+      double saveObjectiveValue2 = small->objectiveValue();
+      int saveSecondaryStatus2 = small->secondaryStatus_;
+      double saveSumPrimal2 = small->sumPrimalInfeasibilities();
+      int saveNumberPrimal2 = small->numberPrimalInfeasibilities();
+      double saveSumDual2 = small->sumDualInfeasibilities();
+      int saveNumberDual2 = small->numberDualInfeasibilities();
+      totalIterations += small->numberIterations();
+      small->primal(); // had dual infeasibilities
+      if (small->problemStatus() != 0 && small->problemStatus() != 1) {
+        // primal did not finish - go back to dual result
+        CoinMemcpyN(saveStatus2, numberTotal2, small->statusArray());
+        CoinMemcpyN(saveSolution2, numberColumns2, small->primalColumnSolution());
+        CoinMemcpyN(saveSolution2 + numberColumns2, numberColumns2,
+          small->dualColumnSolution());
+        CoinMemcpyN(saveSolution2 + 2 * numberColumns2, numberRows2,
+          small->primalRowSolution());
+        CoinMemcpyN(saveSolution2 + 2 * numberColumns2 + numberRows2, numberRows2,
+          small->dualRowSolution());
+        small->setObjectiveValue(saveObjectiveValue2);
+        small->setProblemStatus(0);
+        small->setSecondaryStatus(saveSecondaryStatus2);
+        small->setSumPrimalInfeasibilities(saveSumPrimal2);
+        small->setNumberPrimalInfeasibilities(saveNumberPrimal2);
+        small->setSumDualInfeasibilities(saveSumDual2);
+        small->setNumberDualInfeasibilities(saveNumberDual2);
+      }
+      delete[] saveStatus2;
+      delete[] saveSolution2;
+    }
     modelPtr_->secondaryStatus_ = 0;
     if (small->secondaryStatus_ == 2)
       modelPtr_->secondaryStatus_ = 2;
@@ -9568,7 +9631,16 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
       } else {
         if (canGo != 3) {
           double objValue = direction * objective[iColumn];
-          if (objValue >= 0.0 && (canGo & 1) == 0) {
+          // Note: when objValue == 0.0 exactly, fixing the column carries no
+          // objective benefit at all, so it isn't worth the risk of relying
+          // on the (unscaled, tolerance-free) canGo bits above -- on
+          // instances with large-magnitude coefficients/RHS those bits can
+          // be wrong due to floating-point round-off in the down[]/up[]
+          // accumulations, and fixing a zero-cost column purely on a tie
+          // has, in practice, wrongly excluded the true optimal/feasible
+          // solution (see neos-3656078-kumeu). Require a strict sign so we
+          // only ever fix when there is a genuine objective incentive.
+          if (objValue > 0.0 && (canGo & 1) == 0) {
 #if COIN_DEVELOP > 2
             printf("dual fix down on column %d\n", iColumn);
 #endif
@@ -9577,7 +9649,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
               nTightened++;
               setColUpper(iColumn, lower);
             }
-          } else if (objValue <= 0.0 && (canGo & 2) == 0) {
+          } else if (objValue < 0.0 && (canGo & 2) == 0) {
 #if COIN_DEVELOP > 2
             printf("dual fix up on column %d\n", iColumn);
 #endif
@@ -9608,7 +9680,10 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
       }
       if (canGo != 3) {
         double objValue = direction * objective[iColumn];
-        if (objValue >= 0.0 && (canGo & 1) == 0) {
+        // See the matching comment in the integer-column dual-fix branch
+        // above: don't fix on an exact objective tie, only on a genuine
+        // (strict) sign.
+        if (objValue > 0.0 && (canGo & 1) == 0) {
 #if COIN_DEVELOP > 2
           printf("dual fix down on continuous column %d lower %g\n",
             iColumn, lower);
@@ -9618,7 +9693,7 @@ int OsiClpSolverInterface::tightenBounds(int lightweight)
             nTightened++;
             setColUpper(iColumn, lower);
           }
-        } else if (objValue <= 0.0 && (canGo & 2) == 0) {
+        } else if (objValue < 0.0 && (canGo & 2) == 0) {
 #if COIN_DEVELOP > 2
           printf("dual fix up on continuous column %d upper %g\n",
             iColumn, upper);
@@ -10119,6 +10194,12 @@ void OsiClpSolverInterface::passInMessageHandler(CoinMessageHandler *handler)
   handler_ = handler;
   if (modelPtr_)
     modelPtr_->passInMessageHandler(handler);
+  // Also update the cached small model used by crunch(), which copies its
+  // handler pointer from modelPtr_ at creation time.  Without this, restoring
+  // the handler after B&B leaves smallModel_ with a dangling pointer that
+  // triggers a use-after-free when resolve() reuses the cached model.
+  if (smallModel_)
+    smallModel_->passInMessageHandler(handler);
 }
 // Set log level (will also set underlying solver's log level)
 void OsiClpSolverInterface::setLogLevel(int value)

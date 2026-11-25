@@ -1037,7 +1037,7 @@ void ClpPackedMatrix::transposeTimesByColumn(const ClpSimplex *model, double sca
             for (i = 0; i < numberInRowArray; i++) {
               int iSequence = whichRow[i];
               int iStatus = (statusArray[iSequence] & 3) - 1;
-              if (iStatus) {
+              if (iStatus > 0) {
                 double mult = multiplier[iStatus - 1];
                 double alpha = piOld[i] * mult;
                 double oldValue;
@@ -1764,7 +1764,7 @@ transposeTimesUnscaledBit2(clpTempInfo &info)
         value += pi[iRow] * (*elementThis);
       }
       if (fabs(value) > zeroTolerance) {
-        double mult = multiplier[wanted - 1];
+        double mult = (wanted > 0) ? multiplier[wanted - 1] : 0.0;
         double alpha = value * mult;
         array[numberNonZero] = value;
         index[numberNonZero++] = iColumn;
@@ -1954,7 +1954,7 @@ int ClpPackedMatrix::gutsOfTransposeTimesUnscaled(const double *COIN_RESTRICT pi
       value += value2;
 #endif
         if (fabs(value) > zeroTolerance) {
-          double mult = multiplier[wanted - 1];
+          double mult = (wanted > 0) ? multiplier[wanted - 1] : 0.0;
           double alpha = value * mult;
           array[numberNonZero] = value;
           index[numberNonZero++] = iColumn;
@@ -7686,7 +7686,7 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
   for (int i = 0; i < numberInRowArray; i++) {
     int iSequence = whichRow[i];
     int iStatus = (statusArray[iSequence] & 3) - 1;
-    if (iStatus) {
+    if (iStatus > 0) {
       double mult = multiplier[iStatus - 1];
       double alpha = piOld[i] * mult;
       double oldValue;
@@ -7751,7 +7751,7 @@ void ClpPackedMatrix3::transposeTimes(const ClpSimplex *model,
     double oldValue;
     double value;
     int iStatus = (statusArray[iSequence] & 3) - 1;
-    if (iStatus) {
+    if (iStatus > 0) {
       double mult = multiplier[iStatus - 1];
       alpha = array[i] * mult;
       if (alpha > 0.0) {

@@ -203,7 +203,7 @@ int Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
             }
           }
           if (iCol >= 0 && colsol[iCol] > lower[iCol] + fixTolerance && colsol[iCol] < upper[iCol] - fixTolerance) {
-            whenUsed_[i] = iteration;
+            whenUsed_[iCol] = iteration;
             n++;
           }
         }
@@ -269,7 +269,7 @@ int Idiot::cleanIteration(int iteration, int ordinaryStart, int ordinaryEnd,
             }
           }
           if (iCol >= 0 && colsol[iCol] > lower[iCol] + fixTolerance && colsol[iCol] < upper[iCol] - fixTolerance) {
-            whenUsed_[i] = iteration;
+            whenUsed_[iCol] = iteration;
             n++;
           }
         }
@@ -2241,13 +2241,13 @@ void Idiot::crossOver(int mode)
 #ifdef COIN_DEVELOP
     printf("Total time in crossover %g\n", CoinCpuTime() - startTime);
 #endif
-    delete[] saveUpper;
-    delete[] saveLower;
   }
 #ifdef FEB_TRY
   model_->setSpecialOptions(saveOptions);
   model_->setPerturbation(savePerturbation);
 #endif
+  delete[] saveUpper;
+  delete[] saveLower;
   return;
 }
 #endif
