@@ -502,7 +502,8 @@ int ClpPredictorCorrector::solve()
         << CoinMessageEol;
       break; //finished
     }
-    if (complementarityGap_ < 1.0e-12) {
+    if (complementarityGap_ < 1.0e-12
+      && gonePrimalFeasible_ && goneDualFeasible_) {
       problemStatus_ = 0;
       handler_->message(CLP_BARRIER_EXIT, messages_)
         << "- small complementarity gap"
